@@ -85,12 +85,14 @@ describe("the globe (the world wraps round)", () => {
       }
     });
 
-    it(`${size}: keeps at least three tiles of deep water at every edge, so that swimming across the seam is six tiles of open sea`, () => {
+    it(`${size}: keeps at least two tiles of sea at every edge (the outermost one deep), so that swimming across the seam is at least four tiles of open sea`, () => {
       const world = new World("seam-" + size, size);
       for (let i = 0; i < Math.max(width, height); i++) {
-        for (let d = 0; d < 3; d++) {
+        for (let d = 0; d < 2; d++) {
           for (const [x, y] of [[d, i % height], [width - 1 - d, i % height], [i % width, d], [i % width, height - 1 - d]] as const) {
-            expect(world.tile(x, y).ground, `${x},${y}`).toBe(GROUND.WATER);
+            const ground = world.tile(x, y).ground;
+            expect(ground === GROUND.WATER || ground === GROUND.SHALLOW, `${x},${y}`).toBe(true);
+            if (d === 0) expect(ground, `${x},${y}`).toBe(GROUND.WATER);
           }
         }
       }
@@ -100,7 +102,12 @@ describe("the globe (the world wraps round)", () => {
   it("lets the party sail off one edge and come in at the other: the tiles in a line across the seam are all sea", () => {
     const world = new World("sail", "small");
     const { width, height } = WORLD_SIZES.small;
-    for (let y = 0; y < height; y++) for (let x = width - 4; x < width + 4; x++) expect(world.tile(x, y).ground, `${x},${y}`).toBe(GROUND.WATER);
+    for (let y = 0; y < height; y++) {
+      for (let x = width - 2; x < width + 2; x++) {
+        const ground = world.tile(x, y).ground;
+        expect(ground === GROUND.WATER || ground === GROUND.SHALLOW, `${x},${y}`).toBe(true);
+      }
+    }
   });
 });
 

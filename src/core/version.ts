@@ -67,5 +67,10 @@
  * level-3 island, levels 4 and 5 have an island of their own and never share one, and the sea between them fills with small islands of level 4 or 5 (the bigger the
  * world, the more of them); the islands are rounder (`SHAPE_AMPLITUDE`) and a good quarter of the world is land. No object stands in a passage of one cell or shuts a
  * wider one (`interiors/passage.ts`: vessels in the towns, decoration, chests and the like in every place), and a column has no wall within a cell of it.
+ * 19 = twenty-second playtest: the world is wider than it is high (small 100 x 70, default 200 x 140, large 300 x 210, huge 400 x 280); no island is a circle any
+ * more (`world/islands.ts`: each is a raster of its own made of ellipses, a triangle or a bay, warped and roughened: a continent with arms and a bay, ovals with bulges,
+ * triangles, strips, rings of land round a bay with a small island in it); there are never more small islands than big ones and the number of big ones grows with the world
+ * (the number of big ones follows the land share asked for: 50, 46, 43 and 40 %); the sea at the edge is two tiles at least; a lava island is ringed by mountains with one way in (`World.coastRing`); rivers by climate (meadow and swamp
+ * have them, desert and lava none) and an inland water at most three tiles wide is shallow throughout (`World.narrowInland`).
  */
-export const GEN_VERSION = 18;
+export const GEN_VERSION = 19;

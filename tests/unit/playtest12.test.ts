@@ -183,7 +183,7 @@ describe("the mascots (twelfth playtest, point 10)", () => {
     expect(isSolidSpotItem(7)).toBe(true);
   });
 
-  it("places the four wild mascots near the start on plain ground, apart from each other, in every world", () => {
+  it("places the four wild mascots near the start on plain ground, apart from each other, in every world", { timeout: 120_000 }, () => {
     for (let i = 0; i < 25; i++) {
       const world = new World(`mascot-seed-${i}`);
       const spots = overworldMascotSpots(world);

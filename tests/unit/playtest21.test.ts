@@ -76,8 +76,8 @@ describe("the islands of the 21st playtest", () => {
     for (let i = 1; i < counts.length; i++) expect(counts[i]!, `${i}`).toBeGreaterThan(counts[i - 1]!);
   });
 
-  it("measures 70 x 100, 140 x 200, 210 x 300 and 280 x 400 tiles", () => {
-    expect((["small", "default", "large", "huge"] as const).map((s) => [WORLD_SIZES[s].width, WORLD_SIZES[s].height])).toEqual([[70, 100], [140, 200], [210, 300], [280, 400]]);
+  it("measures 100 x 70, 200 x 140, 300 x 210 and 400 x 280 tiles (the 22nd playtest: always wider than high)", () => {
+    expect((["small", "default", "large", "huge"] as const).map((s) => [WORLD_SIZES[s].width, WORLD_SIZES[s].height])).toEqual([[100, 70], [200, 140], [300, 210], [400, 280]]);
   });
 
   it("keeps every island off the seam and away from the others", () => {
@@ -85,10 +85,10 @@ describe("the islands of the 21st playtest", () => {
       const world = new World("spacing", size);
       const { width, height } = WORLD_SIZES[size];
       for (const i of world.islands) {
-        expect(i.x - i.reach, `${size} ${i.index} west`).toBeGreaterThanOrEqual(5);
-        expect(i.x + i.reach, `${size} ${i.index} east`).toBeLessThanOrEqual(width - 5);
-        expect(i.y - i.reach, `${size} ${i.index} north`).toBeGreaterThanOrEqual(5);
-        expect(i.y + i.reach, `${size} ${i.index} south`).toBeLessThanOrEqual(height - 5);
+        expect(i.x + i.box.x0, `${size} ${i.index} west`).toBeGreaterThanOrEqual(2);
+        expect(i.x + i.box.x1, `${size} ${i.index} east`).toBeLessThanOrEqual(width - 1 - 2);
+        expect(i.y + i.box.y0, `${size} ${i.index} north`).toBeGreaterThanOrEqual(2);
+        expect(i.y + i.box.y1, `${size} ${i.index} south`).toBeLessThanOrEqual(height - 1 - 2);
       }
     }
   });
