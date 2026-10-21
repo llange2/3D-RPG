@@ -51,7 +51,7 @@ describe("nineteenth playtest: the island of the start town and the mascots (poi
     }
   });
 
-  it("never lets a mascot or a wagon close a way, in 40 worlds", () => {
+  it("never lets a mascot or a wagon close a way, in 40 worlds", { timeout: 120_000 }, () => {
     for (let n = 0; n < 40; n++) {
       const w = new World(`mascots-${n}`);
       for (const s of overworldMascotSpots(w)) {

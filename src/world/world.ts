@@ -3,7 +3,7 @@ import { derive, LAYER, rngFor, seedFromString, type SeedState } from "../core/r
 import { placeName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { planPlaces } from "../interiors/dungeonPlan";
-import { along, buildLayout, isqrt, SHAPE_AMPLITUDE, tierOn, wrapDist2, type Island, type Layout } from "./islands";
+import { FIELD_UNIT, ISLAND_EDGE, along, buildLayout, fieldAt, isqrt, tierOn, wrapDist2, type Island, type Layout } from "./islands";
 import { roadThrough, type Pt, type RoadSeg } from "./roads";
 import {
   BIOME,
@@ -17,6 +17,7 @@ import {
   poiEntrances,
   isTileWalkable,
   wrap,
+  wrapDelta,
   type Biome,
   type Deco,
   type Ground,
@@ -116,10 +117,30 @@ const MIN_PLACE_DISTANCE = 6;
 /** Distance (Chebyshev) from a town inside which no other place is built. */
 const TOWN_CLEARANCE = 6;
 /** A place keeps this many tiles of land round it (no coast within reach of the cleared ground), so that it stands on the island and not on a spit. */
-const COAST_MARGIN = 1;
+const COAST_MARGIN = 2;
+/** A place prefers this many tiles of land round it: the ground it clears (`FLATTEN`) then takes no sea, so the channel to the next island keeps its deep tile. */
+const PLACE_ROOM = 3;
 /** Places closer than this (Manhattan) that the road tree does not join get a second road with a chance of 50 %. */
 const LOOP_DISTANCE = 14;
 const LOOP_PERMILLE = 350;
+/** How far (tiles) `nearestBiome` looks for land before it goes by the middles of the islands. */
+const NEAREST_LAND = 8;
+/** The land rises from the coast to its full height over this many tiles. */
+const RISE_TILES = 6;
+/** An inland water this many tiles wide or less is shallow throughout (see `narrowInland`). */
+const NARROW_WATER = 3;
+/** The mountain ring of a lava island: two tiles deep along the coast, with a way in that is six tiles wide and looked for out to six tiles from the sea. */
+const RING = { NONE: 0, WALL: 1, WAY: 2 } as const;
+const RING_DEPTH = 2;
+const RING_WAY_DEPTH = 6;
+const RING_WAY_WIDTH = 3;
+/** The rivers of an island by climate (none on desert and lava): distance between them, width and the noise level above which a stretch is shallow. */
+const RIVERS: Partial<Record<number, { period: number; band: number; ford: number }>> = {
+  [BIOME.MEADOW]: { period: 56, band: 750, ford: 52000 },
+  [BIOME.FOREST]: { period: 64, band: 600, ford: 52000 },
+  [BIOME.SNOW]: { period: 80, band: 350, ford: 50000 },
+  [BIOME.SWAMP]: { period: 28, band: 1700, ford: 42000 },
+};
 /** Size of a cell of the index that finds the islands near a tile. */
 const INDEX_CELL = 16;
 
@@ -233,8 +254,9 @@ export class World {
     const rows = Math.ceil(this.height / INDEX_CELL);
     for (let i = 0; i < this.indexColumns * rows; i++) this.islandIndex.push([]);
     for (const isl of this.layout.islands) {
-      for (let y = isl.y - isl.reach; y <= isl.y + isl.reach + INDEX_CELL - 1; y += INDEX_CELL) {
-        for (let x = isl.x - isl.reach; x <= isl.x + isl.reach + INDEX_CELL - 1; x += INDEX_CELL) {
+      // every cell the box of the island touches (stepping by a cell from the corner would skip one when the box is narrower than a cell)
+      for (let y = isl.y - isl.reach; y <= isl.y + isl.reach; y++) {
+        for (let x = isl.x - isl.reach; x <= isl.x + isl.reach; x++) {
           const cell = Math.floor(wrap(y, this.height) / INDEX_CELL) * this.indexColumns + Math.floor(wrap(x, this.width) / INDEX_CELL);
           const list = this.islandIndex[cell]!;
           if (!list.includes(isl.index)) list.push(isl.index);
@@ -263,21 +285,15 @@ export class World {
   // ---------------------------------------------------------------- the islands and their terrain
 
   /**
-   * The island a tile belongs to and how far inside it the tile lies (Q16, above 0 is land): the blob of the island with a rougher coast from noise.
-   * The core within 0.72 of the radius is always land, so an island is never cut in two.
+   * The island a tile belongs to and how far inside its coast the tile lies (Q8, in 1/256 tiles; above 0 is land): a lookup in the raster of the island,
+   * whose shape (ellipses, a triangle, a bay, warped and roughened) is made once by `buildLayout`.
    */
   private landAt(x: number, y: number): { island: Island; field: number } | null {
     const list = this.islandIndex[Math.floor(y / INDEX_CELL) * this.indexColumns + Math.floor(x / INDEX_CELL)]!;
     let best: { island: Island; field: number } | null = null;
     for (const index of list) {
       const isl = this.layout.islands[index]!;
-      const d2 = wrapDist2(x, y, isl.x, isl.y, this.width, this.height);
-      if (d2 > isl.reach * isl.reach) continue;
-      const rho = Math.floor((isqrt(d2 * 65536) * 256) / isl.r);
-      // wide swells (16 and 8 tiles): the coast is a round blob with bays and capes, not a ragged edge
-      const mix = Math.floor((valueNoise2(this.sShape, x, y, 16) * 2 + valueNoise2(this.sShape + 1, x, y, 8)) / 3);
-      const shape = Math.floor(((mix - 32768) * SHAPE_AMPLITUDE) / 32768);
-      const field = ONE - rho + shape;
+      const field = fieldAt(isl, wrapDelta(isl.x, x, this.width), wrapDelta(isl.y, y, this.height));
       if (field > 0 && (!best || field > best.field)) best = { island: isl, field };
     }
     return best;
@@ -301,7 +317,7 @@ export class World {
     let best = this.layout.islands[0]!;
     let bestD = Infinity;
     for (const isl of this.layout.islands) {
-      const d = isqrt(wrapDist2(cx, cy, isl.x, isl.y, this.width, this.height)) - isl.r;
+      const d = isqrt(wrapDist2(cx, cy, isl.x, isl.y, this.width, this.height)) - ((isl.r + isl.reach) >> 1);
       if (d < bestD) {
         best = isl;
         bestD = d;
@@ -317,15 +333,19 @@ export class World {
       return { biome: BIOME.OCEAN, landBiome: BIOME.MEADOW, ground: GROUND.WATER, deco: DECO.NONE, elevation: 12000 };
     }
     const landBiome = here.island.biome;
-    // the land rises from the coast to a fifth of the way up to the mountains
-    let elevation = SEA_LEVEL + 1 + Math.floor((Math.min(ONE, here.field) * 9000) / ONE);
+    // the land rises from the coast to a fifth of the way up to the mountains, over six tiles
+    let elevation = SEA_LEVEL + 1 + Math.floor((Math.min(ONE, Math.floor((here.field * ONE) / (RISE_TILES * FIELD_UNIT))) * 9000) / ONE);
 
     let ground: Ground = GROUND.LAND;
     const ridge = fbm2(this.sRidge, tx, ty, RIDGE_PERIOD, 2);
     const lump = this.lump(tx, ty);
-    const rock = ridge + lump > RIDGE_LEVEL;
+    const ring = this.coastRing(here.island, tx, ty);
+    const rock = ring === RING.WALL || (ring !== RING.WAY && ridge + lump > RIDGE_LEVEL);
     // a mountain whose core lies more than two tiles from open ground is a hollow: its range stays a wall of at most four tiles
-    if (rock && this.insideMass(tx, ty)) {
+    if (ring === RING.WALL) {
+      ground = GROUND.MOUNTAIN;
+      elevation = MOUNTAIN_LEVEL + 1 + 2000;
+    } else if (rock && this.insideMass(tx, ty)) {
       elevation = Math.min(elevation, MOUNTAIN_LEVEL);
     } else if (rock) {
       ground = GROUND.MOUNTAIN;
@@ -334,7 +354,7 @@ export class World {
       ground = this.riverGround(tx, ty, landBiome, elevation);
     }
 
-    if (ground === GROUND.LAND && landBiome === BIOME.LAVA && valueNoise2(this.sLava, tx, ty, 14) > 52500) {
+    if (ground === GROUND.LAND && landBiome === BIOME.LAVA && ring !== RING.WAY && valueNoise2(this.sLava, tx, ty, 14) > 52500) {
       ground = GROUND.LAVA_POOL;
     }
 
@@ -342,11 +362,39 @@ export class World {
     return { biome: landBiome, landBiome, ground, deco, elevation };
   }
 
+  /**
+   * The mountain ring of a lava island (the user's rule, 22nd playtest: the lava island of the old outside map is surrounded by mountains, but the way in
+   * must never be shut). Tiles within two of the sea are `RING.WALL`; a strip about six tiles wide from the middle of the island out through the coast, in
+   * the direction of `Island.entry`, is `RING.WAY`: no mountain, no lava, so that the party can walk from the shore into the island. Other climates have no ring.
+   */
+  private coastRing(isl: Island, x: number, y: number): number {
+    if (isl.biome !== BIOME.LAVA) return RING.NONE;
+    const dx = wrapDelta(isl.x, x, this.width);
+    const dy = wrapDelta(isl.y, y, this.height);
+    let sea = RING_WAY_DEPTH + 1;
+    for (let k = 1; k < sea; k++) {
+      for (const [ax, ay] of AROUND) {
+        if (fieldAt(isl, dx + ax * k, dy + ay * k) <= 0) {
+          sea = k;
+          break;
+        }
+      }
+    }
+    if (sea > RING_WAY_DEPTH) return RING.NONE;
+    const along = dx * isl.entry.x + dy * isl.entry.y;
+    const across = Math.abs(dx * isl.entry.y - dy * isl.entry.x);
+    if (along > 0 && across <= RING_WAY_WIDTH * 1024) return RING.WAY;
+    return sea <= RING_DEPTH ? RING.WALL : RING.NONE;
+  }
+
   /** Would this tile be a mountain before the ranges are thinned out? Same test as `baseTile`, without the coast and river. */
   private rawMountain(tx: number, ty: number): boolean {
     const x = this.wrapX(tx);
     const y = this.wrapY(ty);
-    if (!this.isLand(x, y)) return false;
+    const here = this.landAt(x, y);
+    if (!here) return false;
+    const ring = this.coastRing(here.island, x, y);
+    if (ring !== RING.NONE) return ring === RING.WALL;
     return fbm2(this.sRidge, x, y, RIDGE_PERIOD, 2) + this.lump(x, y) > RIDGE_LEVEL;
   }
 
@@ -367,14 +415,22 @@ export class World {
     return this.rawMountain(tx - 2, ty) && this.rawMountain(tx + 2, ty) && this.rawMountain(tx, ty - 2) && this.rawMountain(tx, ty + 2);
   }
 
+  /**
+   * The rivers of an island, by climate (22nd playtest): the old outside map has them on the meadow island and the swamp, but not on lava (where a
+   * "river" would be a lava stream, which the user did not want). `period` is the distance between two rivers, `band` how wide they are, `ford` the
+   * noise level above which a stretch of river is shallow.
+   */
   private riverGround(tx: number, ty: number, biome: Biome, elevation: number): Ground {
     if (elevation < SEA_LEVEL + 4000) return GROUND.LAND;
+    const river = RIVERS[biome];
+    if (!river) return GROUND.LAND;
     const wx = tx + Math.floor(((fbm2(this.sWarpX, tx, ty, 64, 3) - 32768) * 40) / 32768);
     const wy = ty + Math.floor(((fbm2(this.sWarpY, tx, ty, 64, 3) - 32768) * 40) / 32768);
-    const n = fbm2(this.sRiver, wx, wy, 112, 2);
-    if (Math.abs(n - 32768) >= 800) return GROUND.LAND;
-    if (biome === BIOME.LAVA) return GROUND.LAVA_POOL;
-    return valueNoise2(this.sFord, tx, ty, 20) > 50000 ? GROUND.SHALLOW : GROUND.WATER;
+    const n = fbm2(this.sRiver, wx, wy, river.period, 2);
+    // here and there the river swells into a pond (up to three times as wide), which is where deep water in the middle stays
+    const swell = 1000 + Math.floor((valueNoise2(this.sFord + 7, tx, ty, 26) * 2000) / ONE);
+    if (Math.abs(n - 32768) >= Math.floor((river.band * swell) / 1000)) return GROUND.LAND;
+    return valueNoise2(this.sFord, tx, ty, 20) > river.ford ? GROUND.SHALLOW : GROUND.WATER;
   }
 
   private decoAt(tx: number, ty: number, biome: Biome, startWeight: number): Deco {
@@ -426,13 +482,25 @@ export class World {
    * Is the ground at (x, y), `margin` tiles in every direction, land of the island (no coast, no sea within the cleared ring of a place)? A town
    * may not stand where the party could not walk round it either.
    */
-  private landAround(x: number, y: number, margin: number): boolean {
-    for (let dy = -margin; dy <= margin; dy++) for (let dx = -margin; dx <= margin; dx++) if (!this.isLand(this.wrapX(x + dx), this.wrapY(y + dy))) return false;
+  private landAround(x: number, y: number, margin: number, island: Island): boolean {
+    // the islands do not overlap, so a tile is the island's if its own raster says so
+    const cx = wrapDelta(island.x, x, this.width);
+    const cy = wrapDelta(island.y, y, this.height);
+    for (let dy = -margin; dy <= margin; dy++) for (let dx = -margin; dx <= margin; dx++) if (fieldAt(island, cx + dx, cy + dy) <= 0) return false;
     return true;
   }
 
+  /**
+   * May a place stand here? The ground it clears (`FLATTEN` round its footprint, a pyramid being the widest) must stay off the two rows of sea along every
+   * edge of the world: clearing turns sea into land, and the user wants at least two tiles of water at the edge.
+   */
+  private edgeSafe(x: number, y: number): boolean {
+    const m = ISLAND_EDGE + FLATTEN + 2;
+    return x >= m && x <= this.width - 1 - m && y >= m && y <= this.height - 1 - m;
+  }
+
   /** Spiral search for a plain land tile inside the box that has `margin` tiles of land round it; null if there is none within `radius`. */
-  private findLand(cx: number, cy: number, radius: number, minX: number, minY: number, maxX: number, maxY: number, margin = COAST_MARGIN, accept?: (x: number, y: number) => boolean): { x: number; y: number } | null {
+  private findLand(island: Island, cx: number, cy: number, radius: number, minX: number, minY: number, maxX: number, maxY: number, margin = COAST_MARGIN, accept?: (x: number, y: number) => boolean): { x: number; y: number } | null {
     for (let r = 0; r <= radius; r++) {
       for (let dy = -r; dy <= r; dy++) {
         for (let dx = -r; dx <= r; dx++) {
@@ -440,8 +508,10 @@ export class World {
           const x = cx + dx;
           const y = cy + dy;
           if (x < minX || x > maxX || y < minY || y > maxY) continue;
+          if (!this.edgeSafe(x, y)) continue;
+          if (fieldAt(island, wrapDelta(island.x, x, this.width), wrapDelta(island.y, y, this.height)) <= 0) continue; // the box of an island may hold a small island of its own (in a bay)
           if (this.baseTile(this.wrapX(x), this.wrapY(y)).ground !== GROUND.LAND) continue;
-          if (margin > 0 && !this.landAround(x, y, margin)) continue;
+          if (margin > 0 && !this.landAround(x, y, margin, island)) continue;
           if (accept && !accept(x, y)) continue;
           return { x, y };
         }
@@ -480,22 +550,34 @@ export class World {
         !near(x, y, TOWN_CLEARANCE * 2) &&
         (!twoLevels ||
           ([-2, 2].every((k) => tierOn(isl, x + k * isl.axis.x, y + k * isl.axis.y, this.width, this.height) === tier) && tierOn(isl, x, y, this.width, this.height) === tier));
-      const pos =
-        this.findLand(target.x, target.y, isl.reach, box.x0, box.y0, box.x1, box.y1, COAST_MARGIN, fits) ??
-        this.findLand(target.x, target.y, isl.reach, box.x0, box.y0, box.x1, box.y1, 0, fits) ?? { x: isl.x + t * 5, y: isl.y };
+      // the odd shapes of the islands leave less room than a circle: if no spot fits, the rules give way one after the other (never the one that keeps the town on land)
+      const spots: [number, (x: number, y: number) => boolean][] = [
+        [PLACE_ROOM, fits],
+        [COAST_MARGIN, fits],
+        [1, fits],
+        [0, fits],
+        [1, (x, y) => !near(x, y, TOWN_CLEARANCE)],
+        [0, (x, y) => !near(x, y, MIN_PLACE_DISTANCE)],
+      ];
+      let pos: { x: number; y: number } | null = null;
+      for (const [margin, accept] of spots) {
+        pos = this.findLand(isl, target.x, target.y, isl.reach, box.x0, box.y0, box.x1, box.y1, margin, accept);
+        if (pos) break;
+      }
+      if (!pos) throw new Error(`island ${isl.index} (${isl.kind}, ${isl.area} tiles) has no room for town ${t}`);
       const name = isl.index === 0 && t === 0 ? "Starthaven" : undefined;
       pois.push(this.makePoi(isl, t, pos.x, pos.y, "town", t === 0, name));
     }
     const towns = pois.length;
     // the other places: about one for every `LAND_PER_PLACE` tiles of the island (the finished strip of the old outside map has one in 54), on spots of
     // plain land with room round them, found by trying random spots of the island
-    const wanted = Math.max(2, Math.floor((314 * isl.r * isl.r) / (100 * LAND_PER_PLACE)) - towns);
+    const wanted = Math.max(2, Math.floor(isl.area / LAND_PER_PLACE) - towns);
     let placed = 0;
     for (let attempt = 0; attempt < 400 && placed < wanted; attempt++) {
       const rng = rngFor(this.seed, LAYER.POI, isl.index, 0, "pick", attempt);
-      const x = isl.x + rng.range(-isl.r, isl.r);
-      const y = isl.y + rng.range(-isl.r, isl.r);
-      const pos = this.findLand(x, y, 1, box.x0, box.y0, box.x1, box.y1);
+      const x = isl.x + rng.range(isl.box.x0, isl.box.x1);
+      const y = isl.y + rng.range(isl.box.y0, isl.box.y1);
+      const pos = this.findLand(isl, x, y, 1, box.x0, box.y0, box.x1, box.y1, PLACE_ROOM) ?? this.findLand(isl, x, y, 1, box.x0, box.y0, box.x1, box.y1);
       if (!pos) continue;
       if (pois.slice(0, towns).some((p) => Math.max(Math.abs(pos.x - p.x), Math.abs(pos.y - p.y)) < TOWN_CLEARANCE)) continue;
       if (near(pos.x, pos.y, MIN_PLACE_DISTANCE)) continue;
@@ -950,18 +1032,46 @@ export class World {
           break;
         }
       }
-      if (beside !== null) t = { ...t, ground: GROUND.LAND, deco: DECO.NONE, biome: this.landAt(x, y)?.island.biome ?? this.nearestBiome(x, y) };
+      if (beside !== null) t = { ...t, ground: GROUND.LAND, deco: DECO.NONE, biome: this.landAt(x, y)?.island.biome ?? this.biomeBeside(x, y) ?? this.nearestBiome(x, y) };
     }
     this.rawCache.set(key, t);
     return t;
   }
 
-  /** The climate of the island nearest to a tile (for a tile of sea that was made land beside a road): the one whose coast is nearest, the islands differ a lot in size. */
+  /** The climate of the land right beside a tile (the eight neighbours), so that a tile of sea made land joins the ground it touches and meets no other climate at a corner. */
+  private biomeBeside(x: number, y: number): Biome | null {
+    for (const [dx, dy] of AROUND) {
+      const t = this.compose(this.wrapX(x + dx), this.wrapY(y + dy));
+      if ((t.ground === GROUND.LAND || t.ground === GROUND.MOUNTAIN || t.ground === GROUND.ROAD || t.ground === GROUND.PASS) && t.biome !== BIOME.OCEAN) return t.biome;
+    }
+    return null;
+  }
+
+  /**
+   * The climate of the island whose land is nearest to a tile (for a tile of sea that was made land beside a road): the land itself, found by looking
+   * ring after ring round the tile, so that the shore beside a bridge head has the ground of the island it belongs to and not of a bigger one that is
+   * nearer by its middle.
+   */
   private nearestBiome(x: number, y: number): Biome {
+    for (let r = 1; r <= NEAREST_LAND; r++) {
+      let found: Island | null = null;
+      let bestField = 0;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const here = this.landAt(this.wrapX(x + dx), this.wrapY(y + dy));
+          if (here && here.field > bestField) {
+            found = here.island;
+            bestField = here.field;
+          }
+        }
+      }
+      if (found) return found.biome;
+    }
     let best = this.layout.islands[0]!;
     let bestD = Infinity;
     for (const isl of this.layout.islands) {
-      const d = isqrt(wrapDist2(x, y, isl.x, isl.y, this.width, this.height)) - isl.r;
+      const d = isqrt(wrapDist2(x, y, isl.x, isl.y, this.width, this.height)) - ((isl.r + isl.reach) >> 1);
       if (d < bestD) {
         best = isl;
         bestD = d;
@@ -978,10 +1088,36 @@ export class World {
   private settle(tx: number, ty: number, raw: TileInfo, groundAt: (x: number, y: number) => Ground): TileInfo {
     if (raw.ground === GROUND.WATER) {
       for (const [dx, dy] of AROUND) if (SHORE_LAND.has(groundAt(tx + dx, ty + dy))) return { ...raw, ground: GROUND.SHALLOW };
+      if (this.narrowInland(tx, ty)) return { ...raw, ground: GROUND.SHALLOW };
     } else if (raw.deco === DECO.LANDMARK && !this.landmarkReachable(tx, ty)) {
       return { ...raw, deco: DECO.NONE };
     }
     return raw;
+  }
+
+  /**
+   * Deep water of a small inland water: a river or pond of an island (inside its coast, never the sea, a strait or a bay) that is at most three tiles
+   * wide where the tile lies, in one direction or the other, with land at both ends. Its middle is shallow like its banks, so that a party that can wade
+   * (Swimmer) can cross a stream; a lake wider than that keeps its deep water for those who can sail (the user's rule, 22nd playtest).
+   */
+  private narrowInland(tx: number, ty: number): boolean {
+    if (!this.landAt(this.wrapX(tx), this.wrapY(ty))) return false;
+    const wet = (x: number, y: number): boolean => {
+      const g = this.rawTile(x, y).ground;
+      return g === GROUND.WATER || g === GROUND.SHALLOW;
+    };
+    for (const [ax, ay] of [[1, 0], [0, 1]] as const) {
+      let run = 1;
+      let closed = true;
+      for (const sign of [1, -1]) {
+        let k = 1;
+        while (k <= NARROW_WATER && wet(tx + sign * ax * k, ty + sign * ay * k)) k++;
+        if (k > NARROW_WATER) closed = false;
+        run += k - 1;
+      }
+      if (closed && run <= NARROW_WATER) return true;
+    }
+    return false;
   }
 
   /**

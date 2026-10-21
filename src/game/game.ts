@@ -53,7 +53,7 @@ import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, GROUND, WORLD_SIZES, isTil
 import { chunkSpawns, type OverworldSpawn } from "../world/spawns";
 import { World } from "../world/world";
 import { MinimapIcons } from "./minimapIcons";
-import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, interiorLegend } from "./minimap";
+import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend } from "./minimap";
 import { FACING_VEC, PlayerRig, type MoveDir } from "./player";
 import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode } from "./debug";
 import { identifyLines } from "./identify";
@@ -447,9 +447,9 @@ export class Game {
   private migrateSave(fromVersion: number): void {
     const s = this.state;
     const at = s.at;
-    // before version 17 the world was endless, before 18 the islands lay elsewhere (other sizes, levels per island): the coordinates mean nothing now (the
+    // before version 17 the world was endless, before 19 the islands lay elsewhere (other sizes, shapes, levels per island): the coordinates mean nothing now (the
     // party could stand in the sea), so it starts again in front of Starthaven
-    if (fromVersion < 18) {
+    if (fromVersion < 19) {
       const start = this.world.startPosition();
       s.at = { mode: "overworld", x: start.x, y: start.y, facing: start.facing };
       s.explored = new Explored(spanOf(s.size));
@@ -1662,6 +1662,9 @@ export class Game {
       if (this.state.opened.has(seen)) return;
       this.state.opened.add(seen);
     }
+    // an object whose use is not written on it shows on the map once the party has been to it, whether or not anything came of it (a fountain
+    // at full health heals nobody): `knownContent` reads the part of the key before the `@`
+    if (hasHiddenUse(a)) this.state.opened.add(`${a.uid}@visited`);
     // spears and the blade have to reload first; stepping onto the cell meanwhile does nothing (the old game: 8 seconds)
     if (isReloadingTrap(a)) {
       if (this.trapReloading(a.uid)) return;

@@ -1,7 +1,7 @@
 /** Shared world constants and tile vocabulary. Pure data, no DOM, no Babylon. */
 
 /**
- * Tiles per chunk side. Ten, because every world is a multiple of ten wide and high (70, 100, 200, 300) and a world is a globe: the chunk grid
+ * Tiles per chunk side. Ten, because every world is a multiple of ten wide and high (70, 100, 140, 200, 210, 280, 300, 400) and a world is a globe: the chunk grid
  * must fit it exactly, so that a chunk on one side of the seam is the chunk beside it on the other.
  */
 export const CHUNK_SIZE = 10;
@@ -49,15 +49,15 @@ export type PoiKind = "town" | "castle" | "dungeon" | "cave";
 
 /**
  * The sizes of a world, which is a group of islands in deep water that wraps round like a globe: swim off the north edge and the party comes in at
- * the south, the same east and west. Small is 70 x 100 tiles, the others are twice, three and four times that on each side. `towns` is the number of
+ * the south, the same east and west. Small is 100 tiles wide and 70 high (a world is always wider than it is high, as the old outside map), the others are twice, three and four times that on each side. `towns` is the number of
  * towns per level (tier): one for each of the five levels on a small world, then two, three and four.
  */
 export type WorldSize = "small" | "default" | "large" | "huge";
 export const WORLD_SIZES: Record<WorldSize, { label: string; width: number; height: number; towns: number }> = {
-  small: { label: "Small", width: 70, height: 100, towns: 1 },
-  default: { label: "Default", width: 140, height: 200, towns: 2 },
-  large: { label: "Large", width: 210, height: 300, towns: 3 },
-  huge: { label: "Huge", width: 280, height: 400, towns: 4 },
+  small: { label: "Small", width: 100, height: 70, towns: 1 },
+  default: { label: "Default", width: 200, height: 140, towns: 2 },
+  large: { label: "Large", width: 300, height: 210, towns: 3 },
+  huge: { label: "Huge", width: 400, height: 280, towns: 4 },
 };
 export const WORLD_SIZE_NAMES = Object.keys(WORLD_SIZES) as WorldSize[];
 export const DEFAULT_WORLD_SIZE: WorldSize = "default";

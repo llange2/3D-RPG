@@ -30,6 +30,45 @@ const WALL_HUNG = [103, 104, 105];
 /** Actions that stand on their cell as an object, blocking it or not (a lore message is one only when it shows a statue or a person). */
 const isObject = (a: { kind: ActionKind; params: Record<string, unknown> }): boolean =>
   a.kind === "lore" ? a.params.object !== undefined || a.params.persona !== undefined : a.kind === "decor" && WALL_HUNG.includes(Number(a.params.item)) ? false : ["decor", "treasure", "shrine", "fountain", "riddle", "gong", "lever", "head", "teleporter", "talent", "work", "portal"].includes(a.kind);
+/** Cells between two banners on a wall, counting one banner (the old castles hang theirs every second or third cell). */
+const BANNER_SPACING = 3;
+/** Shortest stretch of straight wall that gets a banner, and the number of banners below which a castle hangs them closer together. */
+const BANNER_MIN_RUN = 3;
+const BANNER_MIN_TOTAL = 6;
+
+/**
+ * Picks cells at an even distance along the straight walls: the anchors are grouped by the wall they stand against and the line they stand on, a
+ * run of neighbouring cells gets one every `spacing` cells, centred on the run so that both ends are alike.
+ */
+export function spacedAlongWalls(anchors: readonly Anchor[], floorAt: (x: number, y: number) => boolean, spacing: number, minRun = BANNER_MIN_RUN): Anchor[] {
+  const runs = new Map<string, Anchor[]>();
+  for (const a of anchors) {
+    const wall = (["N", "E", "S", "W"] as const).find((f) => !floorAt(a.x + FACING_DELTA[f].dx, a.y + FACING_DELTA[f].dy));
+    if (!wall) continue;
+    const along = wall === "N" || wall === "S" ? a.x : a.y;
+    const line = wall === "N" || wall === "S" ? a.y : a.x;
+    // consecutive cells of one run share the key by their start, which the sort below finds
+    const key = `${wall}:${line}`;
+    const list = runs.get(key) ?? [];
+    list.push({ ...a, depth: along });
+    runs.set(key, list);
+  }
+  const chosen: Anchor[] = [];
+  for (const list of [...runs.entries()].sort(([p], [q]) => (p < q ? -1 : 1)).map(([, l]) => l)) {
+    list.sort((p, q) => p.depth - q.depth);
+    let start = 0;
+    for (let i = 1; i <= list.length; i++) {
+      if (i < list.length && list[i]!.depth === list[i - 1]!.depth + 1) continue;
+      const run = list.slice(start, i);
+      start = i;
+      if (run.length < minRun) continue;
+      for (let k = Math.floor(((run.length - 1) % spacing) / 2); k < run.length; k += spacing) chosen.push(run[k]!);
+    }
+  }
+  // the anchors keep their own depth (the caller reads it for the tier of the object)
+  return chosen.map((c) => anchors.find((a) => a.x === c.x && a.y === c.y)!);
+}
+
 /** Anchors the generator laid out itself with the passage rule in mind (the sites of a town, the vaults of a castle) or where an object blocks nothing (a dead end). */
 const FITTED_ANCHOR = /Site$|^vault|^deadEnd$|^exit$/;
 
@@ -233,7 +272,14 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
 
     // ----- choose anchors
     let chosen: Anchor[];
-    if (rule.count.perMap) {
+    if (rule.id === "banner" && map.castle) {
+      // the banners of the old castles hang along the walls of the halls at an even distance; a castle with no straight wall long enough keeps the plain pick
+      const floorAt = (x: number, y: number): boolean => map.cells[idx(x, y)] === CELL.FLOOR;
+      chosen = spacedAlongWalls(pool, floorAt, BANNER_SPACING);
+      // a castle of small halls: hang them closer rather than leave it bare
+      if (chosen.length < BANNER_MIN_TOTAL) chosen = spacedAlongWalls(pool, floorAt, BANNER_SPACING - 1, 2);
+      if (chosen.length === 0) chosen = rng.shuffle([...pool]).slice(0, rng.range(2, 4));
+    } else if (rule.count.perMap) {
       const n = rng.range(rule.count.perMap[0], rule.count.perMap[1]);
       chosen = rng.shuffle([...pool]).slice(0, n);
     } else {

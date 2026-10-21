@@ -295,11 +295,11 @@ describe("twentieth playtest, point 16: the way round a town stays open", () => 
 
 describe("twentieth playtest, points 1 and 2: the sizes", () => {
   it("has the four sizes the user named, with the towns per level", () => {
-    // the 21st playtest changed the sizes: 70 x 100 and twice, three and four times that on each side
-    expect(WORLD_SIZES.small).toMatchObject({ width: 70, height: 100, towns: 1 });
-    expect(WORLD_SIZES.default).toMatchObject({ width: 140, height: 200, towns: 2 });
-    expect(WORLD_SIZES.large).toMatchObject({ width: 210, height: 300, towns: 3 });
-    expect(WORLD_SIZES.huge).toMatchObject({ width: 280, height: 400, towns: 4 });
+    // the 21st playtest changed the sizes to 70 x 100 and twice, three and four times that; the 22nd made the world wider than it is high (100 x 70)
+    expect(WORLD_SIZES.small).toMatchObject({ width: 100, height: 70, towns: 1 });
+    expect(WORLD_SIZES.default).toMatchObject({ width: 200, height: 140, towns: 2 });
+    expect(WORLD_SIZES.large).toMatchObject({ width: 300, height: 210, towns: 3 });
+    expect(WORLD_SIZES.huge).toMatchObject({ width: 400, height: 280, towns: 4 });
   });
 
   it("is made of sea outside: no tile of a world's edge band is anything but deep water", () => {

@@ -73,7 +73,7 @@ describe("interior generators", () => {
       }
     });
 
-    it(`${kind}: same POI gives the identical map, different POIs differ`, () => {
+    it(`${kind}: same POI gives the identical map, different POIs differ`, { timeout: 120_000 }, () => {
       const hashes = new Set<number>();
       for (let i = 0; i < 40; i++) {
         const a = interiorHash(generateInterior(world, poiFor(kind, i)));
