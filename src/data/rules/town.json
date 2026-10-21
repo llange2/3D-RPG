@@ -1,0 +1,78 @@
+{
+  "tierBonus": 0,
+  "rules": [
+    { "id": "exit", "kind": "transfer", "anchor": "exit", "count": { "perMap": [1, 1] }, "params": { "mode": "poi_exit" } },
+    {
+      "id": "services",
+      "kind": "service",
+      "anchor": "lot",
+      "count": { "perMap": [7, 7] },
+      "assign": ["inn", "smith", "temple", "tavern", "bank", "training", "guild"]
+    },
+    { "id": "talents", "kind": "talent", "anchor": "talentSite", "count": { "chance": 1000 } },
+    { "id": "portal", "kind": "portal", "anchor": "portalSite", "count": { "chance": 1000 } },
+    { "id": "job_master", "kind": "work", "anchor": "workSite", "count": { "chance": 1000 } },
+    { "id": "fountain", "kind": "fountain", "anchor": "fountainSite", "count": { "chance": 1000 }, "params": { "heal": "=8+tier*4" } },
+    {
+      "id": "chests",
+      "kind": "treasure",
+      "anchor": "chestSite",
+      "count": { "chance": 1000 },
+      "params": { "level": "=tier", "gold": "=tier*60+rand(0,90)", "items": "=rand(0,1)" }
+    },
+    { "id": "cages", "kind": "door", "anchor": "cageSite", "count": { "chance": 1000 }, "params": { "locked": false, "ask": true } },
+    { "id": "guards", "kind": "spawn", "anchor": "guardSite", "count": { "chance": 1000 }, "params": { "group": 1 } },
+    {
+      "id": "chests_loose",
+      "kind": "treasure",
+      "anchor": "looseSite",
+      "count": { "chance": 500 },
+      "params": { "level": "=tier", "gold": "=tier*40+rand(0,70)", "items": "=rand(0,1)" }
+    },
+    { "id": "chests_decor", "kind": "decor", "anchor": "looseSite", "count": { "chance": 1000 } },
+    { "id": "decor_town", "kind": "decor", "anchor": "decorSite", "count": { "chance": 1000 } },
+    {
+      "id": "dead_talk",
+      "kind": "lore",
+      "anchor": "deadEnd",
+      "count": { "chance": 450 },
+      "params": { "pool": "villager", "line": "=rand(0,19)" },
+      "variants": [
+        { "weight": 1, "params": { "persona": 106 } },
+        { "weight": 1, "params": { "persona": 107 } },
+        { "weight": 1, "params": { "persona": 108 } }
+      ]
+    },
+    {
+      "id": "dead_barrel",
+      "kind": "treasure",
+      "anchor": "deadEnd",
+      "count": { "chance": 400 },
+      "params": { "chest": 5, "level": 1, "gold": "=rand(0,1)*(tier*12+rand(3,30))", "items": 0 }
+    },
+    {
+      "id": "dead_decor",
+      "kind": "decor",
+      "anchor": "deadEnd",
+      "count": { "chance": 1000 },
+      "variants": [
+        { "weight": 2, "params": { "item": 27 } },
+        { "weight": 2, "params": { "item": 28 } },
+        { "weight": 2, "params": { "item": 29 } },
+        { "weight": 2, "params": { "item": 61 } },
+        { "weight": 2, "params": { "item": 95 } },
+        { "weight": 2, "params": { "item": 91 } },
+        { "weight": 2, "params": { "item": 32 } },
+        { "weight": 2, "params": { "item": 16 } },
+        { "weight": 2, "params": { "item": 12 } },
+        { "weight": 2, "params": { "item": 13 } },
+        { "weight": 1, "params": { "item": 69 } },
+        { "weight": 1, "params": { "item": 83 } },
+        { "weight": 1, "params": { "item": 94 } },
+        { "weight": 1, "params": { "item": 119 } },
+        { "weight": 1, "params": { "item": 34 } }
+      ]
+    },
+    { "id": "breakable", "kind": "breakable_wall", "anchor": "wallBetween", "count": { "perMap": [1, 3] } }
+  ]
+}

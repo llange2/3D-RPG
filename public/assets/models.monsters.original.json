@@ -1,0 +1,2528 @@
+{
+ "1": {
+  "file": "models-original/monster_1.glb",
+  "tris": 9999,
+  "bytes": 1136188,
+  "bounds": [
+   -0.007155502278607284,
+   -2.353872066829571e-10,
+   -0.00334176652114615,
+   0.007155503470700153,
+   0.016999998904764668,
+   0.003341765329053281
+  ],
+  "animations": [
+   "Alert",
+   "Archery_Shot_1",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.249,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "2": {
+  "file": "models-original/monster_2.glb",
+  "tris": 9999,
+  "bytes": 1299040,
+  "bounds": [
+   -0.0079900000693649,
+   -1.290252142931206e-10,
+   -0.004100581017868643,
+   0.009009998835399768,
+   0.016681923493401918,
+   0.004100579527752557
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.302,
+  "animated": true,
+  "scale": 1.6,
+  "y": 0
+ },
+ "3": {
+  "file": "models-original/monster_3.glb",
+  "tris": 9999,
+  "bytes": 1318300,
+  "bounds": [
+   -0.008499999452382334,
+   -6.861454539942214e-10,
+   -0.004409465691235681,
+   0.008500000048428769,
+   0.01698078832818295,
+   0.004409465095189247
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.216,
+  "animated": true,
+  "scale": 2.2,
+  "y": 0
+ },
+ "4": {
+  "file": "models-original/monster_4.glb",
+  "tris": 10000,
+  "bytes": 1052388,
+  "bounds": [
+   -0.008499999452382334,
+   3.8456512669613606e-11,
+   -0.0029482727583883817,
+   0.008499999452382334,
+   0.01698911032850048,
+   0.002948271566295513
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Running",
+   "Walking",
+   "mage_soell_cast_3"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.494,
+  "animated": true,
+  "scale": 1,
+  "y": 0
+ },
+ "5": {
+  "file": "models-original/monster_5.glb",
+  "tris": 10000,
+  "bytes": 1312476,
+  "bounds": [
+   -0.008500000048428769,
+   1.6630580984757974e-10,
+   -0.003496088009415088,
+   0.008499999452382334,
+   0.012959605165728805,
+   0.0034960874133686537
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.386,
+  "animated": true,
+  "scale": 2.2,
+  "y": 0
+ },
+ "6": {
+  "file": "models-original/monster_6.glb",
+  "tris": 9978,
+  "bytes": 1321272,
+  "bounds": [
+   -1.0049599409103394,
+   -0.9124569892883301,
+   -0.879243016242981,
+   1.0026299953460693,
+   0.8915659785270691,
+   0.8696759939193726
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.625,
+  "animated": false,
+  "scale": 1,
+  "y": 1
+ },
+ "7": {
+  "file": "models-original/monster_7.glb",
+  "tris": 9992,
+  "bytes": 953576,
+  "bounds": [
+   -0.7506870031356812,
+   -0.8218610286712646,
+   -0.6029899716377258,
+   0.7409189939498901,
+   1.0002800226211548,
+   0.7124029994010925
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.256,
+  "animated": false,
+  "scale": 1,
+  "y": 1.5
+ },
+ "8": {
+  "file": "models-original/monster_8.glb",
+  "tris": 9976,
+  "bytes": 1117716,
+  "bounds": [
+   -0.0084999988563359,
+   1.845061662180127e-10,
+   -0.0020977721639475477,
+   0.0084999988563359,
+   0.01565632785134774,
+   0.002097771269877896
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.225,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "9": {
+  "file": "models-original/monster_9.glb",
+  "tris": 10000,
+  "bytes": 1055680,
+  "bounds": [
+   -0.008500000644475203,
+   1.280991639663033e-10,
+   -0.0021620897465477185,
+   0.008500000048428769,
+   0.016742087228400537,
+   0.00216208959753611
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Running",
+   "Walking",
+   "mage_soell_cast_3"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.235,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "10": {
+  "file": "models-original/monster_10.glb",
+  "tris": 10000,
+  "bytes": 1194112,
+  "bounds": [
+   -0.9455069899559021,
+   -1.0022000074386597,
+   -0.681194007396698,
+   0.9372310042381287,
+   1.0009299516677856,
+   0.6737350225448608
+  ],
+  "animations": [],
+  "groundTop": -0.75,
+  "fromObj": true,
+  "mean": 0.264,
+  "animated": false,
+  "scale": 1.2,
+  "y": 1.2
+ },
+ "11": {
+  "file": "models-original/monster_11.glb",
+  "tris": 10000,
+  "bytes": 1066336,
+  "bounds": [
+   -0.6558359861373901,
+   -0.9982050061225891,
+   -0.6763309836387634,
+   0.6563609838485718,
+   1.0015100240707397,
+   0.6593040227890015
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.268,
+  "animated": false,
+  "scale": 1,
+  "y": 1.05
+ },
+ "12": {
+  "file": "models-original/monster_12.glb",
+  "tris": 9997,
+  "bytes": 1288848,
+  "bounds": [
+   -0.008839999835789203,
+   -3.368868442183668e-11,
+   -0.0021019042558542422,
+   0.008159999068975465,
+   0.01580744350386909,
+   0.002101903659807808
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.277,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "13": {
+  "file": "models-original/monster_13.glb",
+  "tris": 9996,
+  "bytes": 1144716,
+  "bounds": [
+   -0.008499999452382334,
+   1.6182738342916322e-9,
+   -0.0019210984873526127,
+   0.008499998260289465,
+   0.013786812712546892,
+   0.001921097593282961
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.322,
+  "animated": true,
+  "scale": 1.9,
+  "y": 0
+ },
+ "14": {
+  "file": "models-original/monster_14.glb",
+  "tris": 9999,
+  "bytes": 1041568,
+  "bounds": [
+   -0.9643149971961975,
+   -1.001270055770874,
+   -0.9734690189361572,
+   0.9674239754676819,
+   0.9580469727516174,
+   1.0041500329971313
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.125,
+  "animated": false,
+  "scale": 1.3,
+  "y": 1.35
+ },
+ "15": {
+  "file": "models-original/monster_15.glb",
+  "tris": 10000,
+  "bytes": 924148,
+  "bounds": [
+   -0.9982870221138,
+   -0.9506350159645081,
+   -0.6520159840583801,
+   1.001039981842041,
+   0.9409909844398499,
+   0.6497049927711487
+  ],
+  "animations": [],
+  "groundTop": -0.75,
+  "fromObj": true,
+  "mean": 0.309,
+  "animated": false,
+  "scale": 1,
+  "y": 1.5
+ },
+ "16": {
+  "file": "models-original/monster_16.glb",
+  "tris": 10000,
+  "bytes": 1109100,
+  "bounds": [
+   -0.9316689968109131,
+   -0.8348609805107117,
+   -1.003499984741211,
+   0.925786018371582,
+   0.817313015460968,
+   1.002500057220459
+  ],
+  "animations": [],
+  "groundTop": -0.75,
+  "fromObj": true,
+  "mean": 0.231,
+  "animated": false,
+  "scale": 1.3,
+  "y": 1.3
+ },
+ "17": {
+  "file": "models-original/monster_17.glb",
+  "tris": 10000,
+  "bytes": 920448,
+  "bounds": [
+   -0.8275989890098572,
+   -0.9561629891395569,
+   -0.6956679821014404,
+   0.830735981464386,
+   0.9551510214805603,
+   0.7001010179519653
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.29,
+  "animated": false,
+  "scale": 1.3,
+  "y": 1.35
+ },
+ "18": {
+  "file": "models-original/monster_18.glb",
+  "tris": 9999,
+  "bytes": 1275100,
+  "bounds": [
+   -0.9175320267677307,
+   -0.6904590129852295,
+   -0.993681013584137,
+   0.9192309975624084,
+   0.6891090273857117,
+   1.0025500059127808
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.253,
+  "animated": false,
+  "scale": 0.8,
+  "y": 0.6
+ },
+ "19": {
+  "file": "models-original/monster_19.glb",
+  "tris": 10000,
+  "bytes": 1217324,
+  "bounds": [
+   -0.9967380166053772,
+   -0.9092779755592346,
+   -0.7275840044021606,
+   1.001870036125183,
+   0.9070069789886475,
+   0.7237759828567505
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.248,
+  "animated": false,
+  "scale": 1.5,
+  "y": 1.5
+ },
+ "20": {
+  "file": "models-original/monster_20.glb",
+  "tris": 9999,
+  "bytes": 1163772,
+  "bounds": [
+   -0.008499999452382334,
+   -1.93875808847959e-10,
+   -0.006924398386678132,
+   0.008499999452382334,
+   0.016426033606543378,
+   0.006924398386678132
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.281,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "21": {
+  "file": "models-original/monster_21.glb",
+  "tris": 9999,
+  "bytes": 1228620,
+  "bounds": [
+   -0.9997259974479675,
+   -0.9988240003585815,
+   -0.8503550291061401,
+   0.9964309930801392,
+   0.9907479882240295,
+   0.8654109835624695
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.252,
+  "animated": false,
+  "scale": 1.3,
+  "y": 1.35
+ },
+ "22": {
+  "file": "models-original/monster_22.glb",
+  "tris": 9998,
+  "bytes": 1356136,
+  "bounds": [
+   -0.008499999452382334,
+   7.008488566052057e-10,
+   -0.002903292412237246,
+   0.008499999452382334,
+   0.014005756065120778,
+   0.0029032918161908117
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.259,
+  "animated": true,
+  "scale": 2,
+  "y": 0
+ },
+ "23": {
+  "file": "models-original/monster_23.glb",
+  "tris": 9996,
+  "bytes": 1275680,
+  "bounds": [
+   -0.9930970072746277,
+   -0.9330980181694031,
+   -0.6734709739685059,
+   1.0024700164794922,
+   0.9426509737968445,
+   0.6525260210037231
+  ],
+  "animations": [],
+  "groundTop": -0.75,
+  "fromObj": true,
+  "mean": 0.309,
+  "animated": false,
+  "scale": 0.8,
+  "y": 1.6
+ },
+ "24": {
+  "file": "models-original/monster_24.glb",
+  "tris": 9999,
+  "bytes": 1052260,
+  "bounds": [
+   -0.008418162276934926,
+   -1.2479654008802769e-9,
+   -0.003148872185896212,
+   0.008418161680888492,
+   0.0169999977126718,
+   0.003148871887872995
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.226,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "25": {
+  "file": "models-original/monster_25.glb",
+  "tris": 10000,
+  "bytes": 1193220,
+  "bounds": [
+   -0.0084999988563359,
+   3.088969722021355e-10,
+   -0.003829169485811079,
+   0.008500000644475203,
+   0.012909500310357647,
+   0.0038291688897646448
+  ],
+  "animations": [
+   "Alert",
+   "Axe_Spin_Attack",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.341,
+  "animated": true,
+  "scale": 1.9,
+  "y": 0
+ },
+ "26": {
+  "file": "models-original/monster_26.glb",
+  "tris": 10000,
+  "bytes": 855476,
+  "bounds": [
+   -0.008500000048428769,
+   2.823385906356149e-11,
+   -0.0019046677223294728,
+   0.0084999988563359,
+   0.016868517021793483,
+   0.0019046674243062556
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.266,
+  "animated": true,
+  "scale": 1.7,
+  "y": 0
+ },
+ "27": {
+  "file": "models-original/monster_27.glb",
+  "tris": 10000,
+  "bytes": 1343476,
+  "bounds": [
+   -0.008499999452382334,
+   -1.1899347019322378e-10,
+   -0.003812255476141224,
+   0.008500000048428769,
+   0.016530819761809257,
+   0.0038122557741644414
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.3,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "28": {
+  "file": "models-original/monster_28.glb",
+  "tris": 10000,
+  "bytes": 1370972,
+  "bounds": [
+   -0.6970450282096863,
+   -0.9937319755554199,
+   -0.5353099703788757,
+   0.6923289895057678,
+   0.9969769716262817,
+   0.5217530131340027
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.52,
+  "animated": false,
+  "scale": 1.3,
+  "y": 1.3
+ },
+ "29": {
+  "file": "models-original/monster_29.glb",
+  "tris": 10000,
+  "bytes": 1153268,
+  "bounds": [
+   -0.008499999452382334,
+   1.1807860203246056e-10,
+   -0.003402613623381845,
+   0.008499999452382334,
+   0.013335447013330892,
+   0.0034026142194282794
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.291,
+  "animated": true,
+  "scale": 1.9,
+  "y": 0
+ },
+ "30": {
+  "file": "models-original/monster_30.glb",
+  "tris": 21030,
+  "bytes": 1407640,
+  "bounds": [
+   -1.0055999755859375,
+   -0.44394001364707947,
+   -0.8590360283851624,
+   1.004040002822876,
+   0.44754499197006226,
+   0.8603870272636414
+  ],
+  "animations": [],
+  "groundTop": -0.1,
+  "fromObj": true,
+  "mean": 0.149,
+  "animated": false,
+  "scale": 1.3,
+  "y": 0.65
+ },
+ "31": {
+  "file": "models-original/monster_31.glb",
+  "tris": 9984,
+  "bytes": 1207904,
+  "bounds": [
+   -0.008500000048428769,
+   5.1394056749588465e-11,
+   -0.0029941480682608157,
+   0.0084999988563359,
+   0.014200052897630933,
+   0.0029941474722143813
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.25,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "32": {
+  "file": "models-original/monster_32.glb",
+  "tris": 10000,
+  "bytes": 1133940,
+  "bounds": [
+   -0.6182730197906494,
+   -0.5329170227050781,
+   -1.0004299879074097,
+   0.6159020066261292,
+   0.5315250158309937,
+   0.9995560050010681
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "fromObj": true,
+  "mean": 0.243,
+  "animated": false,
+  "scale": 2.5,
+  "y": 1.25
+ },
+ "33": {
+  "file": "models-original/monster_33.glb",
+  "tris": 10000,
+  "bytes": 1278688,
+  "bounds": [
+   -0.5993379950523376,
+   -0.5091490149497986,
+   -1.000309944152832,
+   0.6471740007400513,
+   0.5060439705848694,
+   1.0012199878692627
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "fromObj": true,
+  "mean": 0.303,
+  "animated": false,
+  "scale": 2.8,
+  "y": 1.4
+ },
+ "34": {
+  "file": "models-original/monster_34.glb",
+  "tris": 10000,
+  "bytes": 974212,
+  "bounds": [
+   -0.7811769843101501,
+   -0.9989699721336365,
+   -0.8899750113487244,
+   0.7793939709663391,
+   0.9998649954795837,
+   0.8885719776153564
+  ],
+  "animations": [],
+  "groundTop": 0.95,
+  "fromObj": true,
+  "mean": 0.233,
+  "animated": false,
+  "scale": 1,
+  "y": 1.5
+ },
+ "35": {
+  "file": "models-original/monster_35.glb",
+  "tris": 10000,
+  "bytes": 1553956,
+  "bounds": [
+   -0.6673189997673035,
+   -0.9994069933891296,
+   -0.6781579852104187,
+   0.6894829869270325,
+   0.9996960163116455,
+   0.6794360280036926
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.282,
+  "animated": false,
+  "scale": 1.2,
+  "y": 1.25
+ },
+ "36": {
+  "file": "models-original/monster_36.glb",
+  "tris": 10000,
+  "bytes": 1294444,
+  "bounds": [
+   -0.3058040142059326,
+   -0.6203740239143372,
+   -0.9972720146179199,
+   0.30600398778915405,
+   0.6210070252418518,
+   0.978335976600647
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": true,
+  "mean": 0.32,
+  "animated": false,
+  "scale": 2,
+  "y": 1.25
+ },
+ "37": {
+  "file": "models-original/monster_37.glb",
+  "tris": 9997,
+  "bytes": 1411028,
+  "bounds": [
+   -0.9988290071487427,
+   -0.6884369850158691,
+   -0.8172879815101624,
+   0.9983109831809998,
+   0.6780800223350525,
+   0.8061190247535706
+  ],
+  "animations": [],
+  "groundTop": -0.35,
+  "fromObj": true,
+  "mean": 0.272,
+  "animated": false,
+  "scale": 1.8,
+  "y": 1.25
+ },
+ "38": {
+  "file": "models-original/monster_38.glb",
+  "tris": 9958,
+  "bytes": 1729484,
+  "bounds": [
+   -0.005374110220951356,
+   1.179097126892835e-11,
+   -0.0017706328234680102,
+   0.005374110220951356,
+   0.0169999977126718,
+   0.0017706320784099672
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.314,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "39": {
+  "file": "models-original/monster_39.glb",
+  "tris": 9998,
+  "bytes": 1178628,
+  "bounds": [
+   -0.008500000048428769,
+   -1.1174350084165022e-10,
+   -0.0027447673064894818,
+   0.0084999988563359,
+   0.013686802081313676,
+   0.00274476641241983
+  ],
+  "animations": [
+   "Alert",
+   "Axe_Spin_Attack",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.366,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "40": {
+  "file": "models-original/monster_40.glb",
+  "tris": 14961,
+  "bytes": 1818740,
+  "bounds": [
+   -0.9080439805984497,
+   -0.8721389770507812,
+   -0.9550830125808716,
+   0.9061620235443115,
+   0.8641049861907959,
+   0.9296330213546753
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.34,
+  "animated": false,
+  "scale": 1.1,
+  "y": 1.1
+ },
+ "41": {
+  "file": "models-original/monster_41.glb",
+  "tris": 9998,
+  "bytes": 1010028,
+  "bounds": [
+   -0.008500000048428769,
+   2.2202228447965146e-11,
+   -0.0021684146932866855,
+   0.008499999452382334,
+   0.015812477712054296,
+   0.0021684139482286424
+  ],
+  "animations": [
+   "Alert",
+   "Axe_Spin_Attack",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.293,
+  "animated": true,
+  "scale": 1.9,
+  "y": 0
+ },
+ "42": {
+  "file": "models-original/monster_42.glb",
+  "tris": 9997,
+  "bytes": 1180872,
+  "bounds": [
+   -0.9556649923324585,
+   -0.8629609942436218,
+   -0.6621609926223755,
+   0.9561690092086792,
+   0.8793699741363525,
+   0.6736209988594055
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.2,
+  "animated": false,
+  "scale": 1,
+  "y": 1.5
+ },
+ "43": {
+  "file": "models-original/monster_43.glb",
+  "tris": 9962,
+  "bytes": 1203120,
+  "bounds": [
+   -0.9969959855079651,
+   -0.9345329999923706,
+   -0.6341570019721985,
+   0.9931179881095886,
+   0.9806270003318787,
+   0.6351760029792786
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.275,
+  "animated": false,
+  "scale": 1,
+  "y": 1.8
+ },
+ "44": {
+  "file": "models-original/monster_44.glb",
+  "tris": 9999,
+  "bytes": 1268984,
+  "bounds": [
+   -0.008500000048428769,
+   -1.3209721021537815e-10,
+   -0.004302407704984967,
+   0.008499999452382334,
+   0.010711670874543389,
+   0.004302407704984967
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.219,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "45": {
+  "file": "models-original/monster_45.glb",
+  "tris": 10000,
+  "bytes": 1174384,
+  "bounds": [
+   -0.0084999988563359,
+   1.45095466618053e-9,
+   -0.0030533763083805954,
+   0.008500000048428769,
+   0.01573624337309054,
+   0.003053375712334161
+  ],
+  "animations": [
+   "Alert",
+   "Axe_Spin_Attack",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.309,
+  "animated": true,
+  "scale": 1.7,
+  "y": 0
+ },
+ "46": {
+  "file": "models-original/monster_46.glb",
+  "tris": 10000,
+  "bytes": 1106596,
+  "bounds": [
+   -0.9077169895172119,
+   -0.735319972038269,
+   -0.9975330233573914,
+   0.9161350131034851,
+   0.7521669864654541,
+   1.000059962272644
+  ],
+  "animations": [],
+  "groundTop": -0.75,
+  "fromObj": true,
+  "mean": 0.404,
+  "animated": false,
+  "scale": 1,
+  "y": 0.8
+ },
+ "47": {
+  "file": "models-original/monster_47.glb",
+  "tris": 9999,
+  "bytes": 1184024,
+  "bounds": [
+   -0.008184250410253169,
+   1.065578712541389e-10,
+   -0.0016923319915160828,
+   0.008184251602346038,
+   0.016999998904764668,
+   0.0016923310974464312
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.375,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "48": {
+  "file": "models-original/monster_48.glb",
+  "tris": 9926,
+  "bytes": 854904,
+  "bounds": [
+   -1.0011399984359741,
+   -1.0015699863433838,
+   -1.0020099878311157,
+   1.0017600059509277,
+   1.0006400346755981,
+   1.0001800060272217
+  ],
+  "animations": [],
+  "groundTop": 0.9,
+  "fromObj": true,
+  "mean": 0.338,
+  "animated": false,
+  "scale": 0.7,
+  "y": 1.7
+ },
+ "49": {
+  "file": "models-original/monster_49.glb",
+  "tris": 9999,
+  "bytes": 789544,
+  "bounds": [
+   -0.008335434012068044,
+   1.4738516211115182e-9,
+   -0.001706719658373601,
+   0.00833543341602161,
+   0.017000001288950406,
+   0.0017067184662807322
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Running",
+   "Sweeping_Kick",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.244,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "50": {
+  "file": "models-original/monster_50.glb",
+  "tris": 9994,
+  "bytes": 886436,
+  "bounds": [
+   -0.9982759952545166,
+   -0.9671000242233276,
+   -0.5358279943466187,
+   1.0009700059890747,
+   0.9333400130271912,
+   0.5393450260162354
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.304,
+  "animated": false,
+  "scale": 1.3,
+  "y": 1.3
+ },
+ "51": {
+  "file": "models-original/monster_51.glb",
+  "tris": 9988,
+  "bytes": 1187952,
+  "bounds": [
+   -0.008500000048428769,
+   -1.281505184413825e-10,
+   -0.0021859408426447013,
+   0.0084999988563359,
+   0.015833131913100207,
+   0.0021859403956098755
+  ],
+  "animations": [
+   "Alert",
+   "Axe_Spin_Attack",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.305,
+  "animated": true,
+  "scale": 1.6,
+  "y": 0
+ },
+ "52": {
+  "file": "models-original/monster_52.glb",
+  "tris": 10000,
+  "bytes": 1051148,
+  "bounds": [
+   -0.9948970079421997,
+   -0.7171970009803772,
+   -0.41615399718284607,
+   0.9930830001831055,
+   0.722661018371582,
+   0.38865798711776733
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "fromObj": true,
+  "mean": 0.293,
+  "animated": false,
+  "scale": 1,
+  "y": 1.5
+ },
+ "53": {
+  "file": "models-original/monster_53.glb",
+  "tris": 9991,
+  "bytes": 1212748,
+  "bounds": [
+   -0.0084999988563359,
+   -1.1137851636273037e-9,
+   -0.003171876300009868,
+   0.00849999766424303,
+   0.014643355280681947,
+   0.003171874809893782
+  ],
+  "animations": [
+   "Alert",
+   "Axe_Spin_Attack",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.234,
+  "animated": true,
+  "scale": 1.7,
+  "y": 0
+ },
+ "54": {
+  "file": "models-original/monster_54.glb",
+  "tris": 9973,
+  "bytes": 1476204,
+  "bounds": [
+   -0.0084999988563359,
+   5.5686978227412776e-11,
+   -0.0017459517327110818,
+   0.0084999988563359,
+   0.016424109568653034,
+   0.0017459511366646474
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.273,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "55": {
+  "file": "models-original/monster_55.glb",
+  "tris": 9993,
+  "bytes": 1166188,
+  "bounds": [
+   -0.007740484899122602,
+   3.7765864257713564e-10,
+   -0.005338802218314953,
+   0.007740485495169036,
+   0.016999998904764668,
+   0.005338803410407822
+  ],
+  "animations": [
+   "Charged_Upward_Slash",
+   "Dead",
+   "Idle_11",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.133,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "56": {
+  "file": "models-original/monster_56.glb",
+  "tris": 19640,
+  "bytes": 1417824,
+  "bounds": [
+   -0.6805449724197388,
+   -0.955826997756958,
+   -0.9368900060653687,
+   0.6797940135002136,
+   0.9570050239562988,
+   0.9223830103874207
+  ],
+  "animations": [],
+  "groundTop": -0.6,
+  "fromObj": true,
+  "mean": 0.292,
+  "animated": false,
+  "scale": 0.5,
+  "y": 1.8
+ },
+ "57": {
+  "file": "models-original/monster_57.glb",
+  "tris": 9995,
+  "bytes": 1346036,
+  "bounds": [
+   -0.9590579867362976,
+   -0.8519819974899292,
+   -0.9578329920768738,
+   0.9556030035018921,
+   0.8555049896240234,
+   0.9558590054512024
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.36,
+  "animated": false,
+  "scale": 1,
+  "y": 1.5
+ },
+ "58": {
+  "file": "models-original/monster_58.glb",
+  "tris": 10000,
+  "bytes": 812596,
+  "bounds": [
+   -0.008499999452382334,
+   3.467204046310136e-10,
+   -0.0019229800569345035,
+   0.008500000048428769,
+   0.010927393192185608,
+   0.001922979460888069
+  ],
+  "animations": [
+   "Idle_9",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.524,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "59": {
+  "file": "models-original/monster_59.glb",
+  "tris": 9991,
+  "bytes": 1263312,
+  "bounds": [
+   -0.008500000048428769,
+   -7.280234208184047e-10,
+   -0.002902558083030027,
+   0.008499999452382334,
+   0.014740324883006695,
+   0.002902557188960375
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Running",
+   "Walking",
+   "mage_soell_cast_4"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.204,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "60": {
+  "file": "models-original/monster_60.glb",
+  "tris": 9995,
+  "bytes": 1027664,
+  "bounds": [
+   -0.008499999452382334,
+   -6.211576447583906e-11,
+   -0.003768219565565445,
+   0.008500000048428769,
+   0.015519022594712162,
+   0.0037682189695190105
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.169,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "61": {
+  "file": "models-original/monster_61.glb",
+  "tris": 9999,
+  "bytes": 1178392,
+  "bounds": [
+   -0.008499999452382334,
+   1.9997834052476919e-10,
+   -0.005913032161153131,
+   0.008500000048428769,
+   0.01652233682895443,
+   0.005913030373013828
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.292,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "62": {
+  "file": "models-original/monster_62.glb",
+  "tris": 9996,
+  "bytes": 1385356,
+  "bounds": [
+   -0.6033939719200134,
+   -1.001960039138794,
+   -0.6424919962882996,
+   0.5786399841308594,
+   0.9891440272331238,
+   0.6544029712677002
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.294,
+  "animated": false,
+  "scale": 0.7,
+  "y": 1.6
+ },
+ "63": {
+  "file": "models-original/monster_63.glb",
+  "tris": 9999,
+  "bytes": 981668,
+  "bounds": [
+   -0.008201836760301062,
+   1.144097626600029e-9,
+   -0.0030644353539250324,
+   0.008201836760301062,
+   0.017000000096857537,
+   0.0030644338638089463
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.226,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "64": {
+  "file": "models-original/monster_64.glb",
+  "tris": 9865,
+  "bytes": 1375188,
+  "bounds": [
+   -0.00826738875506694,
+   -1.5330591564393556e-9,
+   -0.001444409010311759,
+   0.008267388159020506,
+   0.0169999977126718,
+   0.001444409010311759
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.295,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "65": {
+  "file": "models-original/monster_65.glb",
+  "tris": 9992,
+  "bytes": 974056,
+  "bounds": [
+   -0.008499998260289465,
+   -1.0734019655229283e-9,
+   -0.0025949656383328357,
+   0.008500000644475203,
+   0.016865342478483702,
+   0.002594964744263184
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Running",
+   "Walking",
+   "mage_soell_cast_3"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.198,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "66": {
+  "file": "models-original/monster_66.glb",
+  "tris": 9970,
+  "bytes": 1327396,
+  "bounds": [
+   -0.7384480237960815,
+   -0.9186019897460938,
+   -0.9448320269584656,
+   0.7524750232696533,
+   0.9353640079498291,
+   0.9172189831733704
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.315,
+  "animated": false,
+  "scale": 0.9,
+  "y": 1.5
+ },
+ "67": {
+  "file": "models-original/monster_67.glb",
+  "tris": 10000,
+  "bytes": 1061488,
+  "bounds": [
+   -1.0041699409484863,
+   -1.00068998336792,
+   -0.6051980257034302,
+   1.0064300298690796,
+   0.9969260096549988,
+   0.5890610218048096
+  ],
+  "animations": [],
+  "groundTop": -0.4,
+  "fromObj": true,
+  "mean": 0.336,
+  "animated": false,
+  "scale": 1,
+  "y": 1.6
+ },
+ "68": {
+  "file": "models-original/monster_68.glb",
+  "tris": 9998,
+  "bytes": 1133544,
+  "bounds": [
+   -0.008395093491783134,
+   4.019066589628362e-10,
+   -0.003337679132722038,
+   0.008395094087829569,
+   0.0169999977126718,
+   0.003337677642605952
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.33,
+  "animated": true,
+  "scale": 1,
+  "y": 0
+ },
+ "69": {
+  "file": "models-original/monster_69.glb",
+  "tris": 10000,
+  "bytes": 1091016,
+  "bounds": [
+   -0.6552780270576477,
+   -0.7878649830818176,
+   -1.0009299516677856,
+   0.6510980129241943,
+   0.7721080183982849,
+   0.99686199426651
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.259,
+  "animated": false,
+  "scale": 1,
+  "y": 1.6
+ },
+ "70": {
+  "file": "models-original/monster_70.glb",
+  "tris": 9876,
+  "bytes": 1023864,
+  "bounds": [
+   -0.7131639719009399,
+   -0.9561929702758789,
+   -0.867887020111084,
+   0.7068579792976379,
+   0.9565770030021667,
+   0.8634740114212036
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.213,
+  "animated": false,
+  "scale": 1.1,
+  "y": 1.15
+ },
+ "71": {
+  "file": "models-original/monster_71.glb",
+  "tris": 9994,
+  "bytes": 1282900,
+  "bounds": [
+   -0.006451240037726458,
+   1.5504880588152488e-9,
+   -0.005682070724321808,
+   0.006451240037726458,
+   0.017000001288950406,
+   0.005682071320368243
+  ],
+  "animations": [
+   "Dead",
+   "Idle_3",
+   "Running",
+   "Walking",
+   "mage_soell_cast_4"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.177,
+  "animated": true,
+  "scale": 1.7,
+  "y": 0
+ },
+ "72": {
+  "file": "models-original/monster_72.glb",
+  "tris": 9990,
+  "bytes": 1118640,
+  "bounds": [
+   -0.0084999988563359,
+   6.217057840578566e-11,
+   -0.0037965940580533264,
+   0.008499998260289465,
+   0.016690023764445838,
+   0.003796593760030109
+  ],
+  "animations": [
+   "Alert",
+   "Dead",
+   "Left_Slash",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.232,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "73": {
+  "file": "models-original/monster_73.glb",
+  "tris": 10000,
+  "bytes": 834236,
+  "bounds": [
+   -0.4887149930000305,
+   -0.9561910033226013,
+   -0.3813509941101074,
+   0.48111799359321594,
+   0.9560139775276184,
+   0.37654998898506165
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.095,
+  "animated": false,
+  "scale": 1.3,
+  "y": 1.35
+ },
+ "74": {
+  "file": "models-original/monster_74.glb",
+  "tris": 10000,
+  "bytes": 998952,
+  "bounds": [
+   -0.9987949728965759,
+   -0.5276669859886169,
+   -0.2679460048675537,
+   1.0004299879074097,
+   0.5193279981613159,
+   0.2567090094089508
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "fromObj": true,
+  "mean": 0.183,
+  "animated": false,
+  "scale": 1,
+  "y": 2
+ },
+ "75": {
+  "file": "models-original/monster_75.glb",
+  "tris": 10000,
+  "bytes": 966032,
+  "bounds": [
+   -0.9366629719734192,
+   -0.9570279717445374,
+   -1.0007200241088867,
+   0.9170429706573486,
+   0.9684370160102844,
+   1.0007200241088867
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.273,
+  "animated": false,
+  "scale": 1,
+  "y": 1.7
+ },
+ "76": {
+  "file": "models-original/monster_76.glb",
+  "tris": 9996,
+  "bytes": 1246132,
+  "bounds": [
+   -0.0084999988563359,
+   4.871952332579801e-10,
+   -0.004146027472331504,
+   0.0084999988563359,
+   0.01590977633201085,
+   0.004146026578261852
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.365,
+  "animated": true,
+  "scale": 1.7,
+  "y": 0
+ },
+ "77": {
+  "file": "models-original/monster_77.glb",
+  "tris": 9980,
+  "bytes": 1160628,
+  "bounds": [
+   -0.5579599738121033,
+   -0.9570909738540649,
+   -0.8426399827003479,
+   0.5598180294036865,
+   0.9549000263214111,
+   0.8329330086708069
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.135,
+  "animated": false,
+  "scale": 1,
+  "y": 1.5
+ },
+ "78": {
+  "file": "models-original/monster_78.glb",
+  "tris": 10000,
+  "bytes": 1159528,
+  "bounds": [
+   -0.8923969864845276,
+   -0.9562180042266846,
+   -0.8421739935874939,
+   0.896543025970459,
+   0.9555609822273254,
+   0.8635429739952087
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.37,
+  "animated": false,
+  "scale": 0.9,
+  "y": 0.95
+ },
+ "79": {
+  "file": "models-original/monster_79.glb",
+  "tris": 9927,
+  "bytes": 1131212,
+  "bounds": [
+   -0.9373540282249451,
+   -0.9565100073814392,
+   -0.9607260227203369,
+   0.9557849764823914,
+   0.9450719952583313,
+   0.9471049904823303
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.233,
+  "animated": false,
+  "scale": 0.8,
+  "y": 1.7
+ },
+ "80": {
+  "file": "models-original/monster_80.glb",
+  "tris": 9995,
+  "bytes": 1189060,
+  "bounds": [
+   -0.0080744389874986,
+   -2.0352044039228217e-11,
+   -0.0018143176626939095,
+   0.0080744389874986,
+   0.016999998904764668,
+   0.0018143169176358664
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.334,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "81": {
+  "file": "models-original/monster_81.glb",
+  "tris": 9997,
+  "bytes": 1120284,
+  "bounds": [
+   -0.7109649777412415,
+   -0.9470090270042419,
+   -0.4950140118598938,
+   0.7233710289001465,
+   0.9565460085868835,
+   0.49799200892448425
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.113,
+  "animated": false,
+  "scale": 1.4,
+  "y": 1.4
+ },
+ "82": {
+  "file": "models-original/monster_82.glb",
+  "tris": 9995,
+  "bytes": 1266980,
+  "bounds": [
+   -0.008500000644475203,
+   8.820709298990772e-10,
+   -0.00223356137647715,
+   0.008500001836568072,
+   0.014747533468584706,
+   0.0022335603333958898
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.291,
+  "animated": true,
+  "scale": 2.1,
+  "y": 0
+ },
+ "83": {
+  "file": "models-original/monster_83.glb",
+  "tris": 9998,
+  "bytes": 1270856,
+  "bounds": [
+   -0.9416130185127258,
+   -0.6487439870834351,
+   -0.9405050277709961,
+   0.9318450093269348,
+   0.657597005367279,
+   0.9551830291748047
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.137,
+  "animated": false,
+  "scale": 2.4,
+  "y": 1.45
+ },
+ "84": {
+  "file": "models-original/monster_84.glb",
+  "tris": 9996,
+  "bytes": 1221760,
+  "bounds": [
+   -0.9591590166091919,
+   -0.948294997215271,
+   -0.6696659922599792,
+   0.9568079710006714,
+   0.9567480087280273,
+   0.6774410009384155
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.248,
+  "animated": false,
+  "scale": 1,
+  "y": 1
+ },
+ "85": {
+  "file": "models-original/monster_85.glb",
+  "tris": 10000,
+  "bytes": 1193388,
+  "bounds": [
+   -0.0084999988563359,
+   4.784087330382378e-10,
+   -0.004341813526858085,
+   0.0084999988563359,
+   0.015131774802540798,
+   0.004341812632788433
+  ],
+  "animations": [
+   "Alert",
+   "Axe_Spin_Attack",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.271,
+  "animated": true,
+  "scale": 1.9,
+  "y": 0
+ },
+ "86": {
+  "file": "models-original/monster_86.glb",
+  "tris": 9970,
+  "bytes": 1125316,
+  "bounds": [
+   -0.005679263345615637,
+   7.229785497437013e-11,
+   -0.003397665543906414,
+   0.005679262749569203,
+   0.016999998904764668,
+   0.0033976646498367624
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Spell_Cast_1",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.079,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "87": {
+  "file": "models-original/monster_87.glb",
+  "tris": 10000,
+  "bytes": 1935904,
+  "bounds": [
+   -0.00576222168440621,
+   2.2067480682478238e-11,
+   -0.0023900830211471824,
+   0.00576222168440621,
+   0.016999998904764668,
+   0.002390082425100748
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.301,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "88": {
+  "file": "models-original/monster_88.glb",
+  "tris": 9966,
+  "bytes": 1600092,
+  "bounds": [
+   -0.006991849385384108,
+   -3.38146321157379e-10,
+   -0.006176446538199931,
+   0.006991849385384108,
+   0.017000002481043275,
+   0.006176445942153497
+  ],
+  "animations": [
+   "Axe_Spin_Attack",
+   "Dead",
+   "Idle_11",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.259,
+  "animated": true,
+  "scale": 1.5,
+  "y": 0
+ },
+ "89": {
+  "file": "models-original/monster_89.glb",
+  "tris": 14988,
+  "bytes": 1663140,
+  "bounds": [
+   -0.5028499960899353,
+   -0.9562640190124512,
+   -0.8642929792404175,
+   0.4954319894313812,
+   0.9580140113830566,
+   0.875594973564148
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.175,
+  "animated": false,
+  "scale": 1,
+  "y": 1
+ },
+ "90": {
+  "file": "models-original/monster_90.glb",
+  "tris": 9996,
+  "bytes": 986224,
+  "bounds": [
+   -0.008499999452382334,
+   1.0525145675122998e-9,
+   -0.0027693905807422703,
+   0.008499999452382334,
+   0.014953161143813398,
+   0.002769390282719053
+  ],
+  "animations": [
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.103,
+  "animated": true,
+  "scale": 1.5,
+  "y": 0
+ },
+ "91": {
+  "file": "models-original/monster_91.glb",
+  "tris": 29865,
+  "bytes": 2698912,
+  "bounds": [
+   -0.7559869885444641,
+   -0.6931639909744263,
+   -0.9576579928398132,
+   0.7640489935874939,
+   0.6951979994773865,
+   0.9391059875488281
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.24,
+  "animated": false,
+  "scale": 1,
+  "y": 1
+ },
+ "1048": {
+  "file": "models-original/monster_1048.glb",
+  "tris": 9992,
+  "bytes": 986848,
+  "bounds": [
+   -0.008452563096898125,
+   1.5396760144639497e-9,
+   -0.002349935121463198,
+   0.008452563096898125,
+   0.0169999977126718,
+   0.0023499345254167636
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.286,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1049": {
+  "file": "models-original/monster_1049.glb",
+  "tris": 10000,
+  "bytes": 974532,
+  "bounds": [
+   -0.008500000644475203,
+   -1.280701116508443e-10,
+   -0.0024844274859630866,
+   0.008500001836568072,
+   0.016407109132250186,
+   0.0024844270389282608
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.367,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1050": {
+  "file": "models-original/monster_1050.glb",
+  "tris": 10000,
+  "bytes": 891380,
+  "bounds": [
+   -0.008175894435288877,
+   1.5221540309917525e-9,
+   -0.0023446012509330816,
+   0.008175895031335312,
+   0.017000001288950406,
+   0.002344600654886647
+  ],
+  "animations": [
+   "Idle_13",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.3,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "1051": {
+  "file": "models-original/monster_1051.glb",
+  "tris": 10000,
+  "bytes": 1100128,
+  "bounds": [
+   -0.008500000048428769,
+   -4.709346585128147e-11,
+   -0.002340963132508922,
+   0.0084999988563359,
+   0.0163054128817004,
+   0.002340962387450879
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.297,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1052": {
+  "file": "models-original/monster_1052.glb",
+  "tris": 9990,
+  "bytes": 890396,
+  "bounds": [
+   -0.008496191907759187,
+   -7.683627784369636e-11,
+   -0.0024794072848690896,
+   0.008496193099852056,
+   0.0169999977126718,
+   0.002479406390799438
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.212,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1053": {
+  "file": "models-original/monster_1053.glb",
+  "tris": 9997,
+  "bytes": 1009752,
+  "bounds": [
+   -0.008499999452382334,
+   1.8566083366495081e-10,
+   -0.002459694092131537,
+   0.008499999452382334,
+   0.016727480514478366,
+   0.0024596937941083197
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.263,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1054": {
+  "file": "models-original/monster_1054.glb",
+  "tris": 9999,
+  "bytes": 952644,
+  "bounds": [
+   -0.008500001240521637,
+   1.5714783434117156e-9,
+   -0.0019130190779338974,
+   0.008500001240521637,
+   0.0157787295629368,
+   0.0019130190779338974
+  ],
+  "animations": [
+   "Lower_Weapon_Look_Raise",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.256,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1055": {
+  "file": "models-original/monster_1055.glb",
+  "tris": 10000,
+  "bytes": 820876,
+  "bounds": [
+   -0.008499999452382334,
+   1.8073228198620503e-9,
+   -0.0018045420541344115,
+   0.008500000048428769,
+   0.01664010845184083,
+   0.001804541458087977
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "air_squat"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.475,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1056": {
+  "file": "models-original/monster_1056.glb",
+  "tris": 9998,
+  "bytes": 1140260,
+  "bounds": [
+   -0.008368858507971644,
+   -8.953221075356063e-11,
+   -0.0033908727007164186,
+   0.008368857315878775,
+   0.0169999977126718,
+   0.0033908724026932013
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.339,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1057": {
+  "file": "models-original/monster_1057.glb",
+  "tris": 9998,
+  "bytes": 1071284,
+  "bounds": [
+   -0.0084999988563359,
+   -2.0219290678338167e-10,
+   -0.0023287730888551517,
+   0.008500000048428769,
+   0.016937206604990207,
+   0.002328771747750674
+  ],
+  "animations": [
+   "Gentlemans_Bow",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.225,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1058": {
+  "file": "models-original/monster_1058.glb",
+  "tris": 10000,
+  "bytes": 1037968,
+  "bounds": [
+   -0.00823878508272502,
+   1.45110711312108e-10,
+   -0.0028547915178211425,
+   0.00823878508272502,
+   0.016999998904764668,
+   0.002854790921774708
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.302,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1059": {
+  "file": "models-original/monster_1059.glb",
+  "tris": 10000,
+  "bytes": 984652,
+  "bounds": [
+   -0.008499999452382334,
+   7.309144059827733e-10,
+   -0.0029702287248470904,
+   0.008499999452382334,
+   0.015738577490927774,
+   0.002970228128800656
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.296,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1060": {
+  "file": "models-original/monster_1060.glb",
+  "tris": 9993,
+  "bytes": 980032,
+  "bounds": [
+   -0.008499999452382334,
+   -1.8086619086719329e-9,
+   -0.0035392021341800195,
+   0.008499999452382334,
+   0.016713132484708737,
+   0.003539201240110368
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.231,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1082": {
+  "file": "models-original/monster_1082.glb",
+  "tris": 9998,
+  "bytes": 1218792,
+  "bounds": [
+   -0.008499999452382334,
+   1.1577183397415988e-11,
+   -0.0025957267896296043,
+   0.008499999452382334,
+   0.016238035792752292,
+   0.00259572619358317
+  ],
+  "animations": [
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.314,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "1090": {
+  "file": "models-original/monster_1090.glb",
+  "tris": 9999,
+  "bytes": 1268308,
+  "bounds": [
+   -0.008499999452382334,
+   -6.765998099325613e-10,
+   -0.005524655457034955,
+   0.008500000048428769,
+   0.015589767346014805,
+   0.005524655457034955
+  ],
+  "animations": [
+   "Idle_13",
+   "Running",
+   "Stand_and_Chat",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.375,
+  "animated": true,
+  "scale": 1.5,
+  "y": 0
+ },
+ "1106": {
+  "file": "models-original/monster_1106.glb",
+  "tris": 9999,
+  "bytes": 1044820,
+  "bounds": [
+   -0.005341248392881859,
+   8.180075989142959e-11,
+   -0.0028048776953322196,
+   0.005341247796835424,
+   0.016999998904764668,
+   0.0028048762052161336
+  ],
+  "animations": [
+   "Idle_11",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.246,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "1107": {
+  "file": "models-original/monster_1107.glb",
+  "tris": 9988,
+  "bytes": 954448,
+  "bounds": [
+   -0.0050123642754771325,
+   -1.5441474598001434e-9,
+   -0.0027506264429399407,
+   0.005012364871523567,
+   0.0169999977126718,
+   0.002750625250847072
+  ],
+  "animations": [
+   "Idle_11",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.23,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "1108": {
+  "file": "models-original/monster_1108.glb",
+  "tris": 9994,
+  "bytes": 1003772,
+  "bounds": [
+   -0.005570811504778006,
+   3.964430917086605e-11,
+   -0.0029199694934494147,
+   0.0055708121008244404,
+   0.016999998904764668,
+   0.0029199688974029803
+  ],
+  "animations": [
+   "Idle_11",
+   "Running",
+   "Walking"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.24,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ }
+}

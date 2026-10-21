@@ -1,0 +1,443 @@
+{
+ "1": {
+  "name": "Town inn",
+  "action_id": 1,
+  "minimap_texture": "resources/textures/tex_mm_inn"
+ },
+ "2": {
+  "name": "Town training grounds (use parameter 'p')",
+  "action_id": 2,
+  "minimap_texture": "resources/textures/tex_mm_training"
+ },
+ "3": {
+  "name": "Town tavern (use parameter 'p')",
+  "action_id": 3,
+  "minimap_texture": "resources/textures/tex_mm_tavern"
+ },
+ "4": {
+  "name": "Town smith (use parameter 'p')",
+  "action_id": 4,
+  "minimap_texture": "resources/textures/tex_mm_smith"
+ },
+ "5": {
+  "name": "Town temple (use parameter 'p')",
+  "action_id": 5,
+  "minimap_texture": "resources/textures/tex_mm_temple"
+ },
+ "6": {
+  "name": "Town bank",
+  "action_id": 6,
+  "minimap_texture": "resources/textures/tex_mm_bank"
+ },
+ "7": {
+  "name": "Town guild (use parameter 'p')",
+  "action_id": 7,
+  "minimap_texture": "resources/textures/tex_mm_guild"
+ },
+ "8": {
+  "name": "Breakable wall (Press 'Tab' for additional parameters)",
+  "action_id": 8,
+  "param1": "replacement_block",
+  "param2": "block_target_x",
+  "param3": "block_target_y"
+ },
+ "11": {
+  "name": "Map Transfer (Press 'Tab' for addtional parameter)",
+  "action_id": 11,
+  "minimap_texture": "resources/textures/tex_mm_maptransfer",
+  "param1": "map_to_load",
+  "param2": "start_direction",
+  "param3": "start_x",
+  "param4": "start_y",
+  "param5": "txt_id_eligible",
+  "param6": "txt_id_not_eligible",
+  "param7": "required_item_type",
+  "param8": "remove_item",
+  "param9": "current_map_name",
+  "param10": "required_talent"
+ },
+ "12": {
+  "name": "Find item - immediate collection (Press 'Tab' for additional parameters)",
+  "action_id": 12,
+  "minimap_texture": "resources/textures/tex_mm_event",
+  "param1": "item_id",
+  "param2": "text_id",
+  "param3": "remove_item"
+ },
+ "13": {
+  "name": "Mascot (Press 'Tab' for additional parameters)",
+  "action_id": 13,
+  "param1": "mascot_name",
+  "param2": "text_id",
+  "param3": "new_mascot"
+ },
+ "14": {
+  "name": "Open door (unlocked door)",
+  "action_id": 14
+ },
+ "15": {
+  "name": "Buy Talent (Press 'Tab' for additional parameters)",
+  "action_id": 15,
+  "minimap_texture": "resources/textures/tex_mm_persona",
+  "param1": "talent_name",
+  "param2": "text_id"
+ },
+ "16": {
+  "name": "Open gate Top->Bottom (Press 'Tab' for additional parameters)",
+  "action_id": 16,
+  "minimap_texture": "resources/textures/tex_mm_door",
+  "param1": "required_item_type",
+  "param2": "text_id",
+  "param3": "sound_id",
+  "param4": "remove_item"
+ },
+ "17": {
+  "name": "Trap - Spring (Press 'Tab' for additional parameters)",
+  "action_id": 17,
+  "minimap_texture": "resources/textures/tex_mm_trap",
+  "param1": "damage",
+  "param2": "rotation",
+  "trap": true
+ },
+ "18": {
+  "name": "Open gate Bottom->Up (Press 'Tab' for additional parameters)",
+  "action_id": 18,
+  "minimap_texture": "resources/textures/tex_mm_door",
+  "param1": "required_item_type",
+  "param2": "text_id",
+  "param3": "sound_id",
+  "param4": "remove_item"
+ },
+ "19": {
+  "name": "Work for a week",
+  "action_id": 19,
+  "minimap_texture": "resources/textures/tex_mm_persona"
+ },
+ "20": {
+  "name": "Quest: Return item(s) (Press 'Tab' for additional parameters)",
+  "action_id": 20,
+  "minimap_texture": "resources/textures/tex_mm_event",
+  "param1": "txt_id_quest_name",
+  "param2": "txt_id_initial",
+  "param3": "txt_id_in_progress",
+  "param4": "txt_id_completed",
+  "param5": "req_quest_item_type",
+  "param6": "req_quest_item_type2",
+  "param7": "req_quest_item_type3",
+  "param8": "return_amount",
+  "param9": "reward_gold",
+  "param10": "reward_xp",
+  "param11": "reward_treasure_level",
+  "param12": "reward_amount",
+  "param13": "quest_repeatable"
+ },
+ "21": {
+  "name": "Individual treasure (Press 'Tab' for additional parameters)",
+  "action_id": 21,
+  "minimap_texture": "resources/textures/tex_mm_event",
+  "param1": "min_thievery",
+  "param2": "trap_yn",
+  "param3": "trap_damage_type",
+  "param4": "trap_damage",
+  "param5": "reward_gold",
+  "param6": "reward_xp",
+  "param7": "reward_treasure_level",
+  "param8": "reward_amount",
+  "param9": "reward_attribute",
+  "param10": "reward_attribute_value",
+  "param11": "reward_item_id",
+  "param12": "reward_level_up",
+  "param13": "text_id",
+  "param14": "txt_after_search",
+  "param15": "xy_action",
+  "param16": "replacement_item"
+ },
+ "22": {
+  "name": "Solve riddle (teleport on failure) (Press 'Tab' for additional parameters)",
+  "action_id": 22,
+  "param1": "riddle_id",
+  "param2": "fail_tele_x",
+  "param3": "fail_tele_y",
+  "param4": "fail_rotation",
+  "param5": "abort_tele_x",
+  "param6": "abort_tele_y",
+  "param7": "abort_rotation"
+ },
+ "23": {
+  "name": "Trap - Pit (Press 'Tab' for additional parameters)",
+  "action_id": 23,
+  "minimap_texture": "resources/textures/tex_mm_trap",
+  "param1": "damage",
+  "param2": "rotation",
+  "trap": true
+ },
+ "24": {
+  "name": "Trap - Guillotine (Press 'Tab' for additional parameters)",
+  "action_id": 24,
+  "minimap_texture": "resources/textures/tex_mm_trap",
+  "param1": "damage",
+  "param2": "rotation",
+  "trap": true
+ },
+ "25": {
+  "name": "Text message only (Press 'Tab' for additional parameters)",
+  "action_id": 25,
+  "minimap_texture": "resources/textures/tex_mm_info",
+  "param1": "text_id",
+  "trap": true
+ },
+ "26": {
+  "name": "Monster obstacle (until player enters action)",
+  "action_id": 26
+ },
+ "27": {
+  "name": "Teleport (Press 'Tab' for additional parameters)",
+  "action_id": 27,
+  "param1": "tele_x",
+  "param2": "tele_y",
+  "param3": "tele_rotation",
+  "param4": "sound_id"
+ },
+ "28": {
+  "name": "Portal (Press 'Tab' for additional parameters)",
+  "action_id": 28,
+  "param1": "portal_x",
+  "param2": "portal_y",
+  "param3": "portal_rotation",
+  "param4": "txt_id_map_name",
+  "param5": "map_to_load"
+ },
+ "29": {
+  "name": "Trade item (Press 'Tab' for additional parameters)",
+  "action_id": 29,
+  "param1": "txt_id_trade",
+  "param2": "txt_id_no_trade",
+  "param3": "req_quest_item_type",
+  "param4": "trade_all",
+  "param5": "reward_attribute",
+  "param6": "reward_attribute_value"
+ },
+ "30": {
+  "name": "Trap - Generic (Press 'Tab' for additional parameters)",
+  "action_id": 30,
+  "minimap_texture": "resources/textures/tex_mm_trap",
+  "param1": "trap_damage_type",
+  "param2": "trap_damage",
+  "trap": true
+ },
+ "31": {
+  "name": "One-time lever (Press 'Tab' for additional parameters)",
+  "action_id": 31,
+  "param1": "txt_before_switch",
+  "param2": "txt_after_switch",
+  "param3": "xy_action1",
+  "param4": "xy_action2",
+  "param5": "xy_action3",
+  "param6": "xy_action4"
+ },
+ "9032": {
+  "name": "Passives: Multi-door-opener (Press 'Tab' for additional parameters)",
+  "action_id": 9032,
+  "param1": "xy_door1",
+  "param2": "xy_door2",
+  "param3": "xy_door3",
+  "param4": "xy_door4",
+  "param5": "xy_door5",
+  "param6": "xy_door6"
+ },
+ "9033": {
+  "name": "Passives: Multi-trap-placer (Press 'Tab' for additional parameters)",
+  "action_id": 9033,
+  "param1": "trap_type",
+  "param2": "damage",
+  "param3": "xy_trap1",
+  "param4": "xy_trap2",
+  "param5": "xy_trap3",
+  "param6": "xy_trap4",
+  "param7": "xy_trap5",
+  "param8": "xy_trap6"
+ },
+ "9034": {
+  "name": "Passives: Spawn monster (Press 'Tab' for additional parameters)",
+  "action_id": 9034,
+  "param1": "spawning_sound",
+  "param2": "monster_id",
+  "param3": "spawn_x",
+  "param4": "spawn_y",
+  "param5": "spawn_rotation"
+ },
+ "9035": {
+  "name": "Passives: Multi-trigger (Press 'Tab' for additional parameters)",
+  "action_id": 9035,
+  "param1": "xy_action1",
+  "param2": "xy_action2",
+  "param3": "xy_action3",
+  "param4": "xy_action4",
+  "param5": "xy_action5",
+  "param6": "xy_action6",
+  "param7": "xy_action7",
+  "param8": "xy_action8"
+ },
+ "36": {
+  "name": "Elemental Protection (Press 'Tab' for additional parameters)",
+  "action_id": 36,
+  "param1": "txt_id",
+  "param2": "acid_res_level",
+  "param3": "fire_res_level",
+  "param4": "ice_res_level",
+  "param5": "magic_res_level"
+ },
+ "37": {
+  "name": "Quest: Check quest (Press 'Tab' for additional parameters)",
+  "action_id": 37,
+  "param1": "quest_title_check",
+  "param2": "active_quest",
+  "param3": "txt_id_next_quest",
+  "param4": "txt_id_quest_inactive",
+  "param5": "txt_id_in_progress",
+  "param6": "txt_id_completed",
+  "param7": "reward_item_id",
+  "param8": "xy_action"
+ },
+ "9039": {
+  "name": "Passives: Copy/Move (Press 'Tab' for additional parameters)",
+  "action_id": 9039,
+  "param1": "source_coordinates",
+  "param2": "target_coordinates",
+  "param3": "move_copy",
+  "param4": "type"
+ },
+ "40": {
+  "name": "Counter (Press 'Tab' for additional parameters)",
+  "action_id": 40,
+  "minimap_texture": "resources/textures/tex_mm_event",
+  "param1": "target_value",
+  "param2": "target_action",
+  "param3": "counter_id",
+  "param4": "txt_before_action",
+  "param5": "txt_after_action",
+  "param6": "xy_action",
+  "param7": "increment",
+  "param8": "repeatable"
+ },
+ "9041": {
+  "name": "Passives: Sound (Press 'Tab' for additional parameters)",
+  "action_id": 9041,
+  "param1": "sound_id"
+ },
+ "42": {
+  "name": "Trigger: Solve riddle (trigger action) (Press 'Tab' for additional parameters)",
+  "action_id": 42,
+  "minimap_texture": "resources/textures/tex_mm_event",
+  "param1": "riddle_id",
+  "param2": "question",
+  "param3": "answer",
+  "param4": "xy_action1"
+ },
+ "43": {
+  "name": "Trigger: Buy (Press 'Tab' for additional parameters)",
+  "action_id": 43,
+  "minimap_texture": "resources/textures/tex_mm_event",
+  "param1": "txt_id",
+  "param2": "gold_cost",
+  "param3": "required_item_type",
+  "param4": "return_amount",
+  "param5": "xy_action1",
+  "param6": "txt_id_insufficient"
+ },
+ "44": {
+  "name": "Group attribute gain (Press 'Tab' for additional parameters)",
+  "action_id": 44,
+  "minimap_texture": "resources/textures/tex_mm_event",
+  "param1": "txt_id",
+  "param2": "reward_attribute",
+  "param3": "reward_attribute_value",
+  "param4": "reward_attribute_max",
+  "param5": "txt_after_action2"
+ },
+ "45": {
+  "name": "Trigger: Multi-state (Press 'Tab' for additional parameters)",
+  "action_id": 45,
+  "param1": "txt_id",
+  "param2": "sound_id",
+  "param3": "state1_rotation",
+  "param4": "state1_xy_action",
+  "param5": "state2_rotation",
+  "param6": "state2_xy_action",
+  "param7": "state3_rotation",
+  "param8": "state3_xy_action",
+  "param9": "state4_rotation",
+  "param10": "state4_xy_action"
+ },
+ "46": {
+  "name": "Teleport (on item check) (Press 'Tab' for additional parameters)",
+  "action_id": 46,
+  "minimap_texture": "resources/textures/tex_mm_event",
+  "param1": "teleport_location",
+  "param2": "tele_rotation",
+  "param3": "sound_id",
+  "param4": "location_1_xy",
+  "param5": "location_1_item_id",
+  "param6": "location_2_xy",
+  "param7": "location_2_item_id",
+  "param8": "location_3_xy",
+  "param9": "location_3_item_id",
+  "param10": "location_4_xy",
+  "param11": "location_4_item_id"
+ },
+ "9047": {
+  "name": "Passives: Multi-rotation-check (Press 'Tab' for additional parameters)",
+  "action_id": 9047,
+  "param1": "xy_action_success",
+  "param2": "xy_action_fail",
+  "param3": "location_1_xy",
+  "param4": "location_1_rotation",
+  "param5": "location_2_xy",
+  "param6": "location_2_rotation",
+  "param7": "location_3_xy",
+  "param8": "location_3_rotation",
+  "param9": "location_4_xy",
+  "param10": "location_4_rotation",
+  "param11": "location_5_xy",
+  "param12": "location_5_rotation",
+  "param13": "location_6_xy",
+  "param14": "location_6_rotation"
+ },
+ "48": {
+  "name": "Trigger: Talent check (Press 'Tab' for additional parameters)",
+  "action_id": 48,
+  "param1": "talent_name",
+  "param2": "move_from_xy",
+  "param3": "txt_id_insufficient",
+  "param4": "trap_damage_type",
+  "param5": "trap_damage",
+  "param6": "txt_after_trap"
+ },
+ "49": {
+  "name": "Remove Event (Press 'Tab' for additional parameters)",
+  "action_id": 49,
+  "param1": "event_to_remove",
+  "param2": "xy_action"
+ },
+ "50": {
+  "name": "Steal gold (Press 'Tab' for additional parameters)",
+  "action_id": 50,
+  "param1": "sound_id",
+  "param2": "gold_steal",
+  "param3": "txt_id"
+ },
+ "51": {
+  "name": "Endless Dungeon: Exit",
+  "action_id": 51
+ },
+ "52": {
+  "name": "Endless Dungeon: Loot",
+  "action_id": 52
+ },
+ "53": {
+  "name": "Special: Tomb of Terror",
+  "action_id": 53,
+  "param1": "txt_id",
+  "param2": "txt_after_action2"
+ }
+}

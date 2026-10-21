@@ -1,0 +1,377 @@
+{
+ "1": {
+  "block_id": 1,
+  "minimap_texture": "resources/textures/tex_mm_door_open",
+  "name": "City wall with door",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "2": {
+  "block_id": 2,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "City wall",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "3": {
+  "block_id": 3,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "City floor",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "4": {
+  "block_id": 4,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "City columns",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "5": {
+  "block_id": 5,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "City wall (breakable)",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "6": {
+  "block_id": 6,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "City wall (broken)",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "7": {
+  "block_id": 7,
+  "minimap_texture": "resources/textures/tex_mm_lava",
+  "name": "Outside - Lava",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "8": {
+  "block_id": 8,
+  "minimap_texture": "resources/textures/tex_mm_grass",
+  "name": "Outside - Grass",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "9": {
+  "block_id": 9,
+  "minimap_texture": "resources/textures/tex_mm_cobblestone",
+  "name": "Outside - Cobblestone",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "10": {
+  "block_id": 10,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "Dungeon ceiling &floor",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "11": {
+  "block_id": 11,
+  "minimap_texture": "resources/textures/tex_mm_water",
+  "name": "Outside - Water",
+  "obstacle": true,
+  "terrain": "water",
+  "view_blocking": false
+ },
+ "12": {
+  "block_id": 12,
+  "minimap_texture": "resources/textures/tex_mm_dirt",
+  "name": "Outside - Dirt",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "13": {
+  "block_id": 13,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Dungeon wall",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "14": {
+  "block_id": 14,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Dungeon entrance",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "15": {
+  "block_id": 15,
+  "minimap_texture": "resources/textures/tex_mm_door_open",
+  "name": "Dungeon door (open)",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "16": {
+  "block_id": 16,
+  "minimap_texture": "resources/textures/tex_mm_door",
+  "name": "Dungeon door (closed)",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "17": {
+  "block_id": 17,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Dungeon wall (breakable)",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "18": {
+  "block_id": 18,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "Dungeon wall (broken)",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "19": {
+  "block_id": 19,
+  "minimap_texture": "resources/textures/tex_mm_door_open",
+  "name": "City door frame",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "20": {
+  "block_id": 20,
+  "minimap_texture": "resources/textures/tex_mm_door_open",
+  "name": "Dungeon gate (large, rounded)",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "21": {
+  "block_id": 21,
+  "minimap_texture": "resources/textures/tex_mm_mountain",
+  "name": "Outside - Mountain",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "22": {
+  "block_id": 22,
+  "minimap_texture": "resources/textures/tex_mm_lava_mountain",
+  "name": "Outside - Lava Mountain",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "23": {
+  "block_id": 23,
+  "minimap_texture": "resources/textures/tex_mm_forest",
+  "name": "Outside - Forest",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "24": {
+  "block_id": 24,
+  "minimap_texture": "resources/textures/tex_mm_snow",
+  "name": "Outside - Snow",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "25": {
+  "block_id": 25,
+  "minimap_texture": "resources/textures/tex_mm_swamp",
+  "name": "Outside - Swamp",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "26": {
+  "block_id": 26,
+  "minimap_texture": "resources/textures/tex_mm_desert",
+  "name": "Outside - Desert",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "27": {
+  "block_id": 27,
+  "minimap_texture": "resources/textures/tex_mm_snowy_forest",
+  "name": "Outside - Snowy Forest",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "28": {
+  "block_id": 28,
+  "minimap_texture": "resources/textures/tex_mm_desert_palms",
+  "name": "Outside - Desert with palm trees",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "29": {
+  "block_id": 29,
+  "minimap_texture": "resources/textures/tex_mm_desert_mountain",
+  "name": "Outside - Desert mountain",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "30": {
+  "block_id": 30,
+  "minimap_texture": "resources/textures/tex_mm_snow_mountain",
+  "name": "Outside - Snowy mountain",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "31": {
+  "block_id": 31,
+  "minimap_texture": "resources/textures/tex_mm_swamp_mountain",
+  "name": "Outside - Swamp mountain",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "32": {
+  "block_id": 32,
+  "minimap_texture": "resources/textures/tex_mm_forest",
+  "name": "Outside - Tree (on grass)",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "33": {
+  "block_id": 33,
+  "minimap_texture": "resources/textures/tex_mm_water",
+  "name": "Outside - Water (Swimmable)",
+  "obstacle": true,
+  "terrain": "water",
+  "view_blocking": false
+ },
+ "34": {
+  "block_id": 34,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Cyber wall",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "35": {
+  "block_id": 35,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "Cyber ceiling & floor",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "36": {
+  "block_id": 36,
+  "minimap_texture": "resources/textures/tex_mm_trap",
+  "name": "Dungeon - Pit trap",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "37": {
+  "block_id": 37,
+  "name": "Map border (invisible)",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "38": {
+  "block_id": 38,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Fortress wall",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "39": {
+  "block_id": 39,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "Fortress floor",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "40": {
+  "block_id": 40,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "Fortress floor with columns",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "41": {
+  "block_id": 41,
+  "minimap_texture": "resources/textures/tex_mm_door_open",
+  "name": "Fortress door frame",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "42": {
+  "block_id": 42,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Fortress wall (breakable)",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "43": {
+  "block_id": 43,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Fortress wall (broken)",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "44": {
+  "block_id": 44,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Cave wall",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": true
+ },
+ "45": {
+  "block_id": 45,
+  "minimap_texture": "resources/textures/tex_mm_wall",
+  "name": "Cave entrance corner",
+  "obstacle": true,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "46": {
+  "block_id": 46,
+  "minimap_texture": "resources/textures/tex_mm_floor",
+  "name": "Cave floor",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ },
+ "47": {
+  "block_id": 47,
+  "minimap_texture": "resources/textures/tex_mm_door_open",
+  "name": "Dungeon door frame",
+  "obstacle": false,
+  "terrain": "land",
+  "view_blocking": false
+ }
+}

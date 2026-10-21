@@ -1,0 +1,1247 @@
+{
+ "1": {
+  "name": 115,
+  "description": 116,
+  "mana": 1,
+  "scales_with_level": false,
+  "type": [
+   "Arcane",
+   "Clerical",
+   "Nature"
+  ],
+  "level": 1,
+  "category": "Miscellaneous",
+  "value": 2500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "2": {
+  "name": 117,
+  "description": 118,
+  "mana": 1,
+  "scales_with_level": false,
+  "type": [
+   "Arcane",
+   "Nature"
+  ],
+  "level": 1,
+  "category": "Miscellaneous",
+  "value": 2500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "3": {
+  "name": 119,
+  "description": 120,
+  "mana": 2,
+  "scales_with_level": false,
+  "type": [
+   "Arcane",
+   "Nature"
+  ],
+  "level": 1,
+  "category": "Offensive",
+  "value": 2500,
+  "penetrating": false,
+  "dam_min": 8,
+  "dam_max": 8,
+  "dam_type": [
+   "acid",
+   "ice",
+   "fire"
+  ]
+ },
+ "4": {
+  "name": 121,
+  "description": 122,
+  "mana": 1,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 1,
+  "category": "Defensive",
+  "value": 2500,
+  "heal_min": 6,
+  "heal_max": 6
+ },
+ "5": {
+  "name": 123,
+  "description": 124,
+  "mana": 2,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 1,
+  "category": "Offensive",
+  "value": 2500,
+  "penetrating": false,
+  "dam_min": 6,
+  "dam_max": 6,
+  "dam_type": [
+   "physical"
+  ]
+ },
+ "6": {
+  "name": 125,
+  "description": 126,
+  "mana": 1,
+  "scales_with_level": false,
+  "type": [
+   "Arcane",
+   "Clerical",
+   "Nature"
+  ],
+  "level": 1,
+  "category": "Miscellaneous",
+  "value": 2500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "7": {
+  "name": 127,
+  "description": 128,
+  "mana": 3,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 2,
+  "category": "Defensive",
+  "value": 5000,
+  "heal_min": 15,
+  "heal_max": 15
+ },
+ "8": {
+  "name": 129,
+  "description": 130,
+  "mana": 5,
+  "scales_with_level": true,
+  "type": [
+   "Arcane"
+  ],
+  "level": 2,
+  "category": "Offensive",
+  "value": 5000,
+  "penetrating": false,
+  "dam_min": 2,
+  "dam_max": 6,
+  "dam_type": [
+   "magic"
+  ]
+ },
+ "9": {
+  "name": 131,
+  "description": 132,
+  "mana": 2,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 2,
+  "category": "Defensive",
+  "value": 5000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "10": {
+  "name": 133,
+  "description": 134,
+  "mana": 2,
+  "scales_with_level": true,
+  "type": [
+   "Clerical"
+  ],
+  "level": 3,
+  "category": "Offensive",
+  "value": 7500,
+  "penetrating": true,
+  "dam_min": 2,
+  "dam_max": 2,
+  "dam_type": [
+   "magic"
+  ]
+ },
+ "11": {
+  "name": 153,
+  "description": 154,
+  "mana": 3,
+  "scales_with_level": false,
+  "type": [
+   "Arcane",
+   "Nature"
+  ],
+  "level": 3,
+  "category": "Miscellaneous",
+  "value": 7500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "12": {
+  "name": 137,
+  "description": 138,
+  "mana": 4,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 4,
+  "category": "Offensive",
+  "value": 10000,
+  "penetrating": true,
+  "dam_min": 8,
+  "dam_max": 8,
+  "dam_type": [
+   "physical"
+  ]
+ },
+ "13": {
+  "name": 141,
+  "description": 142,
+  "mana": 4,
+  "scales_with_level": false,
+  "type": [
+   "Arcane",
+   "Nature"
+  ],
+  "level": 4,
+  "category": "Offensive",
+  "value": 10000,
+  "penetrating": false,
+  "dam_min": 0,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "14": {
+  "name": 139,
+  "description": 140,
+  "mana": 5,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 3,
+  "category": "Offensive",
+  "value": 7500,
+  "penetrating": true,
+  "dam_min": 10,
+  "dam_max": 10,
+  "dam_type": [
+   "acid"
+  ]
+ },
+ "15": {
+  "name": 143,
+  "description": 144,
+  "mana": 5,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 5,
+  "category": "Offensive",
+  "value": 12500,
+  "penetrating": false,
+  "dam_min": 25,
+  "dam_max": 25,
+  "dam_type": [
+   "acid"
+  ]
+ },
+ "16": {
+  "name": 145,
+  "description": 146,
+  "mana": 4,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 4,
+  "category": "Miscellaneous",
+  "value": 10000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "17": {
+  "name": 147,
+  "description": 148,
+  "mana": 2,
+  "scales_with_level": true,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 5,
+  "category": "Defensive",
+  "value": 12500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "18": {
+  "name": 135,
+  "description": 136,
+  "mana": 4,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 6,
+  "category": "Defensive",
+  "value": 15000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "19": {
+  "name": 157,
+  "description": 158,
+  "mana": 5,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 6,
+  "category": "Offensive",
+  "value": 15000,
+  "penetrating": true,
+  "dam_min": 100,
+  "dam_max": 100,
+  "dam_type": [
+   "fire"
+  ]
+ },
+ "20": {
+  "name": 149,
+  "description": 150,
+  "mana": 2,
+  "scales_with_level": true,
+  "type": [
+   "Clerical"
+  ],
+  "level": 5,
+  "category": "Defensive",
+  "value": 12500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "21": {
+  "name": 161,
+  "description": 162,
+  "mana": 5,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 6,
+  "category": "Miscellaneous",
+  "value": 15000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "22": {
+  "name": 151,
+  "description": 152,
+  "mana": 6,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 5,
+  "category": "Defensive",
+  "value": 12500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "23": {
+  "name": 159,
+  "description": 160,
+  "mana": 5,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 7,
+  "category": "Defensive",
+  "value": 17500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "24": {
+  "name": 155,
+  "description": 156,
+  "mana": 7,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 5,
+  "category": "Miscellaneous",
+  "value": 12500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "25": {
+  "name": 163,
+  "description": 164,
+  "mana": 2,
+  "scales_with_level": true,
+  "type": [
+   "Clerical"
+  ],
+  "level": 8,
+  "category": "Defensive",
+  "value": 20000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "26": {
+  "name": 179,
+  "description": 180,
+  "mana": 5,
+  "scales_with_level": false,
+  "type": [
+   "Arcane",
+   "Nature"
+  ],
+  "level": 8,
+  "category": "Miscellaneous",
+  "value": 20000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "27": {
+  "name": 167,
+  "description": 168,
+  "mana": 6,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 9,
+  "category": "Defensive",
+  "value": 22500,
+  "heal_min": 25,
+  "heal_max": 25
+ },
+ "28": {
+  "name": 169,
+  "description": 170,
+  "mana": 5,
+  "scales_with_level": true,
+  "type": [
+   "Clerical"
+  ],
+  "level": 9,
+  "category": "Defensive",
+  "value": 22500,
+  "heal_min": 2,
+  "heal_max": 12
+ },
+ "29": {
+  "name": 171,
+  "description": 172,
+  "mana": 7,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 10,
+  "category": "Offensive",
+  "value": 25000,
+  "penetrating": false,
+  "dam_min": 35,
+  "dam_max": 35,
+  "dam_type": [
+   "ice"
+  ]
+ },
+ "30": {
+  "name": 191,
+  "description": 192,
+  "mana": 2,
+  "scales_with_level": true,
+  "type": [
+   "Clerical"
+  ],
+  "level": 13,
+  "category": "Defensive",
+  "value": 32500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "31": {
+  "name": 175,
+  "description": 176,
+  "mana": 6,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 11,
+  "category": "Offensive",
+  "value": 27500,
+  "penetrating": false,
+  "dam_min": 0,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "32": {
+  "name": 165,
+  "description": 166,
+  "mana": 8,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 7,
+  "category": "Miscellaneous",
+  "value": 17500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "33": {
+  "name": 177,
+  "description": 178,
+  "mana": 6,
+  "scales_with_level": true,
+  "type": [
+   "Arcane"
+  ],
+  "level": 7,
+  "category": "Defensive",
+  "value": 17500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "34": {
+  "name": 181,
+  "description": 182,
+  "mana": 7,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 12,
+  "category": "Miscellaneous",
+  "value": 30000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "35": {
+  "name": 183,
+  "description": 184,
+  "mana": 8,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 12,
+  "category": "Defensive",
+  "value": 30000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "36": {
+  "name": 185,
+  "description": 186,
+  "mana": 6,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 8,
+  "category": "Miscellaneous",
+  "value": 20000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "37": {
+  "name": 207,
+  "description": 208,
+  "mana": 6,
+  "scales_with_level": true,
+  "type": [
+   "Arcane",
+   "Nature"
+  ],
+  "level": 13,
+  "category": "Offensive",
+  "value": 32500,
+  "penetrating": true,
+  "dam_min": 4,
+  "dam_max": 6,
+  "dam_type": [
+   "magic"
+  ]
+ },
+ "38": {
+  "name": 193,
+  "description": 194,
+  "mana": 8,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 14,
+  "category": "Offensive",
+  "value": 35000,
+  "penetrating": true,
+  "dam_min": 15,
+  "dam_max": 15,
+  "dam_type": [
+   "acid"
+  ]
+ },
+ "39": {
+  "name": 227,
+  "description": 228,
+  "mana": 6,
+  "scales_with_level": true,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 19,
+  "category": "Offensive",
+  "value": 47500,
+  "penetrating": true,
+  "dam_min": 2,
+  "dam_max": 4,
+  "dam_type": [
+   "ice"
+  ]
+ },
+ "40": {
+  "name": 189,
+  "description": 190,
+  "mana": 10,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 12,
+  "category": "Defensive",
+  "value": 30000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "41": {
+  "name": 187,
+  "description": 188,
+  "mana": 8,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 9,
+  "category": "Offensive",
+  "value": 22500,
+  "penetrating": false,
+  "dam_min": 0,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "42": {
+  "name": 195,
+  "description": 196,
+  "mana": 11,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 9,
+  "category": "Miscellaneous",
+  "value": 22500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "43": {
+  "name": 197,
+  "description": 198,
+  "mana": 14,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 10,
+  "category": "Offensive",
+  "value": 25000,
+  "penetrating": false,
+  "dam_min": 0,
+  "dam_max": 0,
+  "dam_type": [
+   "magic"
+  ]
+ },
+ "44": {
+  "name": 219,
+  "description": 220,
+  "mana": 6,
+  "scales_with_level": true,
+  "type": [
+   "Arcane",
+   "Nature"
+  ],
+  "level": 16,
+  "category": "Offensive",
+  "value": 40000,
+  "penetrating": true,
+  "dam_min": 3,
+  "dam_max": 7,
+  "dam_type": [
+   "fire"
+  ]
+ },
+ "45": {
+  "name": 203,
+  "description": 204,
+  "mana": 10,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 17,
+  "category": "Miscellaneous",
+  "value": 42500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "46": {
+  "name": 173,
+  "description": 174,
+  "mana": 15,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 10,
+  "category": "Defensive",
+  "value": 25000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "47": {
+  "name": 199,
+  "description": 200,
+  "mana": 10,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 11,
+  "category": "Miscellaneous",
+  "value": 27500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "48": {
+  "name": 225,
+  "description": 226,
+  "mana": 12,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 18,
+  "category": "Defensive",
+  "value": 45000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "49": {
+  "name": 211,
+  "description": 212,
+  "mana": 12,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 19,
+  "category": "Offensive",
+  "value": 47500,
+  "penetrating": true,
+  "dam_min": 40,
+  "dam_max": 40,
+  "dam_type": [
+   "physical"
+  ]
+ },
+ "50": {
+  "name": 201,
+  "description": 202,
+  "mana": 14,
+  "scales_with_level": true,
+  "type": [
+   "Arcane"
+  ],
+  "level": 12,
+  "category": "Offensive",
+  "value": 30000,
+  "penetrating": true,
+  "dam_min": 5,
+  "dam_max": 5,
+  "dam_type": [
+   "acid",
+   "ice",
+   "fire",
+   "magic"
+  ]
+ },
+ "51": {
+  "name": 205,
+  "description": 206,
+  "mana": 25,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 15,
+  "category": "Offensive",
+  "value": 37500,
+  "penetrating": false,
+  "dam_min": 100,
+  "dam_max": 100,
+  "dam_type": [
+   "fire"
+  ]
+ },
+ "52": {
+  "name": 213,
+  "description": 214,
+  "mana": 20,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 14,
+  "category": "Miscellaneous",
+  "value": 35000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "53": {
+  "name": 217,
+  "description": 218,
+  "mana": 20,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 15,
+  "category": "Offensive",
+  "value": 37500,
+  "penetrating": true,
+  "dam_min": 40,
+  "dam_max": 40,
+  "dam_type": [
+   "ice"
+  ]
+ },
+ "54": {
+  "name": 221,
+  "description": 222,
+  "mana": 19,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 20,
+  "category": "Defensive",
+  "value": 50000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "55": {
+  "name": 223,
+  "description": 224,
+  "mana": 25,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 17,
+  "category": "Miscellaneous",
+  "value": 42500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "56": {
+  "name": 209,
+  "description": 210,
+  "mana": 50,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 16,
+  "category": "Defensive",
+  "value": 40000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "57": {
+  "name": 241,
+  "description": 242,
+  "mana": 20,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 21,
+  "category": "Miscellaneous",
+  "value": 52500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "58": {
+  "name": 229,
+  "description": 230,
+  "mana": 70,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 18,
+  "category": "Miscellaneous",
+  "value": 45000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "59": {
+  "name": 231,
+  "description": 232,
+  "mana": 100,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 19,
+  "category": "Offensive",
+  "value": 47500,
+  "penetrating": false,
+  "dam_min": 250,
+  "dam_max": 250,
+  "dam_type": [
+   "magic"
+  ]
+ },
+ "60": {
+  "name": 233,
+  "description": 234,
+  "mana": 90,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 20,
+  "category": "Offensive",
+  "value": 50000,
+  "penetrating": true,
+  "dam_min": 100,
+  "dam_max": 100,
+  "dam_type": [
+   "magic"
+  ],
+  "heal_min": 50,
+  "heal_max": 50
+ },
+ "61": {
+  "name": 243,
+  "description": 244,
+  "mana": 40,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 22,
+  "category": "Defensive",
+  "value": 55000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "62": {
+  "name": 237,
+  "description": 238,
+  "mana": 38,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 20,
+  "category": "Miscellaneous",
+  "value": 50000
+ },
+ "63": {
+  "name": 239,
+  "description": 240,
+  "mana": 3,
+  "scales_with_level": true,
+  "type": [
+   "Arcane"
+  ],
+  "level": 21,
+  "category": "Offensive",
+  "value": 52500,
+  "penetrating": true,
+  "dam_min": 6,
+  "dam_max": 14,
+  "dam_type": [
+   "physical"
+  ]
+ },
+ "64": {
+  "name": 235,
+  "description": 236,
+  "mana": 78,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 21,
+  "category": "Offensive",
+  "value": 52500,
+  "penetrating": true,
+  "dam_min": 0
+ },
+ "65": {
+  "name": 245,
+  "description": 246,
+  "mana": 60,
+  "scales_with_level": false,
+  "type": [
+   "Clerical",
+   "Nature"
+  ],
+  "level": 23,
+  "category": "Defensive",
+  "value": 57500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "66": {
+  "name": 215,
+  "description": 216,
+  "mana": 50,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 17,
+  "category": "Miscellaneous",
+  "value": 42500,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "67": {
+  "name": 247,
+  "description": 248,
+  "mana": 25,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 22,
+  "category": "Miscellaneous",
+  "value": 55000
+ },
+ "68": {
+  "name": 249,
+  "description": 250,
+  "mana": 45,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 23,
+  "category": "Offensive",
+  "value": 57500,
+  "penetrating": true,
+  "dam_min": 200,
+  "dam_max": 200,
+  "dam_type": [
+   "magic"
+  ]
+ },
+ "69": {
+  "name": 251,
+  "description": 252,
+  "mana": 120,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 24,
+  "category": "Offensive",
+  "value": 60000,
+  "penetrating": true,
+  "dam_min": 0
+ },
+ "70": {
+  "name": 253,
+  "description": 254,
+  "mana": 145,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 24,
+  "category": "Defensive",
+  "value": 60000,
+  "heal_min": 0,
+  "heal_max": 0
+ },
+ "71": {
+  "name": 255,
+  "description": 256,
+  "mana": 120,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 25,
+  "category": "Offensive",
+  "value": 62500,
+  "penetrating": false,
+  "dam_min": 200,
+  "dam_max": 200,
+  "dam_type": [
+   "fire"
+  ]
+ },
+ "72": {
+  "name": 257,
+  "description": 258,
+  "mana": 90,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 24,
+  "category": "Offensive",
+  "value": 60000,
+  "penetrating": true,
+  "dam_min": 100,
+  "dam_max": 100,
+  "dam_type": [
+   "fire"
+  ]
+ },
+ "73": {
+  "name": 259,
+  "description": 260,
+  "mana": 70,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 25,
+  "category": "Offensive",
+  "value": 62500,
+  "penetrating": true,
+  "dam_min": 90,
+  "dam_max": 110,
+  "dam_type": [
+   "acid",
+   "ice",
+   "fire",
+   "magic"
+  ]
+ },
+ "74": {
+  "name": 261,
+  "description": 262,
+  "mana": 45,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 24,
+  "category": "Offensive",
+  "value": 60000,
+  "penetrating": false,
+  "dam_min": 250,
+  "dam_max": 500,
+  "dam_type": [
+   "fire"
+  ]
+ },
+ "75": {
+  "name": 263,
+  "description": 264,
+  "mana": 110,
+  "scales_with_level": false,
+  "type": [
+   "Nature"
+  ],
+  "level": 25,
+  "category": "Offensive",
+  "value": 62500,
+  "penetrating": true,
+  "dam_min": 150,
+  "dam_max": 150,
+  "dam_type": [
+   "acid",
+   "ice",
+   "fire"
+  ]
+ },
+ "76": {
+  "name": 265,
+  "description": 266,
+  "mana": 120,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 25,
+  "category": "Offensive",
+  "value": 62500,
+  "penetrating": true,
+  "dam_min": 200,
+  "dam_max": 200,
+  "dam_type": [
+   "magic"
+  ]
+ },
+ "77": {
+  "name": 267,
+  "description": 268,
+  "mana": 120,
+  "scales_with_level": false,
+  "type": [
+   "Arcane"
+  ],
+  "level": 25,
+  "category": "Offensive",
+  "value": 62500,
+  "penetrating": false,
+  "dam_min": 1000,
+  "dam_max": 1000,
+  "dam_type": [
+   "magic"
+  ]
+ },
+ "78": {
+  "name": 269,
+  "description": 270,
+  "mana": 220,
+  "scales_with_level": false,
+  "type": [
+   "Clerical"
+  ],
+  "level": 25,
+  "category": "Defensive",
+  "value": 62500,
+  "heal_min": 0,
+  "heal_max": 0
+ }
+}

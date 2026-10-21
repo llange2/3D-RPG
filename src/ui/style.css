@@ -1,0 +1,304 @@
+@import "@fontsource/cinzel/500.css";
+@import "@fontsource/cinzel/700.css";
+@import "@fontsource/almendra/400.css";
+@import "@fontsource/almendra/700.css";
+
+:root {
+  --bg: #1b1410;
+  --panel: #2a1e14;
+  --panel-2: #3a2a1b;
+  --gold: #d9a441;
+  --gold-dim: #8f6b2c;
+  --ink: #2b1b0c;
+  --text: #f0e3c8;
+  --good: #7ed07a;
+  --bad: #e8745f;
+  --mana: #5f9be8;
+  --hp: #d6544a;
+  --font-head: "Cinzel", Georgia, serif;
+  --font-body: "Almendra", Georgia, serif;
+  color-scheme: dark;
+}
+
+html, body { margin: 0; height: 100%; background: #0b0b10; overflow: hidden; font-family: var(--font-body); color: var(--text); }
+button { font-family: inherit; }
+
+/* the game's own pointer (src/ui/cursor.ts); the system pointer stays until its picture has loaded */
+html.custom-cursor, html.custom-cursor * { cursor: none !important; }
+#game-cursor {
+  --size: clamp(36px, 6vh, 72px);
+  position: fixed; left: 0; top: 0; width: var(--size); height: var(--size); z-index: 2147483647; pointer-events: none; user-select: none;
+  /* the tip of the arrow is at about 6% of the picture */
+  margin: calc(var(--size) * -0.06) 0 0 calc(var(--size) * -0.06);
+  opacity: 0; filter: drop-shadow(0 1px 2px #000a);
+}
+#game-cursor.on { opacity: 1; }
+
+#ui { position: fixed; inset: 0; pointer-events: none; user-select: none; }
+#ui .hud-hide { display: none !important; }
+
+/* ---------- party cards ---------- */
+.party-bar { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; }
+.card {
+  width: 156px; padding: 6px; background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 2px solid var(--gold-dim); border-radius: 6px; box-shadow: 0 2px 10px #000a; cursor: pointer; position: relative;
+}
+.card:hover { border-color: var(--gold); }
+.party-bar .cards { display: flex; gap: 8px; }
+/* the mascot is the fifth portrait; the crow's card glows and moves while there is danger */
+.card.mascot-card { width: 128px; align-self: flex-start; }
+.card.mascot-card.alarm { border-color: #ff8a3a; box-shadow: 0 0 12px #ff7a2aaa; }
+.card video.portrait { width: 52px; height: 52px; border: 1px solid var(--gold-dim); border-radius: 4px; object-fit: cover; background: #000; }
+/* the hero whose turn it is in a melee round: a glowing green frame, a little thicker than the mascot's (2px border + 2px ring) */
+.card.active { border-color: #6dff8a; box-shadow: 0 0 0 2px #3fe05a, 0 0 16px 4px #3fe05acc; }
+.card.down { filter: grayscale(0.85) brightness(0.7); }
+.card .row { display: flex; gap: 6px; align-items: center; }
+.card img.portrait { width: 52px; height: 52px; border: 1px solid var(--gold-dim); border-radius: 4px; object-fit: cover; background: #000; }
+.card .name { font-family: var(--font-head); font-size: 13px; font-weight: 700; color: var(--gold); line-height: 1.1; }
+.card .cls { font-size: 12px; opacity: 0.85; }
+.bar { height: 7px; background: #120c08; border: 1px solid #000; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+.bar > i { display: block; height: 100%; }
+.bar.hp > i { background: linear-gradient(180deg, #f1796d, var(--hp)); }
+.bar.sp > i { background: linear-gradient(180deg, #8bb9f4, var(--mana)); }
+.card .cond { position: absolute; right: 4px; top: 3px; font-size: 11px; padding: 0 4px; border-radius: 3px; background: #000a; color: var(--bad); }
+/* pictures over a portrait (spell effects, hits): they pop in and fade out, the old game faded them over three seconds */
+.fx { position: fixed; pointer-events: none; z-index: 5; opacity: 0; animation: fx-fade 2.6s linear forwards; filter: drop-shadow(0 0 6px #000a); }
+@keyframes fx-fade { 0% { opacity: 0; transform: scale(0.8); } 6% { opacity: 1; transform: scale(1.08); } 14% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1); } }
+.quest-list { margin-top: 6px; padding: 6px 8px; background: #1b1410cc; border: 1px solid var(--gold-dim); border-radius: 6px; font-size: 13px; line-height: 1.3; max-height: 34vh; overflow: hidden; cursor: pointer; pointer-events: auto; }
+.quest-list:hover { border-color: var(--gold); }
+.quest-head { font-family: var(--font-head); font-size: 14px; color: var(--gold); margin-bottom: 3px; }
+.quest { margin: 3px 0; padding-left: 8px; border-left: 2px solid var(--gold-dim); }
+.quest-list .small { opacity: 0.7; }
+/* active resistance and levitation, in the top right corner to the left of the map (right-panel is 176 px wide at 10 px) */
+.status-icons { position: absolute; right: 196px; top: 10px; display: flex; flex-direction: row-reverse; flex-wrap: wrap; gap: 6px; max-width: 440px; pointer-events: none; }
+.status-icons img { width: 80px; height: 80px; filter: drop-shadow(0 1px 3px #000c); pointer-events: auto; }
+.hitflash { position: absolute; inset: 0; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity 0.4s; }
+.hitflash.on { opacity: 0.55; transition: none; }
+
+/* ---------- top info ---------- */
+.info { position: absolute; left: 10px; top: 10px; padding: 6px 10px; background: #1b1410cc; border: 1px solid var(--gold-dim); border-radius: 6px; font-size: 14px; line-height: 1.35; pointer-events: none; max-width: 280px; }
+.info .place { font-family: var(--font-head); font-size: 15px; color: var(--gold); font-weight: 700; }
+.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; gap: 22px; padding: 4px 16px; background: #1b1410cc; border: 1px solid var(--gold-dim); border-radius: 18px; font-family: var(--font-head); font-size: 16px; pointer-events: none; }
+.fps { position: absolute; left: 50%; top: 48px; transform: translateX(-50%); padding: 1px 10px; background: #1b1410aa; border-radius: 10px; font-family: var(--font-body); font-size: 13px; color: var(--text); opacity: 0.9; pointer-events: none; }
+.fps:empty { display: none; }
+.compass span { opacity: 0.45; width: 18px; text-align: center; }
+.compass span.on { opacity: 1; color: var(--gold); font-weight: 700; text-shadow: 0 0 8px #ffcf5a88; }
+.right-panel { position: absolute; right: 10px; top: 10px; width: 176px; }
+.right-panel canvas.eye { border-color: var(--gold); box-shadow: 0 0 12px #ffd54acc; }
+.right-panel canvas { display: block; width: 176px; height: 176px; border: 2px solid var(--gold-dim); border-radius: 6px; background: #0a0705; box-shadow: 0 2px 10px #000a; }
+.stats { margin-top: 6px; padding: 6px 8px; background: #1b1410cc; border: 1px solid var(--gold-dim); border-radius: 6px; font-size: 14px; line-height: 1.5; }
+.stats b { color: var(--gold); font-weight: 400; }
+
+/* ---------- message log ---------- */
+.log { position: absolute; left: 12px; bottom: 112px; width: min(520px, 46vw); display: flex; flex-direction: column; gap: 2px; pointer-events: none; font-size: 15px; }
+.log div { padding: 2px 8px; background: #1b1410bb; border-left: 3px solid var(--gold-dim); border-radius: 3px; text-shadow: 0 1px 2px #000; animation: logfade 12s forwards; }
+.log div.good { border-left-color: var(--good); }
+.log div.bad { border-left-color: var(--bad); }
+.log div.combat { border-left-color: #e8a85f; }
+.log div.loot { border-left-color: var(--gold); color: #ffe9a8; }
+@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------- action buttons ---------- */
+.actions { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
+.btn {
+  font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.03em;
+  padding: 7px 14px; background: linear-gradient(180deg, #4a3622, #2f2113); border: 2px solid var(--gold-dim); border-radius: 6px; cursor: pointer;
+}
+.btn:hover:not(:disabled) { border-color: var(--gold); color: #fff; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.primary { background: linear-gradient(180deg, #8a6420, #5a3f12); border-color: var(--gold); }
+.btn small { font-weight: 400; opacity: 0.7; font-family: var(--font-body); }
+
+/* ---------- modal ---------- */
+.modal-back { position: absolute; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; pointer-events: auto; z-index: 30; }
+.parchment {
+  /* nine-slice (scroll.webp is 512x364): the rolled edges keep a fixed width however wide the text makes the box, so the text
+     always sits on the paper. A stretched background scaled the rolls with the box and let the text run onto them. */
+  --roll-l: 60px; --roll-r: 82px; --edge-t: 34px; --edge-b: 42px;
+  position: relative; box-sizing: border-box; color: var(--ink); max-width: min(960px, 94vw); max-height: 90vh; overflow: auto;
+  /* no fallback colour: the rolled edges of the scroll are transparent and must show the game behind them */
+  border: solid transparent; border-width: var(--edge-t) var(--roll-r) var(--edge-b) var(--roll-l);
+  border-image: url("/assets/ui/scroll.webp") 42 106 52 76 fill / 1 / 0 stretch;
+  padding: 10px 18px 12px; filter: drop-shadow(0 8px 24px #000c);
+  font-size: 18px; line-height: 1.35;
+}
+.parchment h2 { font-family: var(--font-head); margin: 0 0 8px; font-size: 24px; color: #4a2a08; text-align: center; letter-spacing: 0.03em; }
+.parchment p { margin: 8px 0; white-space: pre-wrap; }
+.parchment .buttons { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.parchment .btn { color: #fbe9c5; }
+.parchment .list { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; min-width: 360px; }
+.parchment .opt {
+  display: flex; justify-content: space-between; gap: 18px; align-items: center; padding: 5px 12px; background: #5a3f1a22; border: 1px solid #5a3f1a66; border-radius: 4px; cursor: pointer;
+}
+.parchment .opt:hover:not(.off) { background: #5a3f1a44; border-color: #5a3f1a; }
+.parchment .opt.off { opacity: 0.45; cursor: default; }
+.parchment .opt.sep { margin-top: 12px; border-style: dashed; }
+.parchment .opt .note { opacity: 0.75; font-size: 15px; }
+.parchment .gold { color: #7a4b00; font-weight: 700; }
+.parchment .small { font-size: 15px; opacity: 0.85; }
+
+/* ---------- panels (inventory, character) ---------- */
+.panel {
+  position: relative; box-sizing: border-box; width: min(1040px, 96vw); max-height: 92vh; overflow: auto; padding: 14px 16px 16px;
+  background: linear-gradient(180deg, #3a2a1b, #1f160e); border: 3px solid var(--gold-dim); border-radius: 10px; box-shadow: 0 10px 40px #000; font-size: 16px;
+}
+.panel h2 { font-family: var(--font-head); font-size: 22px; margin: 0 0 8px; color: var(--gold); }
+.panel .close { position: absolute; right: 10px; top: 8px; }
+
+/* ---------- town services: fixed head, whole picture on the left, scrolling content on the right ---------- */
+.panel.service { display: flex; flex-direction: column; overflow: hidden; width: min(1180px, 96vw); }
+.service .svc-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.service .svc-head h2 { margin: 0; }
+.service .svc-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 16px; }
+.service .svc-art { min-height: 0; display: flex; flex-direction: column; gap: 8px; align-self: start; }
+/* contain: the picture is shown whole, never cropped; its height follows the width and never exceeds the window */
+.service .svc-art img { display: block; width: 100%; height: auto; max-height: calc(92vh - 130px); object-fit: contain; background: #0c0805; border: 2px solid var(--gold-dim); border-radius: 8px; }
+.service .svc-main { min-height: 0; overflow-y: auto; padding-right: 6px; scrollbar-color: var(--gold-dim) transparent; }
+.service .svc-main > :first-child { margin-top: 0; }
+@media (max-width: 860px), (max-aspect-ratio: 1/1) {
+  /* narrow or tall window: stack picture and content, the whole body scrolls under the fixed head */
+  .service .svc-body { display: block; overflow-y: auto; scrollbar-color: var(--gold-dim) transparent; }
+  .service .svc-art img { max-height: 34vh; margin-bottom: 8px; }
+  .service .svc-main { overflow: visible; padding-right: 0; }
+}
+.tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.tab { padding: 4px 12px; border: 2px solid var(--gold-dim); border-radius: 6px 6px 0 0; background: #2a1e14; cursor: pointer; font-family: var(--font-head); font-size: 14px; }
+.tab.on { background: #5a3f12; border-color: var(--gold); }
+.cols { display: grid; grid-template-columns: 300px 1fr; gap: 14px; }
+@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } .parchment { --roll-l: 40px; --roll-r: 54px; --edge-t: 26px; --edge-b: 32px; padding: 8px 12px 10px; } }
+.sheet { background: #00000033; border: 1px solid var(--gold-dim); border-radius: 6px; padding: 8px 10px; }
+.sheet .big { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
+.sheet img.portrait { width: 84px; height: 84px; object-fit: cover; border: 2px solid var(--gold-dim); border-radius: 6px; background: #000; }
+.attrs { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; font-size: 15px; margin-top: 6px; }
+.attrs .v { text-align: right; color: var(--gold); }
+.attrs .v.cond-ok { color: var(--good); }
+.attrs .v.cond-warn { color: #f0b84a; }
+.attrs .v.cond-bad { color: var(--bad); }
+.attrs .v.cond-down { color: #7aa8ff; }
+.attrs .v.cond-bless { color: #b9b9b9; }
+.attrs .v[title]:not([title=""]) { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
+.attrs .v.up { color: var(--good); }
+.attrs .v.down { color: var(--bad); }
+/* ---------- the big map: picture left, legend right, a pointer tip over the picture ---------- */
+.panel.map-panel { width: min(1000px, 96vw); }
+.map-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.map-tools .btn { min-width: 40px; }
+.map-body { display: flex; gap: 16px; align-items: flex-start; }
+/* square, as big as the window leaves room for (the heading takes about 110 px) */
+.map-body canvas { flex: none; --side: min(640px, calc(88vh - 110px), 62vw); width: var(--side); height: var(--side); }
+.legend { flex: 1 1 200px; min-width: 170px; padding: 8px 10px; background: #00000033; border: 1px solid var(--gold-dim); border-radius: 6px; }
+.legend-head { font-family: var(--font-head); font-size: 15px; color: var(--gold); margin-bottom: 4px; }
+.legend-row { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 3px 0; }
+.legend-row i { flex: none; width: 22px; height: 22px; border: 1px solid #000; border-radius: 3px; }
+.legend .small { margin-top: 8px; font-size: 13px; opacity: 0.75; }
+.map-tip { position: absolute; z-index: 2; pointer-events: none; padding: 3px 9px; background: #000d; border: 1px solid var(--gold); border-radius: 6px; font-size: 14px; white-space: nowrap; }
+@media (max-width: 860px) { .map-body { flex-direction: column; } }
+/* ---------- the inn's book of heroes ---------- */
+.roster { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.roster h3 { font-family: var(--font-head); font-size: 15px; color: var(--gold); margin: 12px 0 4px; }
+.roster h3:first-child { margin-top: 0; }
+.roster .member { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px; margin-bottom: 6px; border: 1px solid #5a4020; border-radius: 6px; background: #0000002e; }
+.roster .member img.portrait { width: 54px; height: 54px; object-fit: cover; border: 2px solid var(--gold-dim); border-radius: 6px; background: #000; }
+.roster .member .who { flex: 1 1 130px; min-width: 0; }
+.roster .member .nm { font-family: var(--font-head); font-size: 15px; color: var(--gold); }
+.roster .member .row-btns { margin-top: 0; }
+.roster .member .btn { padding: 4px 9px; font-size: 13px; }
+.roster .classes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin-bottom: 6px; }
+.roster .classes .btn { padding: 5px 2px; font-size: 12px; }
+.roster .classes .btn.off { opacity: 0.35; cursor: default; }
+.roster .picker { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.roster .picker img.portrait { width: 84px; height: 84px; object-fit: cover; border: 2px solid var(--gold-dim); border-radius: 6px; background: #000; flex: none; }
+.roster .namerow { display: flex; gap: 8px; align-items: center; }
+.roster .namerow input { flex: 1 1 auto; min-width: 0; font: inherit; font-size: 16px; padding: 5px 9px; border-radius: 5px; border: 2px solid var(--gold-dim); background: #0c0805; color: var(--text); }
+.roster .waiting { max-height: 150px; overflow-y: auto; scrollbar-color: var(--gold-dim) transparent; }
+@media (max-width: 860px) { .roster { grid-template-columns: 1fr; } }
+/* ---------- the character screen: tabs for the heroes, the party's perks and the mascot ---------- */
+.charscreen .tabs { flex-wrap: wrap; margin-bottom: 8px; }
+.charscreen .cols { grid-template-columns: max-content minmax(0, 1fr); gap: 12px; }
+.charscreen .sheet .big img.portrait { width: 72px; height: 72px; }
+.charscreen .attrs { gap: 0 10px; font-size: 14.5px; line-height: 1.28; }
+/* a label such as "Ice resistance" never breaks into two lines; the sheet column is wide enough for the longest one */
+.charscreen .attrs > div { white-space: nowrap; }
+/* equipment and backpack side by side, the item below them: at 720 px the details and their buttons stay in view */
+.gear { min-width: 0; }
+.gear-top { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+.charscreen .equip-grid { grid-template-columns: repeat(3, 54px); gap: 5px; justify-content: start; margin: 4px 0 0; }
+.charscreen .slots { grid-template-columns: repeat(5, 54px); gap: 5px; margin-top: 4px; }
+.charscreen .slot { width: 54px; height: 54px; }
+.charscreen .slot img { width: 46px; height: 46px; }
+.charscreen .tooltip { min-height: 70px; margin-top: 8px; padding: 6px 10px; }
+.charscreen .row-btns { margin-top: 6px; }
+.perks-view { display: flex; flex-direction: column; gap: 8px; }
+.party-stats { display: grid; grid-template-columns: auto auto; gap: 2px 18px; justify-content: start; font-size: 17px; padding-bottom: 6px; border-bottom: 1px solid var(--gold-dim); }
+.party-stats .v { color: var(--gold); }
+.perk-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; max-height: min(60vh, 520px); overflow-y: auto; scrollbar-color: var(--gold-dim) transparent; padding-right: 6px; }
+.perk-col .perks-head { font-family: var(--font-head); font-size: 16px; color: var(--gold); margin-bottom: 4px; border-bottom: 1px solid var(--gold-dim); }
+@media (max-width: 860px) { .perk-cols { grid-template-columns: 1fr; } }
+.mascot-view { display: flex; flex-direction: column; gap: 10px; }
+.mascot-head { display: flex; gap: 16px; align-items: center; }
+.mascot-pic { width: 150px; height: 150px; object-fit: contain; flex: none; background: #000; border: 2px solid var(--gold-dim); border-radius: 8px; }
+.mascot-name { font-family: var(--font-head); font-size: 22px; color: var(--gold); margin-bottom: 4px; }
+.perks { margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--gold-dim); }
+.perks-head { font-family: var(--font-head); font-size: 14px; color: var(--gold); margin-bottom: 3px; }
+.perk { margin: 3px 0 5px; }
+.perk-name { font-size: 15px; }
+.perks .small { font-size: 13px; opacity: 0.75; }
+.slots { display: grid; grid-template-columns: repeat(5, 58px); gap: 6px; }
+.slot {
+  width: 58px; height: 58px; box-sizing: border-box; background: #0c0805; border: 2px solid #5a4020; border-radius: 6px; position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.slot:hover { border-color: var(--gold); }
+.slot.sel { border-color: #ffe08a; box-shadow: 0 0 10px #ffcf5a99; }
+.slot img { width: 50px; height: 50px; object-fit: contain; image-rendering: auto; }
+.slot .label { position: absolute; left: 2px; bottom: 0; font-size: 10px; opacity: 0.7; pointer-events: none; text-shadow: 0 1px 1px #000; }
+.slot.ok { border-color: var(--good); }
+.equip-grid { display: grid; grid-template-columns: repeat(3, 58px); gap: 6px; justify-content: center; margin: 8px 0; }
+.tooltip { margin-top: 8px; min-height: 90px; padding: 8px 10px; background: #00000044; border: 1px solid var(--gold-dim); border-radius: 6px; font-size: 15px; white-space: pre-wrap; }
+.tooltip .t { font-family: var(--font-head); color: var(--gold); font-size: 16px; margin-bottom: 2px; }
+.tooltip .hint { font-style: italic; opacity: 0.8; margin-bottom: 2px; }
+.tooltip .delta.up { color: var(--good); }
+.tooltip .delta.down { color: var(--bad); }
+.row-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+/* ---------- title screen ---------- */
+.title {
+  position: absolute; inset: 0; pointer-events: auto; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+  background: radial-gradient(ellipse at center, #00000033 0%, #000000dd 85%), url("/assets/ui/title.webp") center / cover no-repeat, #05060a; z-index: 20;
+}
+.title h1 { font-family: var(--font-head); font-size: clamp(34px, 7vw, 76px); margin: 0; color: var(--gold); letter-spacing: 0.06em; text-shadow: 0 4px 24px #000, 0 0 30px #d9a44166; text-align: center; }
+.title .sub { opacity: 0.85; margin-top: -8px; font-size: 18px; }
+.title .seedbox { display: flex; flex-direction: column; gap: 8px; background: #1b1410cc; padding: 8px 12px; border: 1px solid var(--gold-dim); border-radius: 8px; }
+.title .seedrow { display: flex; gap: 8px; align-items: center; }
+/* the four sizes of the world: a row of switches, the one that is on glows like the tabs */
+.title .sizerow { display: flex; gap: 6px; justify-content: stretch; }
+.title .sizerow .btn { flex: 1; }
+.title .sizerow .btn.on { background: #5a3f12; border-color: var(--gold); color: #fff3d0; }
+.title input { font: inherit; font-size: 18px; padding: 6px 10px; border-radius: 5px; border: 2px solid var(--gold-dim); background: #0c0805; color: var(--text); min-width: 190px; }
+.title .menu { display: flex; flex-direction: column; gap: 8px; min-width: 260px; }
+/* the saves of "Load game": one button per save, label left and summary right; long lists scroll inside the menu */
+.title .list { display: flex; flex-direction: column; gap: 6px; min-width: min(520px, 90vw); max-height: 46vh; overflow-y: auto; }
+.title .opt { display: flex; justify-content: space-between; align-items: center; gap: 18px; text-align: left; }
+.title .opt.sep { margin-top: 10px; }
+.title .opt .note { font-family: var(--font-body); font-weight: 400; font-size: 14px; opacity: 0.8; text-align: right; }
+.title .credit { position: absolute; bottom: 10px; font-size: 13px; opacity: 0.6; text-align: center; padding: 0 12px; }
+
+/* ---------- loading screen ---------- */
+/* the old game's picture fills the screen, its percentage sits at 86 % of the height (action_handler.py, toggle_loading_screen) */
+.loading { position: absolute; inset: 0; display: none; background: #05060a; pointer-events: auto; z-index: 40; opacity: 1; transition: opacity 0.25s; }
+.loading.on { display: block; }
+.loading.out { opacity: 0; pointer-events: none; }
+.loading img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.loading .percent {
+  position: absolute; left: 0; right: 0; top: 86%; transform: translateY(-50%); text-align: center;
+  font-family: var(--font-head); font-weight: 700; font-size: clamp(28px, 6vh, 64px); letter-spacing: 0.08em; color: var(--gold);
+  text-shadow: 0 0 6px #000, 0 2px 16px #000, 0 0 30px #000;
+}
+
+/* ---------- misc ---------- */
+.toast { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); padding: 10px 22px; background: #000b; border: 2px solid var(--gold); border-radius: 10px; font-family: var(--font-head); font-size: 22px; color: var(--gold); pointer-events: none; animation: toastfade 2.4s forwards; text-align: center; }
+@keyframes toastfade { 0% { opacity: 0; transform: translate(-50%, 8px); } 12%, 75% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+.focusbar { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); min-width: 200px; text-align: center; padding: 4px 14px; background: #1b1410cc; border: 1px solid var(--bad); border-radius: 8px; font-family: var(--font-head); font-size: 15px; pointer-events: none; }
+.focusbar .bar { margin: 4px 0 0; }
+.dim-overlay { position: absolute; inset: 0; background: #7a0000; opacity: 0; pointer-events: none; transition: opacity 0.9s; }
+.dim-overlay.on { opacity: 0.45; transition: none; }
+#view { image-rendering: auto; }

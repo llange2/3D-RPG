@@ -1,0 +1,214 @@
+{
+ "ARMOR_TYPES": [
+  "robe",
+  "helmet",
+  "shield",
+  "tiara",
+  "boots",
+  "belt",
+  "padded_armor",
+  "chain_mail",
+  "splint_mail",
+  "leather_armor",
+  "ring_mail",
+  "plate_armor",
+  "scale_armor"
+ ],
+ "BODY_ARMOR_TYPES": [
+  "robe",
+  "padded_armor",
+  "chain_mail",
+  "splint_mail",
+  "leather_armor",
+  "ring_mail",
+  "plate_armor",
+  "scale_armor"
+ ],
+ "CHARACTER_CONDITIONS": {
+  "Rotten": false,
+  "Dead": false,
+  "Petrified": false,
+  "Unconscious": false,
+  "Paralyzed": false,
+  "Sleeping": false,
+  "Poisoned": true,
+  "Diseased": true,
+  "Crazy": true,
+  "Cursed": true,
+  "Weak": true,
+  "Drunk": true,
+  "Lovestruck": true,
+  "Blessed": true,
+  "Healthy": true
+ },
+ "CHARACTER_FEMALE": [
+  "character02",
+  "character03",
+  "character08",
+  "character10",
+  "character12",
+  "character14",
+  "character16",
+  "character18",
+  "character20",
+  "character22"
+ ],
+ "CHARACTER_MALE": [
+  "character01",
+  "character04",
+  "character05",
+  "character06",
+  "character07",
+  "character09",
+  "character11",
+  "character13",
+  "character15",
+  "character17",
+  "character19",
+  "character21"
+ ],
+ "CHARACTER_XP": {
+  "Knight": 1500,
+  "Paladin": 2000,
+  "Wizard": 2000,
+  "Thief": 1000,
+  "Barbarian": 1500,
+  "Archer": 2000,
+  "Cleric": 1500,
+  "Ninja": 1500,
+  "Druid": 1500,
+  "Ranger": 2000
+ },
+ "MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION": 20,
+ "MIN_PARTY_SIZE": 4,
+ "MAX_AVATARS": 22,
+ "MAX_ITEMS": 20,
+ "RANGED_WEAPON_TYPES": [
+  "crossbow",
+  "long bow",
+  "short bow",
+  "sling"
+ ],
+ "STANCE_MODIFIER": 0.25,
+ "WEAPON_TYPES_1H": [
+  "broad sword",
+  "club",
+  "dagger",
+  "flail",
+  "katana",
+  "long sword",
+  "mace",
+  "rapier",
+  "scimitar",
+  "short sword",
+  "spear"
+ ],
+ "WEAPON_TYPES_2H": [
+  "bardiche",
+  "battle axe",
+  "great axe",
+  "halberd",
+  "hammer",
+  "staff",
+  "trident"
+ ],
+ "ANIMATION_DISTANCE": 7,
+ "DRAW_DISTANCE_CLOSE": 10,
+ "DRAW_DISTANCE_FAR": 18,
+ "LOAD_ENTITY_BATCH_SIZE": 3,
+ "LOAD_ENTITY_BATCH_SIZE_MIN": 1,
+ "LOAD_ENTITY_BATCH_SIZE_MAX": 12,
+ "LOAD_ENTITY_BATCH_TARGET_MS": 8.0,
+ "MAP_GEOMETRY_VERSION": 0,
+ "MAX_ENTITIES": 1500,
+ "MAX_START_ENTITIES": 500,
+ "MEMORY_CLEANUP_INTERVAL": 60,
+ "MEMORY_EXPIRATION_TIME": 120,
+ "NO_URSINA_ACTORS": false,
+ "OCCLUSION_DISTANCE_MARGIN": 1.0,
+ "OCCLUSION_TOLERANCE": 1.0,
+ "ROTATION_INCREMENT": 2.0,
+ "ROTATION_UPDATE": 0.03,
+ "ANIMATION": {
+  "air_squat": 180,
+  "Agree_Gesture": 180,
+  "Alert": 180,
+  "Archery_Shot_1": 180,
+  "Axe_Spin_Attack": 180,
+  "Dead": 180,
+  "Gentlemans_Bow": 180,
+  "Idle": 180,
+  "Idle_3": 180,
+  "Idle_9": 180,
+  "Idle_11": 180,
+  "Idle_13": 135,
+  "Left_Slash": 180,
+  "Lower_Weapon_Look_Raise": 180,
+  "Stand_and_Chat": 135,
+  "Sweeping_Kick1": 180,
+  "Unsteady_Walk": 180,
+  "Walking": 180
+ },
+ "MONSTER_ACTION_RADIUS": 7,
+ "MUSIC_NAME": {
+  "1": {
+   "name": "Town",
+   "music_id": 1
+  },
+  "2": {
+   "name": "Outside",
+   "music_id": 2
+  },
+  "3": {
+   "name": "Dungeon",
+   "music_id": 3
+  },
+  "4": {
+   "name": "Castle",
+   "music_id": 4
+  },
+  "5": {
+   "name": "Cyber",
+   "music_id": 5
+  },
+  "6": {
+   "name": "Cave",
+   "music_id": 6
+  }
+ },
+ "SOUND_NAME": {
+  "1": {
+   "name": "Fountain",
+   "sound_id": 1
+  },
+  "2": {
+   "name": "Birds chirping",
+   "sound_id": 2
+  },
+  "3": {
+   "name": "Portal",
+   "sound_id": 3
+  },
+  "4": {
+   "name": "Dungeon Ambience",
+   "sound_id": 4
+  },
+  "5": {
+   "name": "Wind Ambience",
+   "sound_id": 5
+  },
+  "6": {
+   "name": "Cricket chirping",
+   "sound_id": 6
+  },
+  "7": {
+   "name": "Horror Ambience",
+   "sound_id": 7
+  },
+  "8": {
+   "name": "Crazy laughter ambience",
+   "sound_id": 8
+  }
+ },
+ "MONSTER_CAN_RANGE_ATTACK_THROUGH_OTHERS": true
+}

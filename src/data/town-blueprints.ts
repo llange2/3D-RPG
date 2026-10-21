@@ -1,0 +1,168 @@
+/**
+ * Ground plans of the five hand-built towns of the old game, one per tier of the generated world. Written by
+ * `tools/export/export-town-blueprints.ts` from the campaign maps: do not edit by hand.
+ *
+ * `rows`: `#` wall, `.` street, a space is nothing. The sites are cells of the street: shops (the old maps' service cells), the people who sell
+ * talents (`talent` is the id in TALENTS), chests (`item` the old object), ways out, and decoration (fountains, statues, gravestones).
+ */
+export interface TownBlueprint {
+  id: string;
+  /** The old map it comes from. */
+  name: string;
+  tier: number;
+  rows: readonly string[];
+  services: readonly (readonly [number, number])[];
+  exits: readonly (readonly [number, number])[];
+  talents: readonly { x: number; y: number; talent: string }[];
+  chests: readonly { x: number; y: number; item: number }[];
+  decor: readonly { x: number; y: number; item: number }[];
+}
+
+export const TOWN_BLUEPRINTS: readonly TownBlueprint[] = [
+  {
+    id: "fountain_head",
+    name: "Fountain Head",
+    tier: 1,
+    rows: [
+      "  ### ##########",
+      " #...#..........#",
+      " #...####.###...#",
+      " #..........####",
+      " #.#####...# #..#",
+      " #..#  #...###..#",
+      " #.#  ###.##.##.#",
+      " #.###.##.#...#.#",
+      " #.#.#..#.......#",
+      " #.#.#.#..#####.#",
+      " #.......##...##",
+      "#..............#",
+      " #.......##...#",
+      " #.#.#.#...###",
+      " ###.###.....#",
+      " # #.#  #####",
+      " ###.#",
+      "   ###",
+    ],
+    services: [[3,5],[12,6],[6,7],[4,8],[14,11],[2,13],[6,13]],
+    exits: [[1,11]],
+    talents: [{"x":7,"y":8,"talent":"guild_level_1"},{"x":15,"y":9,"talent":"talent_cartographer"}],
+    chests: [{"x":15,"y":1,"item":1},{"x":15,"y":2,"item":1},{"x":4,"y":16,"item":1}],
+    decor: [{"x":3,"y":2,"item":2},{"x":11,"y":7,"item":2},{"x":13,"y":7,"item":2},{"x":3,"y":10,"item":2},{"x":5,"y":10,"item":2},{"x":7,"y":10,"item":2},{"x":3,"y":12,"item":2},{"x":5,"y":12,"item":2},{"x":7,"y":12,"item":2}],
+  },
+  {
+    id: "baywatch",
+    name: "Baywatch",
+    tier: 2,
+    rows: [
+      "  #### ######",
+      " #....#......##",
+      " #.#..##.##.##.#",
+      " #.####...#.##.#",
+      " #....#...#.#...#",
+      " #.#..#...#.#...#",
+      " #.### ####.#...#",
+      " #.########.##.#",
+      " #..........##.#",
+      " #.#............#",
+      " #.###.####.....#",
+      "#....#.##.......#",
+      "#....#.####.....#",
+      "#....#...........#",
+      " ########.#.#.#.#",
+      "  #.......#.#.#.#",
+      "   ####### # # #",
+    ],
+    services: [[14,2],[9,11],[3,15],[11,15],[13,15],[15,15]],
+    exits: [[16,13]],
+    talents: [{"x":5,"y":2,"talent":"talent_pathfinder"},{"x":5,"y":4,"talent":"talent_cave_explorer"},{"x":5,"y":5,"talent":"guild_level_2"}],
+    chests: [],
+    decor: [{"x":13,"y":11,"item":89}],
+  },
+  {
+    id: "wildabar",
+    name: "Wildabar",
+    tier: 3,
+    rows: [
+      "     ###",
+      " #####.##########",
+      " ##.....#####..##",
+      " ####...#.#.#.###",
+      " ##.............#",
+      " ####.....#####.#",
+      " #..##.#.##...###",
+      "##...#.#.......##",
+      "#...##.####...###",
+      "##........#####.#",
+      " #.###.##.......#",
+      " #.#.#.#..##.####",
+      " ###.#...###....#",
+      " #...###..#..####",
+      " #.......##.##..#",
+      " #....##.#......#",
+      " ################",
+    ],
+    services: [[3,2],[14,2],[9,3],[11,3],[3,4],[14,7]],
+    exits: [[6,1]],
+    talents: [{"x":15,"y":9,"talent":"guild_level_3"},{"x":15,"y":12,"talent":"talent_seafarer"},{"x":15,"y":14,"talent":"talent_body_builder"},{"x":15,"y":15,"talent":"talent_arms_master"}],
+    chests: [{"x":2,"y":6,"item":13},{"x":3,"y":6,"item":13},{"x":4,"y":7,"item":13},{"x":1,"y":8,"item":13},{"x":2,"y":11,"item":1},{"x":4,"y":11,"item":13},{"x":2,"y":13,"item":13},{"x":2,"y":15,"item":13}],
+    decor: [],
+  },
+  {
+    id: "swamp_town",
+    name: "Swamp Town",
+    tier: 4,
+    rows: [
+      "################",
+      "#.#.#.#..#.....#",
+      "#........#.#...#",
+      "#.#.#.#.##.#...#",
+      "###.#.#.##.#####",
+      "#.#........#####",
+      "#...######.#.#.#",
+      "#.###...##.#.#.##",
+      "#.##............#",
+      "#.###...##.#.#.##",
+      "#...######.#.#.#",
+      "#..........#####",
+      "#....###...#####",
+      "#.#....#...#####",
+      "#......#.......#",
+      "################",
+    ],
+    services: [[12,6],[14,6],[12,10],[14,10],[14,14]],
+    exits: [[15,8]],
+    talents: [],
+    chests: [{"x":1,"y":1,"item":32},{"x":3,"y":1,"item":32},{"x":5,"y":1,"item":32},{"x":7,"y":1,"item":32},{"x":8,"y":1,"item":32},{"x":14,"y":1,"item":32},{"x":14,"y":2,"item":32},{"x":14,"y":3,"item":32},{"x":1,"y":11,"item":32},{"x":4,"y":12,"item":32},{"x":6,"y":13,"item":32},{"x":1,"y":14,"item":32},{"x":3,"y":14,"item":32},{"x":4,"y":14,"item":32},{"x":6,"y":14,"item":32},{"x":8,"y":14,"item":32}],
+    decor: [{"x":13,"y":2,"item":95},{"x":1,"y":10,"item":32},{"x":3,"y":10,"item":32},{"x":7,"y":11,"item":32},{"x":9,"y":13,"item":95}],
+  },
+  {
+    id: "blistering_heights",
+    name: "Blistering Heights",
+    tier: 5,
+    rows: [
+      "        ###",
+      " ########.#######",
+      " ######.....##..#",
+      " #.##.##...###..#",
+      " #.#...#...##...#",
+      " #.#...#........#",
+      " #.##.###.#######",
+      "##.....#...#....##",
+      "#................#",
+      "##.....#...#....##",
+      " #.#.#.##.#######",
+      " #######....#.#.#",
+      " #######........#",
+      " #...#.....###.##",
+      " #..##.#........#",
+      " #.........#.#.##",
+      " ########.#######",
+      "        ###",
+    ],
+    services: [[11,2],[2,3],[5,3],[2,10],[4,10],[6,10]],
+    exits: [[9,1],[1,8],[16,8],[9,16]],
+    talents: [{"x":2,"y":13,"talent":"guild_level_5"}],
+    chests: [{"x":14,"y":2,"item":72},{"x":15,"y":2,"item":72},{"x":15,"y":11,"item":72},{"x":4,"y":13,"item":72},{"x":15,"y":14,"item":72},{"x":14,"y":15,"item":72}],
+    decor: [{"x":9,"y":4,"item":34},{"x":5,"y":8,"item":34},{"x":9,"y":8,"item":34},{"x":13,"y":8,"item":34},{"x":9,"y":13,"item":34}],
+  },
+];

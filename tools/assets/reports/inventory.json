@@ -1,0 +1,216 @@
+{
+ "generatedAt": "2026-10-15T17:50:17.838Z",
+ "totalFiles": 1818,
+ "totalMB": 1707.8,
+ "groups": [
+  {
+   "group": "objects/props+terrain",
+   "files": 379,
+   "MB": 659
+  },
+  {
+   "group": "objects/monster/static",
+   "files": 262,
+   "MB": 277.7
+  },
+  {
+   "group": "objects/monster/animated",
+   "files": 46,
+   "MB": 203.4
+  },
+  {
+   "group": "objects/personas",
+   "files": 60,
+   "MB": 133.3
+  },
+  {
+   "group": "textures/item icons",
+   "files": 308,
+   "MB": 87.4
+  },
+  {
+   "group": "movies",
+   "files": 1,
+   "MB": 84.4
+  },
+  {
+   "group": "music",
+   "files": 16,
+   "MB": 65.9
+  },
+  {
+   "group": "textures/town",
+   "files": 26,
+   "MB": 65.9
+  },
+  {
+   "group": "textures/other",
+   "files": 29,
+   "MB": 46.9
+  },
+  {
+   "group": "textures/world+ui",
+   "files": 56,
+   "MB": 29.6
+  },
+  {
+   "group": "textures/class+spell icons",
+   "files": 158,
+   "MB": 21.1
+  },
+  {
+   "group": "textures/portraits",
+   "files": 222,
+   "MB": 11.8
+  },
+  {
+   "group": "sounds",
+   "files": 80,
+   "MB": 11
+  },
+  {
+   "group": "textures/npc",
+   "files": 8,
+   "MB": 6.1
+  },
+  {
+   "group": "maps",
+   "files": 84,
+   "MB": 3.1
+  },
+  {
+   "group": "textures/water",
+   "files": 40,
+   "MB": 0.6
+  },
+  {
+   "group": "textures/minimap tiles",
+   "files": 38,
+   "MB": 0.4
+  },
+  {
+   "group": "saves",
+   "files": 4,
+   "MB": 0.2
+  },
+  {
+   "group": "fonts",
+   "files": 1,
+   "MB": 0
+  }
+ ],
+ "budgetFindings": {
+  "imagesOver1024px": {
+   "count": 252,
+   "MB": 430.9
+  },
+  "modelsOver5kTriangles": {
+   "count": 317,
+   "ofModels": 367
+  },
+  "exactDuplicateBytesMB": 6.6
+ },
+ "metadataFlags": {
+  "proprietary-font": 1,
+  "marker:c2pa": 13,
+  "marker:Designer": 6,
+  "marker:OpenAI": 7,
+  "marker:Gigapixel": 8
+ },
+ "heaviestFiles": [
+  {
+   "path": "resources/movies/Game Outro.mp4",
+   "MB": 84.4
+  },
+  {
+   "path": "resources/textures/town_temple.mp4",
+   "MB": 15.5
+  },
+  {
+   "path": "resources/objects/Trees.glb",
+   "MB": 13.1,
+   "tris": 3247
+  },
+  {
+   "path": "resources/textures/town_inn.mp4",
+   "MB": 12.1
+  },
+  {
+   "path": "resources/objects/personas/animated/Skull Miser.glb",
+   "MB": 11.6,
+   "tris": 9998
+  },
+  {
+   "path": "resources/objects/Mountain.glb",
+   "MB": 10.8,
+   "tris": 4482
+  },
+  {
+   "path": "resources/objects/Snowy mountain.glb",
+   "MB": 10,
+   "tris": 4295
+  },
+  {
+   "path": "resources/objects/Bone pile.glb",
+   "MB": 9.9,
+   "tris": 9987
+  },
+  {
+   "path": "resources/objects/personas/animated/Explorer.glb",
+   "MB": 9.7,
+   "tris": 9998
+  },
+  {
+   "path": "resources/textures/tex_main_menu.png",
+   "MB": 9.4,
+   "size": "3072x2048"
+  },
+  {
+   "path": "resources/objects/Crystals.glb",
+   "MB": 9,
+   "tris": 4999
+  },
+  {
+   "path": "resources/textures/_title.png",
+   "MB": 8.9,
+   "size": "2554x1588"
+  },
+  {
+   "path": "resources/music/dungeon.mp3",
+   "MB": 8.8
+  },
+  {
+   "path": "resources/objects/Float.glb",
+   "MB": 8.5,
+   "tris": 9999
+  },
+  {
+   "path": "resources/textures/town_temple2.mp4",
+   "MB": 8.2
+  },
+  {
+   "path": "resources/objects/monster/animated/Mummy King.glb",
+   "MB": 8.2,
+   "tris": 10000
+  },
+  {
+   "path": "resources/objects/Castle Gate.glb",
+   "MB": 8,
+   "tris": 10000
+  },
+  {
+   "path": "resources/objects/Lectern.glb",
+   "MB": 8,
+   "tris": 4998
+  },
+  {
+   "path": "resources/objects/Cave exit.glb",
+   "MB": 7.6,
+   "tris": 10448
+  },
+  {
+   "path": "resources/music/_cave.mp3",
+   "MB": 7.5
+  }
+ ]
+}

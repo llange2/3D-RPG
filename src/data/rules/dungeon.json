@@ -1,0 +1,98 @@
+{
+  "tierBonus": 0,
+  "rules": [
+    { "id": "exit", "kind": "transfer", "anchor": "exit", "count": { "perMap": [1, 1] }, "params": { "mode": "poi_exit" } },
+    {
+      "id": "door",
+      "kind": "door",
+      "anchor": "mouth",
+      "when": { "minDepth": 120 },
+      "count": { "chance": 480 },
+      "variants": [
+        { "weight": 78, "params": { "locked": false } },
+        { "weight": 22, "params": { "locked": true, "difficulty": "=tier*2" } }
+      ]
+    },
+    { "id": "boss_guard", "kind": "spawn", "anchor": "bossRoom", "count": { "perMap": [1, 1] }, "params": { "boss": true, "group": "=2+rand(0,tier)" } },
+    {
+      "id": "boss_chest",
+      "kind": "treasure",
+      "anchor": "bossRoomEdge",
+      "count": { "perMap": [1, 2] },
+      "params": { "level": "=min(8,tier+1)", "gold": "=tier*220+rand(0,200)", "items": "=1+rand(0,1)" }
+    },
+    {
+      "id": "chest_deadend",
+      "kind": "treasure",
+      "anchor": "deadEnd",
+      "when": { "minDepth": 200 },
+      "count": { "perMap": [2, 5] },
+      "params": { "level": "=tier", "gold": "=tier*90+rand(0,120)", "items": "=rand(0,1)" }
+    },
+    {
+      "id": "chest_room",
+      "kind": "treasure",
+      "anchor": "roomEdge",
+      "when": { "excludeEntranceRoom": true, "minRoomSize": 12 },
+      "count": { "perMap": [1, 3] },
+      "params": { "level": "=tier", "gold": "=tier*60+rand(0,90)", "items": "=rand(0,1)" }
+    },
+    {
+      "id": "trap_before_chest",
+      "kind": "trap",
+      "anchor": "beforeTreasure",
+      "count": { "chance": 450 },
+      "variants": [
+        { "weight": 3, "params": { "trap": "spring", "damage": "=tier*4+rand(1,5)" } },
+        { "weight": 2, "params": { "trap": "pit", "damage": "=tier*3+rand(1,4)" } },
+        { "weight": 1, "params": { "trap": "steal_gold", "damage": 0 } }
+      ]
+    },
+    {
+      "id": "trap_corridor",
+      "kind": "trap",
+      "anchor": "corridor",
+      "when": { "minDepth": 150 },
+      "count": { "perMap": [3, 8] },
+      "variants": [
+        { "weight": 3, "params": { "trap": "guillotine", "damage": "=tier*5+rand(2,6)" } },
+        { "weight": 3, "params": { "trap": "generic", "damage": "=tier*3+rand(1,5)" } },
+        { "weight": 2, "params": { "trap": "spring", "damage": "=tier*4+rand(1,5)" } }
+      ]
+    },
+    { "id": "ambush", "kind": "ambush", "anchor": "corridor", "when": { "minDepth": 250 }, "count": { "perMap": [1, 3] }, "params": { "group": "=1+rand(0,tier)" } },
+    {
+      "id": "monsters_room",
+      "kind": "spawn",
+      "anchor": "roomCenter",
+      "when": { "excludeEntranceRoom": true },
+      "count": { "chance": 820 },
+      "params": { "boss": false, "group": "=1+rand(0,tier)" }
+    },
+    {
+      "id": "shrine",
+      "kind": "shrine",
+      "anchor": "roomEdge",
+      "when": { "excludeEntranceRoom": true, "minRoomSize": 16 },
+      "count": { "perMap": [0, 2] },
+      "variants": [
+        { "weight": 3, "params": { "effect": "resist", "amount": "=2+tier" } },
+        { "weight": 3, "params": { "effect": "attribute", "amount": 1 } },
+        { "weight": 2, "params": { "effect": "heal", "amount": "=tier*20" } }
+      ]
+    },
+    { "id": "spaceship_xp", "kind": "shrine", "anchor": "roomEdge", "when": { "klass": "C", "excludeEntranceRoom": true, "minRoomSize": 12 }, "count": { "perMap": [2, 3] }, "params": { "effect": "xp", "amount": 1000000 } },
+    { "id": "decor_room", "kind": "decor", "anchor": "roomEdge", "when": { "minRoomSize": 9 }, "count": { "perMap": [8, 16] } },
+    { "id": "decor_hall", "kind": "decor", "anchor": "roomCenter", "when": { "excludeEntranceRoom": true, "minRoomSize": 20 }, "count": { "chance": 140 } },
+    { "id": "lore", "kind": "lore", "anchor": "deadEnd", "count": { "perMap": [1, 3] }, "params": { "pool": "dungeon", "line": "=rand(0,19)" } },
+    {
+      "id": "lore_room",
+      "kind": "lore",
+      "anchor": "roomEdge",
+      "when": { "excludeEntranceRoom": true, "minRoomSize": 12 },
+      "count": { "perMap": [1, 2] },
+      "params": { "pool": "dungeon", "line": "=rand(0,19)" }
+    },
+    { "id": "breakable", "kind": "breakable_wall", "anchor": "wallBetween", "count": { "perMap": [1, 3] } }
+  ]
+}

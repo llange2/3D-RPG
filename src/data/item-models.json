@@ -1,0 +1,2297 @@
+{
+ "1": {
+  "name": "Chest: Wooden",
+  "source": "Chest.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.7,
+  "persona": false
+ },
+ "2": {
+  "name": "Fountain",
+  "source": "Fountain.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.3,
+  "persona": false
+ },
+ "3": {
+  "name": "Portal",
+  "source": "Blue portal.obj",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "4": {
+  "name": "Treasure",
+  "source": "Treasure.obj",
+  "scale": 1.4,
+  "scale3": [
+   1.4,
+   1.4,
+   1.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.65,
+  "persona": false
+ },
+ "5": {
+  "name": "Barrel",
+  "source": "Wooden_barrel.obj",
+  "scale": 0.6,
+  "scale3": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.6,
+  "persona": false
+ },
+ "6": {
+  "name": "Throne (Evil)",
+  "source": "Evil throne.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.05,
+  "persona": false
+ },
+ "7": {
+  "name": "Mascot: Crow",
+  "source": "Crow.obj",
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.8,
+  "persona": false
+ },
+ "8": {
+  "name": "Mascot: Donkey",
+  "source": "Donkey.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": false
+ },
+ "9": {
+  "name": "Mascot: Fairy",
+  "source": "Fairy.glb",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "10": {
+  "name": "Mascot: Magical Orb",
+  "source": "Orb.obj",
+  "scale": 0.2,
+  "scale3": [
+   0.2,
+   0.2,
+   0.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.0,
+  "persona": false
+ },
+ "11": {
+  "name": "Mascot: Wolf",
+  "source": "Wolf.obj",
+  "scale": 1.2,
+  "scale3": [
+   1.2,
+   1.2,
+   1.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.7,
+  "persona": false
+ },
+ "12": {
+  "name": "Mining tools",
+  "source": "Mining tools.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.7,
+  "persona": false
+ },
+ "13": {
+  "name": "Storage equipment",
+  "source": "Storage equipment.obj",
+  "scale": 1.2,
+  "scale3": [
+   1.2,
+   1.2,
+   1.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.75,
+  "persona": false
+ },
+ "14": {
+  "name": "Table with food",
+  "source": "Table with food.glb",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.8,
+  "persona": false
+ },
+ "15": {
+  "name": "Alchemy table",
+  "source": "Alchemy table.obj",
+  "scale": 1.2,
+  "scale3": [
+   1.2,
+   1.4,
+   1.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.2,
+  "persona": false
+ },
+ "16": {
+  "name": "Wheelbarrow",
+  "source": "Wheelbarrow.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.6,
+  "persona": false
+ },
+ "17": {
+  "name": "Quest key blue",
+  "source": "Quest key blue.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "18": {
+  "name": "Quest key black",
+  "source": "Quest key black.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "19": {
+  "name": "Quest key bronze",
+  "source": "Quest key bronze.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "20": {
+  "name": "Quest key golden",
+  "source": "Quest key golden.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "21": {
+  "name": "Quest key green",
+  "source": "Quest key green.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 300.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "22": {
+  "name": "Quest key orange",
+  "source": "Quest key orange.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "23": {
+  "name": "Quest key red",
+  "source": "Quest key red.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "24": {
+  "name": "Quest key silver",
+  "source": "Quest key silver.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "25": {
+  "name": "Quest key rainbow",
+  "source": "Quest key rainbow.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "26": {
+  "name": "Rustic caravan",
+  "source": "Rustic caravan.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.6,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "27": {
+  "name": "Statue: Lion",
+  "source": "Lion statue.obj",
+  "scale": 1.8,
+  "scale3": [
+   1.8,
+   1.8,
+   1.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.45,
+  "persona": false
+ },
+ "28": {
+  "name": "Statue: Pegasus",
+  "source": "Pegasus statue.obj",
+  "scale": 1.8,
+  "scale3": [
+   1.8,
+   1.8,
+   1.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.75,
+  "persona": false
+ },
+ "29": {
+  "name": "Statue: Head",
+  "source": "Head statue.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.35,
+  "persona": false
+ },
+ "30": {
+  "name": "Throne (Good)",
+  "source": "Good throne.obj",
+  "scale": 1.05,
+  "scale3": [
+   1.05,
+   1.05,
+   1.05
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.05,
+  "persona": false
+ },
+ "31": {
+  "name": "Old tree",
+  "source": "Old tree.obj",
+  "scale": 2.0,
+  "scale3": [
+   2.0,
+   2.0,
+   2.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.0,
+  "persona": false
+ },
+ "32": {
+  "name": "Gravestone",
+  "source": "Gravestone.obj",
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.8,
+  "persona": false
+ },
+ "33": {
+  "name": "Giant stone head",
+  "source": "Large stone head.obj",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.7,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.7,
+  "persona": false
+ },
+ "34": {
+  "name": "Statue: Obsidian dragon",
+  "source": "Obsidian Dragon Statue.glb",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "35": {
+  "name": "Amethyst altar",
+  "source": "Amethyst altar.glb",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "36": {
+  "name": "Giant sand clock",
+  "source": "Giant sand clock.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "37": {
+  "name": "Magic well red",
+  "source": "Magic well red.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.35,
+  "persona": false
+ },
+ "38": {
+  "name": "Skull on a spike",
+  "source": "Skull on a spike.obj",
+  "scale": 0.6,
+  "scale3": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.65,
+  "persona": false
+ },
+ "39": {
+  "name": "Lever",
+  "source": "Lever.obj",
+  "scale": 0.6,
+  "scale3": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.5,
+  "persona": false
+ },
+ "40": {
+  "name": "Transporter",
+  "source": "Transporter.obj",
+  "scale": 1.7,
+  "scale3": [
+   1.7,
+   2.3,
+   1.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.3,
+  "persona": false
+ },
+ "41": {
+  "name": "Dungeon entrance",
+  "source": "Dungeon entrance.obj",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "42": {
+  "name": "Cave entrance",
+  "source": "Cave entrance.glb",
+  "scale": 1.7,
+  "scale3": [
+   1.7,
+   2.0,
+   1.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 180.0,
+  "y": 1.4,
+  "persona": false
+ },
+ "43": {
+  "name": "Pyramid",
+  "source": "Pyramid.obj",
+  "scale": 2.0,
+  "scale3": [
+   2.0,
+   2.4,
+   2.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.8,
+  "persona": false
+ },
+ "44": {
+  "name": "Castle",
+  "source": "Castle.obj",
+  "scale": 1.6,
+  "scale3": [
+   1.6,
+   2.4,
+   1.6
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.8,
+  "persona": false
+ },
+ "45": {
+  "name": "Hut",
+  "source": "Hut.obj",
+  "scale": 1.7,
+  "scale3": [
+   1.7,
+   1.7,
+   1.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.7,
+  "persona": false
+ },
+ "46": {
+  "name": "Oven",
+  "source": "Oven.obj",
+  "scale": 1.4,
+  "scale3": [
+   1.4,
+   1.4,
+   1.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 45.0,
+  "y": 1.4,
+  "persona": false
+ },
+ "47": {
+  "name": "Village",
+  "source": "Village.obj",
+  "scale": 1.8,
+  "scale3": [
+   1.8,
+   2.5,
+   1.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.65,
+  "persona": false
+ },
+ "48": {
+  "name": "Persona (Cartographer)",
+  "source": "personas/Cartographer.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "49": {
+  "name": "Persona (Job Offerer)",
+  "source": "personas/Job offerer.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "50": {
+  "name": "Persona (Guild Apprentice)",
+  "source": "personas/Guild apprentice.obj",
+  "scale": 0.9,
+  "scale3": [
+   0.9,
+   0.9,
+   0.9
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": true
+ },
+ "51": {
+  "name": "Persona (Sailor)",
+  "source": "personas/Sailor.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "52": {
+  "name": "Persona (Lord)",
+  "source": "personas/Lord.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "53": {
+  "name": "Persona (Monk)",
+  "source": "personas/Monk.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "54": {
+  "name": "Persona (Weapon master)",
+  "source": "personas/Weapon master.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "55": {
+  "name": "Persona (Body builder)",
+  "source": "personas/Body builder.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "56": {
+  "name": "Persona (Mountaineer)",
+  "source": "personas/Mountaineer.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "57": {
+  "name": "Persona (Explorer)",
+  "source": "personas/Explorer.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "58": {
+  "name": "Persona (Good king)",
+  "source": "personas/Good king.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "59": {
+  "name": "Persona (Neutral king)",
+  "source": "personas/Neutral king.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "60": {
+  "name": "Persona (Evil king)",
+  "source": "personas/Evil king.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "61": {
+  "name": "Statue: Metal",
+  "source": "Statue.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.3,
+  "persona": false
+ },
+ "62": {
+  "name": "Coffin",
+  "source": "Coffin.glb",
+  "scale": 1.2,
+  "scale3": [
+   1.2,
+   1.2,
+   1.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.4,
+  "persona": false
+ },
+ "63": {
+  "name": "Coffin opened",
+  "source": "Coffin opened.glb",
+  "scale": 1.2,
+  "scale3": [
+   1.2,
+   1.2,
+   1.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.4,
+  "persona": false
+ },
+ "64": {
+  "name": "Quest: Key card (black)",
+  "source": "Keycard black.glb",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "65": {
+  "name": "Quest: Key card (blue)",
+  "source": "Keycard blue.glb",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "66": {
+  "name": "Quest: Key card (red)",
+  "source": "Keycard red.glb",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "67": {
+  "name": "Power source crystal",
+  "source": "Power source crystal.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "68": {
+  "name": "Computer terminal",
+  "source": "Computer terminal.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": false
+ },
+ "69": {
+  "name": "Grindstone",
+  "source": "Grindstone.obj",
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.75,
+  "persona": false
+ },
+ "70": {
+  "name": "Bone pile",
+  "source": "Bone pile.glb",
+  "scale": 0.9,
+  "scale3": [
+   0.9,
+   0.9,
+   0.9
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.47,
+  "persona": false
+ },
+ "71": {
+  "name": "Abandoned fireplace",
+  "source": "Abandoned fireplace.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "72": {
+  "name": "Chest: Noble",
+  "source": "Noble chest.obj",
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.65,
+  "persona": false
+ },
+ "73": {
+  "name": "Magic runes",
+  "source": "Magic runes.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.25,
+  "persona": false
+ },
+ "74": {
+  "name": "Chest: Iron",
+  "source": "Iron chest.obj",
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.65,
+  "persona": false
+ },
+ "75": {
+  "name": "Book shelf",
+  "source": "Book shelf.obj",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "76": {
+  "name": "Rustic lantern",
+  "source": "Rustic lantern.obj",
+  "scale": 0.7,
+  "scale3": [
+   0.7,
+   0.7,
+   0.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 3.8,
+  "persona": false
+ },
+ "77": {
+  "name": "Trap door",
+  "source": "Trap door.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 270.0,
+  "yaw": 0.0,
+  "y": 0.2,
+  "persona": false
+ },
+ "78": {
+  "name": "Mascot: Bird Perch",
+  "source": "Bird perch.obj",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.4,
+  "persona": false
+ },
+ "79": {
+  "name": "Mascot: Blue Mushroom",
+  "source": "Blue mushroom.obj",
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.6,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.35,
+  "persona": false
+ },
+ "80": {
+  "name": "Metal Gate (upside-down)",
+  "source": "Metal gate.obj",
+  "scale": 0.9,
+  "scale3": [
+   0.9,
+   1.2,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 180.0,
+  "yaw": 0.0,
+  "y": 1.2,
+  "persona": false
+ },
+ "81": {
+  "name": "Metal Gate",
+  "source": "Metal gate.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.37,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.42,
+  "persona": false
+ },
+ "82": {
+  "name": "Persona (Skull Miser)",
+  "source": "personas/Skull miser.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "83": {
+  "name": "Fractured vessels",
+  "source": "Fractured vessels.obj",
+  "scale": 0.7,
+  "scale3": [
+   0.7,
+   0.7,
+   0.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.6,
+  "persona": false
+ },
+ "84": {
+  "name": "Cyber wall (round inner corner)",
+  "source": "Round inner corner.obj",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   2.25,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "85": {
+  "name": "Cyber wall (round outer corner)",
+  "source": "Round outer corner.obj",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   2.25,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "86": {
+  "name": "Chalice",
+  "source": "Chalice.obj",
+  "scale": 0.9,
+  "scale3": [
+   0.9,
+   0.9,
+   0.9
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ },
+ "87": {
+  "name": "Guillotine trap",
+  "source": "Guillotine trap.obj",
+  "scale": 1.7,
+  "scale3": [
+   1.7,
+   2.0,
+   1.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 5.3,
+  "persona": false
+ },
+ "88": {
+  "name": "Magic well yellow",
+  "source": "Magic well yellow.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.35,
+  "persona": false
+ },
+ "89": {
+  "name": "Mermaid fountain",
+  "source": "Mermaid fountain.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "90": {
+  "name": "Persona (Seth Squirm)",
+  "source": "personas/Seth Squirm.obj",
+  "scale": 1.1,
+  "scale3": [
+   1.1,
+   1.1,
+   1.1
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.1,
+  "persona": true
+ },
+ "91": {
+  "name": "Well",
+  "source": "Well.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.3,
+  "persona": false
+ },
+ "92": {
+  "name": "Acid puddle",
+  "source": "Acid puddle.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.15,
+  "persona": false
+ },
+ "93": {
+  "name": "Hanging Skeleton",
+  "source": "Hanging Skeleton.obj",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 3.0,
+  "persona": false
+ },
+ "94": {
+  "name": "Rustic Table",
+  "source": "Rustic table.obj",
+  "scale": 1.4,
+  "scale3": [
+   1.4,
+   1.4,
+   1.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.65,
+  "persona": false
+ },
+ "95": {
+  "name": "Statue: Stone",
+  "source": "Stone statue.obj",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.3,
+  "persona": false
+ },
+ "96": {
+  "name": "Chest: Sapphire",
+  "source": "Sapphire chest.obj",
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.65,
+  "persona": false
+ },
+ "97": {
+  "name": "Book shelf (old)",
+  "source": "Book shelf old.obj",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "98": {
+  "name": "Gallow",
+  "source": "Gallow.obj",
+  "scale": 2.2,
+  "scale3": [
+   2.2,
+   2.2,
+   2.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.1,
+  "persona": false
+ },
+ "99": {
+  "name": "Wooden support beam",
+  "source": "Wooden support beam.obj",
+  "scale": 2.2,
+  "scale3": [
+   2.2,
+   2.3,
+   2.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.3,
+  "persona": false
+ },
+ "100": {
+  "name": "Castle gate",
+  "source": "Castle Gate.glb",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "101": {
+  "name": "Monster Hut",
+  "source": "Monster hut.obj",
+  "scale": 1.7,
+  "scale3": [
+   1.7,
+   1.7,
+   1.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.7,
+  "persona": false
+ },
+ "102": {
+  "name": "Monster Hut (burnt)",
+  "source": "Monster hut burnt.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.2,
+  "persona": false
+ },
+ "103": {
+  "name": "Decoration: Good Banner",
+  "source": "Good Banner.glb",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.2,
+  "persona": false
+ },
+ "104": {
+  "name": "Decoration: Neutral Banner",
+  "source": "Neutral Banner.glb",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.2,
+  "persona": false
+ },
+ "105": {
+  "name": "Decoration: Evil Banner",
+  "source": "Evil Banner.glb",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.2,
+  "persona": false
+ },
+ "106": {
+  "name": "Persona (Generic 1)",
+  "source": null,
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   3.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "107": {
+  "name": "Persona (Generic 2)",
+  "source": null,
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   3.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "108": {
+  "name": "Persona (Generic 3)",
+  "source": null,
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   3.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "109": {
+  "name": "Orb of ultimate power",
+  "source": "Orb of ultimate power.obj",
+  "scale": 0.6,
+  "scale3": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.6,
+  "persona": false
+ },
+ "110": {
+  "name": "Decoration: Sign temple",
+  "source": "Sign Temple.glb",
+  "scale": 0.55,
+  "scale3": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ },
+ "111": {
+  "name": "Decoration: Sign bank",
+  "source": "Sign Bank.glb",
+  "scale": 0.55,
+  "scale3": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ },
+ "112": {
+  "name": "Decoration: Sign guild",
+  "source": "Sign Guild.glb",
+  "scale": 0.55,
+  "scale3": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ },
+ "113": {
+  "name": "Decoration: Sign inn",
+  "source": "Sign Inn.glb",
+  "scale": 0.55,
+  "scale3": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ },
+ "114": {
+  "name": "Decoration: Sign smith",
+  "source": "Sign Smith.glb",
+  "scale": 0.55,
+  "scale3": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ },
+ "115": {
+  "name": "Decoration: Sign tavern",
+  "source": "Sign Tavern.glb",
+  "scale": 0.55,
+  "scale3": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ },
+ "116": {
+  "name": "Decoration: Sign training",
+  "source": "Sign Training.glb",
+  "scale": 0.55,
+  "scale3": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ },
+ "117": {
+  "name": "Crystals",
+  "source": "Crystals.glb",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "118": {
+  "name": "Gong",
+  "source": "Gong.glb",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "119": {
+  "name": "Lectern",
+  "source": "Lectern.glb",
+  "scale": 0.9,
+  "scale3": [
+   0.9,
+   0.9,
+   0.9
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "120": {
+  "name": "Lava puddle",
+  "source": "Lava puddle.glb",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.1,
+  "persona": false
+ },
+ "121": {
+  "name": "Magic flames",
+  "source": "Magic flames.glb",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.6,
+  "persona": false
+ },
+ "122": {
+  "name": "Quest: Key card (green)",
+  "source": "Keycard green.glb",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "123": {
+  "name": "Quest: Key card (purple)",
+  "source": "Keycard purple.glb",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "124": {
+  "name": "Quest: Key card (brown)",
+  "source": "Keycard brown.glb",
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "125": {
+  "name": "Decoration: Moose King",
+  "source": "Decoration Moose King.glb",
+  "scale": 1.2,
+  "scale3": [
+   1.2,
+   1.2,
+   1.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "126": {
+  "name": "Float",
+  "source": "Float.glb",
+  "scale": 1.5,
+  "scale3": [
+   1.5,
+   1.5,
+   1.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "127": {
+  "name": "Stone coffin locked",
+  "source": "Stone coffin locked.glb",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.65,
+  "persona": false
+ },
+ "128": {
+  "name": "Stone coffin unlocked",
+  "source": "Stone coffin unlocked.glb",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.65,
+  "persona": false
+ },
+ "129": {
+  "name": "ZZZ Test",
+  "source": "Stone coffin locked.glb",
+  "scale": 1.3,
+  "scale3": [
+   1.3,
+   1.3,
+   1.3
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.35,
+  "persona": false
+ },
+ "9001": {
+  "name": "Action marker",
+  "source": null,
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 45.0,
+  "y": 1.5,
+  "persona": false
+ },
+ "9002": {
+  "name": "Sound marker",
+  "source": null,
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 45.0,
+  "y": 2.5,
+  "persona": false
+ },
+ "9003": {
+  "name": "Floor decoration: Bone",
+  "source": "Floor decoration bone.obj",
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.5,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9004": {
+  "name": "Floor decoration: Tall grass",
+  "source": null,
+  "scale": 0.8,
+  "scale3": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9005": {
+  "name": "Floor decoration: Small grass",
+  "source": null,
+  "scale": 0.2,
+  "scale3": [
+   0.2,
+   0.6,
+   0.2
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9006": {
+  "name": "Floor decoration: Grass patch",
+  "source": null,
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.7,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9007": {
+  "name": "Floor decoration: Wild flower patch",
+  "source": null,
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9008": {
+  "name": "Floor decoration: Stones with moss",
+  "source": null,
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.5,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9009": {
+  "name": "Trap: Guillotine",
+  "source": "Guillotine trap.obj",
+  "scale": 1.7,
+  "scale3": [
+   1.7,
+   2.0,
+   1.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 2.5,
+  "persona": false
+ },
+ "9010": {
+  "name": "Melee attack marker",
+  "source": null,
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.5,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9011": {
+  "name": "Ranged attack marker",
+  "source": null,
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.5,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9012": {
+  "name": "Floor decoration: Blue flower",
+  "source": null,
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.5,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9013": {
+  "name": "Floor decoration: Yello flower",
+  "source": null,
+  "scale": 0.4,
+  "scale3": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9014": {
+  "name": "Floor decoration: Lavender flower",
+  "source": null,
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.4,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9015": {
+  "name": "Floor decoration: Pink flower",
+  "source": null,
+  "scale": 0.5,
+  "scale3": [
+   0.5,
+   0.4,
+   0.5
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.0,
+  "persona": false
+ },
+ "9016": {
+  "name": "Monster health marker",
+  "source": null,
+  "scale": 3.0,
+  "scale3": [
+   3.0,
+   0.15,
+   3.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.075,
+  "persona": false
+ },
+ "9017": {
+  "name": "Loot marker",
+  "source": null,
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.5,
+  "persona": false
+ },
+ "9018": {
+  "name": "Ice attack",
+  "source": "Ice attack.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 60.0,
+  "yaw": 270.0,
+  "y": 1.2,
+  "persona": false
+ },
+ "9019": {
+  "name": "Fireball attack",
+  "source": "Fireball.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 75.0,
+  "yaw": 80.0,
+  "y": 1.2,
+  "persona": false
+ },
+ "9020": {
+  "name": "Poison cloud",
+  "source": "Poison cloud.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 90.0,
+  "y": 1.2,
+  "persona": false
+ },
+ "9021": {
+  "name": "Magic attack",
+  "source": "Magic attack.obj",
+  "scale": 0.7,
+  "scale3": [
+   0.7,
+   0.7,
+   0.7
+  ],
+  "rotX": 0.0,
+  "rotZ": 90.0,
+  "yaw": 225.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "9022": {
+  "name": "Physical attack",
+  "source": "Physical attack.obj",
+  "scale": 1.0,
+  "scale3": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 90.0,
+  "yaw": 50.0,
+  "y": 1.0,
+  "persona": false
+ },
+ "9023": {
+  "name": "Arrow",
+  "source": "Arrow.obj",
+  "scale": 0.6,
+  "scale3": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "rotX": 0.0,
+  "rotZ": 90.0,
+  "yaw": 0.0,
+  "y": 1.2,
+  "persona": false
+ },
+ "9024": {
+  "name": "Spear Trap",
+  "source": null,
+  "scale": 1.2,
+  "scale3": [
+   1.2,
+   0.8,
+   1.0
+  ],
+  "rotX": 0.0,
+  "rotZ": 0.0,
+  "yaw": 0.0,
+  "y": 0.9,
+  "persona": false
+ }
+}

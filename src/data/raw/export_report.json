@@ -1,0 +1,60 @@
+{
+ "source": "old_code/g.py",
+ "sha256": "6d167e917cecef8e756caec5172a2b2f7a535f258f6e8450c95f52e9546602dd",
+ "tables": {
+  "BASE_CLASS": {
+   "count": 10,
+   "expected": 10
+  },
+  "BASE_RACE": {
+   "count": 5,
+   "expected": 5
+  },
+  "MONSTER_DATA": {
+   "count": 91,
+   "expected": 91
+  },
+  "QUEST_ITEMS": {
+   "count": 22,
+   "expected": 22
+  },
+  "RIDDLES_MASTER": {
+   "count": 300,
+   "expected": 300
+  },
+  "SPELLS": {
+   "count": 78,
+   "expected": 78
+  },
+  "TALENTS": {
+   "count": 20,
+   "expected": 20
+  },
+  "ACTIONS": {
+   "count": 50,
+   "expected": 50
+  },
+  "BLOCKS": {
+   "count": 47,
+   "expected": 47
+  },
+  "ITEMS": {
+   "count": 142,
+   "expected": 142
+  },
+  "texts": {
+   "count": 485,
+   "expected": 485
+  },
+  "itexts": {
+   "count": 95,
+   "expected": 95
+  },
+  "rumors": {
+   "count": 100,
+   "expected": 100
+  }
+ },
+ "errors": [],
+ "constants": 36
+}

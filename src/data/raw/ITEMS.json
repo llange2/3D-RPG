@@ -1,0 +1,996 @@
+{
+ "1": {
+  "name": "Chest: Wooden",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 1
+ },
+ "2": {
+  "name": "Fountain",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 2
+ },
+ "3": {
+  "name": "Portal",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 3
+ },
+ "4": {
+  "name": "Treasure",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 4
+ },
+ "5": {
+  "name": "Barrel",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 5
+ },
+ "6": {
+  "name": "Throne (Evil)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 6
+ },
+ "7": {
+  "name": "Mascot: Crow",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 7
+ },
+ "8": {
+  "name": "Mascot: Donkey",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 8
+ },
+ "9": {
+  "name": "Mascot: Fairy",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 9
+ },
+ "10": {
+  "name": "Mascot: Magical Orb",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 10
+ },
+ "11": {
+  "name": "Mascot: Wolf",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 11
+ },
+ "12": {
+  "name": "Mining tools",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 12
+ },
+ "13": {
+  "name": "Storage equipment",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 13
+ },
+ "14": {
+  "name": "Table with food",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 14
+ },
+ "15": {
+  "name": "Alchemy table",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 15
+ },
+ "16": {
+  "name": "Wheelbarrow",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 16
+ },
+ "17": {
+  "name": "Quest key blue",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 17
+ },
+ "18": {
+  "name": "Quest key black",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 18
+ },
+ "19": {
+  "name": "Quest key bronze",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 19
+ },
+ "20": {
+  "name": "Quest key golden",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 20
+ },
+ "21": {
+  "name": "Quest key green",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 21
+ },
+ "22": {
+  "name": "Quest key orange",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 22
+ },
+ "23": {
+  "name": "Quest key red",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 23
+ },
+ "24": {
+  "name": "Quest key silver",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 24
+ },
+ "25": {
+  "name": "Quest key rainbow",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 25
+ },
+ "26": {
+  "name": "Rustic caravan",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 26
+ },
+ "27": {
+  "name": "Statue: Lion",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 27
+ },
+ "28": {
+  "name": "Statue: Pegasus",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 28
+ },
+ "29": {
+  "name": "Statue: Head",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 29
+ },
+ "30": {
+  "name": "Throne (Good)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 30
+ },
+ "31": {
+  "name": "Old tree",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 31
+ },
+ "32": {
+  "name": "Gravestone",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 32
+ },
+ "33": {
+  "name": "Giant stone head",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 33
+ },
+ "34": {
+  "name": "Statue: Obsidian dragon",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 34
+ },
+ "35": {
+  "name": "Amethyst altar",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 35
+ },
+ "36": {
+  "name": "Giant sand clock",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 36
+ },
+ "37": {
+  "name": "Magic well red",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 37
+ },
+ "38": {
+  "name": "Skull on a spike",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 38
+ },
+ "39": {
+  "name": "Lever",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 39
+ },
+ "40": {
+  "name": "Transporter",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 40
+ },
+ "41": {
+  "name": "Dungeon entrance",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 41
+ },
+ "42": {
+  "name": "Cave entrance",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 42
+ },
+ "43": {
+  "name": "Pyramid",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 43
+ },
+ "44": {
+  "name": "Castle",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 44
+ },
+ "45": {
+  "name": "Hut",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 45
+ },
+ "46": {
+  "name": "Oven",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 46
+ },
+ "47": {
+  "name": "Village",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 47
+ },
+ "48": {
+  "name": "Persona (Cartographer)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 48
+ },
+ "49": {
+  "name": "Persona (Job Offerer)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 49
+ },
+ "50": {
+  "name": "Persona (Guild Apprentice)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 50
+ },
+ "51": {
+  "name": "Persona (Sailor)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 51
+ },
+ "52": {
+  "name": "Persona (Lord)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 52
+ },
+ "53": {
+  "name": "Persona (Monk)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 53
+ },
+ "54": {
+  "name": "Persona (Weapon master)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 54
+ },
+ "55": {
+  "name": "Persona (Body builder)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 55
+ },
+ "56": {
+  "name": "Persona (Mountaineer)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 56
+ },
+ "57": {
+  "name": "Persona (Explorer)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 57
+ },
+ "58": {
+  "name": "Persona (Good king)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 58
+ },
+ "59": {
+  "name": "Persona (Neutral king)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 59
+ },
+ "60": {
+  "name": "Persona (Evil king)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 60
+ },
+ "61": {
+  "name": "Statue: Metal",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 61
+ },
+ "62": {
+  "name": "Coffin",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 62
+ },
+ "63": {
+  "name": "Coffin opened",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 63
+ },
+ "64": {
+  "name": "Quest: Key card (black)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 64
+ },
+ "65": {
+  "name": "Quest: Key card (blue)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 65
+ },
+ "66": {
+  "name": "Quest: Key card (red)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 66
+ },
+ "67": {
+  "name": "Power source crystal",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 67
+ },
+ "68": {
+  "name": "Computer terminal",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 68
+ },
+ "69": {
+  "name": "Grindstone",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 69
+ },
+ "70": {
+  "name": "Bone pile",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 70
+ },
+ "71": {
+  "name": "Abandoned fireplace",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 71
+ },
+ "72": {
+  "name": "Chest: Noble",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 72
+ },
+ "73": {
+  "name": "Magic runes",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 73
+ },
+ "74": {
+  "name": "Chest: Iron",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 74
+ },
+ "75": {
+  "name": "Book shelf",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 75
+ },
+ "76": {
+  "name": "Rustic lantern",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 76
+ },
+ "77": {
+  "name": "Trap door",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 77
+ },
+ "78": {
+  "name": "Mascot: Bird Perch",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 78
+ },
+ "79": {
+  "name": "Mascot: Blue Mushroom",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 79
+ },
+ "80": {
+  "name": "Metal Gate (upside-down)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 80
+ },
+ "81": {
+  "name": "Metal Gate",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 81
+ },
+ "82": {
+  "name": "Persona (Skull Miser)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 82
+ },
+ "83": {
+  "name": "Fractured vessels",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 83
+ },
+ "84": {
+  "name": "Cyber wall (round inner corner)",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 84
+ },
+ "85": {
+  "name": "Cyber wall (round outer corner)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 85
+ },
+ "86": {
+  "name": "Chalice",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 86
+ },
+ "87": {
+  "name": "Guillotine trap",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 87
+ },
+ "88": {
+  "name": "Magic well yellow",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 88
+ },
+ "89": {
+  "name": "Mermaid fountain",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 89
+ },
+ "90": {
+  "name": "Persona (Seth Squirm)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 90
+ },
+ "91": {
+  "name": "Well",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 91
+ },
+ "92": {
+  "name": "Acid puddle",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 92
+ },
+ "93": {
+  "name": "Hanging Skeleton",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 93
+ },
+ "94": {
+  "name": "Rustic Table",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 94
+ },
+ "95": {
+  "name": "Statue: Stone",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 95
+ },
+ "96": {
+  "name": "Chest: Sapphire",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 96
+ },
+ "97": {
+  "name": "Book shelf (old)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 97
+ },
+ "98": {
+  "name": "Gallow",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 98
+ },
+ "99": {
+  "name": "Wooden support beam",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 99
+ },
+ "100": {
+  "name": "Castle gate",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 100
+ },
+ "101": {
+  "name": "Monster Hut",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 101
+ },
+ "102": {
+  "name": "Monster Hut (burnt)",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 102
+ },
+ "103": {
+  "name": "Decoration: Good Banner",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 103
+ },
+ "104": {
+  "name": "Decoration: Neutral Banner",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 104
+ },
+ "105": {
+  "name": "Decoration: Evil Banner",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 105
+ },
+ "106": {
+  "name": "Persona (Generic 1)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 106
+ },
+ "107": {
+  "name": "Persona (Generic 2)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 107
+ },
+ "108": {
+  "name": "Persona (Generic 3)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 108
+ },
+ "109": {
+  "name": "Orb of ultimate power",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 109
+ },
+ "110": {
+  "name": "Decoration: Sign temple",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 110
+ },
+ "111": {
+  "name": "Decoration: Sign bank",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 111
+ },
+ "112": {
+  "name": "Decoration: Sign guild",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 112
+ },
+ "113": {
+  "name": "Decoration: Sign inn",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 113
+ },
+ "114": {
+  "name": "Decoration: Sign smith",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 114
+ },
+ "115": {
+  "name": "Decoration: Sign tavern",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 115
+ },
+ "116": {
+  "name": "Decoration: Sign training",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 116
+ },
+ "117": {
+  "name": "Crystals",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 117
+ },
+ "118": {
+  "name": "Gong",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 118
+ },
+ "119": {
+  "name": "Lectern",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 119
+ },
+ "120": {
+  "name": "Lava puddle",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 120
+ },
+ "121": {
+  "name": "Magic flames",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 121
+ },
+ "122": {
+  "name": "Quest: Key card (green)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 122
+ },
+ "123": {
+  "name": "Quest: Key card (purple)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 123
+ },
+ "124": {
+  "name": "Quest: Key card (brown)",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": 124
+ },
+ "125": {
+  "name": "Decoration: Moose King",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 125
+ },
+ "126": {
+  "name": "Float",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 126
+ },
+ "127": {
+  "name": "Stone coffin locked",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 127
+ },
+ "128": {
+  "name": "Stone coffin unlocked",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 128
+ },
+ "129": {
+  "name": "ZZZ Test",
+  "obstacle": true,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": 129
+ },
+ "9001": {
+  "name": "Action marker",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": null
+ },
+ "9002": {
+  "name": "Sound marker",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": null
+ },
+ "9010": {
+  "name": "Melee attack marker",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": null
+ },
+ "9011": {
+  "name": "Ranged attack marker",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": null
+ },
+ "9016": {
+  "name": "Monster health marker",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": null
+ },
+ "9017": {
+  "name": "Loot marker",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": true,
+  "item_id": null
+ },
+ "9018": {
+  "name": "Ice attack",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": null
+ },
+ "9019": {
+  "name": "Fireball attack",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": null
+ },
+ "9020": {
+  "name": "Poison cloud",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": null
+ },
+ "9021": {
+  "name": "Magic attack",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": null
+ },
+ "9022": {
+  "name": "Physical attack",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": null
+ },
+ "9023": {
+  "name": "Arrow",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": null
+ },
+ "9024": {
+  "name": "Spear Trap",
+  "obstacle": false,
+  "view_blocking": false,
+  "rotating": false,
+  "item_id": null
+ }
+}

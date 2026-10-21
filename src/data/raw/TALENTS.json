@@ -1,0 +1,104 @@
+{
+ "guild_level_1": {
+  "name": 279,
+  "description": 280,
+  "price": 100
+ },
+ "guild_level_2": {
+  "name": 281,
+  "description": 282,
+  "price": 200
+ },
+ "guild_level_3": {
+  "name": 283,
+  "description": 284,
+  "price": 2000
+ },
+ "guild_level_4": {
+  "name": 285,
+  "description": 286,
+  "price": 10000
+ },
+ "guild_level_5": {
+  "name": 287,
+  "description": 288,
+  "price": 0
+ },
+ "talent_arms_master": {
+  "name": 421,
+  "description": 422,
+  "price": 1000
+ },
+ "talent_bargainer": {
+  "name": 277,
+  "description": 278,
+  "price": 5000
+ },
+ "talent_body_builder": {
+  "name": 423,
+  "description": 424,
+  "price": 400
+ },
+ "talent_cartographer": {
+  "name": 333,
+  "description": 334,
+  "price": 50
+ },
+ "talent_cave_explorer": {
+  "name": 466,
+  "description": 467,
+  "price": 15000
+ },
+ "talent_merchant": {
+  "name": 275,
+  "description": 276,
+  "price": 10000
+ },
+ "talent_orientation": {
+  "name": 344,
+  "description": 345,
+  "price": 200
+ },
+ "talent_pathfinder": {
+  "name": 474,
+  "description": 475,
+  "price": 7500
+ },
+ "talent_perceptive": {
+  "name": 340,
+  "description": 341,
+  "price": 500
+ },
+ "talent_prayer_master": {
+  "name": 466,
+  "description": 467,
+  "price": 50000,
+  "recalc_attribute_values": true
+ },
+ "talent_prestidigitator": {
+  "name": 468,
+  "description": 469,
+  "price": 50000,
+  "recalc_attribute_values": true
+ },
+ "talent_seafarer": {
+  "name": 472,
+  "description": 473,
+  "price": 5000
+ },
+ "talent_swimmer": {
+  "name": 378,
+  "description": 379,
+  "price": 400
+ },
+ "title_crusader": {
+  "name": 375,
+  "description": 376,
+  "price": 0
+ },
+ "title_perfect_adventurer": {
+  "name": 480,
+  "description": 481,
+  "price": 0
+ }
+}

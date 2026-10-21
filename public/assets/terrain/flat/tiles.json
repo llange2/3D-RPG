@@ -1,0 +1,2358 @@
+{
+ "version": 1,
+ "size": 512,
+ "tiles": {
+  "cobblestone_full": {
+   "terrain": "cobblestone",
+   "shape": "full"
+  },
+  "desert_cobblestone_corner-bl": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "desert_cobblestone_corner-br": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "br"
+  },
+  "desert_cobblestone_corner-tl": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "desert_cobblestone_corner-tr": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "desert_cobblestone_diag-tlbr": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "desert_cobblestone_diag-trbl": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "desert_cobblestone_edge-bottom": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "desert_cobblestone_edge-left": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "left"
+  },
+  "desert_cobblestone_edge-right": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "right"
+  },
+  "desert_cobblestone_edge-top": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "top"
+  },
+  "desert_cobblestone_inner-bl": {
+   "terrain": "cobblestone",
+   "other": "desert",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "desert_cobblestone_inner-br": {
+   "terrain": "cobblestone",
+   "other": "desert",
+   "shape": "inner",
+   "at": "br"
+  },
+  "desert_cobblestone_inner-tl": {
+   "terrain": "cobblestone",
+   "other": "desert",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "desert_cobblestone_inner-tr": {
+   "terrain": "cobblestone",
+   "other": "desert",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "desert_cobblestone_island": {
+   "terrain": "cobblestone",
+   "other": "desert",
+   "shape": "island"
+  },
+  "desert_cobblestone_pond": {
+   "terrain": "desert",
+   "other": "cobblestone",
+   "shape": "pond"
+  },
+  "desert_dirt_corner-bl": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "desert_dirt_corner-br": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "br"
+  },
+  "desert_dirt_corner-tl": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "desert_dirt_corner-tr": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "desert_dirt_diag-tlbr": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "desert_dirt_diag-trbl": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "desert_dirt_edge-bottom": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "desert_dirt_edge-left": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "left"
+  },
+  "desert_dirt_edge-right": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "right"
+  },
+  "desert_dirt_edge-top": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "top"
+  },
+  "desert_dirt_inner-bl": {
+   "terrain": "dirt",
+   "other": "desert",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "desert_dirt_inner-br": {
+   "terrain": "dirt",
+   "other": "desert",
+   "shape": "inner",
+   "at": "br"
+  },
+  "desert_dirt_inner-tl": {
+   "terrain": "dirt",
+   "other": "desert",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "desert_dirt_inner-tr": {
+   "terrain": "dirt",
+   "other": "desert",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "desert_dirt_island": {
+   "terrain": "dirt",
+   "other": "desert",
+   "shape": "island"
+  },
+  "desert_dirt_pond": {
+   "terrain": "desert",
+   "other": "dirt",
+   "shape": "pond"
+  },
+  "desert_full": {
+   "terrain": "desert",
+   "shape": "full"
+  },
+  "desert_lava_corner-bl": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "desert_lava_corner-br": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "corner",
+   "at": "br"
+  },
+  "desert_lava_corner-tl": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "desert_lava_corner-tr": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "desert_lava_diag-tlbr": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "desert_lava_diag-trbl": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "desert_lava_edge-bottom": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "desert_lava_edge-left": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "edge",
+   "at": "left"
+  },
+  "desert_lava_edge-right": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "edge",
+   "at": "right"
+  },
+  "desert_lava_edge-top": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "edge",
+   "at": "top"
+  },
+  "desert_lava_inner-bl": {
+   "terrain": "lava",
+   "other": "desert",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "desert_lava_inner-br": {
+   "terrain": "lava",
+   "other": "desert",
+   "shape": "inner",
+   "at": "br"
+  },
+  "desert_lava_inner-tl": {
+   "terrain": "lava",
+   "other": "desert",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "desert_lava_inner-tr": {
+   "terrain": "lava",
+   "other": "desert",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "desert_lava_island": {
+   "terrain": "lava",
+   "other": "desert",
+   "shape": "island"
+  },
+  "desert_lava_pond": {
+   "terrain": "desert",
+   "other": "lava",
+   "shape": "pond"
+  },
+  "desert_water_corner-bl": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "desert_water_corner-br": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "corner",
+   "at": "br"
+  },
+  "desert_water_corner-tl": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "desert_water_corner-tr": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "desert_water_diag-tlbr": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "desert_water_diag-trbl": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "desert_water_edge-bottom": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "desert_water_edge-left": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "edge",
+   "at": "left"
+  },
+  "desert_water_edge-right": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "edge",
+   "at": "right"
+  },
+  "desert_water_edge-top": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "edge",
+   "at": "top"
+  },
+  "desert_water_inner-bl": {
+   "terrain": "water",
+   "other": "desert",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "desert_water_inner-br": {
+   "terrain": "water",
+   "other": "desert",
+   "shape": "inner",
+   "at": "br"
+  },
+  "desert_water_inner-tl": {
+   "terrain": "water",
+   "other": "desert",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "desert_water_inner-tr": {
+   "terrain": "water",
+   "other": "desert",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "desert_water_island": {
+   "terrain": "water",
+   "other": "desert",
+   "shape": "island"
+  },
+  "desert_water_pond": {
+   "terrain": "desert",
+   "other": "water",
+   "shape": "pond"
+  },
+  "dirt_cobblestone_corner-bl": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "dirt_cobblestone_corner-br": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "br"
+  },
+  "dirt_cobblestone_corner-tl": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "dirt_cobblestone_corner-tr": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "dirt_cobblestone_diag-tlbr": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "dirt_cobblestone_diag-trbl": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "dirt_cobblestone_edge-bottom": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "dirt_cobblestone_edge-left": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "left"
+  },
+  "dirt_cobblestone_edge-right": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "right"
+  },
+  "dirt_cobblestone_edge-top": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "top"
+  },
+  "dirt_cobblestone_inner-bl": {
+   "terrain": "cobblestone",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "dirt_cobblestone_inner-br": {
+   "terrain": "cobblestone",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "br"
+  },
+  "dirt_cobblestone_inner-tl": {
+   "terrain": "cobblestone",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "dirt_cobblestone_inner-tr": {
+   "terrain": "cobblestone",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "dirt_cobblestone_island": {
+   "terrain": "cobblestone",
+   "other": "dirt",
+   "shape": "island"
+  },
+  "dirt_cobblestone_pond": {
+   "terrain": "dirt",
+   "other": "cobblestone",
+   "shape": "pond"
+  },
+  "dirt_full": {
+   "terrain": "dirt",
+   "shape": "full"
+  },
+  "dirt_lava_corner-bl": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "dirt_lava_corner-br": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "corner",
+   "at": "br"
+  },
+  "dirt_lava_corner-tl": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "dirt_lava_corner-tr": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "dirt_lava_diag-tlbr": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "dirt_lava_diag-trbl": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "dirt_lava_edge-bottom": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "dirt_lava_edge-left": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "edge",
+   "at": "left"
+  },
+  "dirt_lava_edge-right": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "edge",
+   "at": "right"
+  },
+  "dirt_lava_edge-top": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "edge",
+   "at": "top"
+  },
+  "dirt_lava_inner-bl": {
+   "terrain": "lava",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "dirt_lava_inner-br": {
+   "terrain": "lava",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "br"
+  },
+  "dirt_lava_inner-tl": {
+   "terrain": "lava",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "dirt_lava_inner-tr": {
+   "terrain": "lava",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "dirt_lava_island": {
+   "terrain": "lava",
+   "other": "dirt",
+   "shape": "island"
+  },
+  "dirt_lava_pond": {
+   "terrain": "dirt",
+   "other": "lava",
+   "shape": "pond"
+  },
+  "dirt_swamp_corner-bl": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "dirt_swamp_corner-br": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "br"
+  },
+  "dirt_swamp_corner-tl": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "dirt_swamp_corner-tr": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "dirt_swamp_diag-tlbr": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "dirt_swamp_diag-trbl": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "dirt_swamp_edge-bottom": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "dirt_swamp_edge-left": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "left"
+  },
+  "dirt_swamp_edge-right": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "right"
+  },
+  "dirt_swamp_edge-top": {
+   "terrain": "dirt",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "top"
+  },
+  "dirt_swamp_inner-bl": {
+   "terrain": "swamp",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "dirt_swamp_inner-br": {
+   "terrain": "swamp",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "br"
+  },
+  "dirt_swamp_inner-tl": {
+   "terrain": "swamp",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "dirt_swamp_inner-tr": {
+   "terrain": "swamp",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "dirt_water_corner-bl": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "dirt_water_corner-br": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "corner",
+   "at": "br"
+  },
+  "dirt_water_corner-tl": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "dirt_water_corner-tr": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "dirt_water_diag-tlbr": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "dirt_water_diag-trbl": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "dirt_water_edge-bottom": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "dirt_water_edge-left": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "edge",
+   "at": "left"
+  },
+  "dirt_water_edge-right": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "edge",
+   "at": "right"
+  },
+  "dirt_water_edge-top": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "edge",
+   "at": "top"
+  },
+  "dirt_water_inner-bl": {
+   "terrain": "water",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "dirt_water_inner-br": {
+   "terrain": "water",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "br"
+  },
+  "dirt_water_inner-tl": {
+   "terrain": "water",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "dirt_water_inner-tr": {
+   "terrain": "water",
+   "other": "dirt",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "dirt_water_island": {
+   "terrain": "water",
+   "other": "dirt",
+   "shape": "island"
+  },
+  "dirt_water_pond": {
+   "terrain": "dirt",
+   "other": "water",
+   "shape": "pond"
+  },
+  "grass_cobblestone_corner-bl": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "grass_cobblestone_corner-br": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "br"
+  },
+  "grass_cobblestone_corner-tl": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "grass_cobblestone_corner-tr": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "grass_cobblestone_diag-tlbr": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "grass_cobblestone_diag-trbl": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "grass_cobblestone_edge-bottom": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "grass_cobblestone_edge-left": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "left"
+  },
+  "grass_cobblestone_edge-right": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "right"
+  },
+  "grass_cobblestone_edge-top": {
+   "terrain": "grass",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "top"
+  },
+  "grass_cobblestone_inner-bl": {
+   "terrain": "cobblestone",
+   "other": "grass",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "grass_cobblestone_inner-br": {
+   "terrain": "cobblestone",
+   "other": "grass",
+   "shape": "inner",
+   "at": "br"
+  },
+  "grass_cobblestone_inner-tl": {
+   "terrain": "cobblestone",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "grass_cobblestone_inner-tr": {
+   "terrain": "cobblestone",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "grass_desert_corner-bl": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "grass_desert_corner-br": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "corner",
+   "at": "br"
+  },
+  "grass_desert_corner-tl": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "grass_desert_corner-tr": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "grass_desert_diag-tlbr": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "grass_desert_diag-trbl": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "grass_desert_edge-bottom": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "grass_desert_edge-left": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "edge",
+   "at": "left"
+  },
+  "grass_desert_edge-right": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "edge",
+   "at": "right"
+  },
+  "grass_desert_edge-top": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "edge",
+   "at": "top"
+  },
+  "grass_desert_inner-bl": {
+   "terrain": "desert",
+   "other": "grass",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "grass_desert_inner-br": {
+   "terrain": "desert",
+   "other": "grass",
+   "shape": "inner",
+   "at": "br"
+  },
+  "grass_desert_inner-tl": {
+   "terrain": "desert",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "grass_desert_inner-tr": {
+   "terrain": "desert",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "grass_desert_island": {
+   "terrain": "desert",
+   "other": "grass",
+   "shape": "island"
+  },
+  "grass_desert_pond": {
+   "terrain": "grass",
+   "other": "desert",
+   "shape": "pond"
+  },
+  "grass_dirt_corner-bl": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "grass_dirt_corner-br": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "br"
+  },
+  "grass_dirt_corner-tl": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "grass_dirt_corner-tr": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "grass_dirt_diag-tlbr": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "grass_dirt_diag-trbl": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "grass_dirt_edge-bottom": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "grass_dirt_edge-left": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "left"
+  },
+  "grass_dirt_edge-right": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "right"
+  },
+  "grass_dirt_edge-top": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "top"
+  },
+  "grass_dirt_inner-bl": {
+   "terrain": "dirt",
+   "other": "grass",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "grass_dirt_inner-br": {
+   "terrain": "dirt",
+   "other": "grass",
+   "shape": "inner",
+   "at": "br"
+  },
+  "grass_dirt_inner-tl": {
+   "terrain": "dirt",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "grass_dirt_inner-tr": {
+   "terrain": "dirt",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "grass_dirt_island": {
+   "terrain": "dirt",
+   "other": "grass",
+   "shape": "island"
+  },
+  "grass_dirt_pond": {
+   "terrain": "grass",
+   "other": "dirt",
+   "shape": "pond"
+  },
+  "grass_full": {
+   "terrain": "grass",
+   "shape": "full"
+  },
+  "grass_lava_corner-bl": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "grass_lava_corner-br": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "corner",
+   "at": "br"
+  },
+  "grass_lava_corner-tl": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "grass_lava_corner-tr": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "grass_lava_diag-tlbr": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "grass_lava_diag-trbl": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "grass_lava_edge-bottom": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "grass_lava_edge-left": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "edge",
+   "at": "left"
+  },
+  "grass_lava_edge-right": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "edge",
+   "at": "right"
+  },
+  "grass_lava_edge-top": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "edge",
+   "at": "top"
+  },
+  "grass_lava_inner-bl": {
+   "terrain": "lava",
+   "other": "grass",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "grass_lava_inner-br": {
+   "terrain": "lava",
+   "other": "grass",
+   "shape": "inner",
+   "at": "br"
+  },
+  "grass_lava_inner-tl": {
+   "terrain": "lava",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "grass_lava_inner-tr": {
+   "terrain": "lava",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "grass_lava_island": {
+   "terrain": "lava",
+   "other": "grass",
+   "shape": "island"
+  },
+  "grass_lava_pond": {
+   "terrain": "grass",
+   "other": "lava",
+   "shape": "pond"
+  },
+  "grass_snow_corner-bl": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "grass_snow_corner-br": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "corner",
+   "at": "br"
+  },
+  "grass_snow_corner-tl": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "grass_snow_corner-tr": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "grass_snow_diag-tlbr": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "grass_snow_diag-trbl": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "grass_snow_edge-bottom": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "grass_snow_edge-left": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "edge",
+   "at": "left"
+  },
+  "grass_snow_edge-right": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "edge",
+   "at": "right"
+  },
+  "grass_snow_edge-top": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "edge",
+   "at": "top"
+  },
+  "grass_snow_inner-bl": {
+   "terrain": "snow",
+   "other": "grass",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "grass_snow_inner-br": {
+   "terrain": "snow",
+   "other": "grass",
+   "shape": "inner",
+   "at": "br"
+  },
+  "grass_snow_inner-tl": {
+   "terrain": "snow",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "grass_snow_inner-tr": {
+   "terrain": "snow",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "grass_snow_island": {
+   "terrain": "snow",
+   "other": "grass",
+   "shape": "island"
+  },
+  "grass_snow_pond": {
+   "terrain": "grass",
+   "other": "snow",
+   "shape": "pond"
+  },
+  "grass_swamp_corner-bl": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "grass_swamp_corner-br": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "br"
+  },
+  "grass_swamp_corner-tl": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "grass_swamp_corner-tr": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "grass_swamp_diag-tlbr": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "grass_swamp_diag-trbl": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "grass_swamp_edge-bottom": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "grass_swamp_edge-left": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "left"
+  },
+  "grass_swamp_edge-right": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "right"
+  },
+  "grass_swamp_edge-top": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "top"
+  },
+  "grass_swamp_inner-bl": {
+   "terrain": "swamp",
+   "other": "grass",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "grass_swamp_inner-br": {
+   "terrain": "swamp",
+   "other": "grass",
+   "shape": "inner",
+   "at": "br"
+  },
+  "grass_swamp_inner-tl": {
+   "terrain": "swamp",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "grass_swamp_inner-tr": {
+   "terrain": "swamp",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "grass_swamp_island": {
+   "terrain": "swamp",
+   "other": "grass",
+   "shape": "island"
+  },
+  "grass_swamp_pond": {
+   "terrain": "grass",
+   "other": "swamp",
+   "shape": "pond"
+  },
+  "grass_water_corner-bl": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "grass_water_corner-br": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "corner",
+   "at": "br"
+  },
+  "grass_water_corner-tl": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "grass_water_corner-tr": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "grass_water_diag-tlbr": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "grass_water_diag-trbl": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "grass_water_edge-bottom": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "grass_water_edge-left": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "edge",
+   "at": "left"
+  },
+  "grass_water_edge-right": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "edge",
+   "at": "right"
+  },
+  "grass_water_edge-top": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "edge",
+   "at": "top"
+  },
+  "grass_water_inner-bl": {
+   "terrain": "water",
+   "other": "grass",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "grass_water_inner-br": {
+   "terrain": "water",
+   "other": "grass",
+   "shape": "inner",
+   "at": "br"
+  },
+  "grass_water_inner-tl": {
+   "terrain": "water",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "grass_water_inner-tr": {
+   "terrain": "water",
+   "other": "grass",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "grass_water_island": {
+   "terrain": "water",
+   "other": "grass",
+   "shape": "island"
+  },
+  "grass_water_pond": {
+   "terrain": "grass",
+   "other": "water",
+   "shape": "pond"
+  },
+  "lava_cobblestone_corner-bl": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "lava_cobblestone_corner-br": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "br"
+  },
+  "lava_cobblestone_corner-tl": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "lava_cobblestone_corner-tr": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "lava_cobblestone_diag-tlbr": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "lava_cobblestone_diag-trbl": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "lava_cobblestone_edge-bottom": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "lava_cobblestone_edge-left": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "left"
+  },
+  "lava_cobblestone_edge-right": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "right"
+  },
+  "lava_cobblestone_edge-top": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "top"
+  },
+  "lava_cobblestone_inner-bl": {
+   "terrain": "cobblestone",
+   "other": "lava",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "lava_cobblestone_inner-br": {
+   "terrain": "cobblestone",
+   "other": "lava",
+   "shape": "inner",
+   "at": "br"
+  },
+  "lava_cobblestone_inner-tl": {
+   "terrain": "cobblestone",
+   "other": "lava",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "lava_cobblestone_inner-tr": {
+   "terrain": "cobblestone",
+   "other": "lava",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "lava_cobblestone_island": {
+   "terrain": "cobblestone",
+   "other": "lava",
+   "shape": "island"
+  },
+  "lava_cobblestone_pond": {
+   "terrain": "lava",
+   "other": "cobblestone",
+   "shape": "pond"
+  },
+  "lava_full": {
+   "terrain": "lava",
+   "shape": "full"
+  },
+  "lava_water_corner-bl": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "lava_water_corner-br": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "corner",
+   "at": "br"
+  },
+  "lava_water_corner-tl": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "lava_water_corner-tr": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "lava_water_diag-tlbr": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "lava_water_diag-trbl": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "lava_water_edge-bottom": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "lava_water_edge-left": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "edge",
+   "at": "left"
+  },
+  "lava_water_edge-right": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "edge",
+   "at": "right"
+  },
+  "lava_water_edge-top": {
+   "terrain": "lava",
+   "other": "water",
+   "shape": "edge",
+   "at": "top"
+  },
+  "lava_water_inner-bl": {
+   "terrain": "water",
+   "other": "lava",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "lava_water_inner-br": {
+   "terrain": "water",
+   "other": "lava",
+   "shape": "inner",
+   "at": "br"
+  },
+  "lava_water_inner-tl": {
+   "terrain": "water",
+   "other": "lava",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "lava_water_inner-tr": {
+   "terrain": "water",
+   "other": "lava",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "snow_cobblestone_corner-bl": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "snow_cobblestone_corner-br": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "br"
+  },
+  "snow_cobblestone_corner-tl": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "snow_cobblestone_corner-tr": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "snow_cobblestone_diag-tlbr": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "snow_cobblestone_diag-trbl": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "snow_cobblestone_edge-bottom": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "snow_cobblestone_edge-left": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "left"
+  },
+  "snow_cobblestone_edge-right": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "right"
+  },
+  "snow_cobblestone_edge-top": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "top"
+  },
+  "snow_cobblestone_inner-bl": {
+   "terrain": "cobblestone",
+   "other": "snow",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "snow_cobblestone_inner-br": {
+   "terrain": "cobblestone",
+   "other": "snow",
+   "shape": "inner",
+   "at": "br"
+  },
+  "snow_cobblestone_inner-tl": {
+   "terrain": "cobblestone",
+   "other": "snow",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "snow_cobblestone_inner-tr": {
+   "terrain": "cobblestone",
+   "other": "snow",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "snow_cobblestone_island": {
+   "terrain": "cobblestone",
+   "other": "snow",
+   "shape": "island"
+  },
+  "snow_cobblestone_pond": {
+   "terrain": "snow",
+   "other": "cobblestone",
+   "shape": "pond"
+  },
+  "snow_dirt_corner-bl": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "snow_dirt_corner-br": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "br"
+  },
+  "snow_dirt_corner-tl": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "snow_dirt_corner-tr": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "snow_dirt_diag-tlbr": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "snow_dirt_diag-trbl": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "snow_dirt_edge-bottom": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "snow_dirt_edge-left": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "left"
+  },
+  "snow_dirt_edge-right": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "right"
+  },
+  "snow_dirt_edge-top": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "edge",
+   "at": "top"
+  },
+  "snow_dirt_inner-bl": {
+   "terrain": "dirt",
+   "other": "snow",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "snow_dirt_inner-br": {
+   "terrain": "dirt",
+   "other": "snow",
+   "shape": "inner",
+   "at": "br"
+  },
+  "snow_dirt_inner-tl": {
+   "terrain": "dirt",
+   "other": "snow",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "snow_dirt_inner-tr": {
+   "terrain": "dirt",
+   "other": "snow",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "snow_dirt_island": {
+   "terrain": "dirt",
+   "other": "snow",
+   "shape": "island"
+  },
+  "snow_dirt_pond": {
+   "terrain": "snow",
+   "other": "dirt",
+   "shape": "pond"
+  },
+  "snow_full": {
+   "terrain": "snow",
+   "shape": "full"
+  },
+  "snow_swamp_corner-bl": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "snow_swamp_corner-br": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "br"
+  },
+  "snow_swamp_corner-tl": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "snow_swamp_corner-tr": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "snow_swamp_diag-tlbr": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "snow_swamp_diag-trbl": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "snow_swamp_edge-bottom": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "snow_swamp_edge-left": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "left"
+  },
+  "snow_swamp_edge-right": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "right"
+  },
+  "snow_swamp_edge-top": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "edge",
+   "at": "top"
+  },
+  "snow_swamp_inner-bl": {
+   "terrain": "swamp",
+   "other": "snow",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "snow_swamp_inner-br": {
+   "terrain": "swamp",
+   "other": "snow",
+   "shape": "inner",
+   "at": "br"
+  },
+  "snow_swamp_inner-tl": {
+   "terrain": "swamp",
+   "other": "snow",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "snow_swamp_inner-tr": {
+   "terrain": "swamp",
+   "other": "snow",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "snow_swamp_island": {
+   "terrain": "swamp",
+   "other": "snow",
+   "shape": "island"
+  },
+  "snow_swamp_pond": {
+   "terrain": "snow",
+   "other": "swamp",
+   "shape": "pond"
+  },
+  "snow_water_corner-bl": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "snow_water_corner-br": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "corner",
+   "at": "br"
+  },
+  "snow_water_corner-tl": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "snow_water_corner-tr": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "snow_water_diag-tlbr": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "snow_water_diag-trbl": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "snow_water_edge-bottom": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "snow_water_edge-left": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "edge",
+   "at": "left"
+  },
+  "snow_water_edge-right": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "edge",
+   "at": "right"
+  },
+  "snow_water_edge-top": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "edge",
+   "at": "top"
+  },
+  "snow_water_inner-bl": {
+   "terrain": "water",
+   "other": "snow",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "snow_water_inner-br": {
+   "terrain": "water",
+   "other": "snow",
+   "shape": "inner",
+   "at": "br"
+  },
+  "snow_water_inner-tl": {
+   "terrain": "water",
+   "other": "snow",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "snow_water_inner-tr": {
+   "terrain": "water",
+   "other": "snow",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "snow_water_island": {
+   "terrain": "water",
+   "other": "snow",
+   "shape": "island"
+  },
+  "snow_water_pond": {
+   "terrain": "snow",
+   "other": "water",
+   "shape": "pond"
+  },
+  "swamp_cobblestone_corner-bl": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "swamp_cobblestone_corner-br": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "br"
+  },
+  "swamp_cobblestone_corner-tl": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "swamp_cobblestone_corner-tr": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "swamp_cobblestone_diag-tlbr": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "swamp_cobblestone_diag-trbl": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "swamp_cobblestone_edge-bottom": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "swamp_cobblestone_edge-left": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "left"
+  },
+  "swamp_cobblestone_edge-right": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "right"
+  },
+  "swamp_cobblestone_edge-top": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "top"
+  },
+  "swamp_cobblestone_inner-bl": {
+   "terrain": "cobblestone",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "swamp_cobblestone_inner-br": {
+   "terrain": "cobblestone",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "br"
+  },
+  "swamp_cobblestone_inner-tl": {
+   "terrain": "cobblestone",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "swamp_cobblestone_inner-tr": {
+   "terrain": "cobblestone",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "swamp_cobblestone_island": {
+   "terrain": "cobblestone",
+   "other": "swamp",
+   "shape": "island"
+  },
+  "swamp_cobblestone_pond": {
+   "terrain": "swamp",
+   "other": "cobblestone",
+   "shape": "pond"
+  },
+  "swamp_full": {
+   "terrain": "swamp",
+   "shape": "full"
+  },
+  "swamp_lava_corner-bl": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "swamp_lava_corner-br": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "corner",
+   "at": "br"
+  },
+  "swamp_lava_corner-tl": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "swamp_lava_corner-tr": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "swamp_lava_diag-tlbr": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "swamp_lava_diag-trbl": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "swamp_lava_edge-bottom": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "swamp_lava_edge-left": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "edge",
+   "at": "left"
+  },
+  "swamp_lava_edge-right": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "edge",
+   "at": "right"
+  },
+  "swamp_lava_edge-top": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "edge",
+   "at": "top"
+  },
+  "swamp_lava_inner-bl": {
+   "terrain": "lava",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "swamp_lava_inner-br": {
+   "terrain": "lava",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "br"
+  },
+  "swamp_lava_inner-tl": {
+   "terrain": "lava",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "swamp_lava_inner-tr": {
+   "terrain": "lava",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "swamp_lava_island": {
+   "terrain": "lava",
+   "other": "swamp",
+   "shape": "island"
+  },
+  "swamp_lava_pond": {
+   "terrain": "swamp",
+   "other": "lava",
+   "shape": "pond"
+  },
+  "swamp_water_corner-bl": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "swamp_water_corner-br": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "corner",
+   "at": "br"
+  },
+  "swamp_water_corner-tl": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "swamp_water_corner-tr": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "swamp_water_diag-tlbr": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "swamp_water_diag-trbl": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "swamp_water_edge-bottom": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "swamp_water_edge-left": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "edge",
+   "at": "left"
+  },
+  "swamp_water_edge-right": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "edge",
+   "at": "right"
+  },
+  "swamp_water_edge-top": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "edge",
+   "at": "top"
+  },
+  "swamp_water_inner-bl": {
+   "terrain": "water",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "swamp_water_inner-br": {
+   "terrain": "water",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "br"
+  },
+  "swamp_water_inner-tl": {
+   "terrain": "water",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "swamp_water_inner-tr": {
+   "terrain": "water",
+   "other": "swamp",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "swamp_water_island": {
+   "terrain": "water",
+   "other": "swamp",
+   "shape": "island"
+  },
+  "swamp_water_pond": {
+   "terrain": "swamp",
+   "other": "water",
+   "shape": "pond"
+  },
+  "water_cobblestone_corner-bl": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "bl"
+  },
+  "water_cobblestone_corner-br": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "br"
+  },
+  "water_cobblestone_corner-tl": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tl"
+  },
+  "water_cobblestone_corner-tr": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "corner",
+   "at": "tr"
+  },
+  "water_cobblestone_diag-tlbr": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "tlbr"
+  },
+  "water_cobblestone_diag-trbl": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "diag",
+   "at": "trbl"
+  },
+  "water_cobblestone_edge-bottom": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "bottom"
+  },
+  "water_cobblestone_edge-left": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "left"
+  },
+  "water_cobblestone_edge-right": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "right"
+  },
+  "water_cobblestone_edge-top": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "edge",
+   "at": "top"
+  },
+  "water_cobblestone_inner-bl": {
+   "terrain": "cobblestone",
+   "other": "water",
+   "shape": "inner",
+   "at": "bl"
+  },
+  "water_cobblestone_inner-br": {
+   "terrain": "cobblestone",
+   "other": "water",
+   "shape": "inner",
+   "at": "br"
+  },
+  "water_cobblestone_inner-tl": {
+   "terrain": "cobblestone",
+   "other": "water",
+   "shape": "inner",
+   "at": "tl"
+  },
+  "water_cobblestone_inner-tr": {
+   "terrain": "cobblestone",
+   "other": "water",
+   "shape": "inner",
+   "at": "tr"
+  },
+  "water_cobblestone_island": {
+   "terrain": "cobblestone",
+   "other": "water",
+   "shape": "island"
+  },
+  "water_cobblestone_pond": {
+   "terrain": "water",
+   "other": "cobblestone",
+   "shape": "pond"
+  },
+  "water_full": {
+   "terrain": "water",
+   "shape": "full"
+  }
+ }
+}

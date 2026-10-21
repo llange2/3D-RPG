@@ -1,0 +1,30 @@
+{
+ "tex (interior)": {
+  "files": 25,
+  "bytes": 900384
+ },
+ "terrain flat": {
+  "files": 403,
+  "bytes": 11268084
+ },
+ "icons items": {
+  "files": 308,
+  "bytes": 1026596
+ },
+ "icons portraits": {
+  "files": 229,
+  "bytes": 1297078
+ },
+ "icons skills+spells": {
+  "files": 158,
+  "bytes": 1026494
+ },
+ "ui": {
+  "files": 37,
+  "bytes": 766626
+ },
+ "screens": {
+  "files": 18,
+  "bytes": 2693154
+ }
+}

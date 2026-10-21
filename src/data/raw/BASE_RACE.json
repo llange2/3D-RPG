@@ -1,0 +1,47 @@
+{
+ "Elf": {
+  "base_hp": -2,
+  "base_mana": 2,
+  "res_fire": 0,
+  "res_ice": 0,
+  "res_acid": 0,
+  "res_magic": 10,
+  "thievery": 10
+ },
+ "Gnome": {
+  "base_hp": -1,
+  "base_mana": 1,
+  "res_fire": 2,
+  "res_ice": 2,
+  "res_acid": 2,
+  "res_magic": 20,
+  "thievery": 5
+ },
+ "Human": {
+  "base_hp": 0,
+  "base_mana": 0,
+  "res_fire": 7,
+  "res_ice": 7,
+  "res_acid": 7,
+  "res_magic": 7,
+  "thievery": 0
+ },
+ "Dwarf": {
+  "base_hp": 1,
+  "base_mana": -1,
+  "res_fire": 5,
+  "res_ice": 5,
+  "res_acid": 20,
+  "res_magic": 5,
+  "thievery": 10
+ },
+ "Orc": {
+  "base_hp": 2,
+  "base_mana": -2,
+  "res_fire": 10,
+  "res_ice": 10,
+  "res_acid": 10,
+  "res_magic": 0,
+  "thievery": -10
+ }
+}

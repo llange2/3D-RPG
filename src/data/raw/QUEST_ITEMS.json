@@ -1,0 +1,134 @@
+[
+ {
+  "name": "Black Key",
+  "type": "quest_key_black",
+  "texture": "resources/textures/item_quest_key_black",
+  "value": -1
+ },
+ {
+  "name": "Black Key card",
+  "type": "quest_black_keycard",
+  "texture": "resources/textures/item_quest_black_keycard",
+  "value": -1
+ },
+ {
+  "name": "Blue Key",
+  "type": "quest_key_blue",
+  "texture": "resources/textures/item_quest_key_blue",
+  "value": -1
+ },
+ {
+  "name": "Blue Key card",
+  "type": "quest_blue_keycard",
+  "texture": "resources/textures/item_quest_blue_keycard",
+  "value": -1
+ },
+ {
+  "name": "Bronze Key",
+  "type": "quest_key_bronze",
+  "texture": "resources/textures/item_quest_key_bronze",
+  "value": -1
+ },
+ {
+  "name": "Brown Key card",
+  "type": "quest_brown_keycard",
+  "texture": "resources/textures/item_quest_brown_keycard",
+  "value": -1
+ },
+ {
+  "name": "Evil Artifact",
+  "type": "quest_evil_artifact",
+  "texture": "resources/textures/quest_evil_artifact",
+  "value": -1
+ },
+ {
+  "name": "Golden Key",
+  "type": "quest_key_golden",
+  "texture": "resources/textures/item_quest_key_golden",
+  "value": -1
+ },
+ {
+  "name": "Good Artifact",
+  "type": "quest_good_artifact",
+  "texture": "resources/textures/quest_good_artifact",
+  "value": -1
+ },
+ {
+  "name": "Green Key",
+  "type": "quest_key_green",
+  "texture": "resources/textures/item_quest_key_green",
+  "value": -1
+ },
+ {
+  "name": "Green Key card",
+  "type": "quest_green_keycard",
+  "texture": "resources/textures/item_quest_green_keycard",
+  "value": -1
+ },
+ {
+  "name": "Neutral Artifact",
+  "type": "quest_neutral_artifact",
+  "texture": "resources/textures/quest_neutral_artifact",
+  "value": -1
+ },
+ {
+  "name": "Orange Key",
+  "type": "quest_key_orange",
+  "texture": "resources/textures/item_quest_key_orange",
+  "value": -1
+ },
+ {
+  "name": "Orb of ultimate power",
+  "type": "quest_orb",
+  "texture": "resources/textures/item_quest_orb",
+  "value": -1
+ },
+ {
+  "name": "Pearl of Youth & Beauty",
+  "type": "quest_pearl_of_youth",
+  "texture": "resources/textures/quest_pearl_of_youth",
+  "value": -1
+ },
+ {
+  "name": "Purple Key card",
+  "type": "quest_purple_keycard",
+  "texture": "resources/textures/item_quest_purple_keycard",
+  "value": -1
+ },
+ {
+  "name": "Quatloo coin",
+  "type": "quest_quatloo_coin",
+  "texture": "resources/textures/quest_quatloo_coin",
+  "value": -1
+ },
+ {
+  "name": "Rainbow Key",
+  "type": "quest_key_rainbow",
+  "texture": "resources/textures/item_quest_key_rainbow",
+  "value": -1
+ },
+ {
+  "name": "Red Key",
+  "type": "quest_key_red",
+  "texture": "resources/textures/item_quest_key_red",
+  "value": -1
+ },
+ {
+  "name": "Red Key card",
+  "type": "quest_red_keycard",
+  "texture": "resources/textures/item_quest_red_keycard",
+  "value": -1
+ },
+ {
+  "name": "Silver Key",
+  "type": "quest_key_silver",
+  "texture": "resources/textures/item_quest_key_silver",
+  "value": -1
+ },
+ {
+  "name": "Silver Skull",
+  "type": "quest_silver_skull",
+  "texture": "resources/textures/item_quest_silver_skull",
+  "value": -1
+ }
+]

@@ -1,0 +1,99 @@
+{
+  "tierBonus": 1,
+  "rules": [
+    { "id": "exit", "kind": "transfer", "anchor": "exit", "count": { "perMap": [1, 1] }, "params": { "mode": "poi_exit" } },
+    {
+      "id": "door",
+      "kind": "door",
+      "anchor": "mouth",
+      "when": { "minDepth": 80 },
+      "count": { "chance": 820 },
+      "variants": [
+        { "weight": 68, "params": { "locked": false } },
+        { "weight": 32, "params": { "locked": true, "difficulty": "=tier*2+1" } }
+      ]
+    },
+    { "id": "boss_guard", "kind": "spawn", "anchor": "bossRoom", "when": { "alignment": ["neutral", "evil"] }, "count": { "perMap": [1, 1] }, "params": { "boss": true, "group": "=3+rand(0,tier)" } },
+    {
+      "id": "boss_chest",
+      "kind": "treasure",
+      "anchor": "bossRoomEdge",
+      "when": { "alignment": ["neutral", "evil"] },
+      "count": { "perMap": [2, 3] },
+      "params": { "level": "=min(8,tier+1)", "gold": "=tier*320+rand(0,300)", "items": "=1+rand(0,2)" }
+    },
+    {
+      "id": "chest_room",
+      "kind": "treasure",
+      "anchor": "roomEdge",
+      "when": { "excludeEntranceRoom": true, "minRoomSize": 12 },
+      "count": { "perMap": [3, 6] },
+      "params": { "level": "=tier", "gold": "=tier*100+rand(0,140)", "items": "=rand(0,1)" }
+    },
+    {
+      "id": "chest_deadend",
+      "kind": "treasure",
+      "anchor": "deadEnd",
+      "when": { "minDepth": 200 },
+      "count": { "perMap": [0, 2] },
+      "params": { "level": "=tier", "gold": "=tier*90+rand(0,100)", "items": 1 }
+    },
+    {
+      "id": "trap_corridor",
+      "kind": "trap",
+      "anchor": "corridor",
+      "when": { "minDepth": 200 },
+      "count": { "perMap": [2, 5] },
+      "variants": [
+        { "weight": 3, "params": { "trap": "spring", "damage": "=tier*4+rand(1,6)" } },
+        { "weight": 2, "params": { "trap": "generic", "damage": "=tier*4+rand(1,6)" } }
+      ]
+    },
+    { "id": "ambush", "kind": "ambush", "anchor": "corridor", "when": { "minDepth": 250, "alignment": ["neutral", "evil"] }, "count": { "perMap": [2, 4] }, "params": { "group": "=2+rand(0,tier)" } },
+    {
+      "id": "guards_room",
+      "kind": "spawn",
+      "anchor": "roomCenter",
+      "when": { "excludeEntranceRoom": true, "alignment": ["neutral", "evil"] },
+      "count": { "chance": 900 },
+      "params": { "boss": false, "group": "=2+rand(0,tier)" }
+    },
+    {
+      "id": "shrine",
+      "kind": "shrine",
+      "anchor": "roomEdge",
+      "when": { "excludeEntranceRoom": true, "minRoomSize": 16 },
+      "count": { "perMap": [1, 2] },
+      "variants": [
+        { "weight": 3, "params": { "effect": "resist", "amount": "=3+tier" } },
+        { "weight": 2, "params": { "effect": "attribute", "amount": 1 } },
+        { "weight": 3, "params": { "effect": "heal", "amount": "=tier*25" } }
+      ]
+    },
+    { "id": "lore", "kind": "lore", "anchor": "roomEdge", "when": { "excludeEntranceRoom": true }, "count": { "perMap": [2, 4] }, "params": { "pool": "castle", "line": "=rand(0,19)" } },
+    {
+      "id": "lord",
+      "kind": "talent",
+      "anchor": "roomEdge",
+      "when": { "excludeEntranceRoom": true, "minRoomSize": 12 },
+      "count": { "perMap": [0, 1] },
+      "variants": [
+        { "weight": 1, "params": { "talent": "talent_prayer_master" } },
+        { "weight": 1, "params": { "talent": "talent_prestidigitator" } }
+      ]
+    },
+    { "id": "banner", "kind": "decor", "anchor": "roomEdge", "when": { "minRoomSize": 9 }, "count": { "perMap": [2, 4] } },
+    { "id": "vault_gate", "kind": "door", "anchor": "vaultGate", "count": { "chance": 1000 }, "params": { "locked": false, "ask": true } },
+    { "id": "vault_door", "kind": "door", "anchor": "vaultDoor", "count": { "chance": 1000 }, "params": { "locked": true, "ask": true, "difficulty": "=tier*2+1" } },
+    { "id": "vault_wall", "kind": "breakable_wall", "anchor": "vaultWall", "count": { "chance": 1000 } },
+    {
+      "id": "vault_chest",
+      "kind": "treasure",
+      "anchor": "vaultChest",
+      "count": { "chance": 1000 },
+      "params": { "level": "=min(8,tier+1)", "gold": "=tier*260+rand(0,260)", "items": "=1+rand(0,1)" }
+    },
+    { "id": "vault_guard", "kind": "spawn", "anchor": "vaultGuard", "count": { "chance": 1000 }, "params": { "group": 1 } },
+    { "id": "breakable", "kind": "breakable_wall", "anchor": "wallBetween", "count": { "perMap": [1, 3] } }
+  ]
+}

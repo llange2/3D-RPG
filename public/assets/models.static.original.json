@@ -1,0 +1,3603 @@
+{
+ "poi_castle": {
+  "file": "models-original/poi_castle.glb",
+  "tris": 29997,
+  "bytes": 1520372,
+  "bounds": [
+   -0.9239169955253601,
+   -0.7540810108184814,
+   -0.9036250114440918,
+   0.9201120138168335,
+   0.7573040127754211,
+   0.9403070211410522
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": true,
+  "mean": 0.359
+ },
+ "poi_town": {
+  "file": "models-original/poi_town.glb",
+  "tris": 29976,
+  "bytes": 1522752,
+  "bounds": [
+   -0.8207610249519348,
+   -0.6272979974746704,
+   -0.9561769962310791,
+   0.8484560251235962,
+   0.6276310086250305,
+   0.956375002861023
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.33
+ },
+ "poi_hut": {
+  "file": "models-original/poi_hut.glb",
+  "tris": 23909,
+  "bytes": 1922692,
+  "bounds": [
+   -0.9098029732704163,
+   -0.9464510083198547,
+   -0.8408690094947815,
+   0.9537310004234314,
+   0.9273049831390381,
+   0.8929389715194702
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.314
+ },
+ "poi_pyramid": {
+  "file": "models-original/poi_pyramid.glb",
+  "tris": 10000,
+  "bytes": 995104,
+  "bounds": [
+   -0.9984009861946106,
+   -0.7987260222434998,
+   -0.9911419749259949,
+   0.9941200017929077,
+   0.7687879800796509,
+   0.9827420115470886
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": true,
+  "mean": 0.561
+ },
+ "poi_dungeon": {
+  "file": "models-original/poi_dungeon.glb",
+  "tris": 9998,
+  "bytes": 1290656,
+  "bounds": [
+   -0.9425690174102783,
+   -1.0010499954223633,
+   -0.9818959832191467,
+   0.9432010054588318,
+   1.0013099908828735,
+   0.9798799753189087
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.284
+ },
+ "poi_cave": {
+  "file": "models-original/poi_cave.glb",
+  "tris": 9998,
+  "bytes": 1123976,
+  "bounds": [
+   -0.8272332549095154,
+   -0.6041154861450195,
+   -1,
+   0.8272332549095154,
+   0.6041154861450195,
+   1
+  ],
+  "animations": [],
+  "groundTop": -0.6,
+  "fromObj": false,
+  "mean": 0.323
+ },
+ "poi_gate": {
+  "file": "models-original/poi_gate.glb",
+  "tris": 10000,
+  "bytes": 1484144,
+  "bounds": [
+   -0.9570019942841128,
+   -0.028360605239868164,
+   0.7764194160699844,
+   0.9570019942841128,
+   2.2440903186798096,
+   1.1932456344366074
+  ],
+  "animations": [],
+  "groundTop": 0.2,
+  "fromObj": false,
+  "mean": 0.266
+ },
+ "veg_trees": {
+  "file": "models-original/veg_trees.glb",
+  "tris": 3247,
+  "bytes": 1102772,
+  "bounds": [
+   -0.9501860065761889,
+   -0.360607985949855,
+   -0.935254895665409,
+   0.9327419657868887,
+   2.4846961724304037,
+   0.9417479445432377
+  ],
+  "animations": [],
+  "groundTop": 0.1,
+  "fromObj": false,
+  "mean": 0.285
+ },
+ "veg_snowy_forest": {
+  "file": "models-original/veg_snowy_forest.glb",
+  "tris": 6169,
+  "bytes": 819200,
+  "bounds": [
+   -0.9057260155677795,
+   -0.9546949863433838,
+   -0.8747220039367676,
+   0.8710430264472961,
+   0.9479529857635498,
+   0.8897600173950195
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": true,
+  "mean": 0.485
+ },
+ "veg_palms": {
+  "file": "models-original/veg_palms.glb",
+  "tris": 29269,
+  "bytes": 2101816,
+  "bounds": [
+   -1.311344231861041,
+   -0.48906441032886505,
+   -1.6585399601383337,
+   1.610104180872182,
+   2.050570545781632,
+   1.207388198893582
+  ],
+  "animations": [],
+  "groundTop": 0.1,
+  "fromObj": false,
+  "mean": 0.44
+ },
+ "veg_old_tree": {
+  "file": "models-original/veg_old_tree.glb",
+  "tris": 19522,
+  "bytes": 1574048,
+  "bounds": [
+   -0.6744419932365417,
+   -1.0006300210952759,
+   -0.6340129971504211,
+   0.6940659880638123,
+   0.9860270023345947,
+   0.6421229839324951
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.412
+ },
+ "veg_forest_tile": {
+  "file": "models-original/veg_forest_tile.glb",
+  "tris": 6169,
+  "bytes": 907140,
+  "bounds": [
+   -0.9057260155677795,
+   -0.9546949863433838,
+   -0.8747220039367676,
+   0.8710430264472961,
+   0.9479529857635498,
+   0.8897600173950195
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": true,
+  "mean": 0.291
+ },
+ "poi_portal": {
+  "file": "models-original/poi_portal.glb",
+  "tris": 26104,
+  "bytes": 789548,
+  "bounds": [
+   -0.330951988697052,
+   -0.5277379751205444,
+   -0.6000000238418579,
+   0.330951988697052,
+   0.5277379751205444,
+   0.6000000238418579
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "fromObj": true
+ },
+ "mtn_mountain": {
+  "file": "models-original/mtn_mountain.glb",
+  "tris": 4482,
+  "bytes": 934376,
+  "bounds": [
+   -1.006872447981209,
+   -0.3631249666213989,
+   -0.9815843750771194,
+   1.0366755983286708,
+   1.6290984153747559,
+   0.9960781326432198
+  ],
+  "animations": [],
+  "groundTop": 0.1,
+  "fromObj": false,
+  "mean": 0.376
+ },
+ "mtn_snowy": {
+  "file": "models-original/mtn_snowy.glb",
+  "tris": 4295,
+  "bytes": 558636,
+  "bounds": [
+   -0.9869124293327332,
+   -0.33485471457242966,
+   -1.006969690322876,
+   0.960869312286377,
+   1.795911468565464,
+   1.0363003015518188
+  ],
+  "animations": [],
+  "groundTop": 0.1,
+  "fromObj": false,
+  "mean": 0.538
+ },
+ "mtn_desert": {
+  "file": "models-original/mtn_desert.glb",
+  "tris": 29204,
+  "bytes": 1794264,
+  "bounds": [
+   -1.2204923797422902,
+   -0.4830896109342575,
+   -1.3723809316260325,
+   1.355260585901289,
+   1.8592346442204644,
+   1.469133111269979
+  ],
+  "animations": [],
+  "groundTop": 0.1,
+  "fromObj": false,
+  "mean": 0.438
+ },
+ "mtn_swamp": {
+  "file": "models-original/mtn_swamp.glb",
+  "tris": 28830,
+  "bytes": 1945132,
+  "bounds": [
+   -1.2122719269624795,
+   -0.2455579787492752,
+   -1.1510221576992379,
+   1.144910153058035,
+   1.8401334458175143,
+   1.3287659243226813
+  ],
+  "animations": [],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.29
+ },
+ "mtn_lava": {
+  "file": "models-original/mtn_lava.glb",
+  "tris": 1500,
+  "bytes": 369780,
+  "bounds": [
+   -0.9525889754295349,
+   -0.9645839929580688,
+   -0.9526119828224182,
+   0.9523810148239136,
+   0.9758660197257996,
+   0.9527860283851624
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": true,
+  "mean": 0.171
+ },
+ "gnd_grass": {
+  "file": "models-original/gnd_grass.glb",
+  "tris": 248,
+  "bytes": 454888,
+  "bounds": [
+   -0.9063379764556885,
+   -0.35910800099372864,
+   -0.8877580165863037,
+   0.904833972454071,
+   0.35076001286506653,
+   0.9082919955253601
+  ],
+  "animations": [],
+  "groundTop": 0.1,
+  "fromObj": false,
+  "mean": 0.372
+ },
+ "gnd_snow": {
+  "file": "models-original/gnd_snow.glb",
+  "tris": 220,
+  "bytes": 131900,
+  "bounds": [
+   -0.9569910168647766,
+   -0.2634800672531128,
+   -0.9523389935493469,
+   0.9510549902915955,
+   0.2718890607357025,
+   0.9469159841537476
+  ],
+  "animations": [],
+  "groundTop": 0.2,
+  "fromObj": false,
+  "mean": 0.543
+ },
+ "gnd_swamp": {
+  "file": "models-original/gnd_swamp.glb",
+  "tris": 220,
+  "bytes": 263036,
+  "bounds": [
+   -0.945734977722168,
+   -0.23902395367622375,
+   -0.9452109932899475,
+   0.9230030179023743,
+   0.20277997851371765,
+   0.9243659973144531
+  ],
+  "animations": [],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.266
+ },
+ "gnd_desert": {
+  "file": "models-original/gnd_desert.glb",
+  "tris": 220,
+  "bytes": 176692,
+  "bounds": [
+   -0.9447559714317322,
+   -0.3334130048751831,
+   -0.9559170007705688,
+   0.9487770199775696,
+   0.3389149606227875,
+   0.9567109942436218
+  ],
+  "animations": [],
+  "groundTop": 0.25,
+  "fromObj": false,
+  "mean": 0.521
+ },
+ "gnd_dirt": {
+  "file": "models-original/gnd_dirt.glb",
+  "tris": 162,
+  "bytes": 253284,
+  "bounds": [
+   -0.9975489974021912,
+   -0.1256633698940277,
+   -0.9997959733009338,
+   1.000059962272644,
+   0.054598137736320496,
+   0.9987050294876099
+  ],
+  "animations": [],
+  "groundTop": -0.1,
+  "fromObj": true,
+  "mean": 0.581
+ },
+ "gnd_cobble": {
+  "file": "models-original/gnd_cobble.glb",
+  "tris": 1493,
+  "bytes": 671360,
+  "bounds": [
+   -1.0027849674224854,
+   -0.048294998705387115,
+   -1.002653956413269,
+   0.9978060126304626,
+   0.05544599890708923,
+   1.0033990144729614
+  ],
+  "animations": [],
+  "groundTop": 0,
+  "fromObj": true,
+  "mean": 0.365
+ },
+ "gndx_grass": {
+  "file": "models-original/gndx_grass.glb",
+  "tris": 2250,
+  "bytes": 512348,
+  "bounds": [
+   -0.950186014175415,
+   -0.3631249964237213,
+   -0.9352549910545349,
+   0.9327419996261597,
+   0.3710409998893738,
+   0.9417480230331421
+  ],
+  "animations": [],
+  "groundTop": 0.1,
+  "fromObj": false,
+  "mean": 0.372
+ },
+ "gndx_snow": {
+  "file": "models-original/gndx_snow.glb",
+  "tris": 3560,
+  "bytes": 210796,
+  "bounds": [
+   -0.9591730237007141,
+   -0.274649053812027,
+   -0.9523389935493469,
+   0.9510549902915955,
+   0.2718890607357025,
+   0.9469159841537476
+  ],
+  "animations": [],
+  "groundTop": 0.2,
+  "fromObj": false,
+  "mean": 0.543
+ },
+ "gndx_swamp": {
+  "file": "models-original/gndx_swamp.glb",
+  "tris": 5768,
+  "bytes": 401520,
+  "bounds": [
+   -0.9593960046768188,
+   -0.2460929900407791,
+   -0.9487159848213196,
+   0.952305018901825,
+   0.20866602659225464,
+   0.9420490264892578
+  ],
+  "animations": [],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.266
+ },
+ "gndx_desert": {
+  "file": "models-original/gndx_desert.glb",
+  "tris": 3448,
+  "bytes": 253124,
+  "bounds": [
+   -0.9585800170898438,
+   -0.3440930247306824,
+   -0.9599570035934448,
+   0.958495020866394,
+   0.3389149606227875,
+   0.9602490067481995
+  ],
+  "animations": [],
+  "groundTop": 0.25,
+  "fromObj": false,
+  "mean": 0.521
+ },
+ "gndx_dirt": {
+  "file": "models-original/gndx_dirt.glb",
+  "tris": 7904,
+  "bytes": 541120,
+  "bounds": [
+   -0.9975489974021912,
+   -0.17940199375152588,
+   -0.9997959733009338,
+   1.000059962272644,
+   0.16056199371814728,
+   0.9987050294876099
+  ],
+  "animations": [],
+  "groundTop": 0,
+  "fromObj": true,
+  "mean": 0.581
+ },
+ "obj_chest": {
+  "file": "models-original/obj_chest.glb",
+  "tris": 9999,
+  "bytes": 895580,
+  "bounds": [
+   -1.0004099607467651,
+   -0.6065300107002258,
+   -0.6437379717826843,
+   0.9974489808082581,
+   0.5999109745025635,
+   0.6344929933547974
+  ],
+  "animations": [],
+  "groundTop": 0.5,
+  "fromObj": true,
+  "mean": 0.156
+ },
+ "obj_chest_iron": {
+  "file": "models-original/obj_chest_iron.glb",
+  "tris": 9994,
+  "bytes": 1288052,
+  "bounds": [
+   -1.0036200284957886,
+   -0.7133949995040894,
+   -0.7606009840965271,
+   0.9998080134391785,
+   0.6836659908294678,
+   0.7523819804191589
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": true,
+  "mean": 0.282
+ },
+ "obj_chest_noble": {
+  "file": "models-original/obj_chest_noble.glb",
+  "tris": 9999,
+  "bytes": 1076264,
+  "bounds": [
+   -0.9568979740142822,
+   -0.6406430006027222,
+   -0.7678329944610596,
+   0.9550319910049438,
+   0.6412100195884705,
+   0.7654290199279785
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": true,
+  "mean": 0.54
+ },
+ "obj_chest_sapphire": {
+  "file": "models-original/obj_chest_sapphire.glb",
+  "tris": 10000,
+  "bytes": 921752,
+  "bounds": [
+   -0.9581199884414673,
+   -0.645006000995636,
+   -0.712024986743927,
+   0.9581080079078674,
+   0.6452450156211853,
+   0.7119320034980774
+  ],
+  "animations": [],
+  "groundTop": 0.45,
+  "fromObj": true,
+  "mean": 0.254
+ },
+ "obj_loot": {
+  "file": "models-original/obj_loot.glb",
+  "tris": 25063,
+  "bytes": 2075944,
+  "bounds": [
+   -0.813726007938385,
+   -0.42770200967788696,
+   -0.9960150122642517,
+   0.8165550231933594,
+   0.42539000511169434,
+   0.999085009098053
+  ],
+  "animations": [],
+  "groundTop": -0.4,
+  "fromObj": true,
+  "mean": 0.582
+ },
+ "obj_spear_trap": {
+  "file": "models-original/obj_spear_trap.glb",
+  "tris": 9998,
+  "bytes": 1362336,
+  "bounds": [
+   -0.7619730234146118,
+   -1.0027999877929688,
+   -0.037546999752521515,
+   0.7571219801902771,
+   1.0024900436401367,
+   0.03519799932837486
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.379
+ },
+ "obj_pit": {
+  "file": "models-original/obj_pit.glb",
+  "tris": 9627,
+  "bytes": 2040868,
+  "bounds": [
+   -0.9997169971466064,
+   -0.9104188630630503,
+   -0.9911609888076782,
+   0.9974790215492249,
+   0.06985981714537459,
+   0.9911140203475952
+  ],
+  "animations": [],
+  "groundTop": -0.75,
+  "fromObj": false,
+  "mean": 0.202
+ },
+ "obj_guillotine": {
+  "file": "models-original/obj_guillotine.glb",
+  "tris": 9982,
+  "bytes": 1355020,
+  "bounds": [
+   -0.4228540062904358,
+   -0.9574949741363525,
+   -0.09098400175571442,
+   0.4238159954547882,
+   0.9562640190124512,
+   0.08883800357580185
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "fromObj": true,
+  "mean": 0.434
+ },
+ "obj_well_red": {
+  "file": "models-original/obj_well_red.glb",
+  "tris": 10000,
+  "bytes": 918152,
+  "bounds": [
+   -0.9582269787788391,
+   -0.23562699556350708,
+   -0.9559959769248962,
+   0.9574790000915527,
+   0.2424830049276352,
+   0.9380599856376648
+  ],
+  "animations": [],
+  "groundTop": -0.2,
+  "fromObj": true,
+  "mean": 0.222
+ },
+ "obj_well_yellow": {
+  "file": "models-original/obj_well_yellow.glb",
+  "tris": 10000,
+  "bytes": 988212,
+  "bounds": [
+   -0.9582269787788391,
+   -0.23562699556350708,
+   -0.9559959769248962,
+   0.9574790000915527,
+   0.2424830049276352,
+   0.9380599856376648
+  ],
+  "animations": [],
+  "groundTop": -0.2,
+  "fromObj": true,
+  "mean": 0.356
+ },
+ "obj_altar": {
+  "file": "models-original/obj_altar.glb",
+  "tris": 10000,
+  "bytes": 1177940,
+  "bounds": [
+   -1.0018800497055054,
+   -0.964368999004364,
+   -0.7148669958114624,
+   1.0020899772644043,
+   0.9436749815940857,
+   0.7151240110397339
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.345
+ },
+ "obj_fountain": {
+  "file": "models-original/obj_fountain.glb",
+  "tris": 10000,
+  "bytes": 983848,
+  "bounds": [
+   -0.6705979704856873,
+   -0.9562079906463623,
+   -0.6706429719924927,
+   0.6707010269165039,
+   0.9562029838562012,
+   0.6700009703636169
+  ],
+  "animations": [],
+  "groundTop": -0.3,
+  "fromObj": true,
+  "mean": 0.258
+ },
+ "obj_gravestone": {
+  "file": "models-original/obj_gravestone.glb",
+  "tris": 9739,
+  "bytes": 1033220,
+  "bounds": [
+   -0.8011239767074585,
+   -0.9580180048942566,
+   -0.4953700006008148,
+   0.7952619791030884,
+   0.9579570293426514,
+   0.4889250099658966
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.397
+ },
+ "obj_lantern": {
+  "file": "models-original/obj_lantern.glb",
+  "tris": 10000,
+  "bytes": 1093336,
+  "bounds": [
+   -0.39973700046539307,
+   -1.000440001487732,
+   -0.4012340009212494,
+   0.40070098638534546,
+   1.0010900497436523,
+   0.40276598930358887
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.248
+ },
+ "obj_barrel": {
+  "file": "models-original/obj_barrel.glb",
+  "tris": 6918,
+  "bytes": 1141188,
+  "bounds": [
+   -0.8622459769248962,
+   -1.0009000301361084,
+   -0.8618839979171753,
+   0.8614460229873657,
+   0.99993497133255,
+   0.8624650239944458
+  ],
+  "animations": [],
+  "groundTop": 0.9,
+  "fromObj": true,
+  "mean": 0.407
+ },
+ "obj_statue": {
+  "file": "models-original/obj_statue.glb",
+  "tris": 10000,
+  "bytes": 1262172,
+  "bounds": [
+   -0.5335500240325928,
+   -1.0008100271224976,
+   -0.4414080083370209,
+   0.5554370284080505,
+   1.0010600090026855,
+   0.44247299432754517
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.349
+ },
+ "obj_throne": {
+  "file": "models-original/obj_throne.glb",
+  "tris": 59401,
+  "bytes": 3005188,
+  "bounds": [
+   -0.7923629879951477,
+   -1.0013500452041626,
+   -0.5956180095672607,
+   0.7741209864616394,
+   1.0013699531555176,
+   0.6021630167961121
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.286
+ },
+ "obj_sign_inn": {
+  "file": "models-original/obj_sign_inn.glb",
+  "tris": 9990,
+  "bytes": 985804,
+  "bounds": [
+   1.2703137397766113,
+   2,
+   -0.12196481227874756,
+   2.7296862602233887,
+   4,
+   0.12196481227874756
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.264
+ },
+ "obj_sign_bank": {
+  "file": "models-original/obj_sign_bank.glb",
+  "tris": 10000,
+  "bytes": 901496,
+  "bounds": [
+   1.1363531351089478,
+   2,
+   -0.13911299407482147,
+   2.8636468648910522,
+   4,
+   0.13911299407482147
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.309
+ },
+ "obj_sign_guild": {
+  "file": "models-original/obj_sign_guild.glb",
+  "tris": 10000,
+  "bytes": 1049092,
+  "bounds": [
+   1.0752087235450745,
+   2,
+   -0.0943232849240303,
+   2.9247912764549255,
+   4,
+   0.0943232849240303
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.341
+ },
+ "obj_sign_smith": {
+  "file": "models-original/obj_sign_smith.glb",
+  "tris": 10000,
+  "bytes": 1012480,
+  "bounds": [
+   1.2021109461784363,
+   2,
+   -0.1129721850156784,
+   2.7978890538215637,
+   4,
+   0.1129721850156784
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.267
+ },
+ "obj_sign_tavern": {
+  "file": "models-original/obj_sign_tavern.glb",
+  "tris": 9992,
+  "bytes": 1109916,
+  "bounds": [
+   1.1356511116027832,
+   2,
+   -0.19227400422096252,
+   2.864348888397217,
+   4,
+   0.19227400422096252
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.295
+ },
+ "obj_sign_temple": {
+  "file": "models-original/obj_sign_temple.glb",
+  "tris": 9995,
+  "bytes": 1080404,
+  "bounds": [
+   1.1721951365470886,
+   2,
+   -0.23779582977294922,
+   2.8278048634529114,
+   4,
+   0.23779582977294922
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.275
+ },
+ "obj_sign_training": {
+  "file": "models-original/obj_sign_training.glb",
+  "tris": 9998,
+  "bytes": 900288,
+  "bounds": [
+   1.0596131086349487,
+   2,
+   -0.18111799657344818,
+   2.9403868913650513,
+   4,
+   0.18111799657344818
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.313
+ },
+ "obj_banner_good": {
+  "file": "models-original/obj_banner_good.glb",
+  "tris": 2999,
+  "bytes": 650952,
+  "bounds": [
+   -0.7544291615486145,
+   -1,
+   -0.9892316907644272,
+   0.7544291615486145,
+   1,
+   -0.830115333199501
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": false,
+  "mean": 0.31
+ },
+ "obj_banner_evil": {
+  "file": "models-original/obj_banner_evil.glb",
+  "tris": 2998,
+  "bytes": 367432,
+  "bounds": [
+   -0.7544288635253906,
+   -1,
+   -1.0110108628869057,
+   0.7544288635253906,
+   1,
+   -0.8518946394324303
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": false,
+  "mean": 0.323
+ },
+ "obj_orb": {
+  "file": "models-original/obj_orb.glb",
+  "tris": 10000,
+  "bytes": 731060,
+  "bounds": [
+   -0.9993420243263245,
+   -1.0026299953460693,
+   -0.9986289739608765,
+   1.0027799606323242,
+   0.9981110095977783,
+   1.001170039176941
+  ],
+  "animations": [],
+  "groundTop": 0.9,
+  "fromObj": true,
+  "mean": 0.641
+ },
+ "frame_city": {
+  "file": "models-original/frame_city.glb",
+  "tris": 28,
+  "bytes": 1810540,
+  "bounds": [
+   -1.5,
+   0,
+   -0.20000000298023224,
+   1.5,
+   3,
+   0.20000000298023224
+  ],
+  "animations": [],
+  "groundTop": 3,
+  "fromObj": false,
+  "mean": 0.659
+ },
+ "frame_dungeon": {
+  "file": "models-original/frame_dungeon.glb",
+  "tris": 9992,
+  "bytes": 1092472,
+  "bounds": [
+   -1.0065337418346374,
+   -0.00009890544792923173,
+   -0.15961244859438525,
+   1.0080094056482451,
+   3.052277426971756,
+   0.15955522215223902
+  ],
+  "animations": [],
+  "groundTop": 0.15,
+  "fromObj": false,
+  "mean": 0.207
+ },
+ "frame_fortress": {
+  "file": "models-original/frame_fortress.glb",
+  "tris": 40,
+  "bytes": 579984,
+  "bounds": [
+   -1,
+   0,
+   -0.20000000298023224,
+   1,
+   2.799999952316284,
+   0.20000000298023224
+  ],
+  "animations": [],
+  "groundTop": 2,
+  "fromObj": true,
+  "mean": 0.44
+ },
+ "blk_door_closed": {
+  "file": "models-original/blk_door_closed.glb",
+  "tris": 19992,
+  "bytes": 2380296,
+  "bounds": [
+   -1.0065337418346374,
+   -0.00009892684070811342,
+   -0.15961222281674162,
+   1.0080094056482451,
+   3.0522774714759953,
+   0.1595551240815045
+  ],
+  "animations": [],
+  "groundTop": 0.15,
+  "fromObj": false,
+  "mean": 0.197
+ },
+ "blk_door_open": {
+  "file": "models-original/blk_door_open.glb",
+  "tris": 19992,
+  "bytes": 2380364,
+  "bounds": [
+   -1.0065337418346374,
+   -0.00009892684070811342,
+   -1.224870136577441,
+   1.0080094056482451,
+   3.0522774714759953,
+   0.1595551240815045
+  ],
+  "animations": [],
+  "groundTop": 0.15,
+  "fromObj": false,
+  "mean": 0.197
+ },
+ "blk_brittle_wall": {
+  "file": "models-original/blk_brittle_wall.glb",
+  "tris": 12,
+  "bytes": 143172,
+  "bounds": [
+   -1.3054099678993225,
+   -0.02489295535355751,
+   -0.9999999657714298,
+   -1.0077999830245972,
+   3.0091568192250433,
+   1.0000008849253368
+  ],
+  "animations": [],
+  "groundTop": 3,
+  "fromObj": false,
+  "mean": 0.16
+ },
+ "blk_cracked_wall": {
+  "file": "models-original/blk_cracked_wall.glb",
+  "tris": 152,
+  "bytes": 226380,
+  "bounds": [
+   -1.3015609979629517,
+   -0.06444103018015568,
+   -0.9999999657714298,
+   -1.0015609860420227,
+   3.058931383127142,
+   1.0000009119852977
+  ],
+  "animations": [],
+  "groundTop": 0.45,
+  "fromObj": false,
+  "mean": 0.163
+ },
+ "blk_gate2": {
+  "file": "models-original/blk_gate2.glb",
+  "tris": 104,
+  "bytes": 150764,
+  "bounds": [
+   -0.9999998327813557,
+   9.34063351110126e-8,
+   -0.19999998424106913,
+   1.000000033973988,
+   2.9999995972155205,
+   0.19999998424106913
+  ],
+  "animations": [],
+  "groundTop": 3,
+  "fromObj": false,
+  "mean": 0.16
+ },
+ "blk_pillars_dungeon": {
+  "file": "models-original/blk_pillars_dungeon.glb",
+  "tris": 496,
+  "bytes": 609328,
+  "bounds": [
+   -1.25,
+   0,
+   -1.25,
+   1.25,
+   2,
+   1.25
+  ],
+  "animations": [],
+  "groundTop": 2,
+  "fromObj": true,
+  "mean": 0.44
+ },
+ "blk_pillars_castle": {
+  "file": "models-original/blk_pillars_castle.glb",
+  "tris": 496,
+  "bytes": 636732,
+  "bounds": [
+   -1.25,
+   0,
+   -1.25,
+   1.25,
+   2,
+   1.25
+  ],
+  "animations": [],
+  "groundTop": 2,
+  "fromObj": true,
+  "mean": 0.45
+ },
+ "blk_pillars_city": {
+  "file": "models-original/blk_pillars_city.glb",
+  "tris": 496,
+  "bytes": 368528,
+  "bounds": [
+   -1.25,
+   0,
+   -1.25,
+   1.25,
+   2,
+   1.25
+  ],
+  "animations": [],
+  "groundTop": 2,
+  "fromObj": true,
+  "mean": 0.63
+ },
+ "blk_city_brittle": {
+  "file": "models-original/blk_city_brittle.glb",
+  "tris": 12,
+  "bytes": 1809200,
+  "bounds": [
+   -1.5392637848854065,
+   -0.02489285394557328,
+   -1.5000002015382847,
+   -1.2416538000106812,
+   2.9751079522075656,
+   1.5000006046148542
+  ],
+  "animations": [],
+  "groundTop": 3,
+  "fromObj": false,
+  "mean": 0.659
+ },
+ "blk_city_cracked": {
+  "file": "models-original/blk_city_cracked.glb",
+  "tris": 152,
+  "bytes": 1707444,
+  "bounds": [
+   -1.5454110503196716,
+   -0.024893202260204174,
+   -1.5000002015382847,
+   -1.245410978794098,
+   2.9752570923620927,
+   1.50000051522796
+  ],
+  "animations": [],
+  "groundTop": 3,
+  "fromObj": false,
+  "mean": 0.614
+ },
+ "blk_floor": {
+  "file": "models-original/blk_floor.glb",
+  "tris": 2762,
+  "bytes": 546024,
+  "bounds": [
+   -1.0091401093997092,
+   -0.05012200027704239,
+   -1.00002372200602,
+   1.0147498919830582,
+   0.039115000516176224,
+   0.9990027055653741
+  ],
+  "animations": [],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.102
+ },
+ "blk_cave_wall": {
+  "file": "models-original/blk_cave_wall.glb",
+  "tris": 10410,
+  "bytes": 1019460,
+  "bounds": [
+   -1,
+   -0.9383697509765625,
+   -0.9980468153953552,
+   1,
+   0.9383697509765625,
+   0.9980468153953552
+  ],
+  "animations": [],
+  "groundTop": 0.9,
+  "fromObj": false,
+  "mean": 0.538
+ },
+ "blk_cave_exit": {
+  "file": "models-original/blk_cave_exit.glb",
+  "tris": 10448,
+  "bytes": 1133884,
+  "bounds": [
+   -1,
+   -0.6244344711303711,
+   -0.8815983533859253,
+   1,
+   0.6244344711303711,
+   0.8815983533859253
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "fromObj": false,
+  "mean": 0.427
+ },
+ "proj_arrow": {
+  "file": "models-original/proj_arrow.glb",
+  "tris": 10000,
+  "bytes": 714472,
+  "bounds": [
+   -0.08953499794006348,
+   -0.27615100145339966,
+   -1.001312017440796,
+   0.08841899782419205,
+   0.27073800563812256,
+   1.0014499425888062
+  ],
+  "animations": [],
+  "groundTop": -0.2,
+  "fromObj": true,
+  "mean": 0.441
+ },
+ "proj_fire": {
+  "file": "models-original/proj_fire.glb",
+  "tris": 10000,
+  "bytes": 902800,
+  "bounds": [
+   -0.6030200123786926,
+   -0.9935050010681152,
+   -0.6254990100860596,
+   0.5993180274963379,
+   0.9924820065498352,
+   0.6248610019683838
+  ],
+  "animations": [],
+  "groundTop": -0.25,
+  "fromObj": true,
+  "mean": 0.401
+ },
+ "proj_ice": {
+  "file": "models-original/proj_ice.glb",
+  "tris": 9986,
+  "bytes": 759392,
+  "bounds": [
+   -0.6165570020675659,
+   -0.9402459859848022,
+   -0.30334699153900146,
+   0.6212069988250732,
+   0.989503026008606,
+   0.3062790036201477
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.441
+ },
+ "proj_magic": {
+  "file": "models-original/proj_magic.glb",
+  "tris": 9993,
+  "bytes": 901248,
+  "bounds": [
+   -0.9594910144805908,
+   -0.9896270036697388,
+   -0.9524270296096802,
+   0.9636790156364441,
+   0.97017902135849,
+   0.9801210165023804
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.25
+ },
+ "proj_physical": {
+  "file": "models-original/proj_physical.glb",
+  "tris": 10000,
+  "bytes": 844396,
+  "bounds": [
+   -0.6030200123786926,
+   -0.9935050010681152,
+   -0.6254990100860596,
+   0.5993180274963379,
+   0.9924820065498352,
+   0.6248610019683838
+  ],
+  "animations": [],
+  "groundTop": -0.25,
+  "fromObj": true,
+  "mean": 0.289
+ },
+ "proj_poison": {
+  "file": "models-original/proj_poison.glb",
+  "tris": 17392,
+  "bytes": 1116620,
+  "bounds": [
+   -1.0003199577331543,
+   -0.947987973690033,
+   -1.000040054321289,
+   0.9993529915809631,
+   0.9463719725608826,
+   1.000290036201477
+  ],
+  "animations": [],
+  "groundTop": 0.6,
+  "fromObj": true,
+  "mean": 0.532
+ },
+ "ci_1": {
+  "file": "models-original/ci_1.glb",
+  "tris": 9999,
+  "bytes": 895580,
+  "bounds": [
+   -1.0004099607467651,
+   -0.6065300107002258,
+   -0.6437379717826843,
+   0.9974489808082581,
+   0.5999109745025635,
+   0.6344929933547974
+  ],
+  "animations": [],
+  "groundTop": 0.5,
+  "fromObj": true,
+  "mean": 0.156
+ },
+ "ci_2": {
+  "file": "models-original/ci_2.glb",
+  "tris": 10000,
+  "bytes": 983848,
+  "bounds": [
+   -0.6705979704856873,
+   -0.9562079906463623,
+   -0.6706429719924927,
+   0.6707010269165039,
+   0.9562029838562012,
+   0.6700009703636169
+  ],
+  "animations": [],
+  "groundTop": -0.3,
+  "fromObj": true,
+  "mean": 0.258
+ },
+ "ci_3": {
+  "file": "models-original/ci_3.glb",
+  "tris": 10000,
+  "bytes": 1090944,
+  "bounds": [
+   -0.741694986820221,
+   -0.9997810125350952,
+   -0.5921769738197327,
+   0.7474579811096191,
+   1.0007100105285645,
+   0.591189980506897
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.083
+ },
+ "ci_4": {
+  "file": "models-original/ci_4.glb",
+  "tris": 9990,
+  "bytes": 1603288,
+  "bounds": [
+   -0.9567310214042664,
+   -0.5001189708709717,
+   -0.9553390145301819,
+   0.9584360122680664,
+   0.4950990080833435,
+   0.9270070195198059
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "fromObj": true,
+  "mean": 0.415
+ },
+ "ci_5": {
+  "file": "models-original/ci_5.glb",
+  "tris": 6918,
+  "bytes": 1141188,
+  "bounds": [
+   -0.8622459769248962,
+   -1.0009000301361084,
+   -0.8618839979171753,
+   0.8614460229873657,
+   0.99993497133255,
+   0.8624650239944458
+  ],
+  "animations": [],
+  "groundTop": 0.9,
+  "fromObj": true,
+  "mean": 0.407
+ },
+ "ci_6": {
+  "file": "models-original/ci_6.glb",
+  "tris": 59401,
+  "bytes": 3005188,
+  "bounds": [
+   -0.7923629879951477,
+   -1.0013500452041626,
+   -0.5956180095672607,
+   0.7741209864616394,
+   1.0013699531555176,
+   0.6021630167961121
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.286
+ },
+ "ci_7": {
+  "file": "models-original/ci_7.glb",
+  "tris": 9998,
+  "bytes": 1133820,
+  "bounds": [
+   -0.466746985912323,
+   -1.0007799863815308,
+   -0.6293010115623474,
+   0.4674530029296875,
+   0.9997789859771729,
+   0.6300889849662781
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.192
+ },
+ "ci_8": {
+  "file": "models-original/ci_8.glb",
+  "tris": 9980,
+  "bytes": 1183380,
+  "bounds": [
+   -0.4872640073299408,
+   -0.8864229917526245,
+   -0.9554129838943481,
+   0.4842959940433502,
+   0.9223080277442932,
+   0.9572839736938477
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.171
+ },
+ "ci_9": {
+  "file": "models-original/ci_9.glb",
+  "tris": 14951,
+  "bytes": 1880800,
+  "bounds": [
+   -0.5423413996411434,
+   -0.9569091200828552,
+   -0.6260167805341363,
+   0.4712562892309819,
+   0.9518781304359436,
+   0.580263669098864
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": false,
+  "mean": 0.446
+ },
+ "ci_10": {
+  "file": "models-original/ci_10.glb",
+  "tris": 10000,
+  "bytes": 731060,
+  "bounds": [
+   -0.9993420243263245,
+   -1.0026299953460693,
+   -0.9986289739608765,
+   1.0027799606323242,
+   0.9981110095977783,
+   1.001170039176941
+  ],
+  "animations": [],
+  "groundTop": 0.9,
+  "fromObj": true,
+  "mean": 0.641
+ },
+ "ci_11": {
+  "file": "models-original/ci_11.glb",
+  "tris": 10000,
+  "bytes": 890024,
+  "bounds": [
+   -0.22859400510787964,
+   -0.600013017654419,
+   -0.9813820123672485,
+   0.2291650027036667,
+   0.6005929708480835,
+   0.9990860223770142
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": true,
+  "mean": 0.321
+ },
+ "ci_12": {
+  "file": "models-original/ci_12.glb",
+  "tris": 9429,
+  "bytes": 1137284,
+  "bounds": [
+   -0.9588019847869873,
+   -0.5671830177307129,
+   -0.8673279881477356,
+   0.9565029740333557,
+   0.5736969709396362,
+   0.8121939897537231
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "fromObj": true,
+  "mean": 0.23
+ },
+ "ci_13": {
+  "file": "models-original/ci_13.glb",
+  "tris": 9980,
+  "bytes": 1256896,
+  "bounds": [
+   -0.9538180232048035,
+   -0.6058040261268616,
+   -0.9352260231971741,
+   0.954472005367279,
+   0.6047319769859314,
+   0.9541980028152466
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": true,
+  "mean": 0.287
+ },
+ "ci_14": {
+  "file": "models-original/ci_14.glb",
+  "tris": 9994,
+  "bytes": 1087708,
+  "bounds": [
+   -1,
+   -0.7560011148452759,
+   -0.6783390641212463,
+   1,
+   0.7560011148452759,
+   0.6783390641212463
+  ],
+  "animations": [],
+  "groundTop": 0.1,
+  "fromObj": false,
+  "mean": 0.308
+ },
+ "ci_15": {
+  "file": "models-original/ci_15.glb",
+  "tris": 9998,
+  "bytes": 1268312,
+  "bounds": [
+   -0.9569990038871765,
+   -0.8357449769973755,
+   -0.6770229935646057,
+   0.9564430117607117,
+   0.8364570140838623,
+   0.675881028175354
+  ],
+  "animations": [],
+  "groundTop": -0.25,
+  "fromObj": true,
+  "mean": 0.176
+ },
+ "ci_16": {
+  "file": "models-original/ci_16.glb",
+  "tris": 9901,
+  "bytes": 1349340,
+  "bounds": [
+   -0.9562349915504456,
+   -0.4429740011692047,
+   -0.41987600922584534,
+   0.9569889903068542,
+   0.4434179961681366,
+   0.44417399168014526
+  ],
+  "animations": [],
+  "groundTop": -0.4,
+  "fromObj": true,
+  "mean": 0.22
+ },
+ "ci_17": {
+  "file": "models-original/ci_17.glb",
+  "tris": 10000,
+  "bytes": 894260,
+  "bounds": [
+   -0.08285199850797653,
+   -0.897301971912384,
+   -0.9869920015335083,
+   0.080205999314785,
+   0.8888639807701111,
+   1.0012199878692627
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": true,
+  "mean": 0.281
+ },
+ "ci_18": {
+  "file": "models-original/ci_18.glb",
+  "tris": 10000,
+  "bytes": 973640,
+  "bounds": [
+   -1.001520037651062,
+   -0.853085994720459,
+   -0.22119100391864777,
+   0.9996529817581177,
+   0.8497430086135864,
+   0.22384600341320038
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.172
+ },
+ "ci_19": {
+  "file": "models-original/ci_19.glb",
+  "tris": 10000,
+  "bytes": 1014876,
+  "bounds": [
+   -0.9996650218963623,
+   -0.800366997718811,
+   -0.23947399854660034,
+   0.9989749789237976,
+   0.8002219796180725,
+   0.23770299553871155
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": true,
+  "mean": 0.374
+ },
+ "ci_20": {
+  "file": "models-original/ci_20.glb",
+  "tris": 10000,
+  "bytes": 1139780,
+  "bounds": [
+   -0.9942479729652405,
+   -0.8695440292358398,
+   -0.8341739773750305,
+   1.0006300210952759,
+   0.8577370047569275,
+   0.8464890122413635
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.599
+ },
+ "ci_21": {
+  "file": "models-original/ci_21.glb",
+  "tris": 9997,
+  "bytes": 948524,
+  "bounds": [
+   -0.08958599716424942,
+   -1.0005500316619873,
+   -0.2992500066757202,
+   0.09057900309562683,
+   1.0005300045013428,
+   0.29574498534202576
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.505
+ },
+ "ci_22": {
+  "file": "models-original/ci_22.glb",
+  "tris": 10000,
+  "bytes": 945836,
+  "bounds": [
+   -0.2300110012292862,
+   -0.767687976360321,
+   -0.9869499802589417,
+   0.22884100675582886,
+   0.7598279714584351,
+   0.9986690282821655
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.383
+ },
+ "ci_23": {
+  "file": "models-original/ci_23.glb",
+  "tris": 10000,
+  "bytes": 872348,
+  "bounds": [
+   -1.0003900527954102,
+   -0.9924330115318298,
+   -0.879813015460968,
+   0.9966580271720886,
+   0.9991980195045471,
+   0.8778330087661743
+  ],
+  "animations": [],
+  "groundTop": -0.75,
+  "fromObj": true,
+  "mean": 0.335
+ },
+ "ci_24": {
+  "file": "models-original/ci_24.glb",
+  "tris": 10000,
+  "bytes": 877224,
+  "bounds": [
+   -1.0007400512695312,
+   -0.7383869886398315,
+   -0.11200500279664993,
+   0.9989349842071533,
+   0.736615002155304,
+   0.11273899674415588
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.602
+ },
+ "ci_25": {
+  "file": "models-original/ci_25.glb",
+  "tris": 10000,
+  "bytes": 1316212,
+  "bounds": [
+   -0.9976980090141296,
+   -0.6978020071983337,
+   -0.08870100229978561,
+   0.9977149963378906,
+   0.7026619911193848,
+   0.08750099688768387
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "fromObj": true,
+  "mean": 0.528
+ },
+ "ci_26": {
+  "file": "models-original/ci_26.glb",
+  "tris": 9984,
+  "bytes": 1145788,
+  "bounds": [
+   -0.9628940224647522,
+   -0.9004809856414795,
+   -0.9579300284385681,
+   0.9363579750061035,
+   0.9022619724273682,
+   0.954675018787384
+  ],
+  "animations": [],
+  "groundTop": -0.4,
+  "fromObj": true,
+  "mean": 0.252
+ },
+ "ci_27": {
+  "file": "models-original/ci_27.glb",
+  "tris": 10000,
+  "bytes": 924548,
+  "bounds": [
+   -0.6866779923439026,
+   -0.7956510186195374,
+   -1.002120018005371,
+   0.6878190040588379,
+   0.7988229990005493,
+   0.9993919730186462
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.21
+ },
+ "ci_28": {
+  "file": "models-original/ci_28.glb",
+  "tris": 10000,
+  "bytes": 888432,
+  "bounds": [
+   -0.8773379921913147,
+   -1.0004899501800537,
+   -0.6496739983558655,
+   0.830735981464386,
+   1.002769947052002,
+   0.6474400162696838
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.696
+ },
+ "ci_29": {
+  "file": "models-original/ci_29.glb",
+  "tris": 10000,
+  "bytes": 858044,
+  "bounds": [
+   -0.502485990524292,
+   -0.9986810088157654,
+   -0.6440640091896057,
+   0.4997299909591675,
+   0.9994680285453796,
+   0.654030978679657
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.344
+ },
+ "ci_30": {
+  "file": "models-original/ci_30.glb",
+  "tris": 10000,
+  "bytes": 1163648,
+  "bounds": [
+   -0.6085429787635803,
+   -1.0010199546813965,
+   -0.4728809893131256,
+   0.6093019843101501,
+   0.9998260140419006,
+   0.4636630117893219
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.278
+ },
+ "ci_31": {
+  "file": "models-original/ci_31.glb",
+  "tris": 19522,
+  "bytes": 1574048,
+  "bounds": [
+   -0.6744419932365417,
+   -1.0006300210952759,
+   -0.6340129971504211,
+   0.6940659880638123,
+   0.9860270023345947,
+   0.6421229839324951
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.412
+ },
+ "ci_32": {
+  "file": "models-original/ci_32.glb",
+  "tris": 9739,
+  "bytes": 1033220,
+  "bounds": [
+   -0.8011239767074585,
+   -0.9580180048942566,
+   -0.4953700006008148,
+   0.7952619791030884,
+   0.9579570293426514,
+   0.4889250099658966
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.397
+ },
+ "ci_33": {
+  "file": "models-original/ci_33.glb",
+  "tris": 10000,
+  "bytes": 1012424,
+  "bounds": [
+   -0.5616329908370972,
+   -0.9984189867973328,
+   -0.8654829859733582,
+   0.5612930059432983,
+   0.9985120296478271,
+   0.8606119751930237
+  ],
+  "animations": [],
+  "groundTop": -0.4,
+  "fromObj": true,
+  "mean": 0.477
+ },
+ "ci_34": {
+  "file": "models-original/ci_34.glb",
+  "tris": 9995,
+  "bytes": 1058360,
+  "bounds": [
+   -0.48734214901924133,
+   -1,
+   -0.9095167517662048,
+   0.48734214901924133,
+   1,
+   0.9095167517662048
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": false,
+  "mean": 0.275
+ },
+ "ci_35": {
+  "file": "models-original/ci_35.glb",
+  "tris": 9998,
+  "bytes": 1208048,
+  "bounds": [
+   -0.9556940197944641,
+   -0.9085951447486877,
+   -0.45764604210853577,
+   0.9544169902801514,
+   0.9071910977363586,
+   0.45579609274864197
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": false,
+  "mean": 0.28
+ },
+ "ci_36": {
+  "file": "models-original/ci_36.glb",
+  "tris": 10000,
+  "bytes": 1038708,
+  "bounds": [
+   -0.5843809843063354,
+   -1.0008000135421753,
+   -0.5838750004768372,
+   0.5838649868965149,
+   1.000849962234497,
+   0.5836719870567322
+  ],
+  "animations": [],
+  "groundTop": 1,
+  "fromObj": true,
+  "mean": 0.352
+ },
+ "ci_37": {
+  "file": "models-original/ci_37.glb",
+  "tris": 10000,
+  "bytes": 918152,
+  "bounds": [
+   -0.9582269787788391,
+   -0.23562699556350708,
+   -0.9559959769248962,
+   0.9574790000915527,
+   0.2424830049276352,
+   0.9380599856376648
+  ],
+  "animations": [],
+  "groundTop": -0.2,
+  "fromObj": true,
+  "mean": 0.222
+ },
+ "ci_38": {
+  "file": "models-original/ci_38.glb",
+  "tris": 10000,
+  "bytes": 1300956,
+  "bounds": [
+   -0.397830992937088,
+   -0.9987260103225708,
+   -0.5205339789390564,
+   0.3982450067996979,
+   1.004699945449829,
+   0.5241219997406006
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.352
+ },
+ "ci_39": {
+  "file": "models-original/ci_39.glb",
+  "tris": 10000,
+  "bytes": 953516,
+  "bounds": [
+   -0.9983350038528442,
+   -0.7095649838447571,
+   -0.6901869773864746,
+   1.0015699863433838,
+   0.7027649879455566,
+   0.6897680163383484
+  ],
+  "animations": [],
+  "groundTop": -0.6,
+  "fromObj": true,
+  "mean": 0.369
+ },
+ "ci_40": {
+  "file": "models-original/ci_40.glb",
+  "tris": 9997,
+  "bytes": 1280528,
+  "bounds": [
+   -0.8468869924545288,
+   -0.9996050000190735,
+   -0.7830209732055664,
+   0.8495180010795593,
+   1.0030699968338013,
+   0.7845159769058228
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.196
+ },
+ "ci_41": {
+  "file": "models-original/ci_41.glb",
+  "tris": 9998,
+  "bytes": 1290656,
+  "bounds": [
+   -0.9425690174102783,
+   -1.0010499954223633,
+   -0.9818959832191467,
+   0.9432010054588318,
+   1.0013099908828735,
+   0.9798799753189087
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.284
+ },
+ "ci_42": {
+  "file": "models-original/ci_42.glb",
+  "tris": 9998,
+  "bytes": 1123976,
+  "bounds": [
+   -0.8272332549095154,
+   -0.6041154861450195,
+   -1,
+   0.8272332549095154,
+   0.6041154861450195,
+   1
+  ],
+  "animations": [],
+  "groundTop": -0.6,
+  "fromObj": false,
+  "mean": 0.323
+ },
+ "ci_43": {
+  "file": "models-original/ci_43.glb",
+  "tris": 10000,
+  "bytes": 995104,
+  "bounds": [
+   -0.9984009861946106,
+   -0.7987260222434998,
+   -0.9911419749259949,
+   0.9941200017929077,
+   0.7687879800796509,
+   0.9827420115470886
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": true,
+  "mean": 0.561
+ },
+ "ci_44": {
+  "file": "models-original/ci_44.glb",
+  "tris": 29997,
+  "bytes": 2500148,
+  "bounds": [
+   -0.9239169955253601,
+   -0.7540810108184814,
+   -0.9036250114440918,
+   0.9201120138168335,
+   0.7573040127754211,
+   0.9403070211410522
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": true,
+  "mean": 0.359
+ },
+ "ci_45": {
+  "file": "models-original/ci_45.glb",
+  "tris": 23909,
+  "bytes": 1922692,
+  "bounds": [
+   -0.9098029732704163,
+   -0.9464510083198547,
+   -0.8408690094947815,
+   0.9537310004234314,
+   0.9273049831390381,
+   0.8929389715194702
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "fromObj": true,
+  "mean": 0.314
+ },
+ "ci_46": {
+  "file": "models-original/ci_46.glb",
+  "tris": 9994,
+  "bytes": 1278536,
+  "bounds": [
+   -0.76978600025177,
+   -0.956151008605957,
+   -0.5330610275268555,
+   0.769527018070221,
+   0.9561439752578735,
+   0.5326060056686401
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.267
+ },
+ "ci_47": {
+  "file": "models-original/ci_47.glb",
+  "tris": 29976,
+  "bytes": 2439612,
+  "bounds": [
+   -0.8207610249519348,
+   -0.6272979974746704,
+   -0.9561769962310791,
+   0.8484560251235962,
+   0.6276310086250305,
+   0.956375002861023
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.33
+ },
+ "ci_48": {
+  "file": "models-original/ci_48.glb",
+  "tris": 29998,
+  "bytes": 1887600,
+  "bounds": [
+   -0.534546971321106,
+   -1.0005600452423096,
+   -0.3750140070915222,
+   0.5573440194129944,
+   0.9982309937477112,
+   0.3878200054168701
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.285
+ },
+ "ci_49": {
+  "file": "models-original/ci_49.glb",
+  "tris": 29998,
+  "bytes": 1901364,
+  "bounds": [
+   -0.5869460105895996,
+   -0.9968900084495544,
+   -0.2940619885921478,
+   0.589031994342804,
+   0.9980069994926453,
+   0.3216229975223541
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.311
+ },
+ "ci_50": {
+  "file": "models-original/ci_50.glb",
+  "tris": 30000,
+  "bytes": 1675260,
+  "bounds": [
+   -0.5072780251502991,
+   -1.0013699531555176,
+   -0.4293789863586426,
+   0.49844300746917725,
+   1.0002100467681885,
+   0.42359501123428345
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.157
+ },
+ "ci_51": {
+  "file": "models-original/ci_51.glb",
+  "tris": 30000,
+  "bytes": 2111856,
+  "bounds": [
+   -0.5179600119590759,
+   -1.001289963722229,
+   -0.5486159920692444,
+   0.5236979722976685,
+   0.9996449947357178,
+   0.5360730290412903
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.288
+ },
+ "ci_52": {
+  "file": "models-original/ci_52.glb",
+  "tris": 30000,
+  "bytes": 1913400,
+  "bounds": [
+   -0.4983600080013275,
+   -0.999405026435852,
+   -0.2947959899902344,
+   0.49514299631118774,
+   0.9993879795074463,
+   0.2992599904537201
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.218
+ },
+ "ci_53": {
+  "file": "models-original/ci_53.glb",
+  "tris": 30000,
+  "bytes": 1829136,
+  "bounds": [
+   -0.4749169945716858,
+   -1.0006099939346313,
+   -0.4548099935054779,
+   0.4761199951171875,
+   1.0008800029754639,
+   0.4516650140285492
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.213
+ },
+ "ci_54": {
+  "file": "models-original/ci_54.glb",
+  "tris": 29998,
+  "bytes": 1987076,
+  "bounds": [
+   -0.5990369915962219,
+   -1.000540018081665,
+   -0.38874998688697815,
+   0.6199420094490051,
+   0.9991430044174194,
+   0.402072012424469
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.27
+ },
+ "ci_55": {
+  "file": "models-original/ci_55.glb",
+  "tris": 30000,
+  "bytes": 1824520,
+  "bounds": [
+   -0.6788780093193054,
+   -1.0001200437545776,
+   -0.2780889868736267,
+   0.6871200203895569,
+   0.9977440237998962,
+   0.2719770073890686
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.376
+ },
+ "ci_56": {
+  "file": "models-original/ci_56.glb",
+  "tris": 29997,
+  "bytes": 2062308,
+  "bounds": [
+   -0.5762810111045837,
+   -1.0037800073623657,
+   -0.47518500685691833,
+   0.5187569856643677,
+   0.9960319995880127,
+   0.497873991727829
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.229
+ },
+ "ci_57": {
+  "file": "models-original/ci_57.glb",
+  "tris": 30000,
+  "bytes": 2320332,
+  "bounds": [
+   -0.5656189918518066,
+   -0.9977840185165405,
+   -0.32004401087760925,
+   0.5585150122642517,
+   1.0004099607467651,
+   0.31339600682258606
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.283
+ },
+ "ci_58": {
+  "file": "models-original/ci_58.glb",
+  "tris": 29994,
+  "bytes": 2384840,
+  "bounds": [
+   -0.4907020032405853,
+   -1.0011800527572632,
+   -0.3285369873046875,
+   0.49897798895835876,
+   0.9989399909973145,
+   0.34241700172424316
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.304
+ },
+ "ci_59": {
+  "file": "models-original/ci_59.glb",
+  "tris": 30000,
+  "bytes": 2230872,
+  "bounds": [
+   -0.568792998790741,
+   -1.000920057296753,
+   -0.46195000410079956,
+   0.5791990160942078,
+   1.0002599954605103,
+   0.4587950110435486
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.242
+ },
+ "ci_60": {
+  "file": "models-original/ci_60.glb",
+  "tris": 29981,
+  "bytes": 2335916,
+  "bounds": [
+   -0.6558690071105957,
+   -1.0020500421524048,
+   -0.2978779971599579,
+   0.651934027671814,
+   0.9922109842300415,
+   0.320715993642807
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.207
+ },
+ "ci_61": {
+  "file": "models-original/ci_61.glb",
+  "tris": 10000,
+  "bytes": 1262172,
+  "bounds": [
+   -0.5335500240325928,
+   -1.0008100271224976,
+   -0.4414080083370209,
+   0.5554370284080505,
+   1.0010600090026855,
+   0.44247299432754517
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.349
+ },
+ "ci_62": {
+  "file": "models-original/ci_62.glb",
+  "tris": 9998,
+  "bytes": 1819088,
+  "bounds": [
+   -0.4758091550076062,
+   -0.23863598704338074,
+   -0.9567381358994896,
+   0.4783600977464207,
+   0.23833198845386505,
+   0.9547071564949189
+  ],
+  "animations": [],
+  "groundTop": 0.15,
+  "fromObj": false,
+  "mean": 0.193
+ },
+ "ci_63": {
+  "file": "models-original/ci_63.glb",
+  "tris": 9994,
+  "bytes": 1614504,
+  "bounds": [
+   -0.6268711521773896,
+   -0.3177560269832611,
+   -0.9571590627213183,
+   0.6289210944350917,
+   0.31587204337120056,
+   0.9553621045682704
+  ],
+  "animations": [],
+  "groundTop": -0.2,
+  "fromObj": false,
+  "mean": 0.167
+ },
+ "ci_64": {
+  "file": "models-original/ci_64.glb",
+  "tris": 9998,
+  "bytes": 1564176,
+  "bounds": [
+   -0.9569820165634155,
+   -0.6212970614433289,
+   -0.08617796003818512,
+   0.9550139904022217,
+   0.6195500493049622,
+   0.07970704883337021
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": false,
+  "mean": 0.209
+ },
+ "ci_65": {
+  "file": "models-original/ci_65.glb",
+  "tris": 9998,
+  "bytes": 1487696,
+  "bounds": [
+   -0.9569820165634155,
+   -0.6212970614433289,
+   -0.08617796003818512,
+   0.9550139904022217,
+   0.6195500493049622,
+   0.07970704883337021
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": false,
+  "mean": 0.316
+ },
+ "ci_66": {
+  "file": "models-original/ci_66.glb",
+  "tris": 9998,
+  "bytes": 1293176,
+  "bounds": [
+   -0.9569820165634155,
+   -0.6212970614433289,
+   -0.08617796003818512,
+   0.9550139904022217,
+   0.6195500493049622,
+   0.07970704883337021
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": false,
+  "mean": 0.271
+ },
+ "ci_67": {
+  "file": "models-original/ci_67.glb",
+  "tris": 10000,
+  "bytes": 1033248,
+  "bounds": [
+   -0.4338659942150116,
+   -0.9978280067443848,
+   -0.43438100814819336,
+   0.43417900800704956,
+   0.9972559809684753,
+   0.4295539855957031
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.206
+ },
+ "ci_68": {
+  "file": "models-original/ci_68.glb",
+  "tris": 9994,
+  "bytes": 1024392,
+  "bounds": [
+   -0.7298060059547424,
+   -0.997730016708374,
+   -0.5517140030860901,
+   0.7273659706115723,
+   1.003659963607788,
+   0.5137119889259338
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.149
+ },
+ "ci_69": {
+  "file": "models-original/ci_69.glb",
+  "tris": 10000,
+  "bytes": 868236,
+  "bounds": [
+   -1.0001670122146606,
+   -0.9610310196876526,
+   -0.7401220202445984,
+   0.999584972858429,
+   0.956496000289917,
+   0.742605984210968
+  ],
+  "animations": [],
+  "groundTop": 0.2,
+  "fromObj": true,
+  "mean": 0.22
+ },
+ "ci_70": {
+  "file": "models-original/ci_70.glb",
+  "tris": 9987,
+  "bytes": 1782828,
+  "bounds": [
+   -1,
+   -0.5325514078140259,
+   -0.8333650231361389,
+   1,
+   0.5325514078140259,
+   0.8333650231361389
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": false,
+  "mean": 0.196
+ },
+ "ci_71": {
+  "file": "models-original/ci_71.glb",
+  "tris": 9986,
+  "bytes": 1349464,
+  "bounds": [
+   -0.8576239943504333,
+   -1.0045100450515747,
+   -0.8968660235404968,
+   0.8784379959106445,
+   1.0013600587844849,
+   0.8953999876976013
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.287
+ },
+ "ci_72": {
+  "file": "models-original/ci_72.glb",
+  "tris": 9999,
+  "bytes": 1076264,
+  "bounds": [
+   -0.9568979740142822,
+   -0.6406430006027222,
+   -0.7678329944610596,
+   0.9550319910049438,
+   0.6412100195884705,
+   0.7654290199279785
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": true,
+  "mean": 0.54
+ },
+ "ci_73": {
+  "file": "models-original/ci_73.glb",
+  "tris": 9995,
+  "bytes": 1013560,
+  "bounds": [
+   -0.997564971446991,
+   -0.11803200095891953,
+   -0.9488170146942139,
+   0.982820987701416,
+   0.1198119968175888,
+   0.953499972820282
+  ],
+  "animations": [],
+  "groundTop": -0.1,
+  "fromObj": true,
+  "mean": 0.322
+ },
+ "ci_74": {
+  "file": "models-original/ci_74.glb",
+  "tris": 9994,
+  "bytes": 1288052,
+  "bounds": [
+   -1.0036200284957886,
+   -0.7133949995040894,
+   -0.7606009840965271,
+   0.9998080134391785,
+   0.6836659908294678,
+   0.7523819804191589
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": true,
+  "mean": 0.282
+ },
+ "ci_75": {
+  "file": "models-original/ci_75.glb",
+  "tris": 9996,
+  "bytes": 1182872,
+  "bounds": [
+   -0.6304129958152771,
+   -1.0012999773025513,
+   -0.24297399818897247,
+   0.6317520141601562,
+   1.0021100044250488,
+   0.2462179958820343
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.171
+ },
+ "ci_76": {
+  "file": "models-original/ci_76.glb",
+  "tris": 10000,
+  "bytes": 1093336,
+  "bounds": [
+   -0.39973700046539307,
+   -1.000440001487732,
+   -0.4012340009212494,
+   0.40070098638534546,
+   1.0010900497436523,
+   0.40276598930358887
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.248
+ },
+ "ci_77": {
+  "file": "models-original/ci_77.glb",
+  "tris": 9987,
+  "bytes": 1159340,
+  "bounds": [
+   -0.15847599506378174,
+   -0.9989359974861145,
+   -0.9683859944343567,
+   0.17979900538921356,
+   0.9996539950370789,
+   0.9681569933891296
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": true,
+  "mean": 0.316
+ },
+ "ci_78": {
+  "file": "models-original/ci_78.glb",
+  "tris": 10000,
+  "bytes": 901468,
+  "bounds": [
+   -0.8521909713745117,
+   -1.0006500482559204,
+   -0.5048739910125732,
+   0.8523659706115723,
+   0.9999470114707947,
+   0.5037019848823547
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.526
+ },
+ "ci_79": {
+  "file": "models-original/ci_79.glb",
+  "tris": 10000,
+  "bytes": 1039036,
+  "bounds": [
+   -1.0015300512313843,
+   -0.6154900193214417,
+   -1.0033400058746338,
+   1.0020999908447266,
+   0.6339600086212158,
+   0.9991639852523804
+  ],
+  "animations": [],
+  "groundTop": 0.35,
+  "fromObj": true,
+  "mean": 0.342
+ },
+ "ci_80": {
+  "file": "models-original/ci_80.glb",
+  "tris": 9995,
+  "bytes": 816140,
+  "bounds": [
+   -0.9793850183486938,
+   -1.0019550323486328,
+   -0.09308800101280212,
+   0.9814019799232483,
+   0.9835330247879028,
+   0.09410200268030167
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.159
+ },
+ "ci_81": {
+  "file": "models-original/ci_81.glb",
+  "tris": 9995,
+  "bytes": 816140,
+  "bounds": [
+   -0.9793850183486938,
+   -1.0019550323486328,
+   -0.09308800101280212,
+   0.9814019799232483,
+   0.9835330247879028,
+   0.09410200268030167
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.159
+ },
+ "ci_82": {
+  "file": "models-original/ci_82.glb",
+  "tris": 29878,
+  "bytes": 2430424,
+  "bounds": [
+   -0.5026630163192749,
+   -0.9562349915504456,
+   -0.34980300068855286,
+   0.5027350187301636,
+   0.9559230208396912,
+   0.34902000427246094
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.284
+ },
+ "ci_83": {
+  "file": "models-original/ci_83.glb",
+  "tris": 10000,
+  "bytes": 728372,
+  "bounds": [
+   -1.0033529996871948,
+   -0.6697970032691956,
+   -0.6950280070304871,
+   1.0010290145874023,
+   0.6706849932670593,
+   0.6919569969177246
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "fromObj": true,
+  "mean": 0.178
+ },
+ "ci_86": {
+  "file": "models-original/ci_86.glb",
+  "tris": 19973,
+  "bytes": 2064160,
+  "bounds": [
+   -0.7339609861373901,
+   -0.9562169909477234,
+   -0.4088970124721527,
+   0.7266870141029358,
+   0.9578570127487183,
+   0.40918201208114624
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.311
+ },
+ "ci_87": {
+  "file": "models-original/ci_87.glb",
+  "tris": 9982,
+  "bytes": 1355020,
+  "bounds": [
+   -0.4228540062904358,
+   -0.9574949741363525,
+   -0.09098400175571442,
+   0.4238159954547882,
+   0.9562640190124512,
+   0.08883800357580185
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "fromObj": true,
+  "mean": 0.434
+ },
+ "ci_84": {
+  "file": "models-original/ci_84.glb",
+  "tris": 40,
+  "bytes": 3140,
+  "bounds": [
+   -1,
+   0,
+   -1,
+   1,
+   2,
+   1
+  ],
+  "animations": [],
+  "groundTop": 0,
+  "fromObj": true
+ },
+ "ci_88": {
+  "file": "models-original/ci_88.glb",
+  "tris": 10000,
+  "bytes": 988212,
+  "bounds": [
+   -0.9582269787788391,
+   -0.23562699556350708,
+   -0.9559959769248962,
+   0.9574790000915527,
+   0.2424830049276352,
+   0.9380599856376648
+  ],
+  "animations": [],
+  "groundTop": -0.2,
+  "fromObj": true,
+  "mean": 0.356
+ },
+ "ci_85": {
+  "file": "models-original/ci_85.glb",
+  "tris": 36,
+  "bytes": 2876,
+  "bounds": [
+   -1,
+   0,
+   -1,
+   1,
+   2,
+   1
+  ],
+  "animations": [],
+  "groundTop": 2,
+  "fromObj": true
+ },
+ "ci_89": {
+  "file": "models-original/ci_89.glb",
+  "tris": 10000,
+  "bytes": 1062192,
+  "bounds": [
+   -0.9528710246086121,
+   -0.7702609896659851,
+   -0.9569799900054932,
+   0.9541140198707581,
+   0.8025810122489929,
+   0.9552590250968933
+  ],
+  "animations": [],
+  "groundTop": -0.35,
+  "fromObj": true,
+  "mean": 0.258
+ },
+ "ci_90": {
+  "file": "models-original/ci_90.glb",
+  "tris": 9999,
+  "bytes": 1207560,
+  "bounds": [
+   -0.5915470123291016,
+   -0.9597470164299011,
+   -0.7529579997062683,
+   0.5954769849777222,
+   0.9599609971046448,
+   0.7553840279579163
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.367
+ },
+ "ci_91": {
+  "file": "models-original/ci_91.glb",
+  "tris": 9998,
+  "bytes": 1402916,
+  "bounds": [
+   -0.9220319986343384,
+   -0.9466620087623596,
+   -0.6744170188903809,
+   0.9117140173912048,
+   0.9581360220909119,
+   0.6750230193138123
+  ],
+  "animations": [],
+  "groundTop": 0.75,
+  "fromObj": true,
+  "mean": 0.298
+ },
+ "ci_92": {
+  "file": "models-original/ci_92.glb",
+  "tris": 10000,
+  "bytes": 900280,
+  "bounds": [
+   -0.9563310146331787,
+   -0.11903099715709686,
+   -0.9556630253791809,
+   0.9500290155410767,
+   0.11458399891853333,
+   0.9555879831314087
+  ],
+  "animations": [],
+  "groundTop": -0.05,
+  "fromObj": true,
+  "mean": 0.508
+ },
+ "ci_93": {
+  "file": "models-original/ci_93.glb",
+  "tris": 9979,
+  "bytes": 1776048,
+  "bounds": [
+   -0.5580080151557922,
+   -0.9546740055084229,
+   -0.22549700736999512,
+   0.5646039843559265,
+   0.9561359882354736,
+   0.23007699847221375
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.465
+ },
+ "ci_94": {
+  "file": "models-original/ci_94.glb",
+  "tris": 9998,
+  "bytes": 1231940,
+  "bounds": [
+   -0.919281005859375,
+   -0.4255479872226715,
+   -0.9584119915962219,
+   0.9189500212669373,
+   0.42705899477005005,
+   0.9584590196609497
+  ],
+  "animations": [],
+  "groundTop": 0.05,
+  "fromObj": true,
+  "mean": 0.36
+ },
+ "ci_95": {
+  "file": "models-original/ci_95.glb",
+  "tris": 10000,
+  "bytes": 1179484,
+  "bounds": [
+   -0.47133898735046387,
+   -0.9579110145568848,
+   -0.5835430026054382,
+   0.46434101462364197,
+   0.9577649831771851,
+   0.5792350172996521
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": true,
+  "mean": 0.29
+ },
+ "ci_96": {
+  "file": "models-original/ci_96.glb",
+  "tris": 10000,
+  "bytes": 921752,
+  "bounds": [
+   -0.9581199884414673,
+   -0.645006000995636,
+   -0.712024986743927,
+   0.9581080079078674,
+   0.6452450156211853,
+   0.7119320034980774
+  ],
+  "animations": [],
+  "groundTop": 0.45,
+  "fromObj": true,
+  "mean": 0.254
+ },
+ "ci_97": {
+  "file": "models-original/ci_97.glb",
+  "tris": 9905,
+  "bytes": 1059552,
+  "bounds": [
+   -0.6232439875602722,
+   -0.9581859707832336,
+   -0.36696499586105347,
+   0.6221519708633423,
+   0.9580940008163452,
+   0.364872008562088
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.093
+ },
+ "ci_98": {
+  "file": "models-original/ci_98.glb",
+  "tris": 9997,
+  "bytes": 954196,
+  "bounds": [
+   -0.5720340013504028,
+   -0.9580810070037842,
+   -0.3517239987850189,
+   0.5876569747924805,
+   0.9596959948539734,
+   0.3513610064983368
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": true,
+  "mean": 0.195
+ },
+ "ci_99": {
+  "file": "models-original/ci_99.glb",
+  "tris": 3000,
+  "bytes": 349992,
+  "bounds": [
+   -0.6848710179328918,
+   -0.9579660296440125,
+   -0.09506899863481522,
+   0.6846160292625427,
+   0.9581170082092285,
+   0.09528200328350067
+  ],
+  "animations": [],
+  "groundTop": -0.1,
+  "fromObj": true,
+  "mean": 0.292
+ },
+ "ci_100": {
+  "file": "models-original/ci_100.glb",
+  "tris": 10000,
+  "bytes": 1484144,
+  "bounds": [
+   -0.9570019942841128,
+   -0.028360605239868164,
+   0.7764194160699844,
+   0.9570019942841128,
+   2.2440903186798096,
+   1.1932456344366074
+  ],
+  "animations": [],
+  "groundTop": 0.2,
+  "fromObj": false,
+  "mean": 0.266
+ },
+ "ci_101": {
+  "file": "models-original/ci_101.glb",
+  "tris": 9972,
+  "bytes": 1106896,
+  "bounds": [
+   -1,
+   -0.9216020107269287,
+   -0.9438859820365906,
+   1,
+   0.9216020107269287,
+   0.9438859820365906
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": true,
+  "mean": 0.227
+ },
+ "ci_102": {
+  "file": "models-original/ci_102.glb",
+  "tris": 3000,
+  "bytes": 758076,
+  "bounds": [
+   -1,
+   -0.7601280212402344,
+   -0.9723100066184998,
+   1,
+   0.7601280212402344,
+   0.9723100066184998
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": true,
+  "mean": 0.233
+ },
+ "ci_103": {
+  "file": "models-original/ci_103.glb",
+  "tris": 2999,
+  "bytes": 650952,
+  "bounds": [
+   -0.7544291615486145,
+   -1,
+   -0.9892316907644272,
+   0.7544291615486145,
+   1,
+   -0.830115333199501
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": false,
+  "mean": 0.31
+ },
+ "ci_104": {
+  "file": "models-original/ci_104.glb",
+  "tris": 2999,
+  "bytes": 415940,
+  "bounds": [
+   -0.7544291615486145,
+   -1,
+   -1.0111058801412582,
+   0.7544291615486145,
+   1,
+   -0.8519895225763321
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": false,
+  "mean": 0.419
+ },
+ "ci_105": {
+  "file": "models-original/ci_105.glb",
+  "tris": 2998,
+  "bytes": 367432,
+  "bounds": [
+   -0.7544288635253906,
+   -1,
+   -1.0110108628869057,
+   0.7544288635253906,
+   1,
+   -0.8518946394324303
+  ],
+  "animations": [],
+  "groundTop": 0.55,
+  "fromObj": false,
+  "mean": 0.323
+ },
+ "ci_109": {
+  "file": "models-original/ci_109.glb",
+  "tris": 9936,
+  "bytes": 1420556,
+  "bounds": [
+   -0.981669008731842,
+   -1,
+   -0.9813259840011597,
+   0.981669008731842,
+   1,
+   0.9813259840011597
+  ],
+  "animations": [],
+  "groundTop": -0.75,
+  "fromObj": true,
+  "mean": 0.383
+ },
+ "ci_110": {
+  "file": "models-original/ci_110.glb",
+  "tris": 9995,
+  "bytes": 1080404,
+  "bounds": [
+   1.1721951365470886,
+   2,
+   -0.23779582977294922,
+   2.8278048634529114,
+   4,
+   0.23779582977294922
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.275
+ },
+ "ci_111": {
+  "file": "models-original/ci_111.glb",
+  "tris": 10000,
+  "bytes": 901496,
+  "bounds": [
+   1.1363531351089478,
+   2,
+   -0.13911299407482147,
+   2.8636468648910522,
+   4,
+   0.13911299407482147
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.309
+ },
+ "ci_112": {
+  "file": "models-original/ci_112.glb",
+  "tris": 10000,
+  "bytes": 1049092,
+  "bounds": [
+   1.0752087235450745,
+   2,
+   -0.0943232849240303,
+   2.9247912764549255,
+   4,
+   0.0943232849240303
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.341
+ },
+ "ci_113": {
+  "file": "models-original/ci_113.glb",
+  "tris": 9990,
+  "bytes": 985804,
+  "bounds": [
+   1.2703137397766113,
+   2,
+   -0.12196481227874756,
+   2.7296862602233887,
+   4,
+   0.12196481227874756
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.264
+ },
+ "ci_114": {
+  "file": "models-original/ci_114.glb",
+  "tris": 10000,
+  "bytes": 1012480,
+  "bounds": [
+   1.2021109461784363,
+   2,
+   -0.1129721850156784,
+   2.7978890538215637,
+   4,
+   0.1129721850156784
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.267
+ },
+ "ci_115": {
+  "file": "models-original/ci_115.glb",
+  "tris": 9992,
+  "bytes": 1109916,
+  "bounds": [
+   1.1356511116027832,
+   2,
+   -0.19227400422096252,
+   2.864348888397217,
+   4,
+   0.19227400422096252
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.295
+ },
+ "ci_116": {
+  "file": "models-original/ci_116.glb",
+  "tris": 9998,
+  "bytes": 900288,
+  "bounds": [
+   1.0596131086349487,
+   2,
+   -0.18111799657344818,
+   2.9403868913650513,
+   4,
+   0.18111799657344818
+  ],
+  "animations": [],
+  "groundTop": 2.1,
+  "fromObj": false,
+  "mean": 0.313
+ },
+ "ci_117": {
+  "file": "models-original/ci_117.glb",
+  "tris": 4999,
+  "bytes": 1104072,
+  "bounds": [
+   -0.9262257814407349,
+   -1,
+   -0.658461332321167,
+   0.9262257814407349,
+   1,
+   0.658461332321167
+  ],
+  "animations": [],
+  "groundTop": -1,
+  "fromObj": false,
+  "mean": 0.418
+ },
+ "ci_118": {
+  "file": "models-original/ci_118.glb",
+  "tris": 9997,
+  "bytes": 1518488,
+  "bounds": [
+   -1,
+   -0.9366453289985657,
+   -0.5758212804794312,
+   1,
+   0.9366453289985657,
+   0.5758212804794312
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "fromObj": false,
+  "mean": 0.213
+ },
+ "ci_119": {
+  "file": "models-original/ci_119.glb",
+  "tris": 4998,
+  "bytes": 1253084,
+  "bounds": [
+   -0.6920748353004456,
+   -1,
+   -0.6681718230247498,
+   0.6920748353004456,
+   1,
+   0.6681718230247498
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": false,
+  "mean": 0.281
+ },
+ "ci_120": {
+  "file": "models-original/ci_120.glb",
+  "tris": 3000,
+  "bytes": 646760,
+  "bounds": [
+   -0.9578080177307129,
+   -0.11128398776054382,
+   -0.8896341323852539,
+   0.953586995601654,
+   0.1094050332903862,
+   0.8870001435279846
+  ],
+  "animations": [],
+  "groundTop": 0.05,
+  "fromObj": false,
+  "mean": 0.482
+ },
+ "ci_121": {
+  "file": "models-original/ci_121.glb",
+  "tris": 9955,
+  "bytes": 1842852,
+  "bounds": [
+   -0.9557539820671082,
+   -0.5909311175346375,
+   -0.6777470707893372,
+   0.9545310139656067,
+   0.5904420614242554,
+   0.6791390180587769
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": false,
+  "mean": 0.594
+ },
+ "ci_122": {
+  "file": "models-original/ci_122.glb",
+  "tris": 9998,
+  "bytes": 1466024,
+  "bounds": [
+   -0.9569820165634155,
+   -0.6212970614433289,
+   -0.08617796003818512,
+   0.9550139904022217,
+   0.6195500493049622,
+   0.07970704883337021
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": false,
+  "mean": 0.418
+ },
+ "ci_123": {
+  "file": "models-original/ci_123.glb",
+  "tris": 9998,
+  "bytes": 1307680,
+  "bounds": [
+   -0.9569820165634155,
+   -0.6212970614433289,
+   -0.08617796003818512,
+   0.9550139904022217,
+   0.6195500493049622,
+   0.07970704883337021
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": false,
+  "mean": 0.307
+ },
+ "ci_124": {
+  "file": "models-original/ci_124.glb",
+  "tris": 9998,
+  "bytes": 1414968,
+  "bounds": [
+   -0.9569820165634155,
+   -0.6212970614433289,
+   -0.08617796003818512,
+   0.9550139904022217,
+   0.6195500493049622,
+   0.07970704883337021
+  ],
+  "animations": [],
+  "groundTop": -0.55,
+  "fromObj": false,
+  "mean": 0.219
+ },
+ "ci_125": {
+  "file": "models-original/ci_125.glb",
+  "tris": 9978,
+  "bytes": 2312588,
+  "bounds": [
+   -0.618939995765686,
+   1.0437079071998596,
+   -1.3705401420593262,
+   0.6159800291061401,
+   2.95500510931015,
+   -0.8315719664096832
+  ],
+  "animations": [],
+  "groundTop": 1.2,
+  "fromObj": false,
+  "mean": 0.332
+ },
+ "ci_126": {
+  "file": "models-original/ci_126.glb",
+  "tris": 9999,
+  "bytes": 1382272,
+  "bounds": [
+   -1.0060869455337524,
+   -0.14397400617599487,
+   -0.9402620196342468,
+   1.0059529542922974,
+   0.13835200667381287,
+   0.9458230137825012
+  ],
+  "animations": [],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.365
+ },
+ "ci_127": {
+  "file": "models-original/ci_127.glb",
+  "tris": 9973,
+  "bytes": 1316432,
+  "bounds": [
+   -0.497002133867651,
+   -0.4702019989490509,
+   -0.9578401889133612,
+   0.49633453538774747,
+   0.4668900668621063,
+   0.9552240534728947
+  ],
+  "animations": [],
+  "groundTop": 0.35,
+  "fromObj": false,
+  "mean": 0.257
+ },
+ "ci_128": {
+  "file": "models-original/ci_128.glb",
+  "tris": 9958,
+  "bytes": 1109604,
+  "bounds": [
+   -0.36163802942356604,
+   -0.4713710844516754,
+   -0.9550620842055515,
+   0.9332883438408418,
+   0.455140084028244,
+   0.9582201205782449
+  ],
+  "animations": [],
+  "groundTop": 0.15,
+  "fromObj": false,
+  "mean": 0.294
+ },
+ "ci_129": {
+  "file": "models-original/ci_129.glb",
+  "tris": 9973,
+  "bytes": 1316432,
+  "bounds": [
+   -0.497002133867651,
+   -0.4702019989490509,
+   -0.9578401889133612,
+   0.49633453538774747,
+   0.4668900668621063,
+   0.9552240534728947
+  ],
+  "animations": [],
+  "groundTop": 0.35,
+  "fromObj": false,
+  "mean": 0.257
+ },
+ "wpn_sword3": {
+  "file": "models-original/wpn_sword3.glb",
+  "tris": 1000,
+  "bytes": 151904,
+  "bounds": [
+   -0.18068699538707733,
+   -0.9574729800224304,
+   -0.06452099978923798,
+   0.17878399789333344,
+   0.9570469856262207,
+   0.061184998601675034
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "fromObj": false,
+  "mean": 0.724
+ },
+ "wpn_sword2": {
+  "file": "models-original/wpn_sword2.glb",
+  "tris": 1000,
+  "bytes": 172496,
+  "bounds": [
+   -0.19853299856185913,
+   -0.9587389826774597,
+   -0.0729760006070137,
+   0.19418099522590637,
+   0.9508330225944519,
+   0.0736289992928505
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "fromObj": false,
+  "mean": 0.511
+ },
+ "wpn_sword1": {
+  "file": "models-original/wpn_sword1.glb",
+  "tris": 1000,
+  "bytes": 287420,
+  "bounds": [
+   -0.24940699338912964,
+   -0.9531199932098389,
+   -0.14993000030517578,
+   0.24706600606441498,
+   0.9574289917945862,
+   0.14899300038814545
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "fromObj": false,
+  "mean": 0.48
+ },
+ "wpn_shield2": {
+  "file": "models-original/wpn_shield2.glb",
+  "tris": 996,
+  "bytes": 368700,
+  "bounds": [
+   -0.621891975402832,
+   -0.9596459865570068,
+   -0.15829500555992126,
+   0.6200540065765381,
+   0.9575290083885193,
+   0.15196500718593597
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": false,
+  "mean": 0.337
+ },
+ "wpn_shield1": {
+  "file": "models-original/wpn_shield1.glb",
+  "tris": 1000,
+  "bytes": 435780,
+  "bounds": [
+   -0.9536370038986206,
+   -0.9571689963340759,
+   -0.2768479883670807,
+   0.952688992023468,
+   0.955968976020813,
+   0.2757999897003174
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "fromObj": false,
+  "mean": 0.358
+ },
+ "wpn_shield3": {
+  "file": "models-original/wpn_shield3.glb",
+  "tris": 999,
+  "bytes": 319656,
+  "bounds": [
+   -0.8300999999046326,
+   -0.9574729800224304,
+   -0.34839099645614624,
+   0.8282319903373718,
+   0.9562309980392456,
+   0.3372209966182709
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "fromObj": false,
+  "mean": 0.31
+ },
+ "wpn_axe": {
+  "file": "models-original/wpn_axe.glb",
+  "tris": 1000,
+  "bytes": 271880,
+  "bounds": [
+   -0.4322589039802551,
+   -1,
+   -0.07200777530670166,
+   0.4322589039802551,
+   1,
+   0.07200777530670166
+  ],
+  "animations": [],
+  "groundTop": 0.7,
+  "fromObj": false,
+  "mean": 0.612
+ },
+ "wpn_hammer": {
+  "file": "models-original/wpn_hammer.glb",
+  "tris": 1000,
+  "bytes": 633796,
+  "bounds": [
+   -0.3674663007259369,
+   -1,
+   -0.19468402862548828,
+   0.3674663007259369,
+   1,
+   0.19468402862548828
+  ],
+  "animations": [],
+  "groundTop": 0.95,
+  "fromObj": false,
+  "mean": 0.439
+ }
+}

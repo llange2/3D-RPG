@@ -1,0 +1,471 @@
+{
+ "maps": [
+  {
+   "name": "0000",
+   "slug": "0000",
+   "debug": true,
+   "width": 46,
+   "height": 59,
+   "music": 3,
+   "cells": 1325,
+   "actions": 34,
+   "monsters": 0,
+   "bytes": 38627
+  },
+  {
+   "name": "Arachnoid Cavern",
+   "slug": "arachnoid-cavern",
+   "debug": false,
+   "width": 55,
+   "height": 44,
+   "music": 3,
+   "cells": 1013,
+   "actions": 126,
+   "monsters": 37,
+   "bytes": 57497
+  },
+  {
+   "name": "Baywatch Cavern",
+   "slug": "baywatch-cavern",
+   "debug": false,
+   "width": 22,
+   "height": 30,
+   "music": 3,
+   "cells": 322,
+   "actions": 67,
+   "monsters": 33,
+   "bytes": 18444
+  },
+  {
+   "name": "Baywatch",
+   "slug": "baywatch",
+   "debug": false,
+   "width": 20,
+   "height": 19,
+   "music": 1,
+   "cells": 256,
+   "actions": 30,
+   "monsters": 28,
+   "bytes": 11992
+  },
+  {
+   "name": "Blistering Heights Cavern",
+   "slug": "blistering-heights-cavern",
+   "debug": false,
+   "width": 20,
+   "height": 21,
+   "music": 3,
+   "cells": 268,
+   "actions": 40,
+   "monsters": 18,
+   "bytes": 13551
+  },
+  {
+   "name": "Blistering Heights",
+   "slug": "blistering-heights",
+   "debug": false,
+   "width": 20,
+   "height": 20,
+   "music": 1,
+   "cells": 268,
+   "actions": 27,
+   "monsters": 20,
+   "bytes": 12877
+  },
+  {
+   "name": "Bloodreign Dungeon",
+   "slug": "bloodreign-dungeon",
+   "debug": false,
+   "width": 22,
+   "height": 20,
+   "music": 3,
+   "cells": 324,
+   "actions": 31,
+   "monsters": 21,
+   "bytes": 13745
+  },
+  {
+   "name": "Castle Bloodreign",
+   "slug": "castle-bloodreign",
+   "debug": false,
+   "width": 25,
+   "height": 22,
+   "music": 4,
+   "cells": 316,
+   "actions": 57,
+   "monsters": 4,
+   "bytes": 19612
+  },
+  {
+   "name": "Castle Dragontooth",
+   "slug": "castle-dragontooth",
+   "debug": false,
+   "width": 21,
+   "height": 34,
+   "music": 4,
+   "cells": 290,
+   "actions": 36,
+   "monsters": 14,
+   "bytes": 16914
+  },
+  {
+   "name": "Castle Whiteshield",
+   "slug": "castle-whiteshield",
+   "debug": false,
+   "width": 18,
+   "height": 21,
+   "music": 4,
+   "cells": 224,
+   "actions": 26,
+   "monsters": 2,
+   "bytes": 11941
+  },
+  {
+   "name": "Cathedral of Carnage",
+   "slug": "cathedral-of-carnage",
+   "debug": false,
+   "width": 34,
+   "height": 49,
+   "music": 3,
+   "cells": 879,
+   "actions": 114,
+   "monsters": 40,
+   "bytes": 45071
+  },
+  {
+   "name": "Cave 01",
+   "slug": "cave-01",
+   "debug": false,
+   "width": 8,
+   "height": 8,
+   "music": 6,
+   "cells": 29,
+   "actions": 2,
+   "monsters": 0,
+   "bytes": 1635
+  },
+  {
+   "name": "Cave 02",
+   "slug": "cave-02",
+   "debug": false,
+   "width": 8,
+   "height": 8,
+   "music": 6,
+   "cells": 32,
+   "actions": 2,
+   "monsters": 0,
+   "bytes": 1842
+  },
+  {
+   "name": "Cave 03",
+   "slug": "cave-03",
+   "debug": false,
+   "width": 8,
+   "height": 9,
+   "music": 6,
+   "cells": 34,
+   "actions": 2,
+   "monsters": 2,
+   "bytes": 1993
+  },
+  {
+   "name": "Cursed Cold Cavern",
+   "slug": "cursed-cold-cavern",
+   "debug": false,
+   "width": 44,
+   "height": 34,
+   "music": 3,
+   "cells": 727,
+   "actions": 73,
+   "monsters": 39,
+   "bytes": 33605
+  },
+  {
+   "name": "Cyclops Cavern",
+   "slug": "cyclops-cavern",
+   "debug": false,
+   "width": 37,
+   "height": 36,
+   "music": 3,
+   "cells": 955,
+   "actions": 95,
+   "monsters": 71,
+   "bytes": 54181
+  },
+  {
+   "name": "Dark Warriors Keep",
+   "slug": "dark-warriors-keep",
+   "debug": false,
+   "width": 34,
+   "height": 53,
+   "music": 3,
+   "cells": 966,
+   "actions": 64,
+   "monsters": 60,
+   "bytes": 43478
+  },
+  {
+   "name": "Dragon Cavern",
+   "slug": "dragon-cavern",
+   "debug": false,
+   "width": 35,
+   "height": 36,
+   "music": 3,
+   "cells": 779,
+   "actions": 79,
+   "monsters": 35,
+   "bytes": 43342
+  },
+  {
+   "name": "Dragontooth Dungeon",
+   "slug": "dragontooth-dungeon",
+   "debug": false,
+   "width": 20,
+   "height": 20,
+   "music": 3,
+   "cells": 313,
+   "actions": 51,
+   "monsters": 25,
+   "bytes": 21279
+  },
+  {
+   "name": "Fortress of Fear",
+   "slug": "fortress-of-fear",
+   "debug": false,
+   "width": 42,
+   "height": 42,
+   "music": 3,
+   "cells": 763,
+   "actions": 100,
+   "monsters": 38,
+   "bytes": 37694
+  },
+  {
+   "name": "Fountain Head Cavern",
+   "slug": "fountain-head-cavern",
+   "debug": false,
+   "width": 22,
+   "height": 67,
+   "music": 3,
+   "cells": 287,
+   "actions": 52,
+   "monsters": 36,
+   "bytes": 18798
+  },
+  {
+   "name": "Fountain Head",
+   "slug": "fountain-head",
+   "debug": false,
+   "width": 19,
+   "height": 25,
+   "music": 1,
+   "cells": 252,
+   "actions": 34,
+   "monsters": 10,
+   "bytes": 13069
+  },
+  {
+   "name": "Halls of Insanity",
+   "slug": "halls-of-insanity",
+   "debug": false,
+   "width": 34,
+   "height": 34,
+   "music": 3,
+   "cells": 792,
+   "actions": 69,
+   "monsters": 34,
+   "bytes": 32387
+  },
+  {
+   "name": "Magic Cavern",
+   "slug": "magic-cavern",
+   "debug": false,
+   "width": 35,
+   "height": 36,
+   "music": 3,
+   "cells": 949,
+   "actions": 80,
+   "monsters": 44,
+   "bytes": 43326
+  },
+  {
+   "name": "Maze from Hell",
+   "slug": "maze-from-hell",
+   "debug": false,
+   "width": 36,
+   "height": 36,
+   "music": 3,
+   "cells": 1108,
+   "actions": 68,
+   "monsters": 45,
+   "bytes": 39977
+  },
+  {
+   "name": "Outside",
+   "slug": "outside",
+   "debug": false,
+   "width": 106,
+   "height": 120,
+   "music": 2,
+   "cells": 7082,
+   "actions": 57,
+   "monsters": 57,
+   "bytes": 226465
+  },
+  {
+   "name": "Slithercult Stronghold",
+   "slug": "slithercult-stronghold",
+   "debug": false,
+   "width": 39,
+   "height": 54,
+   "music": 3,
+   "cells": 771,
+   "actions": 80,
+   "monsters": 61,
+   "bytes": 31472
+  },
+  {
+   "name": "Space Ship",
+   "slug": "space-ship",
+   "debug": false,
+   "width": 75,
+   "height": 29,
+   "music": 5,
+   "cells": 1218,
+   "actions": 1,
+   "monsters": 0,
+   "bytes": 36420
+  },
+  {
+   "name": "Swamp Town Cavern",
+   "slug": "swamp-town-cavern",
+   "debug": false,
+   "width": 20,
+   "height": 20,
+   "music": 3,
+   "cells": 315,
+   "actions": 47,
+   "monsters": 19,
+   "bytes": 17294
+  },
+  {
+   "name": "Swamp Town",
+   "slug": "swamp-town",
+   "debug": false,
+   "width": 19,
+   "height": 18,
+   "music": 1,
+   "cells": 259,
+   "actions": 47,
+   "monsters": 23,
+   "bytes": 14847
+  },
+  {
+   "name": "Temple of Moo",
+   "slug": "temple-of-moo",
+   "debug": false,
+   "width": 35,
+   "height": 45,
+   "music": 3,
+   "cells": 621,
+   "actions": 64,
+   "monsters": 57,
+   "bytes": 27728
+  },
+  {
+   "name": "Tomb of Terror",
+   "slug": "tomb-of-terror",
+   "debug": false,
+   "width": 42,
+   "height": 36,
+   "music": 3,
+   "cells": 1106,
+   "actions": 55,
+   "monsters": 112,
+   "bytes": 43392
+  },
+  {
+   "name": "Whiteshield Dungeon",
+   "slug": "whiteshield-dungeon",
+   "debug": false,
+   "width": 19,
+   "height": 28,
+   "music": 3,
+   "cells": 291,
+   "actions": 35,
+   "monsters": 13,
+   "bytes": 13240
+  },
+  {
+   "name": "Wildabar Cavern",
+   "slug": "wildabar-cavern",
+   "debug": false,
+   "width": 28,
+   "height": 25,
+   "music": 3,
+   "cells": 340,
+   "actions": 61,
+   "monsters": 39,
+   "bytes": 18552
+  },
+  {
+   "name": "Wildabar",
+   "slug": "wildabar",
+   "debug": false,
+   "width": 19,
+   "height": 19,
+   "music": 1,
+   "cells": 262,
+   "actions": 34,
+   "monsters": 32,
+   "bytes": 13026
+  }
+ ],
+ "report": {
+  "dropped_outliers": [
+   {
+    "map": "Fountain Head Cavern",
+    "x": 4924,
+    "y": 5161,
+    "keys": [
+     "Block"
+    ]
+   },
+   {
+    "map": "Fountain Head Cavern",
+    "x": 5011,
+    "y": 4869,
+    "keys": [
+     "Action"
+    ]
+   },
+   {
+    "map": "Magic Cavern",
+    "x": -5,
+    "y": 0,
+    "keys": [
+     "Monster",
+     "Monster_Additional_Parameter",
+     "Monster_Rotation"
+    ]
+   },
+   {
+    "map": "Magic Cavern",
+    "x": -4,
+    "y": 0,
+    "keys": [
+     "Monster",
+     "Monster_Additional_Parameter",
+     "Monster_Rotation"
+    ]
+   }
+  ],
+  "unknown_keys": {},
+  "skipped": [
+   "0_test_mesh_collider",
+   "all_items",
+   "all_monsters",
+   "default"
+  ]
+ }
+}
