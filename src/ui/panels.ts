@@ -1,7 +1,8 @@
 import { BASE_CLASS, SPELLS, TEXTS, talentInfo } from "../data/tables";
-import { armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
+import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
 import { bonusLines, combineItems, isTwoHanded, makeItem, weaponHands, type Hands } from "../sim/items";
-import { isSpellImplemented, learnBlock, needsTarget, type QuickCast, type QuickCastBlock } from "../sim/spells";
+import { SPELL_GRID, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, type QuickCast, type QuickCastBlock } from "../sim/spells";
+import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
 import { portraitImage } from "./avatarFx";
 import { assetPath, clear, h } from "./dom";
@@ -306,12 +307,13 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
         return [h("div", { text: label }), h("div", { class: cls, text: `${now}${now !== c[key] ? ` (${c[key]})` : ""}` })];
       });
       const need = xpToNextLevel(c);
+      const age = ageOf(c, party.minutes);
       const dmin = itemBonus(c, "dam_min");
       const dmax = itemBonus(c, "dam_max");
       const sheet = h(
         "div",
         { class: "sheet" },
-        h("div", { class: "big" }, portraitImage(c), h("div", {}, h("div", { class: "t", style: "font-family:var(--font-head);color:var(--gold);font-size:19px", text: c.name }), h("div", { text: `${c.raceType} ${c.classType}` }), h("div", { text: `Level ${c.level}` }))),
+        h("div", { class: "big" }, portraitImage(c), h("div", {}, h("div", { class: "t", style: "font-family:var(--font-head);color:var(--gold);font-size:19px", text: c.name }), h("div", { text: `${c.raceType} ${c.classType}` }), h("div", { text: `Level ${c.level}` }), h("div", { text: `Age ${age.total}`, title: age.magic ? `${age.natural} years old, aged ${age.magic} more by magic` : `${age.natural} years old`, style: age.magic ? "color:var(--bad)" : "" }))),
         h("div", { class: "attrs" },
           h("div", { text: "Hit points" }), h("div", { class: "v", text: `${c.hp} / ${c.health}` }),
           h("div", { text: "Spell points" }), h("div", { class: "v", text: `${c.sp} / ${c.mana}` }),
@@ -442,6 +444,8 @@ export interface SpellChoice {
   spellId: number;
   target?: number;
   element?: "acid" | "fire" | "ice" | "magic";
+  /** Lloyd's Beacon: light the fire or go back to it. */
+  beacon?: "set" | "return";
 }
 
 const QUICK_CAST_BLOCK: Record<QuickCastBlock, string> = {
@@ -458,7 +462,7 @@ const QUICK_CAST_BLOCK: Record<QuickCastBlock, string> = {
 export function quickCastOption(party: Party, quick: QuickCast): Option<SpellChoice> {
   const spell = SPELLS[quick.spellId];
   const who = party.characters[quick.caster]?.name ?? party.lastCast?.caster ?? "";
-  const label = `${who} - ${spell ? (TEXTS[spell.name] ?? `Spell ${quick.spellId}`) : `Spell ${quick.spellId}`}`;
+  const label = `${who} - ${spell ? spell.title : `Spell ${quick.spellId}`}`;
   const cost = spell ? `${spell.mana} SP` : "";
   return {
     label,
@@ -471,10 +475,13 @@ export function quickCastOption(party: Party, quick: QuickCast): Option<SpellCho
 }
 
 /**
- * Spell menu of one caster. Asks for a target or an element when the spell needs one. `quick` adds the last spell as the bottom
- * entry (only when this caster cast it); choosing it repeats the spell, still asking for the target.
+ * Spell window of one caster: the pictures of the spells the hero knows on a wide scroll (the old game's 6 x 6 grid of plates), the
+ * cost on each plate, and under them what the plate under the pointer does. A plate is greyed out without the spell points; the
+ * spells whose picture is the shared placeholder carry their name. `quick` adds the last spell as a button below the grid (only
+ * when this caster cast it); choosing it repeats the spell, still asking for the target. Asks for a target or an element afterwards
+ * when the spell needs one.
  */
-export async function pickSpell(ui: UI, party: Party, caster: number, quick: QuickCast | null = null): Promise<SpellChoice | null> {
+export async function pickSpell(ui: UI, party: Party, caster: number, quick: QuickCast | null = null, sound?: (id: number) => void): Promise<SpellChoice | null> {
   const c = party.characters[caster]!;
   if (!canAct(c)) {
     await ui.message(`${c.name} cannot act right now.`);
@@ -489,13 +496,65 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
     await ui.message(`${c.name} does not know any spells yet. Visit a guild to learn some.`);
     return null;
   }
-  const options: Option<SpellChoice | number>[] = c.spells.map((id) => {
-    const s = SPELLS[id]!;
-    const ok = isSpellImplemented(id) && c.sp >= s.mana;
-    return { label: `${TEXTS[s.name] ?? `Spell ${id}`}`, value: id, note: `${s.mana} SP${isSpellImplemented(id) ? "" : " - not available"}`, disabled: !ok };
-  });
-  if (quick && quick.caster === caster) options.push(quickCastOption(party, quick));
-  const picked = await ui.choose(`${c.name}'s spells`, `Spell points: ${c.sp} / ${c.mana}`, options);
+  // the sheet was fetched at start-up; this only waits when the window is opened before it arrived
+  await preloadSpellIcons();
+  const picked = await ui.modal<SpellChoice | number | null>(
+    (close) => {
+      const info = h("div", { class: "spell-info" });
+      const describe = (id: number | null): void => {
+        clear(info);
+        const s = id === null ? undefined : SPELLS[id];
+        if (!s || id === null) {
+          info.append(h("div", { class: "small", text: "Choose a spell. Point at one to read what it does." }));
+          return;
+        }
+        const short = c.sp < s.mana;
+        info.append(
+          h("div", { class: "spell-name", text: s.title }),
+          h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${s.mana} spell point${s.mana === 1 ? "" : "s"}${short ? " - not enough spell points" : ""}` }),
+          h("div", { text: s.text }),
+        );
+      };
+      const slots = c.spells.map((id) => {
+        const s = SPELLS[id]!;
+        const ok = isSpellImplemented(id) && c.sp >= s.mana;
+        const slot = h(
+          "button",
+          {
+            class: `spell-slot${ok ? "" : " off"}`,
+            title: `${s.title} (${s.mana} SP)`,
+            onclick: () => {
+              if (ok) close(id);
+              else sound?.(9014);
+            },
+          },
+          spellPlate(id),
+          isPlaceholderIcon(id) ? h("span", { class: "spell-caption", text: s.title }) : null,
+          h("span", { class: "spell-cost", text: String(s.mana) }),
+        );
+        slot.addEventListener("mouseenter", () => describe(id));
+        slot.addEventListener("focus", () => describe(id));
+        return slot;
+      });
+      describe(null);
+      const buttons = h("div", { class: "buttons" });
+      if (quick && quick.caster === caster) {
+        const q = quickCastOption(party, quick);
+        buttons.append(h("button", { class: "btn", text: `${q.label} (${q.note})`, disabled: q.disabled, onclick: () => close(q.value) }));
+      }
+      buttons.append(h("button", { class: "btn", text: "Back", onclick: () => close(null) }));
+      return h(
+        "div",
+        { class: "parchment spells", style: `--cols:${SPELL_GRID.columns}` },
+        h("h2", { text: `${c.name}'s spells` }),
+        h("p", { class: "small", style: "text-align:center", text: `Spell points: ${c.sp} / ${c.mana}` }),
+        h("div", { class: "spell-grid" }, ...slots),
+        info,
+        buttons,
+      );
+    },
+    { dismissWith: null },
+  );
   if (picked === null) return null;
   return askSpellDetails(ui, party, typeof picked === "object" ? picked.spellId : picked);
 }
@@ -503,8 +562,16 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
 /** Asks for what a spell still needs, the hero it works on or the element it protects against; null when the player backs out. */
 export async function askSpellDetails(ui: UI, party: Party, spellId: number): Promise<SpellChoice | null> {
   const choice: SpellChoice = { spellId };
+  if (needsBeaconChoice(spellId)) {
+    const beacon = await ui.choose("Lloyd's Beacon", "Light a fire where the party stands, or go back to the one that was lit.", [
+      { label: "Set", value: "set" as const, note: "light a fire here" },
+      { label: "Return", value: "return" as const, note: "go back to the fire" },
+    ]);
+    if (beacon === null) return null;
+    choice.beacon = beacon;
+  }
   if (needsTarget(spellId)) {
-    const target = await ui.choose("On whom?", "", party.characters.map((ch, i) => ({ label: ch.name, value: i, note: `${ch.hp}/${ch.health} HP, ${ch.conditions.join(", ")}` })));
+    const target = await ui.choose(ITEM_SPELLS.has(spellId) ? "Whose backpack?" : "On whom?", "", party.characters.map((ch, i) => ({ label: ch.name, value: i, note: `${ch.hp}/${ch.health} HP, ${ch.conditions.join(", ")}` })));
     if (target === null) return null;
     choice.target = target;
   }

@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { BASE_CLASS, CONSTANTS, SPELLS } from "../data/tables";
-import { createCharacter, recalcValues, removeCondition } from "./character";
+import { bornAtStart, createCharacter, recalcValues, removeCondition } from "./character";
 import { equipRecruit } from "./party";
 import { SPELL_SCHOOL } from "./spells";
 import { ATTRIBUTES, type Attribute, type Character, type ClassName, type Party, type RaceName } from "./types";
@@ -86,6 +86,8 @@ export function addRecruit(party: Party, spec: RecruitSpec): RosterResult {
   if (!isEligible(spec.classType, spec.attrs)) return { ok: false, reason: "not_eligible" };
   if (party.reserve.length >= MAX_RESERVE) return { ok: false, reason: "reserve_full" };
   const hero = createCharacter({ name, classType: spec.classType, raceType: raceOfAvatar(spec.avatar), avatar: avatarKey(spec.avatar), attrs: { ...spec.attrs }, spells: startingSpells(spec.classType), talents: party.talents });
+  // a hero made in the inn is 18 today (the old game set the birthday to the day of making)
+  hero.born = bornAtStart(party.minutes);
   equipRecruit(party, hero);
   party.reserve.push(hero);
   return { ok: true };

@@ -1,8 +1,8 @@
 import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, type MonsterDef } from "../data/tables";
-import { addCondition, armor, canAct, getBaseValue, itemBonus, pyRound, removeCondition } from "./character";
+import { addCondition, anyoneLeft, armor, canAct, fightSpeed, getBaseValue, isRifted, itemBonus, pyRound, removeCondition } from "./character";
 import { cheats } from "./cheats";
-import { protectionLevel } from "./party";
+import { hasEffect, protectionLevel } from "./party";
 import type { Character, Condition, Party } from "./types";
 
 export type DamageType = "physical" | "fire" | "ice" | "acid" | "magic" | "poison";
@@ -41,7 +41,7 @@ export function meleeDamage(c: Character, monster: MonsterDef | null, rng: Rng):
   const max = itemBonus(c, "dam_max");
   let weapon = rng.range(Math.min(min, max), Math.max(min, max));
   if (weapon === 0) weapon = 1;
-  let total = Math.ceil(base * c.level + weapon);
+  let total = Math.ceil(base * c.level + weapon) + (c.mods?.rage ?? 0);
   if (c.defensiveStance) total = Math.trunc(total * STANCE());
   if (monster && monster.armor > 0) total = Math.max(0, total - monster.armor);
   return Math.trunc(total);
@@ -57,11 +57,14 @@ export function rangedDamage(c: Character, monster: MonsterDef | null, distance:
   const max = itemBonus(c, "ranged_dam_max");
   const weapon = rng.range(Math.min(min, max), Math.max(min, max));
   const base = c.acc / 10 + getBaseValue(c.raceType, c.classType, "base_ranged");
-  let total = Math.ceil(base * c.level + weapon);
+  let total = Math.ceil(base * c.level + weapon) + (c.mods?.rage ?? 0);
   if (c.defensiveStance) total = Math.trunc(total * STANCE());
   if (monster && monster.armor > 0) total = Math.max(0, total - Math.trunc(monster.armor / 2));
   return Math.trunc(total);
 }
+
+/** Power Shield takes this share off every hit the party suffers. */
+export const POWER_SHIELD_REDUCTION = 0.1;
 
 /** Damage of a spell against a monster: resisted share is subtracted (monster resistances are fractions). */
 export function spellDamageToMonster(monster: MonsterDef, damage: number, type: string): number {
@@ -97,7 +100,7 @@ export function monsterDamage(party: Party, monster: MonsterDef, target: Charact
   const type = monster.attack_type.toLowerCase() as DamageType;
   const hitChance = ranged
     ? distance > 0
-      ? Math.min(1, Math.max(0, monster.speed / (target.spd * distance * (target.classType === "Ninja" ? 0.75 : 0.5))))
+      ? Math.min(1, Math.max(0, monster.speed / (fightSpeed(target) * distance * (target.classType === "Ninja" ? 0.75 : 0.5))))
       : 1
     : 1;
   const hit = ranged ? (rng.float() <= hitChance ? 1 : 0) : 1;
@@ -137,6 +140,9 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
   const added: Condition[] = [];
   // debug menu, god mode: nothing hurts and nothing sticks
   if (cheats.god) return { damage: 0, conditions: added, defeated: false };
+  // nothing can hit a hero in the Dimensional Rift
+  if (isRifted(c)) return { damage: 0, conditions: added, defeated: false };
+  if (damage > 0 && hasEffect(party, "power_shield")) damage = Math.trunc(damage * (1 - POWER_SHIELD_REDUCTION));
   if (damage > 0) c.hp -= damage;
 
   if (c.conditions.includes("Sleeping") && damage > 0) {
@@ -159,8 +165,7 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
     added.push(cond);
   }
 
-  const anyAlive = party.characters.some((x) => canAct(x));
-  return { damage, conditions: added, defeated: !anyAlive };
+  return { damage, conditions: added, defeated: !anyoneLeft(party.characters) };
 }
 
 export function monsterById(id: number): MonsterDef {

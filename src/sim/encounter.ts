@@ -1,7 +1,7 @@
 import type { Rng } from "../core/rng";
-import type { MonsterDef } from "../data/tables";
+import { isUndead, type MonsterDef } from "../data/tables";
 import { applyHit, meleeDamage, monsterById, monsterDamage, rangedDamage, spellDamageToMonster, type DamageType } from "./combat";
-import { canAct, itemBonus } from "./character";
+import { anyoneLeft, canAct, isRifted, itemBonus } from "./character";
 import type { ConditionEvent } from "./conditions";
 import { ACTION_MINUTES, addXp, advanceTime } from "./party";
 import { generateItem } from "./items";
@@ -9,6 +9,8 @@ import type { Condition, Item, Party, TimedEffect } from "./types";
 
 /** Radius (in tiles) within which monsters notice and attack the party (MONSTER_ACTION_RADIUS of the old game). */
 export const MONSTER_ACTION_RADIUS = 7;
+/** Share of a Clumsy monster's attacks that do not take place. */
+const CLUMSY_MISS = 0.1;
 const PATH_STEP_LIMIT = 30;
 
 /** What the combat engine needs to know about the map under it. */
@@ -33,6 +35,16 @@ export interface MonsterInstance {
   x: number;
   y: number;
   hp: number;
+  /** Dimensional Phasing: monster turns left. The monster neither moves nor attacks, and nothing can hurt it. */
+  phased?: number;
+  /** Immobilize: monster turns left in which the monster cannot move (it can still strike). */
+  immobile?: number;
+  /** Set for good once Immobilize has been cast on this monster: it works once on each. */
+  wasImmobilized?: boolean;
+  /** Clumsy: some of the monster's attacks fail, until it dies. */
+  clumsy?: boolean;
+  /** Gravity drew the monster to the party this turn: it spent the turn on that and does not strike until the next one. */
+  pulled?: boolean;
 }
 
 export interface Encounter {
@@ -45,6 +57,8 @@ export interface Encounter {
 
 export type CombatEvent =
   | { type: "monster_move"; uid: string; from: [number, number]; to: [number, number] }
+  /** Gravity: the monster is drawn to the party at once (a quick slide, no walking). */
+  | { type: "monster_pull"; uid: string; from: [number, number]; to: [number, number] }
   | { type: "monster_attack"; uid: string; target: number; damage: number; ranged: boolean; damageType: DamageType; conditions: Condition[] }
   | { type: "party_attack"; attacker: number | null; kind: "melee" | "ranged" | "magic"; uid: string; defId: number; damage: number; shots?: number }
   /** The Wolf mascot finishes off a monster the party has wounded below `WOLF_EXECUTE_BELOW` of its health. */
@@ -247,11 +261,16 @@ interface Scanned {
   steps: number;
 }
 
+/** In another dimension (Dimensional Phasing): out of the fight. */
+export function isPhased(m: MonsterInstance): boolean {
+  return (m.phased ?? 0) > 0;
+}
+
 function scan(view: GridView, enc: Encounter, px: number, py: number, radius: number): Scanned[] {
   const r2 = radius * radius;
   const found: Scanned[] = [];
   for (const monster of enc.monsters) {
-    if (monster.hp <= 0) continue;
+    if (monster.hp <= 0 || isPhased(monster)) continue;
     const d2 = (monster.x - px) ** 2 + (monster.y - py) ** 2;
     if (d2 > r2) continue;
     const path = wayToPlayer(view, monsterById(monster.defId), monster.x, monster.y, px, py, radius);
@@ -278,7 +297,35 @@ export function isAdjacent(x: number, y: number, px: number, py: number, view?: 
 
 /** Candidates a monster may attack: everybody who is not dead or knocked out (sleepers included). */
 function targets(party: Party): number[] {
-  return party.characters.map((c, i) => (c.conditions.some((x) => x === "Dead" || x === "Rotten" || x === "Unconscious" || x === "Petrified") ? -1 : i)).filter((i) => i >= 0);
+  return party.characters.map((c, i) => (isRifted(c) || c.conditions.some((x) => x === "Dead" || x === "Rotten" || x === "Unconscious" || x === "Petrified") ? -1 : i)).filter((i) => i >= 0);
+}
+
+/** What a monster turn counts down: Dimensional Phasing, Immobilize and the Dimensional Rift last a number of monster turns. */
+function endMonsterTurn(party: Party, enc: Encounter): void {
+  for (const m of enc.monsters) {
+    if (m.pulled) m.pulled = undefined;
+    if (m.phased) m.phased = m.phased > 1 ? m.phased - 1 : undefined;
+    if (m.immobile) m.immobile = m.immobile > 1 ? m.immobile - 1 : undefined;
+  }
+  for (const c of party.characters) {
+    const mods = c.mods;
+    if (mods?.rift) {
+      mods.rift -= 1;
+      if (mods.rift <= 0) delete mods.rift;
+    }
+  }
+}
+
+/** Moving ends a Dimensional Rift ("if the party moves the spell is cancelled"). Returns who came back. */
+export function cancelRifts(party: Party): number[] {
+  const back: number[] = [];
+  party.characters.forEach((c, i) => {
+    if (c.mods?.rift) {
+      delete c.mods.rift;
+      back.push(i);
+    }
+  });
+  return back;
 }
 
 /**
@@ -291,6 +338,7 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
 
   // 1. movement
   for (const s of scan(view, enc, px, py, radius)) {
+    if (s.monster.immobile) continue;
     const first = s.path?.[0];
     if (!first) continue;
     const [nx, ny] = first;
@@ -312,10 +360,13 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
 
   // 2. attacks
   for (const s of scan(view, enc, px, py, radius)) {
+    if (s.monster.pulled) continue;
     const def = monsterById(s.monster.defId);
     for (let n = 0; n < def.no_of_attacks; n++) {
       let candidates = targets(party);
       if (candidates.length === 0) break;
+      // Clumsy: one attack in ten does not take place
+      if (s.monster.clumsy && rng.float() < CLUMSY_MISS) continue;
       if (def.preferred_enemy) {
         const matching = candidates.filter((i) => party.characters[i]!.classType.includes(def.preferred_enemy!));
         if (matching.length > 0) candidates = matching;
@@ -330,20 +381,22 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
       const distance = Math.max(Math.abs(s.monster.x - px), Math.abs(s.monster.y - py));
       const damage = monsterDamage(party, def, party.characters[target]!, ranged, distance, rng);
       const hit = applyHit(party, target, damage, ranged ? null : def, rng);
-      events.push({ type: "monster_attack", uid: s.monster.uid, target, damage, ranged, damageType: def.attack_type.toLowerCase() as DamageType, conditions: hit.conditions });
+      events.push({ type: "monster_attack", uid: s.monster.uid, target, damage: hit.damage, ranged, damageType: def.attack_type.toLowerCase() as DamageType, conditions: hit.conditions });
       if (hit.defeated) {
         events.push({ type: "defeat" });
+        endMonsterTurn(party, enc);
         return events;
       }
     }
   }
+  endMonsterTurn(party, enc);
   return events;
 }
 
 // ---------------------------------------------------------------- party acting
 
 export function updateBattleMode(enc: Encounter, px: number, py: number, view?: GridView): void {
-  const adjacent = enc.monsters.some((m) => m.hp > 0 && isAdjacent(m.x, m.y, px, py, view));
+  const adjacent = enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && isAdjacent(m.x, m.y, px, py, view));
   if (!adjacent) {
     enc.battleMode = false;
     enc.sequence = [];
@@ -420,7 +473,7 @@ function spendAction(party: Party, events: CombatEvent[]): void {
   if (expired.length > 0) events.push({ type: "effects_ended", effects: expired });
   if (conditions.length > 0) events.push({ type: "conditions_ended", conditions });
   // poison can take the last hero who could still act
-  if (conditions.some((c) => c.outcome === "died") && !party.characters.some((c) => canAct(c))) events.push({ type: "defeat" });
+  if (conditions.some((c) => c.outcome === "died") && !anyoneLeft(party.characters)) events.push({ type: "defeat" });
 }
 
 /** Moves to the next character in the round; after the last one the monsters act. */
@@ -460,7 +513,7 @@ function advanceRound(party: Party, view: GridView, enc: Encounter, px: number, 
  */
 export function partyAttack(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, attack: PartyAttack): CombatEvent[] {
   const events: CombatEvent[] = [];
-  const target = enc.monsters.find((m) => m.uid === attack.targetUid && m.hp > 0);
+  const target = enc.monsters.find((m) => m.uid === attack.targetUid && m.hp > 0 && !isPhased(m));
   if (!target) return [{ type: "denied", reason: "no_target" }];
   // arrows and spells need a clear line like the monsters' shots do: walls and closed gates stop them (melee has no distance)
   if (attack.kind !== "melee" && !lineOfSight(view, enc, px, py, target.x, target.y)) return [{ type: "denied", reason: "no_target" }];
@@ -525,14 +578,16 @@ function firstActive(party: Party): number {
   return i < 0 ? 0 : i;
 }
 
-/**
- * Penetrating spell: hits every monster on the line from the party through the target, up to the action radius.
- * `undead`: null = all, true = undead only, false = living only.
- */
-export function spellInLine(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, targetUid: string, magic: { damage: number; type: string }, undead: boolean | null): CombatEvent[] {
-  const target = enc.monsters.find((m) => m.uid === targetUid);
-  if (!target) return [{ type: "denied", reason: "no_target" }];
-  if (!lineOfSight(view, enc, px, py, target.x, target.y)) return [{ type: "denied", reason: "no_target" }];
+/** What every spell that works on monsters ends with: the caster's turn is over, the monsters answer, the clock moves. */
+function finishSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, events: CombatEvent[]): void {
+  beginTurn(party, enc);
+  if (!enc.battleMode) events.push(...monsterTurn(party, view, enc, px, py, rng));
+  else advanceRound(party, view, enc, px, py, rng, events);
+  spendAction(party, events);
+}
+
+/** The monsters a beam hits: everyone on the line from the party through `target`, up to the action radius, but not through a wall or a gate. */
+function monstersOnLine(view: GridView, enc: Encounter, px: number, py: number, target: MonsterInstance): MonsterInstance[] {
   const dx = Math.abs(target.x - px);
   const dy = Math.abs(target.y - py);
   const sx = px < target.x ? 1 : -1;
@@ -540,7 +595,6 @@ export function spellInLine(party: Party, view: GridView, enc: Encounter, px: nu
   let err = dx - dy;
   let cx = px;
   let cy = py;
-  const events: CombatEvent[] = [];
   const hit: MonsterInstance[] = [];
   for (let step = 0; step < MONSTER_ACTION_RADIUS; step++) {
     const e2 = 2 * err;
@@ -552,20 +606,165 @@ export function spellInLine(party: Party, view: GridView, enc: Encounter, px: nu
       err += dx;
       cy += sy;
     }
-    // the beam goes on past the target, but not through a wall or a gate
     if (view.opaque(cx, cy) || view.obstacle?.(cx, cy)) break;
     const m = enc.monsters.find((x) => x.hp > 0 && x.x === cx && x.y === cy);
-    if (m && (undead === null || monsterById(m.defId).undead === undead)) hit.push(m);
+    if (m && !isPhased(m)) hit.push(m);
   }
-  for (const m of hit) {
+  return hit;
+}
+
+/**
+ * Penetrating spell: hits every monster on the line from the party through the target, up to the action radius.
+ * `undead`: null = all, true = undead only, false = living only.
+ */
+export function spellInLine(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, targetUid: string, magic: { damage: number; type: string }, undead: boolean | null): CombatEvent[] {
+  const target = enc.monsters.find((m) => m.uid === targetUid && !isPhased(m));
+  if (!target) return [{ type: "denied", reason: "no_target" }];
+  if (!lineOfSight(view, enc, px, py, target.x, target.y)) return [{ type: "denied", reason: "no_target" }];
+  const events: CombatEvent[] = [];
+  for (const m of monstersOnLine(view, enc, px, py, target)) {
+    if (undead !== null && isUndead(m.defId) !== undead) continue;
     const damage = spellDamageToMonster(monsterById(m.defId), magic.damage, magic.type);
     m.hp -= damage;
     events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage });
     killIfDead(party, enc, m, rng, events);
   }
-  beginTurn(party, enc);
-  if (!enc.battleMode) events.push(...monsterTurn(party, view, enc, px, py, rng));
-  else advanceRound(party, view, enc, px, py, rng, events);
-  spendAction(party, events);
+  finishSpell(party, view, enc, px, py, rng, events);
   return events;
+}
+
+/** Spells with a rule of their own for whom they hit and how hard. */
+export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death";
+
+/** Star Burst: everything within this many tiles of the target. */
+export const STAR_BURST_RADIUS = 3;
+/** Holy Word: undead with more health than this lose a share of it instead of a fixed amount. */
+export const HOLY_WORD_BIG = 600;
+export const HOLY_WORD_DAMAGE = 150;
+export const HOLY_WORD_SHARE = 0.25;
+/** Mass Distortion: the chance for each monster on the line to lose half its health. */
+export const MASS_DISTORTION_CHANCE = 0.2;
+/** Finger of Death: the chance to kill, and the highest treasure level it works on. */
+export const FINGER_CHANCE = 0.5;
+export const FINGER_MAX_LEVEL = 2;
+
+/**
+ * Star Burst, Holy Word, Mass Distortion and Finger of Death (the spell sheet's own rules). Like the beams they need a clear line to the
+ * target; `magic` carries the damage Star Burst rolled.
+ */
+export function specialSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, kind: SpecialSpell, targetUid: string, magic: { damage: number; type: string }): CombatEvent[] {
+  const target = enc.monsters.find((m) => m.uid === targetUid && m.hp > 0 && !isPhased(m));
+  if (!target || !lineOfSight(view, enc, px, py, target.x, target.y)) return [{ type: "denied", reason: "no_target" }];
+  const events: CombatEvent[] = [];
+  const strike = (m: MonsterInstance, damage: number): void => {
+    m.hp -= damage;
+    events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage });
+    killIfDead(party, enc, m, rng, events);
+  };
+  switch (kind) {
+    case "star_burst":
+      for (const m of [...enc.monsters]) {
+        if (m.hp <= 0 || isPhased(m)) continue;
+        if ((m.x - target.x) ** 2 + (m.y - target.y) ** 2 > STAR_BURST_RADIUS ** 2) continue;
+        if (m !== target && !lineOfSight(view, enc, target.x, target.y, m.x, m.y)) continue;
+        strike(m, spellDamageToMonster(monsterById(m.defId), magic.damage, magic.type));
+      }
+      break;
+    case "holy_word":
+      for (const m of monstersOnLine(view, enc, px, py, target)) {
+        if (!isUndead(m.defId)) continue;
+        const max = monsterById(m.defId).health;
+        strike(m, max > HOLY_WORD_BIG ? Math.floor(max * HOLY_WORD_SHARE) : HOLY_WORD_DAMAGE);
+      }
+      break;
+    case "mass_distortion":
+      for (const m of monstersOnLine(view, enc, px, py, target)) {
+        if (monsterById(m.defId).treasure_level >= 5 || !(rng.float() < MASS_DISTORTION_CHANCE)) continue;
+        strike(m, Math.max(1, Math.floor(m.hp / 2)));
+      }
+      break;
+    case "finger_of_death": {
+      const def = monsterById(target.defId);
+      strike(target, def.treasure_level <= FINGER_MAX_LEVEL && rng.float() < FINGER_CHANCE ? target.hp : 0);
+      break;
+    }
+  }
+  finishSpell(party, view, enc, px, py, rng, events);
+  return events;
+}
+
+// ---------------------------------------------------------------- spells that change monsters
+
+/** Dimensional Phasing: radius (tiles) and turns. */
+export const PHASE_RADIUS = 4;
+export const PHASE_TURNS = 5;
+export const IMMOBILIZE_TURNS = 3;
+export const GRAVITY_RADIUS = 4;
+
+/** Dimensional Phasing: every monster within the radius leaves the fight for `PHASE_TURNS` monster turns. Returns who was caught. */
+export function phaseMonsters(enc: Encounter, px: number, py: number): MonsterInstance[] {
+  const caught = enc.monsters.filter((m) => m.hp > 0 && (m.x - px) ** 2 + (m.y - py) ** 2 <= PHASE_RADIUS ** 2);
+  for (const m of caught) m.phased = PHASE_TURNS;
+  return caught;
+}
+
+/** Immobilize: three monster turns without moving, once per monster. False when this monster has been held before. */
+export function immobilize(m: MonsterInstance): boolean {
+  if (m.wasImmobilized) return false;
+  m.wasImmobilized = true;
+  m.immobile = IMMOBILIZE_TURNS;
+  return true;
+}
+
+/** Clumsy: false when the monster is clumsy already (the effect does not stack). */
+export function makeClumsy(m: MonsterInstance): boolean {
+  if (m.clumsy) return false;
+  m.clumsy = true;
+  return true;
+}
+
+/**
+ * Gravity: monsters within the radius are pulled along the way they would walk to the party, as far as it is free, but at once, not
+ * step by step ("if there is a way"). The ones nearest to the party get the places next to it first.
+ */
+export function pullMonsters(view: GridView, enc: Encounter, px: number, py: number): CombatEvent[] {
+  const events: CombatEvent[] = [];
+  const near = enc.monsters
+    .filter((m) => m.hp > 0 && !isPhased(m) && !isAdjacent(m.x, m.y, px, py, view) && (m.x - px) ** 2 + (m.y - py) ** 2 <= GRAVITY_RADIUS ** 2)
+    .map((m) => ({ m, path: wayToPlayer(view, monsterById(m.defId), m.x, m.y, px, py, GRAVITY_RADIUS + 1) }))
+    .filter((s): s is { m: MonsterInstance; path: [number, number][] } => s.path !== null && s.path.length > 0)
+    .sort((a, b) => a.path.length - b.path.length);
+  const occupied = (x: number, y: number) => (x === px && y === py) || enc.monsters.some((o) => o.hp > 0 && o.x === x && o.y === y);
+  for (const { m, path } of near) {
+    // the farthest cell of its way that is free, going back from the end
+    const spot = [...path].reverse().find(([x, y]) => !occupied(x, y));
+    if (!spot) continue;
+    events.push({ type: "monster_pull", uid: m.uid, from: [m.x, m.y], to: [spot[0], spot[1]] });
+    m.x = spot[0];
+    m.y = spot[1];
+    m.pulled = true;
+  }
+  return events;
+}
+
+export interface MonsterReport {
+  uid: string;
+  defId: number;
+  name: string;
+  hp: number;
+  maxHp: number;
+  armor: number;
+  attacks: number;
+  abilities: string;
+}
+
+/** Identify Monster: what the party learns about every monster within the action radius. */
+export function identifyMonsters(enc: Encounter, px: number, py: number): MonsterReport[] {
+  return enc.monsters
+    .filter((m) => m.hp > 0 && (m.x - px) ** 2 + (m.y - py) ** 2 <= MONSTER_ACTION_RADIUS ** 2)
+    .sort((a, b) => (a.x - px) ** 2 + (a.y - py) ** 2 - ((b.x - px) ** 2 + (b.y - py) ** 2))
+    .map((m) => {
+      const def = monsterById(m.defId);
+      return { uid: m.uid, defId: m.defId, name: def.name, hp: m.hp, maxHp: def.health, armor: def.armor, attacks: def.no_of_attacks, abilities: def.special_abilties ?? "" };
+    });
 }

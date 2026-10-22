@@ -3,6 +3,8 @@ import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
 import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import type { AnimationGroup } from "@babylonjs/core/Animations/animationGroup";
 import type { Skeleton } from "@babylonjs/core/Bones/skeleton";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import "@babylonjs/core/Rendering/outlineRenderer"; // registers `renderOverlay`, the tint of a monster in another dimension
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
@@ -20,6 +22,11 @@ const IDLE_NAMES = ["Alert", "Idle_11", "Idle_9", "Idle_3"];
 /** How long a monster takes to walk one tile; the game times a monster's attack after its step by it. */
 export const MONSTER_STEP_SECONDS = 0.28;
 const MOVE_SECONDS = MONSTER_STEP_SECONDS;
+/** Gravity pulls a monster to the party in this time, without a walking clip. */
+export const PULL_SECONDS = 0.2;
+/** Dimensional Phasing: a monster in the other dimension is purple and half transparent. */
+const PHASE_COLOR = new Color3(0.62, 0.22, 0.95);
+const PHASE_ALPHA = 0.5;
 
 /**
  * Flying monsters among the static models (the animated ones all walk): the height of the middle of the body above the floor.
@@ -60,6 +67,10 @@ interface View {
   bobSeed: number;
   /** A monster that appears out of nowhere (an ambush) fades in: seconds so far and in all. Null once it is solid. */
   fade: { t: number; seconds: number } | null;
+  /** In another dimension (Dimensional Phasing): still, purple, half transparent. */
+  phased: boolean;
+  /** Seconds the current move takes when it is not a walk (Gravity); null for a step. */
+  slide: number | null;
 }
 
 /** How a person of a campaign map stands: `yaw` in degrees (Babylon), `idle` the clip it loops. */
@@ -214,6 +225,8 @@ export class MonsterRenderer {
       attackUntil: 0,
       bobSeed: Math.random() * 10,
       fade: fadeSeconds > 0 ? { t: 0, seconds: fadeSeconds } : null,
+      phased: false,
+      slide: null,
     };
     if (view.fade) this.setVisibility(view, 0);
     this.views.set(uid, view);
@@ -258,6 +271,39 @@ export class MonsterRenderer {
       for (const g of v.groups) g.stop();
       this.group(v, ["Walking"])?.start(true);
     }
+  }
+
+  /** Draws a monster to a new place in a moment, standing (Gravity): no walking clip, `PULL_SECONDS` long. */
+  slideTo(uid: string, x: number, y: number, z: number, seconds = PULL_SECONDS): void {
+    const v = this.views.get(uid);
+    if (!v) return;
+    v.from = { x: v.holder.position.x, y: v.holder.position.y, z: v.holder.position.z };
+    v.to = { x, y: y + v.lift, z };
+    v.t = 0;
+    v.slide = seconds;
+  }
+
+  /**
+   * Dimensional Phasing: the monster stops where it is (its clip is paused), turns purple and half transparent, and returns to normal
+   * when it ends. The tint is an overlay and the transparency the mesh's own visibility, so the materials the type shares stay as they are.
+   */
+  setPhased(uid: string, on: boolean): void {
+    const v = this.views.get(uid);
+    if (!v || v.phased === on) return;
+    v.phased = on;
+    for (const mesh of v.holder.getChildMeshes()) {
+      mesh.renderOverlay = on;
+      if (on) {
+        mesh.overlayColor = PHASE_COLOR;
+        mesh.overlayAlpha = 0.4;
+      }
+      mesh.visibility = on ? PHASE_ALPHA : 1;
+    }
+    if (on) {
+      v.walking = false;
+      v.attackUntil = 0;
+      for (const g of v.groups) g.pause();
+    } else this.playIdle(v);
   }
 
   /** Teleports without animation. */
@@ -341,23 +387,24 @@ export class MonsterRenderer {
       if (v.fade) {
         v.fade.t += dt;
         const done = v.fade.t >= v.fade.seconds;
-        this.setVisibility(v, done ? 1 : v.fade.t / v.fade.seconds);
+        if (!v.phased) this.setVisibility(v, done ? 1 : v.fade.t / v.fade.seconds);
         if (done) v.fade = null;
       }
       if (v.t < 1) {
-        v.t = Math.min(1, v.t + dt / MOVE_SECONDS);
+        v.t = Math.min(1, v.t + dt / (v.slide ?? MOVE_SECONDS));
         const e = v.t;
         v.holder.position.x = v.from.x + (v.to.x - v.from.x) * e;
         v.holder.position.y = v.from.y + (v.to.y - v.from.y) * e;
         v.holder.position.z = v.from.z + (v.to.z - v.from.z) * e;
+        if (v.t >= 1) v.slide = null;
         if (v.t >= 1 && v.walking && v.dying === null) {
           v.walking = false;
           this.playIdle(v);
         }
-      } else if (!v.animated && v.dying === null) {
+      } else if (!v.animated && v.dying === null && !v.phased) {
         v.holder.position.y = v.to.y + Math.sin(this.time * 2 + v.bobSeed) * 0.05;
       }
-      if (v.attackUntil > 0 && this.time > v.attackUntil && v.dying === null) {
+      if (v.attackUntil > 0 && this.time > v.attackUntil && v.dying === null && !v.phased) {
         v.attackUntil = 0;
         this.playIdle(v);
       }

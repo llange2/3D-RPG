@@ -1,0 +1,470 @@
+{
+ "1": {
+  "name": "Awaken",
+  "description": "Awakens all sleeping members of the party.",
+  "explanation": "",
+  "status": "done"
+ },
+ "2": {
+  "name": "Pandora's box",
+  "description": "Opens a dimensional rift and randomly pulls an entity into your reality.",
+  "explanation": "Chances:\n30%: receive 1-100 gold\n30%: receive a random L1 item\n20%: random L1 monster appears\n5%: receive 101 - 200 gold\n5%: receive a random L2 item\n5%: random L2 monster appears\n4%: receive 1000 - 10000 gold\n1%: Dragon Lord (ID 83) appears",
+  "status": "to implement"
+ },
+ "3": {
+  "name": "Elemental Arrow",
+  "description": "Does 8 damage of a random elemental type to one monster.",
+  "explanation": "",
+  "status": "done"
+ },
+ "4": {
+  "name": "First Aid",
+  "description": "Heals one character for 6 hit points.",
+  "explanation": "",
+  "status": "done"
+ },
+ "5": {
+  "name": "Flying Fist",
+  "description": "Does 6 physical damage to one monster.",
+  "explanation": "",
+  "status": "done"
+ },
+ "6": {
+  "name": "Light",
+  "description": "Lights up dark dungeons and caves.",
+  "explanation": "",
+  "status": "done"
+ },
+ "7": {
+  "name": "Cure Wounds",
+  "description": "Heals one character for 15 hit points.",
+  "explanation": "",
+  "status": "done"
+ },
+ "8": {
+  "name": "Energy Blast",
+  "description": "Does 2-6 energy damage per caster level to one monster.",
+  "explanation": "",
+  "status": "done"
+ },
+ "9": {
+  "name": "Revitalize",
+  "description": "Removes the \"Weak\" status from one character.",
+  "explanation": "",
+  "status": "done"
+ },
+ "10": {
+  "name": "Sparks",
+  "description": "Does 2 magic damage per caster level to a group of monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "11": {
+  "name": "Suppress Poison",
+  "description": "Reduces \"Poisoned\" status on one character to minimum.",
+  "explanation": "",
+  "status": "done"
+ },
+ "12": {
+  "name": "Pain",
+  "description": "Does 8 physical damage to a group of monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "13": {
+  "name": "Dimensional Phasing",
+  "description": "Put all monsters in a 4 field radius in a different dimensional phase for 5 turns.",
+  "explanation": "1) Stop all movement/animation for monsters in radius\n2) Color all monsters in purple and make the half transparent\n3) Monster do not/move attack and also cannot be attacked or take damage of any kind.\n4) After 5 turns return monsters to normal",
+  "status": "to implement"
+ },
+ "14": {
+  "name": "Toxic Cloud",
+  "description": "Does 10 poison damage to a group of monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "15": {
+  "name": "Acid Stream",
+  "description": "Does 25 acid damage to one monster.",
+  "explanation": "",
+  "status": "done"
+ },
+ "16": {
+  "name": "Jump",
+  "description": "Moves the party two spaces ahead",
+  "explanation": "",
+  "status": "done"
+ },
+ "17": {
+  "name": "Protection from Elements",
+  "description": "Gives the party damage reduction to either fire, cold, magic or acid.",
+  "explanation": "",
+  "status": "done"
+ },
+ "18": {
+  "name": "Suppress Madness",
+  "description": "Reduces \"Crazy\" status on one character to minimum.",
+  "explanation": "",
+  "status": "done"
+ },
+ "19": {
+  "name": "Turn Undead",
+  "description": "Damages or destroys a group of undead monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "20": {
+  "name": "Stone Skin",
+  "description": "Gives a character +1 AC per caster's level, but halves the target's speed for 12h",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "21": {
+  "name": "Levitate",
+  "description": "Lets the party levitate to avoid pit traps for 4 hours",
+  "explanation": "",
+  "status": "done"
+ },
+ "22": {
+  "name": "Gravity",
+  "description": "Pulls all monsters in a 4 field radius around the party, if there is a way.",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "23": {
+  "name": "Suppress Disease",
+  "description": "Reduces \"Diseased\" status on one character to minimum.",
+  "explanation": "",
+  "status": "graphic missing"
+ },
+ "24": {
+  "name": "Wizard Eye",
+  "description": "Displays a map of the party's surroundings for 8h",
+  "explanation": "1) Shows the level incl. The not explored areas\n2) Shows traps, if crow is mascot\n3) Does not show monsters (see \"36 - Detect monster\")",
+  "status": "done"
+ },
+ "25": {
+  "name": "Rage",
+  "description": "Gives a character +1 damage per caster's level, but halves the target's armor for 12h",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "26": {
+  "name": "Identify Monster",
+  "description": "Shows the hit points, AC, attacks per round, and special abilities of monsters in combat range.",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "27": {
+  "name": "Nature's Cure",
+  "description": "Heals one character for 25 hit points.",
+  "explanation": "",
+  "status": "done"
+ },
+ "28": {
+  "name": "Power Cure",
+  "description": "Heals one character for 2â€“12 hit points per caster level.",
+  "explanation": "",
+  "status": "done"
+ },
+ "29": {
+  "name": "Frost Bite",
+  "description": "Deals 35 cold damage to one monster.",
+  "explanation": "",
+  "status": "done"
+ },
+ "30": {
+  "name": "Dimensional Rift",
+  "description": "Target Character cannot attack or be attacked for 5 turns. If party moves the spell is cancelled.",
+  "explanation": "1) Works similar like 13- Dimensional phasing, but on own character\n2) color character in purple\n3) Character does not receive any damage, nor does he have a turn\n4) End spell after 5 turns or if party moves a field",
+  "status": "to implement"
+ },
+ "31": {
+  "name": "Immobilize",
+  "description": "Makes a monster unabled to move for 3 turns. Each monster can only be immobilized once.",
+  "explanation": "1) The monster in front of the party cannot move. \n2) It receives damage as usual and can attack, if party is in front of it or if it has range capabilties",
+  "status": "to implement"
+ },
+ "32": {
+  "name": "Lloyd's Beacon",
+  "description": "Sets a teleport beacon.",
+  "explanation": "1) When cast the player select between \"Set\" and \"Return\"\n2) \"Set\" remembers the current position\n3)  \"Return\" moves the party back to the position\n4) Spell is cross-world (e.g. save a position in town and return to it from a dungeon)",
+  "status": "to implement"
+ },
+ "33": {
+  "name": "Power Shield",
+  "description": "Reduces incoming damage for the party by 10% for 1h.",
+  "explanation": "Will show a power shield icon in the top right. Use a dummy until final icon is provided",
+  "status": "to implement"
+ },
+ "34": {
+  "name": "Walk on Water",
+  "description": "Allows the party to walk on water for 4h",
+  "explanation": "",
+  "status": "done"
+ },
+ "35": {
+  "name": "Cure Poison",
+  "description": "Removes \"Poisoned\" status from one character.",
+  "explanation": "",
+  "status": "done"
+ },
+ "36": {
+  "name": "Detect Monster",
+  "description": "Shows monsters on mini map for 8h",
+  "explanation": "Shows monsters on mini map (does not reveal anything unexplored - this is done via 24-wizard's eye)",
+  "status": "to implement"
+ },
+ "37": {
+  "name": "Lightning Bolt",
+  "description": "Does 4-6 magic damage per caster level to a group of monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "38": {
+  "name": "Acid Spray",
+  "description": "Does 15 acid damage to all monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "39": {
+  "name": "Cold Ray",
+  "description": "Does 2-4 cold damage per caster level to all monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "40": {
+  "name": "Cure Disease",
+  "description": "Removes \"Diseased\" status from one character.",
+  "explanation": "",
+  "status": "done"
+ },
+ "41": {
+  "name": "Clumsy",
+  "description": "Makes the monster in front of you clumsy, thus lowering ist chance to hit you.",
+  "explanation": "1) Monster in front of the player rolls a dice when attacking.\n2) it has a 10% chance that the attack does not take place. Otherwise continue with the standard process for attacks\n3) Effect does not stack and stays with the monster until it dies",
+  "status": "to implement"
+ },
+ "42": {
+  "name": "Time Distortion",
+  "description": "Randomly teleports party to safety.",
+  "explanation": "Finds the closest area to party's current location, where they are out of reach of monster attacks",
+  "status": "to implement"
+ },
+ "43": {
+  "name": "Finger of Death",
+  "description": "50% chance to kill a low level monster instantly, which is next to you.",
+  "explanation": "1) Only works on monsters adjacent to the party and only monsters the party is looking at\n2) 50% chance that a L1/L2 monster is killed instantly (L1/L2 refers to the monsters treasure level)",
+  "status": "to implement"
+ },
+ "44": {
+  "name": "Fireball",
+  "description": "Does 3-7 fire damage per caster level to a group of monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "45": {
+  "name": "Nature's Gate",
+  "description": "Teleports the party to an another biome",
+  "explanation": "1) selects a random biome (explored or unexplored), different from the current one\n2) places the party in a place, where no monsters are in attack range\n3) party must only be placed on freely accessible areas",
+  "status": "to implement"
+ },
+ "46": {
+  "name": "Communion",
+  "description": "50% chance to remove curses from a character",
+  "explanation": "",
+  "status": "done"
+ },
+ "47": {
+  "name": "Teleport",
+  "description": "Moves party up to nine spaces.",
+  "explanation": "",
+  "status": "done"
+ },
+ "48": {
+  "name": "Cure Paralysis",
+  "description": "Removes \"Paralysed\" status from one character.",
+  "explanation": "",
+  "status": "done"
+ },
+ "49": {
+  "name": "Deadly Swarm",
+  "description": "Does 40 physical damage to a group of monsters",
+  "explanation": "Deals 40 physical damage to all monsters in direct line in front of the party",
+  "status": "to implement"
+ },
+ "50": {
+  "name": "Dragon Breath",
+  "description": "Hits all monsters for 5 damage per caster level.",
+  "explanation": "",
+  "status": "done"
+ },
+ "51": {
+  "name": "Fiery Flail",
+  "description": "Does 100 fire damage to one monster.",
+  "explanation": "",
+  "status": "graphic missing"
+ },
+ "52": {
+  "name": "Super Shelter",
+  "description": "Lets party rest in unsafe areas.",
+  "explanation": "1) Party can rest, even if monsters are nearby\n2) Monsters do not attack party during the rest",
+  "status": "to implement"
+ },
+ "53": {
+  "name": "Fantastic Freeze",
+  "description": "Does 40 cold damage to group.",
+  "explanation": "",
+  "status": "done"
+ },
+ "54": {
+  "name": "Sanity",
+  "description": "Removes the crazy status from a character.",
+  "explanation": "",
+  "status": "done"
+ },
+ "55": {
+  "name": "Combine",
+  "description": "Combine 3 items of the same type to the next higher material level.",
+  "explanation": "1) after casting, player must select a character\n2) Characters inventory is opened\n3) If character does not have 3 items of the same kind and material (e.g. 3 wooden short swords) the spell is cancelled (mana is still consumed)\n4) if at least one valid combination is found, player selects the 3 valid items and clicks a \"Combine\" button (button is only active, if combination is correct). Put an \"Abort\" button next to combine\n5) On successful combine replace the 3 items with 1 item of the same type, but 1 material level better. If combining rings, the ring will be 1 level better as well",
+  "status": "to implement"
+ },
+ "56": {
+  "name": "Half For Me",
+  "description": "Heals one character, but damages the caster for half the hit points healed",
+  "explanation": "1) Heals target character to the maximum or to the extend that caster has 1 HP left (e.g. target character missed 30HP, character has 11 HP> max 10HP can be taken from caster, meaning the target is healed by 20 HP)",
+  "status": "to implement"
+ },
+ "57": {
+  "name": "Emergency rations",
+  "description": "Creates enough food for the party to rest.",
+  "explanation": "Creates 1 food for the party, but cannot exceed 1 food.",
+  "status": "to implement"
+ },
+ "58": {
+  "name": "Duplication",
+  "description": "50% chance that item is duplicated, 25% chance that item is destroyed",
+  "explanation": "and 25% that nothing happens",
+  "status": "to implement"
+ },
+ "59": {
+  "name": "Disintegrate",
+  "description": "Does 250 magic damage to one monster.",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "60": {
+  "name": "Moon Ray",
+  "description": "Does 100 magic damage to all monsters and heals party",
+  "explanation": "Heals each party member by up to 50 HP",
+  "status": "to implement"
+ },
+ "61": {
+  "name": "Stone to Flesh",
+  "description": "Removes the \"Petrified\" status from one character",
+  "explanation": "",
+  "status": "done"
+ },
+ "62": {
+  "name": "Etherealise",
+  "description": "Allows party to walk through doors or brittle walls",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "63": {
+  "name": "Dancing Sword",
+  "description": "Does 6-14 physical damage per caster level to a group of monsters",
+  "explanation": "",
+  "status": "done"
+ },
+ "64": {
+  "name": "Mass Distortion",
+  "description": "20% chance to damage a group of monsters for half their hit points",
+  "explanation": "1) All monsters in a straight line in front of the party roll a dice individually\n2) with a 20% chance they lose 50% of their health\n3) Does not work on L5 monsters",
+  "status": "to implement"
+ },
+ "65": {
+  "name": "Raise Dead",
+  "description": "Revives a dead character",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "66": {
+  "name": "Town Portal",
+  "description": "Teleports party to any visited town. Can only be used outside battle.",
+  "explanation": "Functions like a regular town portal.",
+  "status": "to implement"
+ },
+ "67": {
+  "name": "Transform Ring",
+  "description": "Randomly changes a ring to another one of the same level, with a 25% risk of the ring being destroyed.",
+  "explanation": "Selection logic functions similar to 55-Combine",
+  "status": "to implement"
+ },
+ "68": {
+  "name": "Mega Volts",
+  "description": "Does 200 magical damage to a group of monsters",
+  "explanation": "",
+  "status": "done"
+ },
+ "69": {
+  "name": "Holy Word",
+  "description": "Severely damages or destroys undead monster",
+  "explanation": "1) Directly reduces the HP of an undead monster by 150 HP\n2) Undead monsters with max HP > 600 instantly lose 25% of their max HP",
+  "status": "to implement"
+ },
+ "70": {
+  "name": "Resurrect",
+  "description": "Revives a rotten character, but permanently reduces their Endurance by 1 and caster magically ages by 5 years.",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "71": {
+  "name": "Sun Ray",
+  "description": "Does 200 fire damage to one monster.",
+  "explanation": "",
+  "status": "done"
+ },
+ "72": {
+  "name": "Meteor Shower",
+  "description": "Does 100 fire damage to all monsters.",
+  "explanation": "",
+  "status": "done"
+ },
+ "73": {
+  "name": "Prismatic Light",
+  "description": "Hits all monsters. 90-100 random damage effect.",
+  "explanation": "",
+  "status": "done"
+ },
+ "74": {
+  "name": "Incinerate",
+  "description": "Does 250-500 fire damage to one monster",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "75": {
+  "name": "Elemental Storm",
+  "description": "Does 150 fire, ice or acid damage to all monsters",
+  "explanation": "",
+  "status": "done"
+ },
+ "76": {
+  "name": "Star Burst",
+  "description": "Does 200 energy damage to all monsters in a 3 field radius.",
+  "explanation": "",
+  "status": "to implement"
+ },
+ "77": {
+  "name": "Implosion",
+  "description": "Does 1000 energy damage to one monster",
+  "explanation": "",
+  "status": "graphic missing"
+ },
+ "78": {
+  "name": "Divine Intervention",
+  "description": "All party members are cured of all statuses (except \"Eradicated\") and restored to full hit points, but the caster ages 5 years.",
+  "explanation": "",
+  "status": "to implement"
+ }
+}

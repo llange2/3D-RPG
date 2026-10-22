@@ -15,13 +15,13 @@
   "files": 229,
   "bytes": 1297078
  },
- "icons skills+spells": {
-  "files": 158,
-  "bytes": 1026494
+ "icons skills": {
+  "files": 80,
+  "bytes": 614592
  },
  "ui": {
-  "files": 37,
-  "bytes": 766626
+  "files": 38,
+  "bytes": 918553
  },
  "screens": {
   "files": 18,

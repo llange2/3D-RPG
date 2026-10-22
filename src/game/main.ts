@@ -4,6 +4,7 @@ import { interiorFingerprints } from "../actions/fingerprint";
 import { chunkHash, World } from "../world/world";
 import { installCursor } from "../ui/cursor";
 import { preloadImages } from "../ui/dom";
+import { preloadSpellIcons } from "../ui/spellIcons";
 import { splitLegacySaves } from "./state";
 import { parseWorldSize, type WorldSize } from "../world/types";
 
@@ -12,6 +13,8 @@ async function main(): Promise<void> {
   document.getElementById("boot")?.remove();
   installCursor();
   preloadImages(["ui/scroll.webp"]);
+  // the 78 spell pictures are one sheet: fetched and decoded now, so that the spell window opens with every plate in place
+  void preloadSpellIcons();
   splitLegacySaves();
 
   const canvas = document.createElement("canvas");

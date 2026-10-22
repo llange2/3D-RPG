@@ -1,5 +1,5 @@
 import type { Rng } from "../core/rng";
-import { CONSTANTS, ITEXTS, QUEST_ITEMS, SPELLS, TEXTS } from "../data/tables";
+import { CONSTANTS, ITEXTS, QUEST_ITEMS, SPELLS } from "../data/tables";
 import type { Bonus, BonusKey, Item } from "./types";
 
 const MATERIAL_NAMES = ["wood", "copper", "iron", "steel", "gold", "ruby", "diamond", "obsidian"];
@@ -228,32 +228,70 @@ export function generateItem(rng: Rng, treasureLevel = 1, options: GenerateOptio
     item.bonus.arm = arm + ARMOR_MATERIAL_BONUS[materialIdx]!;
     item.texture = CONSTANTS.ARMOR_TYPES.includes(type) ? `item_${type}_${materialName}` : `item_${type}`;
   } else {
-    const level = rng.range(1, treasureLevel);
-    item.type = "ring";
-    item.name = ITEXTS[43]!;
-    item.value = 100 * level ** 3;
-    let prefix = rng.range(0, Math.min(3, level));
-    let suffix = level - prefix;
-    if (suffix > 4) {
-      suffix = 4;
-      prefix = level - suffix;
-    }
-    if (prefix > 0) {
-      const entry = PREFIXES[prefix]![rng.int(PREFIXES[prefix]!.length)]!;
-      item.name = ITEXTS[entry[0]]! + item.name;
-      addBonuses(item, entry);
-    }
-    if (suffix > 0) {
-      const entry = SUFFIXES[suffix]![rng.int(SUFFIXES[suffix]!.length)]!;
-      item.name += ITEXTS[entry[0]];
-      addBonuses(item, entry);
-    }
-    item.texture = `item_ring_${Math.min(5, level)}`;
-    return item;
+    return fillRing(rng, item, rng.range(1, treasureLevel));
   }
 
   item.value = Math.floor(baseValue * MATERIAL_VALUE_MULTIPLIER[materialIdx]! + 0.9999);
   return item;
+}
+
+/** The highest ring level there is: three prefix levels and four suffix levels. */
+export const MAX_RING_LEVEL = 7;
+/** Obsidian, the best material. */
+export const MAX_MATERIAL = 8;
+
+/** A ring of the given level: its value is `100 * level^3`, the level is split between a prefix and a suffix. */
+function fillRing(rng: Rng, item: Item, level: number): Item {
+  item.type = "ring";
+  item.name = ITEXTS[43]!;
+  item.value = 100 * level ** 3;
+  let prefix = rng.range(0, Math.min(3, level));
+  let suffix = level - prefix;
+  if (suffix > 4) {
+    suffix = 4;
+    prefix = level - suffix;
+  }
+  if (prefix > 0) {
+    const entry = PREFIXES[prefix]![rng.int(PREFIXES[prefix]!.length)]!;
+    item.name = ITEXTS[entry[0]]! + item.name;
+    addBonuses(item, entry);
+  }
+  if (suffix > 0) {
+    const entry = SUFFIXES[suffix]![rng.int(SUFFIXES[suffix]!.length)]!;
+    item.name += ITEXTS[entry[0]];
+    addBonuses(item, entry);
+  }
+  item.texture = `item_ring_${Math.min(5, level)}`;
+  return item;
+}
+
+/** A new ring of exactly this level with affixes of its own (Combine and Transform Ring). */
+export function generateRing(rng: Rng, level: number): Item {
+  return fillRing(rng, makeItem({ name: "empty", type: "undefined" }), Math.max(1, Math.min(MAX_RING_LEVEL, level)));
+}
+
+/** The level of a ring; the value of a ring is `100 * level^3`. */
+export function ringLevel(item: Item): number {
+  return Math.max(1, Math.round(Math.cbrt(item.value / 100)));
+}
+
+/** The `forcedType` number (1..35) of a weapon, armor or piece of equipment, or null for anything else (rings, scrolls, quest items). */
+export function itemKind(item: Item): number | null {
+  const w = WEAPONS.findIndex((e) => e[3] === item.type);
+  if (w >= 0) return w + 1;
+  const a = BODY_ARMOR.findIndex((e) => e[2] === item.type);
+  if (a >= 0) return 22 + a + 1;
+  const e = EQUIPMENT.findIndex((x) => x[2] === item.type);
+  return e >= 0 ? 30 + e + 1 : null;
+}
+
+/** The same item one material better (Combine). Null when it is as good as it gets or is not made of a material. */
+export function betterMaterial(rng: Rng, item: Item): Item | null {
+  if (item.quest) return null;
+  if (item.type === "ring") return ringLevel(item) >= MAX_RING_LEVEL ? null : generateRing(rng, ringLevel(item) + 1);
+  const kind = itemKind(item);
+  if (kind === null || item.material >= MAX_MATERIAL) return null;
+  return generateItem(rng, 1, { forcedMaterial: item.material + 1, forcedType: kind });
 }
 
 /** A quest item from the QUEST_ITEMS table, found by its type id. */
@@ -268,7 +306,7 @@ export function spellScroll(spellId: number): Item {
   const spell = SPELLS[spellId];
   if (!spell) throw new Error(`unknown spell ${spellId}`);
   return makeItem({
-    name: TEXTS[spell.name] ?? `Spell ${spellId}`,
+    name: spell.title,
     type: "spell",
     spellId,
     texture: `item_spell_${spell.type.map((t) => t.toLowerCase()).join("_")}`,

@@ -314,7 +314,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           ? h("button", { class: "btn", text: "Buy & learn", disabled: party.gold < price, onclick: () => {
               const r = learnSpell(party, guildWho, s.id);
               if (r.ok) ctx.sound?.(9000);
-              note(r.ok ? `${c.name} learns ${TEXTS[s.name]}.` : "Not enough gold.", r.ok ? "good" : "bad");
+              note(r.ok ? `${c.name} learns ${s.title}.` : "Not enough gold.", r.ok ? "good" : "bad");
               refresh();
             } })
           : null;
@@ -332,8 +332,8 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
         h(
           "span",
           {},
-          h("div", { html: `<b>${TEXTS[spell.name]}</b> <span class="small" style="opacity:0.75">level ${spell.level}, ${spell.mana} SP</span>` }),
-          h("div", { class: "small", style: "opacity:0.75", text: `${TEXTS[spell.description] ?? ""}${isSpellImplemented(spellId) ? "" : " (Has no effect in this game yet.)"}` }),
+          h("div", { html: `<b>${spell.title}</b> <span class="small" style="opacity:0.75">level ${spell.level}, ${spell.mana} SP</span>` }),
+          h("div", { class: "small", style: "opacity:0.75", text: `${spell.text}${isSpellImplemented(spellId) ? "" : " (Has no effect in this game yet.)"}` }),
           why ? h("div", { class: "small", style: "color:#e8745f", text: why }) : null,
         ),
       );

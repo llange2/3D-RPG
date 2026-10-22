@@ -11,6 +11,8 @@ import QUEST_ITEMS_RAW from "./raw/QUEST_ITEMS.json";
 import rumorsRaw from "./raw/rumors.json";
 import RIDDLES_RAW from "./raw/RIDDLES_MASTER.json";
 import SPELLS_RAW from "./raw/SPELLS.json";
+import SPELL_SHEET from "./spell-sheet.json";
+import MONSTER_GROUPS from "./monster-groups.json";
 import TALENTS_RAW from "./raw/TALENTS.json";
 import textsRaw from "./raw/texts.json";
 
@@ -61,6 +63,11 @@ export interface SpellDef {
   dam_min?: number;
   dam_max?: number;
   dam_type?: string[];
+  /** Name and description as the user's spell sheet has them (the old text table still carries the names of spells that were never built). */
+  title: string;
+  text: string;
+  /** The rules in the sheet's own words (column Explanation), empty when it has none. */
+  explanation: string;
 }
 
 export interface ClassDef {
@@ -101,9 +108,22 @@ export const MONSTERS: Record<number, MonsterDef> = Object.fromEntries(
 );
 export const MONSTER_IDS: number[] = Object.keys(MONSTERS).map(Number).sort((a, b) => a - b);
 
+const SHEET = SPELL_SHEET as Record<string, { name: string; description: string; explanation: string }>;
 export const SPELLS: Record<number, SpellDef> = Object.fromEntries(
-  Object.entries(SPELLS_RAW as unknown as Record<string, Omit<SpellDef, "id">>).map(([id, s]) => [Number(id), { ...s, id: Number(id) } as SpellDef]),
+  Object.entries(SPELLS_RAW as unknown as Record<string, Omit<SpellDef, "id" | "title" | "text" | "explanation">>).map(([id, s]) => {
+    const sheet = SHEET[id];
+    return [Number(id), { ...s, id: Number(id), title: sheet?.name ?? textsRaw[s.name] ?? `Spell ${id}`, text: sheet?.description ?? textsRaw[s.description] ?? "", explanation: sheet?.explanation ?? "" } as SpellDef];
+  }),
 );
+
+/** The group a monster belongs to in the user's monster sheet ("undead", "beast", "humanoid", ...). */
+export function monsterGroup(id: number): string {
+  return (MONSTER_GROUPS as Record<string, string>)[String(id)] ?? "";
+}
+/** Undead by the sheet's group column, not by the old `undead` flag (Phantom, a ghost, was never flagged). */
+export function isUndead(id: number): boolean {
+  return monsterGroup(id) === "undead";
+}
 export const TALENTS = TALENTS_RAW as unknown as Record<string, { name: number; description: number; price: number; recalc_attribute_values?: boolean }>;
 
 /**

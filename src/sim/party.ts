@@ -162,8 +162,14 @@ export function addEffect(party: Party, effect: TimedEffect): void {
 }
 
 export function hasEffect(party: Party, kind: TimedEffect["kind"]): boolean {
-  return party.effects.some((e) => e.kind === kind && e.until > party.minutes);
+  return party.effects.some((e) => e.kind === kind && (e.until > party.minutes || e.held));
 }
+
+/**
+ * What the sim must know about where the party stands, set by the game after every step: Walk on Water never runs out under the
+ * party's feet (a party that sank would drown), so an expired spell holds until the party leaves the deep water.
+ */
+export const surroundings = { inDeepWater: false };
 
 /** Can the party cross shallow water (a ford, a shore)? The Swimmer can, as in the old game's rivers; so can the Seafarer and whoever floats or walks on water by a spell. */
 export function canSwim(party: Party): boolean {
@@ -193,10 +199,15 @@ export function advanceTime(party: Party, minutes: number): TimePassed {
   party.minutes += minutes;
   const daysPassed = Math.floor(party.minutes / MINUTES_PER_DAY) - Math.floor(before / MINUTES_PER_DAY);
   for (let d = 0; d < daysPassed; d++) if (party.food > 0) party.food--;
-  const expired = party.effects.filter((e) => e.until <= party.minutes);
-  party.effects = party.effects.filter((e) => e.until > party.minutes);
+  const over = (e: TimedEffect) => e.until <= party.minutes && !(e.held && surroundings.inDeepWater);
+  for (const e of party.effects) if (e.kind === "walk_on_water" && e.until <= party.minutes && surroundings.inDeepWater) e.held = true;
+  const expired = party.effects.filter(over);
+  party.effects = party.effects.filter((e) => !over(e));
   for (const e of expired) {
-    if (e.kind === "blessed" && e.character !== undefined && party.characters[e.character]) removeCondition(party.characters[e.character]!, "Blessed");
+    const hero = e.character !== undefined ? party.characters[e.character] : undefined;
+    if (e.kind === "blessed" && hero) removeCondition(hero, "Blessed");
+    if (e.kind === "stone_skin" && hero?.mods) delete hero.mods.stoneSkin;
+    if (e.kind === "rage" && hero?.mods) delete hero.mods.rage;
   }
   return { daysPassed, expired, conditions: tickConditions(party) };
 }

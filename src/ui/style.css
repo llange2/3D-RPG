@@ -302,3 +302,35 @@ html.custom-cursor, html.custom-cursor * { cursor: none !important; }
 .dim-overlay { position: absolute; inset: 0; background: #7a0000; opacity: 0; pointer-events: none; transition: opacity 0.9s; }
 .dim-overlay.on { opacity: 0.45; transition: none; }
 #view { image-rendering: auto; }
+
+/* ---------- spell window: the pictures of the spells on a wide scroll ---------- */
+/* the plates are 128 x 60 pixels in the sheet (spells.webp); --slot is how wide one shows: the nine columns and the scroll's rolls fit
+   the window down to about 1000 pixels, and 118 is as large as the picture is drawn for */
+.parchment.spells { --slot: clamp(60px, 7.6vw, 118px); max-width: min(1320px, 98vw); }
+.spell-grid { display: grid; grid-template-columns: repeat(var(--cols, 9), var(--slot)); gap: 8px; justify-content: center; margin: 8px 0 6px; }
+.spell-slot {
+  position: relative; display: block; width: var(--slot); padding: 0; border: 0; background: none; cursor: pointer; border-radius: 10px;
+  transition: transform 0.08s, filter 0.08s;
+}
+.spell-slot:hover:not(.off), .spell-slot:focus-visible { transform: scale(1.06); filter: brightness(1.12) drop-shadow(0 0 5px #fff8); outline: none; }
+.spell-slot.off { cursor: default; filter: grayscale(0.85) brightness(0.7); }
+.spell-icon { background-repeat: no-repeat; border-radius: 10px; background-color: #e8d6a8; }
+.spell-icon.plate { aspect-ratio: 128 / 60; }
+/* the cost of the spell, on the lower right corner of its plate */
+.spell-cost {
+  position: absolute; right: -4px; bottom: -6px; min-width: 1.5em; padding: 0 4px; border-radius: 9px; background: #2b1b0cf0; color: #f5d98a; border: 1px solid #8f6b2c;
+  font: 700 clamp(10px, 1.1vw, 13px)/1.5 var(--font-head); text-align: center;
+}
+/* a plate that shares the placeholder picture (the hand with the fireball says nothing about the spell) is covered by its name */
+.spell-caption {
+  position: absolute; inset: 9% 4%; display: flex; align-items: center; justify-content: center; border-radius: 7px; background: #f2e3b8; color: #3b2208;
+  font: 700 clamp(8.5px, 0.95vw, 12px)/1.08 var(--font-head); text-align: center; overflow: hidden; pointer-events: none;
+}
+.spell-info { min-height: 5.2em; margin: 4px auto 2px; max-width: 760px; text-align: center; }
+.spell-info .spell-name { font-family: var(--font-head); font-size: 20px; color: #4a2a08; }
+
+/* a hero in the Dimensional Rift is out of this world: purple and faint, and the card says so */
+.card.rifted .portrait { filter: sepia(1) hue-rotate(235deg) saturate(3) brightness(0.9); opacity: 0.55; }
+.card.rifted { box-shadow: 0 0 10px #8a4ad8; }
+/* the items a spell may not touch are dimmed in the backpack window of Combine, Duplication and Transform Ring */
+.slot.off { opacity: 0.3; cursor: default; }

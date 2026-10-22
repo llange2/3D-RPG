@@ -10,6 +10,8 @@ import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
 import { buildFlatTerrain } from "./build-flat-terrain";
 import { buildMinimap } from "./build-minimap";
+import { buildPlaceholderIcons } from "./build-placeholder-icons";
+import { buildSpellIcons } from "./build-spell-icons";
 import { OLD, OUT, ensureDir, mb, pool, upToDate } from "./lib";
 
 const TEX = join(OLD, "textures");
@@ -66,8 +68,12 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   const portraits = await listFiles(TEX, (n) => /^character\d+.*\.(png|jpg)$/.test(n));
   await pool(portraits, 8, async (n) => add("icons portraits", await toWebp(join(TEX, n), join(OUT, "icons", "portraits", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 192, 85)));
 
-  const skills = await listFiles(TEX, (n) => /^mm3_(icon|spell)_.*\.(png|jpg)$/.test(n));
-  await pool(skills, 8, async (n) => add("icons skills+spells", await toWebp(join(TEX, n), join(OUT, "icons", "skills", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 160, 85)));
+  const skills = await listFiles(TEX, (n) => /^mm3_icon_.*\.(png|jpg)$/.test(n));
+  await pool(skills, 8, async (n) => add("icons skills", await toWebp(join(TEX, n), join(OUT, "icons", "skills", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 160, 85)));
+
+  // the 78 spell pictures become one sheet with a register (see build-spell-icons.ts)
+  add("ui", (await buildSpellIcons()).bytes);
+  await buildPlaceholderIcons();
 
   // the 38 symbols of the map become one sheet (`ui/minimap.webp`), see build-minimap.ts
   add("ui", (await buildMinimap()).bytes);
