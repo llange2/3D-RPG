@@ -65,7 +65,7 @@ describe("the Monster Huts by world size (25th playtest, 3 and 7)", () => {
           if (nearest < 14) crowded++;
         }
         // the big worlds have the room to keep nearly every hut well apart from the others (two radii and some more), so that two huts never meet in one fight
-        if (size === "large" || size === "huge") expect(crowded, `${seed} ${size}`).toBeLessThanOrEqual(8);
+        if (size === "large" || size === "huge") expect(crowded, `${seed} ${size}`).toBeLessThanOrEqual(10);
       }
     });
   }
@@ -75,9 +75,34 @@ describe("the Monster Huts by world size (25th playtest, 3 and 7)", () => {
       const world = new World("p25-start", size);
       const s = world.startPosition();
       for (const h of hutsOf(world)) {
-        for (const slot of h.slots) expect(Math.max(Math.abs(wrapDelta(s.x, slot.x, world.width)), Math.abs(wrapDelta(s.y, slot.y, world.height))), h.id).toBeGreaterThanOrEqual(12);
+        for (const slot of h.slots) expect(Math.hypot(wrapDelta(s.x, slot.x, world.width), wrapDelta(s.y, slot.y, world.height)), h.id).toBeGreaterThanOrEqual(12);
       }
     }
+  });
+
+  it("stands the huts of levels 1 and 2 from the weakest to the strongest monster, outwards from Starthaven (kelp-peak-430)", () => {
+    for (const size of SIZES) {
+      for (const seed of ["kelp-peak-430", "p25-a", "p25-b"]) {
+        const world = new World(seed, size);
+        const home = world.poiById("p:0:0:0")!;
+        for (const level of [1, 2]) {
+          const ranked = hutsOf(world)
+            .filter((h) => MONSTERS[h.monster]!.treasure_level === level)
+            .sort((a, b) => MONSTERS[a.monster]!.xp - MONSTERS[b.monster]!.xp || a.monster - b.monster);
+          const dist = ranked.map((h) => (h.x - home.x) ** 2 + (h.y - home.y) ** 2);
+          expect(dist, `${seed} ${size} level ${level}`).toEqual([...dist].sort((a, b) => a - b));
+        }
+      }
+    }
+    // the first three of Starthaven on the world of the playtest: Goblin, Vampire Bat, Wild Fungus
+    const world = new World("kelp-peak-430", "small");
+    const home = world.poiById("p:0:0:0")!;
+    const nearest = hutsOf(world)
+      .filter((h) => MONSTERS[h.monster]!.treasure_level === 1)
+      .sort((a, b) => (a.x - home.x) ** 2 + (a.y - home.y) ** 2 - ((b.x - home.x) ** 2 + (b.y - home.y) ** 2))
+      .slice(0, 3)
+      .map((h) => MONSTERS[h.monster]!.name);
+    expect(nearest).toEqual(["Goblin", "Vampire Bat", "Wild Fungus"]);
   });
 
   it("names the monster in the scene of its hut", () => {

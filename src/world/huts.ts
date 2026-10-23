@@ -45,12 +45,18 @@ const LEAST_START = 8;
  * sheet has its hut, so the rules loosen pass by pass, for the hut that does not fit, until it does.
  */
 const PASSES: readonly { share: number; apart: number; start: number }[] = [
-  { share: 100, apart: 24, start: 22 },
-  { share: 80, apart: 18, start: 22 },
-  { share: 60, apart: 14, start: 20 },
-  { share: 40, apart: 10, start: 18 },
-  { share: 25, apart: 7, start: 16 },
-  { share: 1, apart: 3, start: 12 },
+  { share: 100, apart: 24, start: 17 },
+  { share: 100, apart: 20, start: 17 },
+  { share: 90, apart: 17, start: 16 },
+  { share: 80, apart: 14, start: 16 },
+  { share: 70, apart: 12, start: 15 },
+  { share: 60, apart: 10, start: 14 },
+  { share: 50, apart: 8, start: 14 },
+  { share: 40, apart: 7, start: 13 },
+  { share: 30, apart: 6, start: 12 },
+  { share: 25, apart: 5, start: 12 },
+  { share: 1, apart: 4, start: 10 },
+  { share: 1, apart: 3, start: 10 },
   { share: 1, apart: 2, start: LEAST_START },
 ];
 /** Spots tried on each island for a level. */
@@ -113,8 +119,12 @@ function makeHuts(world: World): HutSpot[] {
     const spawners = MONSTER_IDS.filter((id) => MONSTERS[id]!.outside === "hut" && MONSTERS[id]!.treasure_level === level).sort((a, b) => MONSTERS[a]!.xp - MONSTERS[b]!.xp || a - b);
     if (spawners.length === 0) continue;
     const rng = rngFor(world.rootSeed, LAYER.SPAWN, "hutsites", level);
+    // Levels 1 and 2 share the start island and are ordered by the plain distance from Starthaven: the weakest hut of a level is the nearest to it, the
+    // next weakest the second nearest, and so on, so the monsters grow harder from the town outwards, across the border of level 2 to the end of the island.
+    // The later levels have an island of their own: they go by `levelAt`, the way from the town of the level to that of the next.
+    const home = level <= 2 ? world.poiById("p:0:0:0") : null;
     // spots on the islands of the level, ordered by how hard the level is there
-    const spots: { x: number; y: number; island: number; level: number; fromStart: number }[] = [];
+    const spots: { x: number; y: number; island: number; reach: number; fromStart: number }[] = [];
     const seen = new Set<number>();
     for (const isl of world.islands) {
       if (!isl.tiers.includes(level)) continue;
@@ -128,34 +138,64 @@ function makeHuts(world: World): HutSpot[] {
         if (t.ground !== GROUND.LAND || t.deco !== DECO.NONE || t.poiId !== null) continue;
         const fromStart = wrapDist2(x, y, start.x, start.y, world.width, world.height);
         if (fromStart < LEAST_START * LEAST_START) continue;
-        spots.push({ x, y, island: isl.index, level: levelAt(world, x, y), fromStart });
+        const reach = home ? wrapDist2(x, y, home.x, home.y, world.width, world.height) : levelAt(world, x, y);
+        spots.push({ x, y, island: isl.index, reach, fromStart });
       }
     }
-    spots.sort((a, b) => a.level - b.level || a.y - b.y || a.x - b.x);
+    spots.sort((a, b) => a.reach - b.reach || a.y - b.y || a.x - b.x);
     if (spots.length === 0) continue;
-    spawners.forEach((monster, rank) => {
-      const aim = Math.floor(((2 * rank + 1) * (spots.length - 1)) / (2 * spawners.length));
-      // the copy number stays in the id: the saves of earlier versions know the huts by it
-      const copy = 0;
-      const id = `${monster}.${copy}`;
-      search: for (const pass of PASSES) {
-        const needed = Math.max(1, Math.ceil((wanted * pass.share) / 100));
-        for (let step = 0; step < 2 * spots.length; step++) {
-          // alternately above and below the aimed rank, nearest first
-          const at = aim + (step % 2 === 0 ? step / 2 : -(step + 1) / 2);
-          const spot = spots[at];
-          if (!spot || spot.fromStart < pass.start * pass.start) continue;
+    // room for a hut's monsters, as far as the ground alone allows (a spot that has too little never gets a hut, whatever the others stand)
+    const room = new Map<number, number>();
+    const roomAt = (i: number, id: string): number => {
+      let n = room.get(i);
+      if (n === undefined) {
+        const spot = spots[i]!;
+        n = slotsAround(world, id, spot.x, spot.y, spot.island, start, [], wanted).length;
+        room.set(i, n);
+      }
+      return n;
+    };
+    // The huts go from the weakest monster to the strongest, each on the spot nearest to the town that the rules of the pass allow and not nearer
+    // than the hut before it: the nearest hut to the town is the weakest monster's, the second nearest the next one's, and so on. The rules loosen
+    // for the whole level together (a hut that did not fit would otherwise jump the order), until every hut of the level has its place.
+    for (let p = 0; p < PASSES.length; p++) {
+      const pass = PASSES[p]!;
+      const last = p === PASSES.length - 1;
+      const needed = Math.max(1, Math.ceil((wanted * pass.share) / 100));
+      const placed: HutSpot[] = [];
+      let from = 0;
+      let fits = true;
+      for (const monster of spawners) {
+        // the copy number stays in the id: the saves of earlier versions know the huts by it
+        const copy = 0;
+        const id = `${monster}.${copy}`;
+        let found = false;
+        for (let i = from; i < spots.length; i++) {
+          const spot = spots[i]!;
+          if (spot.fromStart < pass.start * pass.start || roomAt(i, id) < needed) continue;
           const { x, y } = spot;
-          if (out.some((h) => near(world, x, y, h.x, h.y, pass.apart))) continue;
+          const all = [...out, ...placed];
+          if (all.some((h) => near(world, x, y, h.x, h.y, pass.apart))) continue;
           if (blockers.some((b) => b.x === x && b.y === y)) continue;
-          if (world.poiAtEntrance(x, y) !== null || !world.leavesPassage(x, y) || !world.keepsRingOpen(x, y, [...blockers, ...out]) || !world.isOpenGround(x, y)) continue;
-          const slots = slotsAround(world, id, x, y, spot.island, start, out, wanted);
+          if (world.poiAtEntrance(x, y) !== null || !world.leavesPassage(x, y) || !world.keepsRingOpen(x, y, [...blockers, ...all]) || !world.isOpenGround(x, y)) continue;
+          const slots = slotsAround(world, id, x, y, spot.island, start, all, wanted);
           if (slots.length < needed) continue;
-          out.push({ id, monster, copy, x, y, island: spot.island, slots });
-          break search;
+          placed.push({ id, monster, copy, x, y, island: spot.island, slots });
+          from = i + 1;
+          found = true;
+          break;
+        }
+        if (!found) {
+          fits = false;
+          // the loosest rules are the last word: a hut that does not fit even then is left out, the others keep their places
+          if (!last) break;
         }
       }
-    });
+      if (fits || last) {
+        out.push(...placed);
+        break;
+      }
+    }
   }
   return out;
 }

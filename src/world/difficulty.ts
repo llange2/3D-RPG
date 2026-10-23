@@ -43,8 +43,46 @@ function nearestTown(world: World, towns: readonly Poi[], x: number, y: number):
   return best === Infinity ? -1 : isqrt(best);
 }
 
-/** The position along the way to the next town (0 to 1000): 0 at a town of the island's own level, 1000 at the town of the next level. */
+/** How far the land of a level of the start island lies from Starthaven: the nearest and the farthest tile of it, in tiles. */
+const spans = new WeakMap<World, Map<number, { min: number; max: number }>>();
+
+function startSpan(world: World, tier: number): { min: number; max: number } | null {
+  let byTier = spans.get(world);
+  if (!byTier) spans.set(world, (byTier = new Map()));
+  const known = byTier.get(tier);
+  if (known) return known;
+  const home = world.poiById("p:0:0:0");
+  const isl = world.islands[0];
+  if (!home || !isl) return null;
+  let min = Infinity;
+  let max = 0;
+  for (let dy = isl.box.y0; dy <= isl.box.y1; dy++) {
+    for (let dx = isl.box.x0; dx <= isl.box.x1; dx++) {
+      const x = world.wrapX(isl.x + dx);
+      const y = world.wrapY(isl.y + dy);
+      if (world.islandAt(x, y) !== isl || world.tierAt(x, y) !== tier) continue;
+      const d = isqrt(wrapDist2(x, y, home.x, home.y, world.width, world.height));
+      min = Math.min(min, d);
+      max = Math.max(max, d);
+    }
+  }
+  const span = { min: min === Infinity ? 0 : min, max };
+  byTier.set(tier, span);
+  return span;
+}
+
+/**
+ * The position along the way to the next town (0 to 1000): 0 at a town of the island's own level, 1000 at the town of the next level. Levels 1 and 2
+ * share the start island: there the way is the distance from Starthaven, 0 at the nearest tile of the level's half and 1000 at the farthest, so that
+ * the weakest monsters of level 1 stand next to Starthaven and the weakest of level 2 where level 2 begins, not in the middle of its scale (25th playtest).
+ */
 export function wayAt(world: World, x: number, y: number, level: number): number {
+  const span = level <= 2 ? startSpan(world, level) : null;
+  const home = span ? world.poiById("p:0:0:0") : null;
+  if (span && home && span.max > span.min) {
+    const d = isqrt(wrapDist2(x, y, home.x, home.y, world.width, world.height));
+    return Math.max(0, Math.min(1000, Math.floor(((d - span.min) * 1000) / (span.max - span.min))));
+  }
   const own = nearestTown(world, townsOfLevel(world, level), x, y);
   if (own < 0) return 500;
   if (level >= 5) return Math.min(1000, Math.floor((own * 1000) / LAST_LEVEL_REACH));
