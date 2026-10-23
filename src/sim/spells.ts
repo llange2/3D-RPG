@@ -107,8 +107,19 @@ export interface CastOptions {
   here?: Place;
   /** The party stands in a town: Pandora's box is too dangerous there. */
   town?: boolean;
-  /** Monsters are next to the party: Town Portal and Lloyd's Beacon do not work. */
+  /** Monsters are next to the party: the spells that move it (`movesParty`) do not work. */
   battle?: boolean;
+}
+
+/** Jump, Time Distortion, Nature's Gate, Teleport, Etherealise and Town Portal: spells that carry the party off its tile. */
+const PARTY_MOVERS: ReadonlySet<number> = new Set([16, 42, 45, 47, 62, 66]);
+
+/**
+ * Does the spell take the party away from where it stands (and so does not work while monsters are next to it)? Lloyd's Beacon does when it
+ * brings the party back to its fire; lighting the fire is no move.
+ */
+export function movesParty(spellId: number, beacon?: "set" | "return"): boolean {
+  return PARTY_MOVERS.has(spellId) || (spellId === 32 && beacon === "return");
 }
 
 /** Spells the game has code for. Every spell of the sheet is one of them. */
@@ -276,7 +287,7 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
 
   if (WORLD_SPELLS.has(spellId)) {
     if (spellId === 2 && options.town) return { kind: "fizzle", reason: "in_town" };
-    if ((spellId === 66 || (spellId === 32 && options.beacon === "return")) && options.battle) return { kind: "fizzle", reason: "in_battle" };
+    if (options.battle && movesParty(spellId, options.beacon)) return { kind: "fizzle", reason: "in_battle" };
     if (spellId === 52 && party.food <= 0) return { kind: "fizzle", reason: "no_food" };
     if (spellId === 32) {
       if (!options.beacon) return { kind: "fizzle", reason: "needs_choice" };

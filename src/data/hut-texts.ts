@@ -1,3 +1,5 @@
+import { MONSTERS } from "./tables";
+
 /**
  * What the party sees inside a Monster Hut, one scene for each monster that has one (entity 9 of the monster sheet), by monster id. The scene
  * ends with the question that decides whether the hut burns down.
@@ -31,7 +33,7 @@ const HUT_SCENES: Record<number, string> = {
 /** The scene of a hut whose monster the list above does not know, so that a monster added to the sheet has a hut at once. */
 const GENERIC = "The hut is dark and silent. Bones, scraps and the marks of many claws and boots show that the creatures who live here have done terrible things." + ASK;
 
-/** The scene inside the Monster Hut of a monster, with the question to burn it down. */
+/** The scene inside the Monster Hut of a monster: whose hut it is, what the party sees and the question to burn it down. */
 export function hutScene(monster: number): string {
-  return HUT_SCENES[monster] ?? GENERIC;
+  return `This is the hut of the ${MONSTERS[monster]?.name ?? "monsters"}. ${HUT_SCENES[monster] ?? GENERIC}`;
 }

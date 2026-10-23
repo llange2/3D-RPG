@@ -6,7 +6,7 @@ import { createEncounter, createMonster, monsterTurn, type CombatEvent, type Gri
 import { applyHit } from "../../src/sim/combat";
 import { createDefaultParty } from "../../src/sim/party";
 import { levelAt, monsterLevel } from "../../src/world/difficulty";
-import { HUT_MONSTERS, HUT_RADIUS, hutCopies, hutGold, hutsOf } from "../../src/world/huts";
+import { HUT_RADIUS, hutGold, hutMonsters, hutsOf, hutXpPercent } from "../../src/world/huts";
 import { chunkSpawns } from "../../src/world/spawns";
 import { CHUNK_SIZE, GROUND } from "../../src/world/types";
 import { World } from "../../src/world/world";
@@ -118,10 +118,10 @@ describe("what a monster does in a turn (entity 4 and the abilities of entity 8)
 
 describe("the Monster Huts on the overworld", () => {
   for (const size of ["small", "default", "large", "huge"] as const) {
-    it(`puts every hut ${hutCopies(new World("huts-a", size))} time(s) into a ${size} world, on islands of the level of its monster`, () => {
+    it(`puts every hut once into a ${size} world, on islands of the level of its monster`, () => {
       const world = new World(`huts-${size}`, size);
       const huts = hutsOf(world);
-      expect(huts).toHaveLength(21 * hutCopies(world));
+      expect(huts).toHaveLength(21);
       expect(new Set(huts.map((h) => h.id)).size).toBe(huts.length);
       for (const h of huts) {
         const def = MONSTERS[h.monster]!;
@@ -129,9 +129,9 @@ describe("the Monster Huts on the overworld", () => {
         expect(world.islandAt(h.x, h.y)?.index, h.id).toBe(h.island);
         expect(world.tierAt(h.x, h.y), `${def.name} ${h.id}`).toBe(def.treasure_level);
         expect(world.tile(h.x, h.y).ground).toBe(GROUND.LAND);
-        // its monsters: at most ten, within ten tiles, on the island of the hut, one to a tile
+        // its monsters: at most as many as the size says (4, 6, 8, 10), within five tiles, on the island of the hut, one to a tile
         expect(h.slots.length).toBeGreaterThan(0);
-        expect(h.slots.length).toBeLessThanOrEqual(HUT_MONSTERS);
+        expect(h.slots.length).toBeLessThanOrEqual(hutMonsters(size));
         for (const s of h.slots) {
           expect(Math.max(Math.abs(s.x - h.x), Math.abs(s.y - h.y)), h.id).toBeLessThanOrEqual(HUT_RADIUS);
           expect(world.islandAt(s.x, s.y)?.index, h.id).toBe(h.island);

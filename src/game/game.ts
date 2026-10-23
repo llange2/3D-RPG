@@ -47,7 +47,7 @@ import {
   type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, giveItem, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
-import { RIFT_TURNS, SPELL_AGING, castSpell, isAttackSpell, learnBlock, needsAdjacent, quickCast, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
+import { RIFT_TURNS, SPELL_AGING, castSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, quickCast, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
 import { canCombine, combine, combineGroups, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
 import { pickGateSpot, safeCells, type Spot } from "./spellSites";
 import { pickFromBackpack } from "../ui/itemSpells";
@@ -64,7 +64,7 @@ import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
 import { sellerParams } from "../data/talent-sellers";
 import { CARAVAN_ITEM, caravansIn, type CaravanSpot } from "../world/caravans";
-import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, slotDistance, slotKey, type HutSpot } from "../world/huts";
+import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, hutXpPercent, slotDistance, slotKey, type HutSpot } from "../world/huts";
 import { hutScene } from "../data/hut-texts";
 import { generateItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
@@ -127,11 +127,15 @@ const LOAD_BUILT = 0.6;
 
 type PartyAttackEvent = Extract<CombatEvent, { type: "party_attack" }>;
 
+/** Said when a spell that would carry the party away is cast in melee, and when the party tries to step away from it. */
+const IN_MELEE_SPELL = "That spell cannot be cast during a fight: the party cannot leave its field while monsters are next to it.";
+const IN_MELEE_STEP = "The party cannot step away from a fight: monsters are next to it.";
+
 /** What a spell that did not work says, by reason (the rest read "The spell fizzles (reason)"). */
 const FIZZLE_TEXT: Partial<Record<FizzleReason, (caster: string) => string>> = {
   mana: (n) => `${n} lacks the spell points.`,
   in_town: () => "It is too dangerous to cast Pandora's box in a town.",
-  in_battle: () => "That spell cannot be cast while monsters are next to the party.",
+  in_battle: () => IN_MELEE_SPELL,
   no_beacon: (n) => `${n} has not lit a fire to go back to yet. Set one first.`,
   no_food: () => "The party has no food to rest on.",
   no_effect: () => "It would have no effect.",
@@ -319,7 +323,8 @@ export class Game {
     this.sceneInst.captureFrameTime = true;
 
     this.player = new PlayerRig({
-      canEnter: (x, y) => this.canEnter(x, y),
+      // in melee the party holds its field: a step is refused (the bump says why, `onBlocked`)
+      canEnter: (x, y) => !this.enc.battleMode && this.canEnter(x, y),
       heightAt: (x, y) => this.heightAt(x, y),
       stepStarted: (x, y) => this.onStepStarted(x, y),
       arrived: (x, y) => void this.onArrived(x, y),
@@ -1132,6 +1137,12 @@ export class Game {
 
   private async onBlocked(x: number, y: number): Promise<void> {
     if (this.over || this.busy) return;
+    // melee: a step to a free tile is refused, as are the spells that carry the party away (`spellRefusal`); a monster in the way is still fought
+    if (this.enc.battleMode && this.canEnter(x, y)) {
+      this.audio.play(9014, 0.5);
+      this.ui.log(IN_MELEE_STEP, "bad");
+      return;
+    }
     // the party stands in a brittle wall's cell and bumps into its wall piece: the cell's own action asks about the wall (as the
     // old game did on entering), and a monster behind the wall piece is out of reach
     const rt = this.interior;
@@ -1695,6 +1706,7 @@ export class Game {
     const W = this.world.width;
     const H = this.world.height;
     const reach = SPAWN_CHUNKS * CHUNK_SIZE + HUT_RADIUS;
+    const xpPercent = hutXpPercent(this.world.size);
     for (const hut of hutIndex(this.world).huts) {
       if (Math.abs(wrapDelta(tx, hut.x, W)) > reach || Math.abs(wrapDelta(ty, hut.y, H)) > reach) continue;
       hut.slots.forEach((slot, i) => {
@@ -1707,6 +1719,7 @@ export class Game {
         const sx = tx + wrapDelta(tx, slot.x, W);
         const sy = ty + wrapDelta(ty, slot.y, H);
         for (const m of this.placeGroup(base, [hut.monster], sx, sy, (x, y) => view.walkable(x, y))) {
+          m.xpPercent = xpPercent;
           this.enc.monsters.push(m);
           this.addMonsterView(m);
         }
@@ -1788,6 +1801,11 @@ export class Game {
   private async promptEnterPoi(poiId: string): Promise<void> {
     const poi = this.world.poiById(poiId);
     if (!poi) return;
+    if (this.enc.battleMode) {
+      this.audio.play(9014, 0.5);
+      this.ui.log(IN_MELEE_STEP, "bad");
+      return;
+    }
     this.player.locked = true;
     const kind = poi.kind === "town" ? "town" : poi.kind === "castle" ? "castle" : poi.kind === "cave" ? "cave" : "dungeon";
     // a key dungeon asks for its key, a pyramid for its key card; neither is used up (the old maps keep the item)
@@ -1988,6 +2006,11 @@ export class Game {
   private async usePortal(): Promise<void> {
     const rt = this.interior;
     if (!rt) return;
+    if (this.enc.battleMode) {
+      this.audio.play(9014, 0.5);
+      this.ui.log(IN_MELEE_STEP, "bad");
+      return;
+    }
     const here = PORTAL_KEY + rt.poi.id;
     this.state.opened.add(here);
     const options = this.portalOptions(here);
@@ -2441,7 +2464,8 @@ export class Game {
   }
 
   /** The party's wild-card spells that move it are checked before the spell points are paid. */
-  private spellRefusal(spellId: number): string | null {
+  private spellRefusal(spellId: number, beacon?: "set" | "return"): string | null {
+    if (this.enc.battleMode && movesParty(spellId, beacon)) return IN_MELEE_SPELL;
     const { tx, ty } = this.player;
     const view = this.gridView();
     const near = (radius: number) => this.enc.monsters.filter((m) => m.hp > 0 && !isPhased(m) && (m.x - tx) ** 2 + (m.y - ty) ** 2 <= radius * radius);
@@ -2459,7 +2483,7 @@ export class Game {
       case 26:
         return identifyMonsters(this.enc, tx, ty).length === 0 ? "There is no monster in range to identify." : null;
       case 66:
-        return this.enc.battleMode ? "A town portal cannot be opened in a fight." : this.portalOptions().length === 0 ? "The party knows no town portal yet. Touch the portal of a town first." : null;
+        return this.portalOptions().length === 0 ? "The party knows no town portal yet. Touch the portal of a town first." : null;
       case 42:
         return this.safeSpots().length === 0 ? "There is no safe place close enough." : null;
       case 52:
@@ -2776,7 +2800,7 @@ export class Game {
       return;
     }
     // what cannot work now is refused before the spell points are spent
-    const refusal = this.spellRefusal(pick.spellId);
+    const refusal = this.spellRefusal(pick.spellId, pick.beacon);
     if (refusal) {
       this.audio.play(9014);
       this.ui.log(refusal, "bad");
