@@ -277,6 +277,9 @@ html.custom-cursor, html.custom-cursor * { cursor: none !important; }
 .title .sizerow .btn.on { background: #5a3f12; border-color: var(--gold); color: #fff3d0; }
 .title input { font: inherit; font-size: 18px; padding: 6px 10px; border-radius: 5px; border: 2px solid var(--gold-dim); background: #0c0805; color: var(--text); min-width: 190px; }
 .title .menu { display: flex; flex-direction: column; gap: 8px; min-width: 260px; }
+/* the picture has the name of the game in it: buttons side by side on the grey rock of the island, never over the lettering */
+.title .menu.on-rock { position: absolute; left: 50%; top: var(--rock-y, 69%); transform: translate(-50%, -50%); flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; min-width: 0; width: min(640px, 92vw); }
+.title .menu.on-rock .seedbox { flex-basis: 100%; align-items: center; }
 /* the saves of "Load game": one button per save, label left and summary right; long lists scroll inside the menu */
 .title .list { display: flex; flex-direction: column; gap: 6px; min-width: min(520px, 90vw); max-height: 46vh; overflow-y: auto; }
 .title .opt { display: flex; justify-content: space-between; align-items: center; gap: 18px; text-align: left; }

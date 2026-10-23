@@ -23,7 +23,7 @@ const browser = await puppeteer.launch({
 });
 try {
   const page = await browser.newPage();
-  await page.goto("http://localhost:5173/?seed=test&autostart=1&outside=1", { waitUntil: "load" });
+  await page.goto(`${process.env.GAME_URL ?? "http://localhost:5173/"}?seed=test&autostart=1&outside=1`, { waitUntil: "load" });
   await page.waitForFunction("window.__game && window.__game.state", { timeout: 60000 });
   await sleep(2500);
   await page.evaluate(async () => {

@@ -76,7 +76,7 @@ betretbaren Orten plus die 34 handgebauten Kampagnenkarten des Altspiels. Alles 
 ## Vor dem Abschluss einer Änderung
 ```
 npm run typecheck
-npm test            # 635 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
+npm test            # 639 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
 npm run check:chrome   # nur bei Generatoränderungen, braucht laufenden Dev-Server (npm run dev) und Chrome
 npm run check:render   # nur bei Rendering-Änderungen (Monster, Innenräume, Materialien), gleiche Voraussetzungen
 npm run check:effects -- <Ordner>   # nur bei Änderungen an Kampf-Darstellung, Zauberbildern, Zeiger (Screenshots in <Ordner>)
@@ -145,4 +145,6 @@ Ein Playtest-Fehler gilt erst als behoben, wenn er im Browser nachgestellt und d
 - **„Animated town scenes“** (`Settings.animatedTown`, Standard aus; `ui/townScenes.ts`): die sieben Dienstfenster zeigen, wenn an, die Altfilme als `ui/town/town_<Dienst>.webm` (ein `<video>` je Film, vorgeladen, pausiert beim Schließen); aus: die Standbilder `town_<Dienst>.webp`. Neue Dienste brauchen ein Standbild und einen Eintrag in `SERVICE_SCENES` und `build-textures.ts`.
 - **Mischkacheln (drei Böden an einer Ecke)** gibt es nur als `mix_…` für Kopfstein + Wasser + ein Land (Wüste, Erde, Gras, Schnee, Sumpf); `parseFlatName` verlangt genau drei Böden, einer zweimal. Ein neuer Boden oder eine neue Mischung: Skript `gen-mixed-tiles.py` (`LAND`, `STYLES`), nicht von Hand malen und nie die Quellen der Paarkacheln ändern (die Seiten der Mischkacheln übernehmen sie).
 - **Brückenköpfe (Kopfstein, Land, Wasser an einer Ecke) zeigen die Mischkacheln** `mix_<tl>_<tr>_<bl>_<br>` (180, gemalt von `tools/assets/gen-mixed-tiles.py` mit der Mischung des Tile Generators, an den Seiten die gemalten Nachbarn): `tools/dev/corner-stats.ts` und `corner-keys.ts` zählen Ecken ohne Kachel, es sollen null sein. Straßen über Wasser sind immer Brücken (Dämme wurden ausprobiert und auf Wunsch des Nutzers verworfen).
-- **`GEN_VERSION` 20** (war 19); `tests` 635.
+- **Dinge am Boden stehen mit der Unterkante auf dem Boden** (`GROUNDED_ITEMS` in `data/item-tuning.ts`, `itemProp`): nie über `info.y` des Altspiels, sobald eine Größenkorrektur (`HEIGHT_FACTOR`, `WIDTH_FACTOR`) das Modell verändert; ein neues Objekt, das am Boden steht, gehört in die Menge. **Monster ohne Füße** schweben mit den Augen auf Kamerahöhe (`EYES_AT` in `render/monsters.ts`, Augenanteil der Höhe am Kontaktbogen `npm run sheet:monsters` gemessen).
+- **Das Ladebild lädt sein Bild in einem eigenen `<img>`** (`LoadingScreen.fetchPicture`) und tauscht es nur bei unsichtbarem Schirm; `tools/dev/check-loading.ts` beobachtet den Bildwechsel. **„Reveal map“ deckt in erzeugten Welten die ganze Kugel auf** (die huge-Welt ist breiter als ein Quadrat von 301 Kacheln).
+- **`GEN_VERSION` 20** (war 19); `tests` 639.

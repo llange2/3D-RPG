@@ -27,10 +27,11 @@ function painted(): Promise<void> {
  */
 export class LoadingScreen {
   readonly element: HTMLElement;
-  private readonly picture: HTMLImageElement;
+  private picture: HTMLImageElement;
   private readonly percent: HTMLElement;
   private shown = false;
   private value = 0;
+  private last = 0;
   private fade: ReturnType<typeof setTimeout> | null = null;
 
   constructor(parent: HTMLElement) {
@@ -51,19 +52,32 @@ export class LoadingScreen {
     this.shown = true;
     this.value = 0;
     this.percent.textContent = "0%";
-    // a screen that is still fading out from the last map keeps its picture, a second one would flash by
-    const fading = this.fade !== null;
+    // a screen that is still up or fading out from the last map keeps its picture, a second one would flash by
+    const visible = this.element.classList.contains("on");
     if (this.fade !== null) clearTimeout(this.fade);
     this.fade = null;
-    if (!fading) {
-      // the picture is a few hundred KB: it is decoded while the element is still hidden, otherwise the picture of the
-      // last map (or black) shows first and then switches
-      this.picture.src = assetPath(`ui/loading_screen${1 + Math.floor(Math.random() * PICTURES)}.webp`);
-      await this.picture.decode().catch(() => undefined);
+    if (!visible) {
+      // the picture is a few hundred KB: it is loaded and decoded in an element of its own while the screen is still hidden. The same
+      // `<img>` with a new `src` shows the old picture until the new one has arrived, and a decode that fails (a big world has the page short
+      // of memory) would let the last map's picture, or none, show first and then switch
+      const next = await this.fetchPicture();
+      this.picture.replaceWith(next);
+      this.picture = next;
     }
     this.element.classList.remove("out");
     this.element.classList.add("on");
     await painted();
+  }
+
+  private async fetchPicture(): Promise<HTMLImageElement> {
+    const img = h("img", { alt: "" }) as HTMLImageElement;
+    // not the picture of the map before, so that a scene change is always told by a new picture
+    let n = 1 + Math.floor(Math.random() * PICTURES);
+    if (n === this.last) n = (n % PICTURES) + 1;
+    this.last = n;
+    img.src = assetPath(`ui/loading_screen${n}.webp`);
+    await img.decode().catch(() => (img.complete ? undefined : new Promise<void>((resolve) => { img.onload = img.onerror = () => resolve(); })));
+    return img;
   }
 
   /** Sets the share of the work that is done (0 to 1). The percentage never goes back. */
@@ -82,6 +96,7 @@ export class LoadingScreen {
     if (lingerMs > 0) await new Promise((r) => setTimeout(r, lingerMs));
     this.shown = false;
     this.element.classList.add("out");
+    if (this.fade !== null) clearTimeout(this.fade);
     this.fade = setTimeout(() => {
       this.element.classList.remove("on");
       this.fade = null;
