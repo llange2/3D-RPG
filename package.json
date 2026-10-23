@@ -10,6 +10,7 @@
     "test": "vitest run",
     "data:export": "python -I tools/export/export_g_data.py",
     "data:spells": "python -I tools/export/export_spell_sheet.py",
+    "data:monsters": "python -I tools/export/export_monster_sheet.py",
     "data:validate": "tsx tools/export/validate-data.ts",
     "data:maps": "python -I tools/export/export_maps.py",
     "data:towns": "tsx tools/export/export-town-blueprints.ts",

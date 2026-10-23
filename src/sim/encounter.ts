@@ -59,7 +59,9 @@ export type CombatEvent =
   | { type: "monster_move"; uid: string; from: [number, number]; to: [number, number] }
   /** Gravity: the monster is drawn to the party at once (a quick slide, no walking). */
   | { type: "monster_pull"; uid: string; from: [number, number]; to: [number, number] }
-  | { type: "monster_attack"; uid: string; target: number; damage: number; ranged: boolean; damageType: DamageType; conditions: Condition[] }
+  | { type: "monster_attack"; uid: string; target: number; damage: number; ranged: boolean; damageType: DamageType; conditions: Condition[]; drained?: number; aged?: number }
+  /** A Troll or a Vampire heals a share of its health at the end of a monster turn. */
+  | { type: "monster_regen"; uid: string; amount: number }
   | { type: "party_attack"; attacker: number | null; kind: "melee" | "ranged" | "magic"; uid: string; defId: number; damage: number; shots?: number }
   /** The Wolf mascot finishes off a monster the party has wounded below `WOLF_EXECUTE_BELOW` of its health. */
   | { type: "wolf_kill"; uid: string; defId: number }
@@ -143,7 +145,7 @@ class MinHeap {
  */
 export function wayToPlayer(view: GridView, def: MonsterDef, mx: number, my: number, px: number, py: number, radius = MONSTER_ACTION_RADIUS): [number, number][] | null {
   const water = def.terrain === "water";
-  const blocked = (x: number, y: number) => (water ? !view.water(x, y) : !view.walkable(x, y));
+  const blocked = (x: number, y: number) => (water ? !view.water(x, y) : def.terrain === "both" ? !view.walkable(x, y) && !view.water(x, y) : !view.walkable(x, y));
   // a tile on the far side of a wall piece is next to the party on the map only
   const reachable = DIRS.filter(([dx, dy]) => !view.wallBetween?.(px, py, px + dx, py + dy));
   const goals = new Set<string>(reachable.map(([dx, dy]) => `${px + dx},${py + dy}`));
@@ -301,8 +303,17 @@ function targets(party: Party): number[] {
 }
 
 /** What a monster turn counts down: Dimensional Phasing, Immobilize and the Dimensional Rift last a number of monster turns. */
-function endMonsterTurn(party: Party, enc: Encounter): void {
+function endMonsterTurn(party: Party, enc: Encounter, events: CombatEvent[]): void {
   for (const m of enc.monsters) {
+    const regen = monsterById(m.defId).regen;
+    if (regen > 0 && m.hp > 0) {
+      const def = monsterById(m.defId);
+      const healed = Math.min(def.health - m.hp, Math.max(1, Math.round(def.health * regen)));
+      if (healed > 0) {
+        m.hp += healed;
+        events.push({ type: "monster_regen", uid: m.uid, amount: healed });
+      }
+    }
     if (m.pulled) m.pulled = undefined;
     if (m.phased) m.phased = m.phased > 1 ? m.phased - 1 : undefined;
     if (m.immobile) m.immobile = m.immobile > 1 ? m.immobile - 1 : undefined;
@@ -362,7 +373,16 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
   for (const s of scan(view, enc, px, py, radius)) {
     if (s.monster.pulled) continue;
     const def = monsterById(s.monster.defId);
-    for (let n = 0; n < def.no_of_attacks; n++) {
+    const ranged = !isAdjacent(s.monster.x, s.monster.y, px, py, view);
+    if (ranged) {
+      if (!def.ranged) continue;
+      // MONSTER_CAN_RANGE_ATTACK_THROUGH_OTHERS is true in the old game: other monsters do not block a shot
+      if (!lineOfSight(view, enc, s.monster.x, s.monster.y, px, py, false)) continue;
+    }
+    // the number of attacks in a row counts in melee only; a shot from afar is one a turn
+    const attacks = ranged ? 1 : def.no_of_attacks;
+    const distance = Math.max(Math.abs(s.monster.x - px), Math.abs(s.monster.y - py));
+    for (let n = 0; n < attacks; n++) {
       let candidates = targets(party);
       if (candidates.length === 0) break;
       // Clumsy: one attack in ten does not take place
@@ -371,25 +391,31 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
         const matching = candidates.filter((i) => party.characters[i]!.classType.includes(def.preferred_enemy!));
         if (matching.length > 0) candidates = matching;
       }
-      const target = candidates[rng.int(candidates.length)]!;
-      const ranged = !isAdjacent(s.monster.x, s.monster.y, px, py, view);
-      if (ranged) {
-        if (!def.special_abilties?.includes("Ranged Attack")) continue;
-        // MONSTER_CAN_RANGE_ATTACK_THROUGH_OTHERS is true in the old game: other monsters do not block a shot
-        if (!lineOfSight(view, enc, s.monster.x, s.monster.y, px, py, false)) continue;
-      }
-      const distance = Math.max(Math.abs(s.monster.x - px), Math.abs(s.monster.y - py));
-      const damage = monsterDamage(party, def, party.characters[target]!, ranged, distance, rng);
-      const hit = applyHit(party, target, damage, ranged ? null : def, rng);
-      events.push({ type: "monster_attack", uid: s.monster.uid, target, damage: hit.damage, ranged, damageType: def.attack_type.toLowerCase() as DamageType, conditions: hit.conditions });
-      if (hit.defeated) {
-        events.push({ type: "defeat" });
-        endMonsterTurn(party, enc);
-        return events;
+      // Hits All: one blow lands on every hero who can be hit, each with its own roll
+      const victims = def.hits_all ? candidates : [candidates[rng.int(candidates.length)]!];
+      for (const target of victims) {
+        const damage = monsterDamage(party, def, party.characters[target]!, ranged, distance, rng);
+        const hit = applyHit(party, target, damage, ranged ? null : def, rng);
+        events.push({
+          type: "monster_attack",
+          uid: s.monster.uid,
+          target,
+          damage: hit.damage,
+          ranged,
+          damageType: def.attack_type.toLowerCase() as DamageType,
+          conditions: hit.conditions,
+          ...(hit.drained ? { drained: hit.drained } : {}),
+          ...(hit.aged ? { aged: hit.aged } : {}),
+        });
+        if (hit.defeated) {
+          events.push({ type: "defeat" });
+          endMonsterTurn(party, enc, events);
+          return events;
+        }
       }
     }
   }
-  endMonsterTurn(party, enc);
+  endMonsterTurn(party, enc, events);
   return events;
 }
 

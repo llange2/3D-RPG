@@ -1,5 +1,5 @@
 import type { Rng } from "../core/rng";
-import { CONSTANTS, MONSTERS, SPELLS, type SpellDef } from "../data/tables";
+import { CONSTANTS, MONSTERS, SPELLS, walksOnLand, type SpellDef } from "../data/tables";
 import { addCondition, canAct, canBeHealed, healHp, isAlive, recalcValues, removeCondition } from "./character";
 import { restartCondition } from "./conditions";
 import { generateItem } from "./items";
@@ -149,7 +149,7 @@ function attackDamage(spell: SpellDef, caster: Character, rng: Rng): number {
 /** Monsters Pandora's box may bring: land monsters of the treasure level. */
 function pandoraMonsters(level: number): number[] {
   return Object.values(MONSTERS)
-    .filter((m) => m.treasure_level === level && m.terrain === "land")
+    .filter((m) => m.treasure_level === level && walksOnLand(m))
     .map((m) => m.id)
     .sort((a, b) => a - b);
 }

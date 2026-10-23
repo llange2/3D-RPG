@@ -1,6 +1,5 @@
 import { LAYER, rngFor } from "../core/rng";
-import { hasLandMonster, pickMonster } from "../data/monsters";
-import { OVERWORLD_THEMES } from "../data/overworld-themes";
+import { pickWildMonster } from "./difficulty";
 import { wrapDist2 } from "./islands";
 import { CHUNK_SIZE, GROUND, isTileWalkable, wrap } from "./types";
 import type { World } from "./world";
@@ -38,7 +37,7 @@ function groupsOf(world: World, ccx: number, ccy: number): OverworldSpawn[] {
   const spawns: OverworldSpawn[] = [];
   for (let n = 0; n < count; n++) {
     // a group looks for a spot a few times: a chunk of mountains, trees and water would otherwise stay empty on most rolls
-    let found: { x: number; y: number; tile: ReturnType<World["tile"]>; inWater: boolean } | null = null;
+    let found: { x: number; y: number; inWater: boolean } | null = null;
     for (let attempt = 0; attempt < 6 && !found; attempt++) {
       const x = ccx * CHUNK_SIZE + rng.int(CHUNK_SIZE);
       const y = ccy * CHUNK_SIZE + rng.int(CHUNK_SIZE);
@@ -54,17 +53,15 @@ function groupsOf(world: World, ccx: number, ccy: number): OverworldSpawn[] {
       } else if (!world.isOpenGround(x, y)) {
         continue; // walled in by mountains, trees or water: the party could never get to it
       }
-      found = { x, y, tile, inWater };
+      found = { x, y, inWater };
     }
     if (!found) continue;
-    const { x, y, tile, inWater } = found;
-    const theme = OVERWORLD_THEMES[tile.biome];
-    const tier = Math.min(5, world.tierAt(x, y) + theme.lootLevelBias);
+    const { x, y, inWater } = found;
+    const tier = world.tierAt(x, y);
     const size = rng.range(1, Math.min(4, 1 + Math.ceil(tier / 2)));
-    // land in the ocean biome (a shore, an island) has no water family of its own to draw from
-    const family = inWater ? "aquatic" : hasLandMonster(theme.monsterTheme) ? theme.monsterTheme : "beast";
+    // the monsters without a hut of the sheet (its "x"), harder the nearer the spot lies to the town of the next level (`difficulty.ts`)
     const monsterIds: number[] = [];
-    for (let i = 0; i < size; i++) monsterIds.push(pickMonster(rng, family, tier, inWater).id);
+    for (let i = 0; i < size; i++) monsterIds.push(pickWildMonster(rng, world, x, y, inWater).id);
     spawns.push({ uid: `c:${ccx}:${ccy}:${n}`, x, y, monsterIds });
   }
   byChunk.set(key, spawns);

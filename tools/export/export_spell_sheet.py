@@ -3,7 +3,7 @@
 - old_code/documentation/MM3_Master_documentation.xlsx, sheet "Spells": name, description and explanation of all 78 spells.
   The numbers (mana, level, damage, school) of the sheet equal src/data/raw/SPELLS.json, only the texts differ (the new spells
   have their own names), so only the texts are exported.
-- old_code/documentation/RPG_0.1.xlsx, sheet "Monster": the column "entity 22: group" says who is undead (the flag of entity 20 is
+- docs/RPG_0.1.xlsx (the user's current workbook), sheet "Monster": the column "entity 22: group" says who is undead (the flag of entity 20 is
   not used for that).
 
 Run:  python -I tools/export/export_spell_sheet.py
@@ -44,7 +44,7 @@ def export_spells() -> int:
 
 
 def export_groups() -> int:
-    ws = openpyxl.load_workbook(DOCS / "RPG_0.1.xlsx", data_only=True)["Monster"]
+    ws = openpyxl.load_workbook(ROOT / "docs" / "RPG_0.1.xlsx", data_only=True)["Monster"]
     head = [c.value for c in ws[1]]
     group_col = next(i for i, h in enumerate(head) if h and "group" in str(h))
     out = {}

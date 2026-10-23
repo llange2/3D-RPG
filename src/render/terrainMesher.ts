@@ -109,13 +109,12 @@ const TILE_MOUNTAINS: Record<Biome, PropSpec> = {
 };
 
 /** What stands on a tile with a solid or decorative object, by biome. Hash `h` picks between variants. `tileModels`: the old game's tile models. */
-/** The landmarks of the old outside map (item numbers), with a weight: wells and huts are common, the rest is a find. */
+/** The landmarks of the old outside map (item numbers), with a weight: wells and huts are common, the rest is a find. The Monster Hut is not one: it has a place of its own (`world/huts.ts`). */
 const LANDMARKS: readonly { item: number; weight: number }[] = [
   { item: 91, weight: 4 }, // Well
   { item: 45, weight: 4 }, // Hut
   { item: 26, weight: 2 }, // Rustic caravan
   { item: 33, weight: 2 }, // Giant stone head
-  { item: 101, weight: 2 }, // Monster hut
   { item: 2, weight: 1 }, // Fountain
 ];
 const LANDMARK_TOTAL = LANDMARKS.reduce((n, l) => n + l.weight, 0);

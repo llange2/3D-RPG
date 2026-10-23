@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Rng, seedFromString } from "../../src/core/rng";
-import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../../src/data/monsters";
-import { MONSTERS } from "../../src/data/tables";
+import { hasLandMonster, monstersOfTheme, pickMonster, pickMonsterWeighted } from "../../src/data/monsters";
+import { MONSTERS, walksOnLand } from "../../src/data/tables";
 import { buildMapContent } from "../../src/actions";
 import { generateInterior } from "../../src/interiors";
 import { CELL, type Facing } from "../../src/interiors/types";
@@ -43,17 +43,19 @@ describe("water monsters stay in the water (thirteenth playtest, point 4)", () =
 
   it("has water monsters, all of the aquatic theme, and the theme has no land monster", () => {
     expect(water.length).toBeGreaterThan(0);
-    expect(hasLandMonster("aquatic")).toBe(false);
+    // the sheet lets the Dragon Worm (terrain "both") out of the water: they are the only monsters of the theme that walk (the Kudo crab too)
+    expect(monstersOfTheme("aquatic").filter(walksOnLand).map((m) => m.name)).toEqual(["Dragon Worm", "Kudo crab"]);
+    expect(hasLandMonster("aquatic")).toBe(true);
     expect(hasLandMonster("beast")).toBe(true);
   });
 
   it("never draws one for dry ground, whatever the theme", () => {
     const rng = new Rng(seedFromString("dry"));
     for (let i = 0; i < 300; i++) {
-      expect(pickMonster(rng, "aquatic", 1 + (i % 5)).terrain).toBe("land");
-      expect(pickMonsterWeighted(rng, { beast: 3, aquatic: 3 }, 1 + (i % 5)).terrain).toBe("land");
+      expect(pickMonster(rng, "aquatic", 1 + (i % 5)).terrain).not.toBe("water");
+      expect(pickMonsterWeighted(rng, { beast: 3, aquatic: 3 }, 1 + (i % 5)).terrain).not.toBe("water");
     }
-    expect(pickMonsterWeighted(rng, { aquatic: 1 }, 2).terrain).toBe("land");
+    expect(pickMonsterWeighted(rng, { aquatic: 1 }, 2).terrain).not.toBe("water");
   });
 
   it("puts none into a generated cave, castle or dungeon, nor into a land spawn of the wild", () => {
@@ -62,14 +64,17 @@ describe("water monsters stay in the water (thirteenth playtest, point 4)", () =
       const pois: Poi[] = world.allPois().filter((p) => p.kind !== "town");
       for (const poi of pois.slice(0, 40)) {
         const map = generateInterior(world, poi);
-        for (const s of buildMapContent(world, poi, map).spawns) for (const id of s.monsterIds) expect(MONSTERS[id]!.terrain, `${seed} ${poi.id}`).toBe("land");
+        for (const s of buildMapContent(world, poi, map).spawns) for (const id of s.monsterIds) expect(MONSTERS[id]!.terrain, `${seed} ${poi.id}`).not.toBe("water");
       }
       for (let cy = 0; cy < 20; cy++) {
         for (let cx = 0; cx < 20; cx++) {
           for (const g of chunkSpawns(world, cx, cy)) {
             const t = world.tile(g.x, g.y);
             const inWater = t.ground === GROUND.WATER || t.ground === GROUND.SHALLOW;
-            for (const id of g.monsterIds) expect(MONSTERS[id]!.terrain, `${seed} ${g.uid}`).toBe(inWater ? "water" : "land");
+            for (const id of g.monsterIds) {
+              if (inWater) expect(MONSTERS[id]!.terrain, `${seed} ${g.uid}`).toBe("water");
+              else expect(MONSTERS[id]!.terrain, `${seed} ${g.uid}`).not.toBe("water");
+            }
           }
         }
       }

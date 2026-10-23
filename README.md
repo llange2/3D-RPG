@@ -63,6 +63,7 @@ into the backpack when they are put on (one free place more is needed when weapo
 | `npm run check:effects -- <outDir>` | In Chrome: own mouse pointer, a projectile for ranged attacks and attack spells, the healing picture over a portrait, screenshots (needs `npm run dev`) |
 | `npm run check:spells -- <outDir>` | In Chrome: the spell window (all 36 plates of the biggest school, pictures, costs), casting from it, travelling and item spells, screenshots (needs `npm run dev`) |
 | `npm run data:spells` | Spell names and descriptions from the user's workbook, undead from the monster sheet (`src/data/spell-sheet.json`, `monster-groups.json`) |
+| `npm run data:monsters` | All monster stats, abilities, XP, treasure level and Monster Hut XP from the user's workbook `docs/RPG_0.1.xlsx` (`src/data/monster-sheet.json`) |
 | `npm run sheet:projectiles -- <outDir>` | Side view of the six projectiles in flight, to check by eye which way they point (needs `npm run dev`) |
 | `npm run sheet:monsters -- <outDir>` | Contact sheets of all 91 monsters seen from the front, to check by eye which way they face (needs `npm run dev`) |
 | `npm run bench -- overworld\|interior\|campaign` | Frame times, draw calls and triangles over a fixed camera path in Chrome (needs `npm run dev`) |

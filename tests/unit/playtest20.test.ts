@@ -31,13 +31,13 @@ describe("twentieth playtest, point 8: no monster stronger than the level of its
       for (let tier = 1; tier <= 5; tier++) {
         for (let i = 0; i < 40; i++) {
           const m = pickMonster(rng, theme, tier);
-          expect(m.terrain, `${theme} ${tier}`).toBe("land");
+          expect(m.terrain, `${theme} ${tier}`).not.toBe("water");
           expect(m.treasure_level, `${theme} ${tier}: ${m.name}`).toBeLessThanOrEqual(tier);
         }
       }
     }
-    // the cold family has nothing on the first tier: the beasts stand in for it
-    expect(monstersOfTheme("cold").some((m) => m.treasure_level <= 1)).toBe(false);
+    // the cold family has its Cryo Spore on the first tier in the sheet (it had nothing there before: the beasts stood in for it)
+    expect(monstersOfTheme("cold").some((m) => m.treasure_level <= 1)).toBe(true);
     expect(pickMonster(new Rng(seedFromString("cold")), "cold", 1).treasure_level).toBe(1);
   });
 });
@@ -128,8 +128,8 @@ describe("twentieth playtest, point 4: castles are good, neutral or evil", () =>
   });
 
   it("uses the monsters the user named, by level, for a good, neutral and evil castle", () => {
-    expect(castleMonsters("good", 1)).toEqual([8]); // nothing below level 2: the Castle Guard
-    expect(castleMonsters("good", 3).sort((a, b) => a - b)).toEqual([1, 8, 20]);
+    expect(castleMonsters("good", 1).sort((a, b) => a - b)).toEqual([8, 20, 66]); // nothing below level 2: Castle Guard, Draconi, Sorcerer
+    expect(castleMonsters("good", 3).sort((a, b) => a - b)).toEqual([1, 8, 20, 66]);
     expect(castleMonsters("evil", 2).sort((a, b) => a - b)).toEqual([8, 12, 51, 61, 63]);
     expect(castleMonsters("neutral", 5)).toHaveLength(12);
     for (const kind of ALIGNMENTS) for (let tier = 1; tier <= 5; tier++) for (const id of castleBosses(kind, tier)) expect(CASTLE_MONSTERS[kind]).toContain(id);
