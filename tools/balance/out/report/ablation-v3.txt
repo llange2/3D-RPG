@@ -1,0 +1,11 @@
+base                                                         score 0.170  loss 0.124  deaths 0.029  bows 0.021  robust 0.004
+hpFlat=0,hpScale=1                                           score 0.898  loss 0.131  deaths 0.755  bows 0.015  robust 0.003
+mScale=1                                                     score 0.189  loss 0.130  deaths 0.049  bows 0.012  robust 0.003
+armorVsHeroes=1                                              score 0.198  loss 0.128  deaths 0.055  bows 0.020  robust 0.004
+mScale=1,armorVsHeroes=1                                     score 0.222  loss 0.136  deaths 0.076  bows 0.013  robust 0.003
+rClass=1                                                     score 0.168  loss 0.127  deaths 0.025  bows 0.021  robust 0.003
+rHit=0.5                                                     score 0.255  loss 0.197  deaths 0.022  bows 0.047  robust 0.004
+rArmor=0.5                                                   score 0.170  loss 0.124  deaths 0.029  bows 0.021  robust 0.004
+rClass=1,rHit=0.5,rArmor=0.5                                 score 0.266  loss 0.206  deaths 0.022  bows 0.053  robust 0.002
+floorVsMonsters=0                                            score 0.383  loss 0.348  deaths 0.016  bows 0.016  robust 0.013
+lethalScale=1                                                score 0.238  loss 0.125  deaths 0.101  bows 0.016  robust 0.002
