@@ -47,7 +47,8 @@ describe("overworld spawns", () => {
       for (const id of s.monsterIds) {
         const m = MONSTERS[id]!;
         if (t.ground === GROUND.WATER) expect(m.terrain).toBe("water");
-        else expect(m.terrain).toBe("land");
+        // the Dragon Worm (terrain "both") walks on land as well
+        else expect(m.terrain).not.toBe("water");
       }
     }
   });

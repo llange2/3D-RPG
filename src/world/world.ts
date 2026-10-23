@@ -299,6 +299,11 @@ export class World {
     return best;
   }
 
+  /** The island whose land this tile belongs to (before roads and places are laid), null at sea. */
+  islandAt(x: number, y: number): Island | null {
+    return this.landAt(this.wrapX(x), this.wrapY(y))?.island ?? null;
+  }
+
   /** Is this tile (canonical) part of an island, before roads and places are laid? */
   private isLand(x: number, y: number): boolean {
     return this.landAt(x, y) !== null;

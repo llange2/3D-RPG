@@ -15,7 +15,7 @@ import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { ringBlocked } from "../actions/quests";
 import { THEMES_BY_ID } from "../data/dungeon-themes";
-import { CONSTANTS, MAP_ITEMS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
+import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
 import { CELL, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
 import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
@@ -46,7 +46,7 @@ import {
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS,
   type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
-import { ACTION_MINUTES, activeCharacters, advanceTime, giveItem, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
+import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, giveItem, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
 import { RIFT_TURNS, SPELL_AGING, castSpell, isAttackSpell, learnBlock, needsAdjacent, quickCast, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
 import { canCombine, combine, combineGroups, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
 import { pickGateSpot, safeCells, type Spot } from "./spellSites";
@@ -64,6 +64,9 @@ import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
 import { sellerParams } from "../data/talent-sellers";
 import { CARAVAN_ITEM, caravansIn, type CaravanSpot } from "../world/caravans";
+import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, slotDistance, slotKey, type HutSpot } from "../world/huts";
+import { hutScene } from "../data/hut-texts";
+import { generateItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { readSettings, writeSettings, type Settings } from "./settings";
 import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
@@ -161,6 +164,10 @@ const REVEAL_RADIUS = 150;
 const CHEST_SOUND_GAP = 0.35;
 /** Monsters of an ambush or a spawn action fade in over this long (seconds). */
 const APPEAR_SECONDS = 0.3;
+/** A Monster Hut is drawn when it lies within this many tiles of the party (the farthest view is four chunks). */
+const HUT_REACH = 60;
+/** The Monster Huts refill once a week of game time. */
+const HUT_WEEK = 7 * MINUTES_PER_DAY;
 /** Caravans are looked up for the towns within this many tiles of the party's chunk (the farthest view is four chunks). */
 const CARAVAN_REACH = 40;
 /** How far from the party the debug menu looks for a place to identify in the open country (tiles). */
@@ -307,7 +314,7 @@ export class Game {
       this.minimapIcons = icons;
       this.minimapDirty = true;
     });
-    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", "poi_dungeon", "poi_cave", "poi_pyramid", "obj_loot", ...PROJECTILE_MODELS]);
+    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", "poi_dungeon", "poi_cave", "poi_pyramid", "obj_loot", ...PROJECTILE_MODELS]);
     this.sceneInst = new SceneInstrumentation(this.r.scene);
     this.sceneInst.captureFrameTime = true;
 
@@ -582,7 +589,7 @@ export class Game {
     return {
       walkable: (x, y) => {
         const t = this.world.tile(x, y);
-        return isTileWalkable(t) && t.poiId === null && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y) && !this.caravanAt(x, y);
+        return isTileWalkable(t) && t.poiId === null && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y) && !this.caravanAt(x, y) && !this.hutAt(x, y);
       },
       water: (x, y) => {
         const g = this.world.tile(x, y).ground;
@@ -605,6 +612,7 @@ export class Game {
     if (this.monsterAt(x, y)) return false;
     if (this.mascotSpotAt(x, y)) return false;
     if (this.caravanAt(x, y)) return false;
+    if (this.hutAt(x, y)) return false;
     if (this.mode === "interior" && this.interior) {
       const { map, blocked } = this.interior;
       if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
@@ -877,6 +885,8 @@ export class Game {
       this.monsters.place(m.uid, p.x, p.y, p.z);
     }
     const wanted = new Set<string>();
+    this.refillHuts();
+    this.placeHutMonsters(wanted, view);
     for (let cy = py - SPAWN_CHUNKS; cy <= py + SPAWN_CHUNKS; cy++) {
       for (let cx = px - SPAWN_CHUNKS; cx <= px + SPAWN_CHUNKS; cx++) {
         const key = `${cx},${cy}`;
@@ -1148,6 +1158,11 @@ export class Game {
     const caravan = this.caravanAt(x, y);
     if (caravan) {
       await this.visitCaravan(caravan);
+      return;
+    }
+    const hut = this.hutAt(x, y);
+    if (hut) {
+      await this.visitHut(hut);
       return;
     }
     if (this.mode === "overworld") {
@@ -1568,6 +1583,135 @@ export class Game {
     }
     this.props.setInstances("mascots", list);
     this.props.flush();
+  }
+
+  // ---------------------------------------------------------------- monster huts
+
+  /** The huts by tile (canonical coordinates), for the many questions "is a hut here?" of the path finding. */
+  private hutTiles: { world: World; byTile: Map<number, HutSpot> } | null = null;
+  /** What the hut props show now: the party's chunk and which huts are burnt. */
+  private hutShown = "";
+
+  private hutTable(): Map<number, HutSpot> {
+    if (this.hutTiles?.world !== this.world) this.hutTiles = { world: this.world, byTile: new Map(hutIndex(this.world).huts.map((h) => [h.y * this.world.width + h.x, h])) };
+    return this.hutTiles.byTile;
+  }
+
+  private hutBurnt(hut: HutSpot): boolean {
+    return this.state.opened.has(`hut:${hut.id}@burnt`);
+  }
+
+  /** The Monster Hut on this tile, if it still stands: a burnt-out hut is not in the way. */
+  private hutAt(x: number, y: number): HutSpot | undefined {
+    if (this.mode !== "overworld" || !this.state) return undefined;
+    const hut = this.hutTable().get(this.world.wrapY(y) * this.world.width + this.world.wrapX(x));
+    return hut && !this.hutBurnt(hut) ? hut : undefined;
+  }
+
+  /** Draws the huts near the party (a burnt one as its ruin) and takes them down inside a place. */
+  private syncHuts(): void {
+    if (!this.state) return;
+    const near = this.mode === "overworld" ? hutIndex(this.world).huts.filter((h) => Math.abs(wrapDelta(this.player.tx, h.x, this.world.width)) <= HUT_REACH && Math.abs(wrapDelta(this.player.ty, h.y, this.world.height)) <= HUT_REACH) : [];
+    const sig = near.map((h) => `${h.id}${this.hutBurnt(h) ? "b" : ""}@${Math.floor(this.player.tx / CHUNK_SIZE)},${Math.floor(this.player.ty / CHUNK_SIZE)}`).join("|");
+    if (sig === this.hutShown) return;
+    this.hutShown = sig;
+    const list: PropInstance[] = [];
+    for (const h of near) {
+      // the globe: the copy of the hut that is nearest to the party
+      const w = this.worldPos(this.player.tx + wrapDelta(this.player.tx, h.x, this.world.width), this.player.ty + wrapDelta(this.player.ty, h.y, this.world.height));
+      const inst = itemProp(this.hutBurnt(h) ? BURNT_HUT_ITEM : HUT_ITEM, ((h.monster * 7) % 4) * 90, w.x, w.z, this.staticInfo);
+      if (!inst) continue;
+      inst.y += w.y;
+      list.push(inst);
+    }
+    this.props.setInstances("huts", list);
+    this.props.flush();
+  }
+
+  /** The party bumps into a Monster Hut: the scene inside, and the question whether to burn it down. */
+  private async visitHut(hut: HutSpot): Promise<void> {
+    this.player.locked = true;
+    const burn = await this.ui.confirm("Monster Hut", hutScene(hut.monster), "Burn it down", "Leave it");
+    this.player.locked = false;
+    if (!burn) return;
+    this.burnHut(hut);
+  }
+
+  /**
+   * The hut burns: it is replaced by its ruin, its monsters stay but no new ones come, and the party gets the XP of the sheet (entity 9), 13 times
+   * the gold of the monster rounded up to the next thousand and seven items of its treasure level (a pile on the ruin, which is walked over).
+   */
+  private burnHut(hut: HutSpot): void {
+    const def = MONSTERS[hut.monster]!;
+    const party = this.state.party;
+    this.state.opened.add(`hut:${hut.id}@burnt`);
+    addXp(party, def.hut_xp);
+    const rng = rngFor(this.world.rootSeed, LAYER.LOOT, "hut", hut.id);
+    const items = Array.from({ length: HUT_ITEMS }, () => generateItem(rng, def.treasure_level));
+    this.dropLoot(hut.x, hut.y, hutGold(hut.monster), items);
+    this.audio.play(9001);
+    this.ui.log(`The hut burns down. +${thousands(def.hut_xp)} xp`, "good");
+    for (const c of party.characters) if (c.xp > 0 && xpReady(c)) this.ui.toast(`${c.name} can advance a level!`);
+    this.hutShown = "";
+    this.syncHuts();
+    this.refresh();
+    this.save("auto");
+  }
+
+  /** Remembers when a monster of a hut fell, for the refill of the next week. */
+  private noteHutDeath(uid: string): void {
+    const found = /^h:([^:]+):(\d+):(\d+)#0$/.exec(uid);
+    if (!found) return;
+    const key = slotKey(found[1]!, Number(found[2]));
+    const slot = (this.state.hutSlots[key] ??= { gen: 0 });
+    if (slot.gen === Number(found[3])) slot.died = this.state.party.minutes;
+  }
+
+  /**
+   * A new week refills the huts: every slot whose monster fell in an earlier week gets a new one, but only while the party is out of sight of it
+   * (farther than the view reaches), and never for a hut that is burnt. The monster itself appears when the slot comes near the party.
+   */
+  private refillHuts(): void {
+    if (this.mode !== "overworld") return;
+    const now = this.state.party.minutes;
+    const week = Math.floor(now / HUT_WEEK);
+    const hidden = (chunkRadius(this.viewDistance) + 1) * CHUNK_SIZE;
+    const { byId } = hutIndex(this.world);
+    for (const [key, slot] of Object.entries(this.state.hutSlots)) {
+      if (slot.died === undefined || week <= Math.floor(slot.died / HUT_WEEK)) continue;
+      const at = key.lastIndexOf(":");
+      const hut = byId.get(key.slice(0, at));
+      const place = hut?.slots[Number(key.slice(at + 1))];
+      if (!hut || !place || this.hutBurnt(hut)) continue;
+      if (slotDistance(this.world, this.player.tx, this.player.ty, place) <= hidden) continue;
+      slot.gen++;
+      delete slot.died;
+    }
+  }
+
+  /** Puts the monsters of the huts near the party into the encounter, one for each slot that is not waiting for a refill. */
+  private placeHutMonsters(wanted: Set<string>, view: GridView): void {
+    const { tx, ty } = this.player;
+    const W = this.world.width;
+    const H = this.world.height;
+    const reach = SPAWN_CHUNKS * CHUNK_SIZE + HUT_RADIUS;
+    for (const hut of hutIndex(this.world).huts) {
+      if (Math.abs(wrapDelta(tx, hut.x, W)) > reach || Math.abs(wrapDelta(ty, hut.y, H)) > reach) continue;
+      hut.slots.forEach((slot, i) => {
+        const state = this.state.hutSlots[slotKey(hut.id, i)];
+        if (state?.died !== undefined) return;
+        const base = `h:${hut.id}:${i}:${state?.gen ?? 0}`;
+        wanted.add(`${base}#0`);
+        if (this.enc.monsters.some((m) => m.uid === `${base}#0`)) return;
+        // the globe: at the copy of its place that is nearest to the party
+        const sx = tx + wrapDelta(tx, slot.x, W);
+        const sy = ty + wrapDelta(ty, slot.y, H);
+        for (const m of this.placeGroup(base, [hut.monster], sx, sy, (x, y) => view.walkable(x, y))) {
+          this.enc.monsters.push(m);
+          this.addMonsterView(m);
+        }
+      });
+    }
   }
 
   // ---------------------------------------------------------------- caravans
@@ -2115,9 +2259,18 @@ export class Game {
               this.audio.play(9017);
             }
             for (const c of e.conditions) this.ui.log(`${target.name} is ${c.toLowerCase()}!`, "bad");
+            if (e.drained) this.ui.log(`${name} drains ${e.drained} spell points from ${target.name}.`, "bad");
+            if (e.aged) this.ui.log(`${target.name} ages ${e.aged === 1 ? "a year" : `${e.aged} years`}.`, "bad");
           });
           break;
         }
+        case "monster_regen":
+          // the wound closes when the monsters have had their turn
+          at(answer, () => {
+            const m = this.enc.monsters.find((x) => x.uid === e.uid);
+            if (m && Math.max(Math.abs(m.x - this.player.tx), Math.abs(m.y - this.player.ty)) <= 6) this.ui.log(`${monsterById(m.defId).name} regenerates ${e.amount} hit points.`, "combat");
+          });
+          break;
         case "party_attack": {
           const def = monsterById(e.defId);
           const who = e.attacker !== null ? party.characters[e.attacker]!.name : "The party";
@@ -2145,6 +2298,7 @@ export class Game {
         case "monster_dead": {
           const def = monsterById(e.defId);
           this.state.killed.add(e.uid);
+          this.noteHutDeath(e.uid);
           this.state.kills++;
           this.dropLoot(e.x, e.y, e.loot.gold, e.loot.item ? [e.loot.item] : [], true);
           const epoch = this.fxEpoch;
@@ -3493,6 +3647,7 @@ export class Game {
     this.campaignView.tick(dt);
     this.syncMascots();
     this.syncCaravans();
+    this.syncHuts();
     this.syncRaft();
     if (this.chunks) {
       this.chunks.update(this.player.tx, this.player.ty);

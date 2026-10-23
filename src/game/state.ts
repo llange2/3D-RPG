@@ -93,6 +93,12 @@ export interface CampaignSave {
 /** The tiles across and down of a world size, for `Explored`. */
 export const spanOf = (size: WorldSize): { w: number; h: number } => ({ w: WORLD_SIZES[size].width, h: WORLD_SIZES[size].height });
 
+export interface HutSlotState {
+  gen: number;
+  /** Game minute at which the monster of this generation was defeated; absent while it lives. */
+  died?: number;
+}
+
 export interface GameState {
   seed: string;
   /** How big the world is: small, default, large or huge (the seed alone does not tell). */
@@ -107,6 +113,11 @@ export interface GameState {
   broken: Set<string>;
   /** ids of defeated monsters */
   killed: Set<string>;
+  /**
+   * The monsters of the Monster Huts (`world/huts.ts`), by slot (`<hut id>:<slot>`): the generation that stands there now (a monster that was
+   * defeated is replaced by the next generation) and the game minute its predecessor fell, while it is waiting for a new week.
+   */
+  hutSlots: Record<string, HutSlotState>;
   /** dropped loot per map key (`ow` for the overworld, the interior key otherwise) */
   loot: Record<string, LootPile[]>;
   explored: Explored;
@@ -125,6 +136,7 @@ export function newGameState(seed: string, start: { x: number; y: number; facing
     opened: new Set(),
     broken: new Set(),
     killed: new Set(),
+    hutSlots: {},
     loot: {},
     explored: new Explored(spanOf(size)),
     visited: new Set(),
@@ -160,6 +172,8 @@ export interface SaveFile {
     opened: string[];
     broken: string[];
     killed: string[];
+    /** Absent in saves from before the Monster Huts. */
+    hutSlots?: Record<string, HutSlotState>;
     loot: Record<string, LootPile[]>;
     explored: Record<string, string>;
     visited: string[];
@@ -183,6 +197,7 @@ export function toSaveFile(state: GameState): SaveFile {
       opened: [...state.opened],
       broken: [...state.broken],
       killed: [...state.killed],
+      hutSlots: state.hutSlots,
       loot: state.loot,
       explored: state.explored.toJSON(),
       visited: [...state.visited],
@@ -204,6 +219,7 @@ export function fromSaveFile(file: SaveFile): GameState {
     opened: new Set(s.opened),
     broken: new Set(s.broken),
     killed: new Set(s.killed),
+    hutSlots: s.hutSlots ?? {},
     loot: s.loot,
     explored: Explored.fromJSON(s.explored, spanOf(size)),
     visited: new Set(s.visited),

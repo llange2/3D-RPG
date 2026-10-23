@@ -74,5 +74,8 @@
  * have them, desert and lava none) and an inland water at most three tiles wide is shallow throughout (`World.narrowInland`).
  * 20 = twenty-third playtest: a door of a town stands in a wall that goes on on both sides (no free cell beside the wall cell that carries a shop's door or the way out),
  * and a wall that gives way is never beside a shop.
+ * 21 = the user's monster sheet (docs/RPG_0.1.xlsx): treasure levels and XP of the monsters changed, so the monsters of the interiors changed; the overworld holds
+ * Monster Huts (`world/huts.ts`: ten monsters each within ten tiles, one hut per monster with an entity-9 value, two of each on large and huge worlds) and the wild
+ * groups are the sheet's "x" monsters by the level of the spot (`world/difficulty.ts`), no longer drawn from the family of the biome.
  */
-export const GEN_VERSION = 20;
+export const GEN_VERSION = 21;

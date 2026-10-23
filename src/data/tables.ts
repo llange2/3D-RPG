@@ -13,6 +13,7 @@ import RIDDLES_RAW from "./raw/RIDDLES_MASTER.json";
 import SPELLS_RAW from "./raw/SPELLS.json";
 import SPELL_SHEET from "./spell-sheet.json";
 import MONSTER_GROUPS from "./monster-groups.json";
+import MONSTER_SHEET from "./monster-sheet.json";
 import TALENTS_RAW from "./raw/TALENTS.json";
 import textsRaw from "./raw/texts.json";
 
@@ -31,7 +32,8 @@ export interface MonsterDef {
   gold: number;
   treasure_level: number;
   attack_type: AttackType;
-  terrain: "land" | "water";
+  /** `both` (the Dragon Worm) is at home on land and in the water. */
+  terrain: "land" | "water" | "both";
   undead: boolean;
   icon_height: number;
   res_acid: number;
@@ -39,7 +41,25 @@ export interface MonsterDef {
   res_ice: number;
   res_magic: number;
   res_physical: number;
+  res_poison: number;
+  /** The abilities as one line for the player ("Ranged Attack, Causes Poisoned"), built from the flags below. */
   special_abilties: string | null;
+  /** A ranged attack: one shot a turn from a distance (`no_of_attacks` only counts in melee). */
+  ranged: boolean;
+  /** Every attack hits all characters at once. */
+  hits_all: boolean;
+  /** Conditions its hits can cause, as `Condition` names ("Poisoned", "Dead", "Rotten" for eradication ...). */
+  causes: string[];
+  /** Share of its maximum hit points it heals at the end of every monster turn (0.05 = 5 %). */
+  regen: number;
+  /** Share of the maximum mana of the hero it hits that a hit takes away. */
+  steal_mana: number;
+  /** Years a hit adds to the hero's magical age. */
+  aging_years: number;
+  /** Where it lives on the overworld: with a Monster Hut (`hut`), as a wild group without one (`wild`), or not at all (null). */
+  outside: "hut" | "wild" | null;
+  /** XP of burning its Monster Hut down (13 times the monster's XP), 0 without a hut. */
+  hut_xp: number;
   preferred_enemy?: string | null;
   anim_path?: string;
   anim_scale?: number;
@@ -103,8 +123,125 @@ export interface BlockDef {
   minimap_texture?: string;
 }
 
+interface MonsterSheetRow {
+  name: string;
+  health: number;
+  armor: number;
+  speed: number;
+  attacks: number;
+  damageMin: number;
+  damageMax: number;
+  attackType: string;
+  regen: number | null;
+  stealMana: number | null;
+  aging: number | null;
+  hut: number | "x" | null;
+  resMagic: number;
+  resFire: number;
+  resPhysical: number;
+  resCold: number;
+  resPoison: number;
+  gold: number;
+  iconHeight: number;
+  terrain: "land" | "water" | "both";
+  undead: boolean;
+  xp: number;
+  level: number;
+  ranged: boolean;
+  hitsAll: boolean;
+  poisoned: boolean;
+  cursed: boolean;
+  sleeping: boolean;
+  crazy: boolean;
+  diseased: boolean;
+  weak: boolean;
+  petrified: boolean;
+  dead: boolean;
+  paralyzed: boolean;
+  eradication: boolean;
+}
+
+/** The sheet's condition columns with the `Condition` each one stands for, in the order the player reads them. */
+const SHEET_CAUSES: readonly [keyof MonsterSheetRow, string][] = [
+  ["poisoned", "Poisoned"],
+  ["cursed", "Cursed"],
+  ["sleeping", "Sleeping"],
+  ["crazy", "Crazy"],
+  ["diseased", "Diseased"],
+  ["weak", "Weak"],
+  ["petrified", "Petrified"],
+  ["dead", "Dead"],
+  ["paralyzed", "Paralyzed"],
+  ["eradication", "Rotten"],
+];
+
+/** What the old table (`MONSTER_DATA.json`) has of a monster: the fields the sheet adds are missing. */
+type OldMonster = Omit<MonsterDef, "id" | "res_poison" | "ranged" | "hits_all" | "causes" | "regen" | "steal_mana" | "aging_years" | "outside" | "hut_xp">;
+
+const percent = (share: number): string => `${Math.round(share * 100)}%`;
+
+/**
+ * A monster of the user's sheet (`docs/RPG_0.1.xlsx`, exported by `npm run data:monsters`) laid over the old table: stats, resistances, XP
+ * (the sheet's new XP column; the old one is not used any more), treasure level, abilities and the Monster Hut come from the sheet, the
+ * animation and sound entries only the old table has stay.
+ */
+function monsterFromSheet(id: number, old: OldMonster, row: MonsterSheetRow): MonsterDef {
+  const causes = SHEET_CAUSES.filter(([key]) => row[key]).map(([, condition]) => condition);
+  const regen = row.regen ?? 0;
+  const stealMana = row.stealMana ?? 0;
+  const aging = row.aging ?? 0;
+  const abilities = [
+    row.ranged ? "Ranged Attack" : "",
+    row.hitsAll ? "Hits All" : "",
+    ...causes.map((c) => `Causes ${c === "Rotten" ? "Eradication" : c}`),
+    regen > 0 ? `Regenerates ${percent(regen)}` : "",
+    stealMana > 0 ? `Drains ${percent(stealMana)} of Spell Points` : "",
+    aging > 0 ? `Aging Touch(+${aging})` : "",
+  ].filter((a) => a !== "");
+  return {
+    ...old,
+    id,
+    name: row.name,
+    health: row.health,
+    armor: row.armor,
+    speed: row.speed,
+    no_of_attacks: row.attacks,
+    damage_min: row.damageMin,
+    damage_max: row.damageMax,
+    attack_type: (row.attackType === "Cold" ? "Ice" : row.attackType) as AttackType,
+    res_magic: row.resMagic,
+    res_fire: row.resFire,
+    res_physical: row.resPhysical,
+    res_ice: row.resCold,
+    // acid and poison are one element in the sheet
+    res_acid: row.resPoison,
+    res_poison: row.resPoison,
+    xp: row.xp,
+    gold: row.gold,
+    treasure_level: row.level,
+    icon_height: row.iconHeight,
+    terrain: row.terrain,
+    undead: row.undead,
+    // the sheet knows no hatred of one class (the old "Targets Clerics" and "Hatred:Paladins")
+    preferred_enemy: null,
+    special_abilties: abilities.length > 0 ? abilities.join(", ") : null,
+    ranged: row.ranged,
+    hits_all: row.hitsAll,
+    causes,
+    regen,
+    steal_mana: stealMana,
+    aging_years: aging,
+    outside: typeof row.hut === "number" ? "hut" : row.hut === "x" ? "wild" : null,
+    hut_xp: typeof row.hut === "number" ? row.hut : 0,
+  };
+}
+
 export const MONSTERS: Record<number, MonsterDef> = Object.fromEntries(
-  Object.entries(MONSTER_DATA_RAW as Record<string, Omit<MonsterDef, "id">>).map(([id, m]) => [Number(id), { ...m, id: Number(id) } as MonsterDef]),
+  Object.entries(MONSTER_DATA_RAW as unknown as Record<string, OldMonster>).map(([id, m]) => {
+    const row = (MONSTER_SHEET as unknown as Record<string, MonsterSheetRow>)[id];
+    if (!row) throw new Error(`monster ${id} is not in the monster sheet`);
+    return [Number(id), monsterFromSheet(Number(id), m, row)];
+  }),
 );
 export const MONSTER_IDS: number[] = Object.keys(MONSTERS).map(Number).sort((a, b) => a - b);
 
@@ -115,6 +252,11 @@ export const SPELLS: Record<number, SpellDef> = Object.fromEntries(
     return [Number(id), { ...s, id: Number(id), title: sheet?.name ?? textsRaw[s.name] ?? `Spell ${id}`, text: sheet?.description ?? textsRaw[s.description] ?? "", explanation: sheet?.explanation ?? "" } as SpellDef];
   }),
 );
+
+/** Whether a monster walks on dry ground: land monsters and the Dragon Worm (terrain `both`). */
+export function walksOnLand(m: Pick<MonsterDef, "terrain">): boolean {
+  return m.terrain !== "water";
+}
 
 /** The group a monster belongs to in the user's monster sheet ("undead", "beast", "humanoid", ...). */
 export function monsterGroup(id: number): string {

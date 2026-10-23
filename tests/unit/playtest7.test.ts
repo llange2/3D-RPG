@@ -79,11 +79,14 @@ describe("experience", () => {
     expect(party.characters.map((c) => c.xp)).toEqual([1200, 0, 0, 0]);
   });
 
-  it("monster XP and the level thresholds are the old game's", () => {
-    // spot checks against old_code/g.py MONSTER_DATA; the export itself is compared by `npm run data:export`
-    expect([MONSTERS[4]!.xp, MONSTERS[46]!.xp, MONSTERS[1]!.xp, MONSTERS[32]!.xp]).toEqual([250, 1200, 20000, 4000000]);
+  it("monster XP is the sheet's new XP (entity 23), the level thresholds are the old game's", () => {
+    // spot checks against docs/RPG_0.1.xlsx, sheet Monster, column "entity 23: XP_new"; the old column (entity 15) is not used any more
+    expect([MONSTERS[4]!.xp, MONSTERS[46]!.xp, MONSTERS[1]!.xp, MONSTERS[32]!.xp]).toEqual([152.5, 4288, 33750, 6230300]);
   });
 });
+
+/** The strongest monster of treasure level 1 in the sheet is the Giant Spider with 10178 xp. */
+const MAX_TIER1_XP = 10200;
 
 describe("monsters of a generated place", () => {
   it("never come from above the tier's treasure level while the theme has one in its band", () => {
@@ -103,10 +106,10 @@ describe("monsters of a generated place", () => {
     expect(above).toBe(0);
   });
 
-  it("keep tier 1 to the first maps' kind of reward (a few thousand XP at most) in the themes that have such monsters", () => {
+  it("keep tier 1 to the first maps' kind of reward (ten thousand XP at most: the Giant Spider) in the themes that have such monsters", () => {
     const rng = new Rng(seedFromString("xp"));
     for (const theme of ["undead", "beast", "humanoid"]) {
-      for (let i = 0; i < 80; i++) expect(pickMonster(rng, theme, 1, false).xp, theme).toBeLessThanOrEqual(3000);
+      for (let i = 0; i < 80; i++) expect(pickMonster(rng, theme, 1, false).xp, theme).toBeLessThanOrEqual(MAX_TIER1_XP);
     }
   });
 

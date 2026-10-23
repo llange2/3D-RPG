@@ -8,28 +8,14 @@ import type { Character, Condition, Party } from "./types";
 
 export type DamageType = "physical" | "fire" | "ice" | "acid" | "magic" | "poison";
 
-/** Monster condition names as written in `special_abilties` ("Causes Poisoned"). */
-const SPECIAL_CONDITIONS: Record<string, Condition> = {
-  Poisoned: "Poisoned",
-  Sleeping: "Sleeping",
-  Weak: "Weak",
-  Crazy: "Crazy",
-  Cursed: "Cursed",
-  Diseased: "Diseased",
-  Paralyzed: "Paralyzed",
-  Petrified: "Petrified",
-  Dead: "Dead",
-  Unconscious: "Unconscious",
-  Eradication: "Rotten",
-};
+/** The conditions a monster's hit can cause, from the sheet's status columns (a Medusa petrifies and kills). */
+export function specialConditions(monster: MonsterDef): Condition[] {
+  return monster.causes as Condition[];
+}
 
-/** The condition a monster's special attack inflicts, parsed like the old code: the word after "Causes". */
+/** The first condition its special attack inflicts, null when it has none. */
 export function specialCondition(monster: MonsterDef): Condition | null {
-  const text = monster.special_abilties ?? "";
-  const at = text.indexOf("Causes");
-  if (at < 0) return null;
-  const word = text.slice(at + "Causes".length).trim().split(/\s+/)[0]?.replace(/[,.;:]+$/g, "") ?? "";
-  return SPECIAL_CONDITIONS[word] ?? null;
+  return specialConditions(monster)[0] ?? null;
 }
 
 const STANCE = () => 1 - CONSTANTS.STANCE_MODIFIER;
@@ -131,6 +117,10 @@ export interface HitResult {
   conditions: Condition[];
   /** True when no character in the party can act any more. */
   defeated: boolean;
+  /** Spell points the hit took away (Mystic cloud, Vampire). */
+  drained?: number;
+  /** Years the hit added to the hero's magical age (Ghost, Phantom). */
+  aged?: number;
 }
 
 /**
@@ -152,14 +142,25 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
     removeCondition(c, "Sleeping");
   }
 
-  const special = monster ? specialCondition(monster) : null;
-  if (special) {
-    const luck = attr(c, "lck");
-    // being killed or rotted outright is half as likely as the other conditions
-    const chance = (special === "Dead" || special === "Rotten" ? 5 : 10) / (luck * luck * 0.05);
-    if ((damage > 0 && rng.float() < chance) || force) {
-      addCondition(c, special, party.minutes);
-      added.push(special);
+  let drained = 0;
+  let aged = 0;
+  if (monster) {
+    for (const special of specialConditions(monster)) {
+      const luck = attr(c, "lck");
+      // being killed or rotted outright is half as likely as the other conditions
+      const chance = (special === "Dead" || special === "Rotten" ? 5 : 10) / (luck * luck * 0.05);
+      if ((damage > 0 && rng.float() < chance) || force) {
+        addCondition(c, special, party.minutes);
+        added.push(special);
+      }
+    }
+    if (damage > 0 && monster.steal_mana > 0) {
+      drained = Math.min(c.sp, Math.ceil(c.mana * monster.steal_mana));
+      c.sp -= drained;
+    }
+    if (damage > 0 && monster.aging_years > 0) {
+      c.magicAge = (c.magicAge ?? 0) + monster.aging_years;
+      aged = monster.aging_years;
     }
   }
 
@@ -170,7 +171,7 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
     added.push(cond);
   }
 
-  return { damage, conditions: added, defeated: !anyoneLeft(party.characters) };
+  return { damage, conditions: added, defeated: !anyoneLeft(party.characters), ...(drained > 0 ? { drained } : {}), ...(aged > 0 ? { aged } : {}) };
 }
 
 export function monsterById(id: number): MonsterDef {

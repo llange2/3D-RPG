@@ -1,0 +1,181 @@
+import { LAYER, rngFor } from "../core/rng";
+import { MONSTER_IDS, MONSTERS } from "../data/tables";
+import { caravansOf } from "./caravans";
+import { levelAt } from "./difficulty";
+import { wrapDist2 } from "./islands";
+import { overworldMascotSpots } from "./mascots";
+import { DECO, GROUND, wrapDelta } from "./types";
+import type { World } from "./world";
+
+/** Map items of the old game: the Monster Hut and the one that replaces it once it is burnt down. */
+export const HUT_ITEM = 101;
+export const BURNT_HUT_ITEM = 102;
+/** The models of the two, for the preload. */
+export const HUT_MODELS: readonly string[] = [`ci_${HUT_ITEM}`, `ci_${BURNT_HUT_ITEM}`];
+
+/** Monsters of one hut, all within this many tiles of it, on the island it stands on. */
+export const HUT_MONSTERS = 10;
+export const HUT_RADIUS = 10;
+/** Huts keep this far from the start (the wild monsters keep `SAFE_RADIUS` = 12, the hut and its first ring of monsters lie behind that). */
+const HUT_START_CLEARANCE = 16;
+const MONSTER_START_CLEARANCE = 12;
+/**
+ * How a hut is placed, the strict way first: a hut needs room for `slots` of its monsters, keeps `apart` tiles from the huts of other monsters and
+ * `twin` from its twin. A small island cannot hold twenty-one huts that far apart, and every monster of the sheet has its hut, so the rules loosen
+ * pass by pass, for the hut that does not fit, until it does.
+ */
+const PASSES: readonly { slots: number; apart: number; twin: number }[] = [
+  { slots: 8, apart: 8, twin: 26 },
+  { slots: 5, apart: 5, twin: 18 },
+  { slots: 3, apart: 3, twin: 10 },
+  { slots: 1, apart: 1, twin: 3 },
+];
+/** Spots tried for each level, and how many steps up and down the ladder of levels the search for a free one goes. */
+const SAMPLES = 4000;
+const SEARCH_STEPS = 600;
+
+/** Where one monster of a hut stands. */
+export interface HutSlot {
+  x: number;
+  y: number;
+}
+
+/** A Monster Hut on the overworld: whose home it is, where it stands and where its monsters stand. */
+export interface HutSpot {
+  /** `<monster id>.<copy>`; the key of the saved state (`hut:<id>@burnt`) and of its monsters (`h:<id>:<slot>:<generation>`). */
+  id: string;
+  monster: number;
+  copy: number;
+  x: number;
+  y: number;
+  island: number;
+  slots: HutSlot[];
+}
+
+/** The state key of a slot. */
+export const slotKey = (hutId: string, slot: number): string => `${hutId}:${slot}`;
+
+/** How often every hut is there: once on small and default worlds, twice on large and huge ones. */
+export function hutCopies(world: World): number {
+  return world.size === "large" || world.size === "huge" ? 2 : 1;
+}
+
+const cache = new WeakMap<World, { huts: HutSpot[]; byId: Map<string, HutSpot> }>();
+
+function near(world: World, ax: number, ay: number, bx: number, by: number, within: number): boolean {
+  return wrapDist2(ax, ay, bx, by, world.width, world.height) < within * within;
+}
+
+/**
+ * The Monster Huts of the world, one for each monster of the sheet that has an outside XP in entity 9 (twice on large and huge worlds). A hut
+ * stands on an island of its monster's treasure level, and where on it depends on the monster: the monsters of a level are ranked by XP, and the
+ * hut of the weakest stands where the level is lowest (nearest the town the level begins at), the hut of the strongest where it is highest (nearest
+ * the town of the next level). The spots are ranked the same way, so that the huts spread evenly over the island. A pure function of the world seed.
+ */
+export function hutsOf(world: World): HutSpot[] {
+  return hutIndex(world).huts;
+}
+
+export function hutIndex(world: World): { huts: HutSpot[]; byId: Map<string, HutSpot> } {
+  const known = cache.get(world);
+  if (known) return known;
+  const huts = makeHuts(world);
+  const made = { huts, byId: new Map(huts.map((h) => [h.id, h])) };
+  cache.set(world, made);
+  return made;
+}
+
+function makeHuts(world: World): HutSpot[] {
+  const start = world.startPosition();
+  const copies = hutCopies(world);
+  // what already stands on open ground and must keep its ways: the mascots, the wagons of the talent traders
+  const blockers: { x: number; y: number }[] = [...overworldMascotSpots(world)];
+  for (const p of world.allPois()) if (p.kind === "town") blockers.push(...caravansOf(world, p));
+  const out: HutSpot[] = [];
+  for (let level = 1; level <= 5; level++) {
+    const spawners = MONSTER_IDS.filter((id) => MONSTERS[id]!.outside === "hut" && MONSTERS[id]!.treasure_level === level).sort((a, b) => MONSTERS[a]!.xp - MONSTERS[b]!.xp || a - b);
+    if (spawners.length === 0) continue;
+    const rng = rngFor(world.rootSeed, LAYER.SPAWN, "hutsites", level);
+    // spots on the islands of the level, ordered by how hard the level is there
+    const spots: { x: number; y: number; island: number; level: number }[] = [];
+    const seen = new Set<number>();
+    for (const isl of world.islands) {
+      if (!isl.tiers.includes(level)) continue;
+      for (let n = 0; n < SAMPLES; n++) {
+        const x = world.wrapX(isl.x + rng.range(isl.box.x0, isl.box.x1));
+        const y = world.wrapY(isl.y + rng.range(isl.box.y0, isl.box.y1));
+        const key = y * world.width + x;
+        if (seen.has(key) || world.islandAt(x, y) !== isl || world.tierAt(x, y) !== level) continue;
+        seen.add(key);
+        const t = world.tile(x, y);
+        if (t.ground !== GROUND.LAND || t.deco !== DECO.NONE || t.poiId !== null) continue;
+        if (near(world, x, y, start.x, start.y, HUT_START_CLEARANCE)) continue;
+        spots.push({ x, y, island: isl.index, level: levelAt(world, x, y) });
+      }
+    }
+    spots.sort((a, b) => a.level - b.level || a.y - b.y || a.x - b.x);
+    if (spots.length === 0) continue;
+    spawners.forEach((monster, rank) => {
+      const aim = Math.floor(((2 * rank + 1) * (spots.length - 1)) / (2 * spawners.length));
+      for (let copy = 0; copy < copies; copy++) {
+        const id = `${monster}.${copy}`;
+        search: for (const pass of PASSES) {
+          for (let step = 0; step < SEARCH_STEPS; step++) {
+            // alternately above and below the aimed rank, nearest first
+            const at = aim + (step % 2 === 0 ? step / 2 : -(step + 1) / 2);
+            const spot = spots[at];
+            if (!spot) continue;
+            const { x, y } = spot;
+            if (out.some((h) => near(world, x, y, h.x, h.y, h.monster === monster ? pass.twin : pass.apart))) continue;
+            if (blockers.some((b) => b.x === x && b.y === y)) continue;
+            if (world.poiAtEntrance(x, y) !== null || !world.leavesPassage(x, y) || !world.keepsRingOpen(x, y, [...blockers, ...out]) || !world.isOpenGround(x, y)) continue;
+            const slots = slotsAround(world, id, x, y, spot.island, start, out);
+            if (slots.length < pass.slots) continue;
+            out.push({ id, monster, copy, x, y, island: spot.island, slots });
+            break search;
+          }
+        }
+      }
+    });
+  }
+  return out;
+}
+
+/** The places of a hut's monsters: ground of the hut's island within `HUT_RADIUS` tiles of it, open to walk, at least two tiles from each other. */
+function slotsAround(world: World, id: string, hx: number, hy: number, island: number, start: { x: number; y: number }, others: readonly HutSpot[]): HutSlot[] {
+  const rng = rngFor(world.rootSeed, LAYER.SPAWN, "hutslots", id);
+  const cells: [number, number][] = [];
+  for (let oy = -HUT_RADIUS; oy <= HUT_RADIUS; oy++) for (let ox = -HUT_RADIUS; ox <= HUT_RADIUS; ox++) if (ox !== 0 || oy !== 0) cells.push([hx + ox, hy + oy]);
+  rng.shuffle(cells);
+  const out: HutSlot[] = [];
+  const taken = new Set<number>(others.flatMap((h) => h.slots.map((s) => world.wrapY(s.y) * world.width + world.wrapX(s.x))));
+  for (const [cx, cy] of cells) {
+    if (out.length >= HUT_MONSTERS) break;
+    const x = world.wrapX(cx);
+    const y = world.wrapY(cy);
+    if (taken.has(y * world.width + x)) continue;
+    // the hut's own ring: nothing stands right next to it
+    if (Math.max(Math.abs(cx - hx), Math.abs(cy - hy)) < 2) continue;
+    if (world.islandAt(x, y)?.index !== island) continue;
+    const t = world.tile(x, y);
+    if (t.ground !== GROUND.LAND || t.deco !== DECO.NONE || t.poiId !== null) continue;
+    if (near(world, x, y, start.x, start.y, MONSTER_START_CLEARANCE)) continue;
+    if (out.some((s) => Math.max(Math.abs(s.x - cx), Math.abs(s.y - cy)) < 2)) continue;
+    if (world.poiAtEntrance(x, y) !== null || !world.isOpenGround(x, y)) continue;
+    out.push({ x: cx, y: cy });
+  }
+  return out;
+}
+
+/** The distance in tiles (straight line, round the globe) from a spot to a hut slot, for "out of sight" tests. */
+export function slotDistance(world: World, x: number, y: number, slot: HutSlot): number {
+  return Math.max(Math.abs(wrapDelta(x, slot.x, world.width)), Math.abs(wrapDelta(y, slot.y, world.height)));
+}
+
+/** The gold of burning a hut down: 13 times the gold of its monster, rounded up to the next thousand. */
+export function hutGold(monster: number): number {
+  return Math.ceil((13 * MONSTERS[monster]!.gold) / 1000) * 1000;
+}
+
+/** Items in the pile of a burnt hut. */
+export const HUT_ITEMS = 7;

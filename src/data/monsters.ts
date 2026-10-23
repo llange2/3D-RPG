@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import monsterThemesRaw from "./monsterThemes.json";
-import { MONSTER_IDS, MONSTERS, type MonsterDef } from "./tables";
+import { MONSTER_IDS, MONSTERS, walksOnLand, type MonsterDef } from "./tables";
 
 const THEMES_BY_ID = monsterThemesRaw as Record<string, string[]>;
 
@@ -58,9 +58,9 @@ export function tierBand(tier: number): [number, number] {
  * appear in aquatic themes.
  */
 export function pickMonster(rng: Rng, theme: string, tier: number, allowWater = false): MonsterDef {
-  const pool = monstersOfTheme(theme).filter((m) => allowWater || m.terrain === "land");
+  const pool = monstersOfTheme(theme).filter((m) => allowWater || walksOnLand(m));
   // a theme without land monsters ("aquatic") never puts its water monsters on dry ground: piranhas stranded in a cave cannot move
-  const all = pool.length > 0 ? pool : allowWater ? monstersOfTheme(theme) : monstersOfTheme("beast").filter((m) => m.terrain === "land");
+  const all = pool.length > 0 ? pool : allowWater ? monstersOfTheme(theme) : monstersOfTheme("beast").filter(walksOnLand);
   const [lo, hi] = tierBand(tier);
   const mid = (lo + hi) / 2;
   const fromPool = (list: MonsterDef[]): MonsterDef | null => {
@@ -77,14 +77,14 @@ export function pickMonster(rng: Rng, theme: string, tier: number, allowWater = 
   if (own) return own;
   // nothing at or below the tier: water monsters have no land kin, the weakest of them it is; on land the beasts fill in
   if (all.some((m) => m.terrain === "water")) return [...all].sort((a, b) => a.treasure_level - b.treasure_level || threatPercentile(a.id) - threatPercentile(b.id) || a.id - b.id)[0]!;
-  const kin = fromPool(monstersOfTheme("beast").filter((m) => m.terrain === "land"));
+  const kin = fromPool(monstersOfTheme("beast").filter(walksOnLand));
   if (kin) return kin;
   return [...all].sort((a, b) => a.treasure_level - b.treasure_level || threatPercentile(a.id) - threatPercentile(b.id) || a.id - b.id)[0]!;
 }
 
 /** Whether the theme has a monster that lives on dry ground. */
 export function hasLandMonster(theme: string): boolean {
-  return monstersOfTheme(theme).some((m) => m.terrain === "land");
+  return monstersOfTheme(theme).some(walksOnLand);
 }
 
 /**
