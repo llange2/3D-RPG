@@ -196,6 +196,7 @@ export class UI {
       if (e.until <= party.minutes) continue;
       if (e.kind === "protection" && e.element) icons.set(protectionEffect(e.element), `Protection from ${e.element}`);
       else if (e.kind === "levitate") icons.set("gui_levitate", "Levitate");
+      else if (e.kind === "power_shield") icons.set("gui_power_shield", "Power Shield: a tenth less damage");
     }
     this.status.replaceChildren(...[...icons].map(([name, title]) => h("img", { src: assetPath(`ui/tex_${name}.webp`), title, alt: title })));
   }
@@ -207,7 +208,7 @@ export class UI {
       const down = !isAlive(c) || c.conditions.includes("Unconscious");
       const card = h(
         "div",
-        { class: `card${battle && attacker === i ? " active" : ""}${down ? " down" : ""}`, onclick: () => this.onCard(i), title: `${c.name} - ${c.raceType} ${c.classType}` },
+        { class: `card${battle && attacker === i ? " active" : ""}${down ? " down" : ""}${c.mods?.rift ? " rifted" : ""}`, onclick: () => this.onCard(i), title: `${c.name} - ${c.raceType} ${c.classType}` },
         h(
           "div",
           { class: "row" },

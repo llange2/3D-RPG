@@ -151,7 +151,7 @@ function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t
  * old game; without them the map is coloured squares. The world is a globe: the small map goes on round the seam, the big map (the one given a `view`) shows the world
  * once, tiles beyond its edge stay dark, and the party, places and monsters stand at their place in the world (the party's arrow jumps to the other side at the edge).
  */
-export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explored: Explored, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, revealAll = false, view?: MapView, icons?: MinimapIcons | null): void {
+export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explored: Explored, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, revealAll = false, view?: MapView, icons?: MinimapIcons | null, detect = false): void {
   const ctx = canvas.getContext("2d")!;
   const s = canvas.width / cells;
   const half = Math.floor(cells / 2);
@@ -209,7 +209,8 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
     const dy = myw - my;
     if (Math.abs(dx) > half || Math.abs(dy) > half) continue;
     // a monster on ground the party has not seen would show what lies behind a mountain or a wood
-    if (!revealAll && !explored.hasOverworld(m.x, m.y)) continue;
+    // Detect Monster shows them wherever they are; Wizard's Eye shows the ground, not who stands on it
+    if (!detect && !explored.hasOverworld(m.x, m.y)) continue;
     if (icons) icons.drawSymbol(ctx, "pos2", (dx + half) * s + s * 0.1, (dy + half) * s + s * 0.1, s * 0.8);
     else ctx.fillRect((dx + half) * s + s * 0.2, (dy + half) * s + s * 0.2, s * 0.6, s * 0.6);
   }
@@ -292,9 +293,9 @@ export function knownContent(content: MapContent, opened: ReadonlySet<string>, e
 
 /**
  * Draws an interior. `traps` (keys `x,y`) are the traps to mark: the map hides them unless the party has Wizard's Eye and the Crow
- * (see `Game.trapsShown`). `eye`: Wizard's Eye is on, the whole map and every monster show. `icons`: the symbols of the old game; without them the map is coloured squares.
+ * (see `Game.trapsShown`). `eye`: Wizard's Eye is on, the whole map shows (not the monsters: `detect`, Detect Monster, shows those wherever they are). `icons`: the symbols of the old game; without them the map is coloured squares.
  */
-export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, content: MapContent, explored: Explored, opened: Set<string>, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, traps: ReadonlySet<string> = new Set(), view?: MapView, icons?: MinimapIcons | null, eye = false): void {
+export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, content: MapContent, explored: Explored, opened: Set<string>, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, traps: ReadonlySet<string> = new Set(), view?: MapView, icons?: MinimapIcons | null, eye = false, detect = false): void {
   const ctx = canvas.getContext("2d")!;
   const s = canvas.width / cells;
   const half = Math.floor(cells / 2);
@@ -393,7 +394,7 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
     const dx = m.x - mx;
     const dy = m.y - my;
     if (Math.abs(dx) > half || Math.abs(dy) > half) continue;
-    if (!eye && !explored.has(key, m.y * map.width + m.x)) continue;
+    if (!detect && !explored.has(key, m.y * map.width + m.x)) continue;
     if (icons) icons.drawSymbol(ctx, "pos2", (dx + half) * s + s * 0.08, (dy + half) * s + s * 0.08, s * 0.84);
     else ctx.fillRect((dx + half) * s + s * 0.15, (dy + half) * s + s * 0.15, s * 0.7, s * 0.7);
   }

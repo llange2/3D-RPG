@@ -22,8 +22,8 @@ describe("options (fourteenth playtest, points 1, 2 and 6)", () => {
   });
 
   it("keeps what is stored and ignores values it does not know", () => {
-    const s = parseSettings(JSON.stringify({ floorModel: false, viewDistance: "close", resolution: "low", showFps: true, music: false, sfx: false, junk: 1 }));
-    expect(s).toEqual({ floorModel: false, viewDistance: "close", resolution: "low", showFps: true, music: false, sfx: false });
+    const s = parseSettings(JSON.stringify({ floorModel: false, viewDistance: "close", resolution: "low", showFps: true, music: false, sfx: false, animatedTown: true, junk: 1 }));
+    expect(s).toEqual({ floorModel: false, viewDistance: "close", resolution: "low", showFps: true, music: false, sfx: false, animatedTown: true });
     expect(parseSettings(JSON.stringify({ viewDistance: "sideways", resolution: "huge", showFps: "yes" }))).toEqual(DEFAULT_SETTINGS);
   });
 

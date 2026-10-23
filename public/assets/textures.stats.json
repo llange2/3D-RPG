@@ -4,27 +4,23 @@
   "bytes": 900384
  },
  "terrain flat": {
-  "files": 403,
-  "bytes": 11268084
+  "files": 583,
+  "bytes": 16039194
  },
- "icons items": {
-  "files": 308,
-  "bytes": 1026596
+ "ui": {
+  "files": 39,
+  "bytes": 1471337
  },
  "icons portraits": {
   "files": 229,
   "bytes": 1297078
  },
- "icons skills+spells": {
-  "files": 158,
-  "bytes": 1026494
- },
- "ui": {
-  "files": 37,
-  "bytes": 766626
+ "icons skills": {
+  "files": 80,
+  "bytes": 614592
  },
  "screens": {
-  "files": 18,
-  "bytes": 2693154
+  "files": 25,
+  "bytes": 5038548
  }
 }

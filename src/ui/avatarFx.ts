@@ -22,6 +22,7 @@ export type AvatarEffect =
   | "magic_hit"
   | "physical_hit"
   | "gui_levitate"
+  | "gui_power_shield"
   | "gui_protect_acid"
   | "gui_protect_fire"
   | "gui_protect_ice"

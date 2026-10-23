@@ -690,7 +690,6 @@ describe("spells", () => {
     const c = party.characters[3]!;
     expect(castSpell(party, 3, 99, r)).toMatchObject({ kind: "fizzle", reason: "unknown" });
     expect(castSpell(party, 3, 8, r)).toMatchObject({ kind: "fizzle", reason: "not_known" });
-    expect(castSpell(party, 3, 2, r)).toMatchObject({ kind: "fizzle", reason: "not_implemented" });
     expect(c.sp).toBe(100);
     c.sp = 0;
     expect(castSpell(party, 3, 3, r)).toMatchObject({ kind: "fizzle", reason: "mana" });
@@ -706,7 +705,8 @@ describe("spells", () => {
     expect(["acid", "ice", "fire"]).toContain((result as { type: string }).type);
     expect(party.characters[3]!.sp).toBe(100 - 2);
     expect(castSpell(party, 3, 19, r)).toMatchObject({ kind: "attack", undead: true, type: "fire", penetrate: true });
-    expect(castSpell(party, 3, 12, r)).toMatchObject({ kind: "attack", undead: false, type: "physical" });
+    // Pain hits the living and the dead alike since the spell sheet dropped "Doesn't affect undead"
+    expect(castSpell(party, 3, 12, r)).toMatchObject({ kind: "attack", undead: null, type: "physical" });
   });
 
   it("heals up to maximum health and revives the knocked out", () => {
@@ -738,15 +738,16 @@ describe("spells", () => {
     expect(protectionLevel(party, "acid")).toBe(1);
     castSpell(party, 3, 34, r);
     expect(hasEffect(party, "walk_on_water")).toBe(true);
+    // spell 20 is Stone Skin now (the old Blessed spell was replaced by the spell sheet): armor for speed, twelve hours
     castSpell(party, 3, 20, r, { target: 0 });
-    expect(party.characters[0]!.conditions).toContain("Blessed");
-    advanceTime(party, 4 * 60 + 1);
-    expect(party.characters[0]!.conditions).not.toContain("Blessed");
+    expect(party.characters[0]!.mods?.stoneSkin).toBe(1);
+    advanceTime(party, 12 * 60 + 1);
+    expect(party.characters[0]!.mods?.stoneSkin).toBeUndefined();
   });
 
-  it("marks exactly the spells the old game implemented", () => {
-    for (const id of [3, 4, 6, 7, 12, 17, 19, 21, 34]) expect(isSpellImplemented(id)).toBe(true);
-    for (const id of [2, 13, 22, 43, 66, 77 + 1]) expect(isSpellImplemented(id)).toBe(false);
+  it("implements every spell of the spell sheet", () => {
+    for (let id = 1; id <= 78; id++) expect(isSpellImplemented(id), `spell ${id}`).toBe(true);
+    expect(isSpellImplemented(79)).toBe(false);
   });
 
   describe("learning (guild and scrolls: the old handle_right_click)", () => {

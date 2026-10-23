@@ -61,6 +61,8 @@ into the backpack when they are put on (one free place more is needed when weapo
 | `npm run check:render` | In Chrome: all 91 monsters keep their textures after others of their type were removed, a town opened after a dungeon wears its own textures, nothing of a campaign map stays in a generated world (needs `npm run dev`) |
 | `npm run check:models -- <outDir>` | In Chrome: the menu's model switch (low poly, reload into the same game with originals only, back, fallback when the originals are not built, campaign) with screenshots (needs `npm run dev` and `npm run assets:originals`) |
 | `npm run check:effects -- <outDir>` | In Chrome: own mouse pointer, a projectile for ranged attacks and attack spells, the healing picture over a portrait, screenshots (needs `npm run dev`) |
+| `npm run check:spells -- <outDir>` | In Chrome: the spell window (all 36 plates of the biggest school, pictures, costs), casting from it, travelling and item spells, screenshots (needs `npm run dev`) |
+| `npm run data:spells` | Spell names and descriptions from the user's workbook, undead from the monster sheet (`src/data/spell-sheet.json`, `monster-groups.json`) |
 | `npm run sheet:projectiles -- <outDir>` | Side view of the six projectiles in flight, to check by eye which way they point (needs `npm run dev`) |
 | `npm run sheet:monsters -- <outDir>` | Contact sheets of all 91 monsters seen from the front, to check by eye which way they face (needs `npm run dev`) |
 | `npm run bench -- overworld\|interior\|campaign` | Frame times, draw calls and triangles over a fixed camera path in Chrome (needs `npm run dev`) |

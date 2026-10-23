@@ -4,12 +4,15 @@
  */
 import { execFile } from "node:child_process";
 import { statSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
 import { buildFlatTerrain } from "./build-flat-terrain";
 import { buildMinimap } from "./build-minimap";
+import { buildPlaceholderIcons } from "./build-placeholder-icons";
+import { buildItemIcons } from "./build-item-icons";
+import { buildSpellIcons } from "./build-spell-icons";
 import { OLD, OUT, ensureDir, mb, pool, upToDate } from "./lib";
 
 const TEX = join(OLD, "textures");
@@ -60,14 +63,18 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   stats["terrain flat"] = { files: flat.files, bytes: flat.bytes };
   if (flat.missing.length) console.warn(`flat terrain: ${flat.missing.length} transitions missing (${flat.missing.join(", ")})`);
 
-  const icons = await listFiles(TEX, (n) => n.startsWith("item_") && /\.(png|jpg)$/.test(n));
-  await pool(icons, 8, async (n) => add("icons items", await toWebp(join(TEX, n), join(OUT, "icons", "items", `${basename(n, ".png").replace(/\.jpg$/, "")}.webp`), 96, 85)));
+  // the item pictures become one sheet with a register (see build-item-icons.ts)
+  add("ui", (await buildItemIcons()).bytes);
 
   const portraits = await listFiles(TEX, (n) => /^character\d+.*\.(png|jpg)$/.test(n));
   await pool(portraits, 8, async (n) => add("icons portraits", await toWebp(join(TEX, n), join(OUT, "icons", "portraits", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 192, 85)));
 
-  const skills = await listFiles(TEX, (n) => /^mm3_(icon|spell)_.*\.(png|jpg)$/.test(n));
-  await pool(skills, 8, async (n) => add("icons skills+spells", await toWebp(join(TEX, n), join(OUT, "icons", "skills", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 160, 85)));
+  const skills = await listFiles(TEX, (n) => /^mm3_icon_.*\.(png|jpg)$/.test(n));
+  await pool(skills, 8, async (n) => add("icons skills", await toWebp(join(TEX, n), join(OUT, "icons", "skills", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 160, 85)));
+
+  // the 78 spell pictures become one sheet with a register (see build-spell-icons.ts)
+  add("ui", (await buildSpellIcons()).bytes);
+  await buildPlaceholderIcons();
 
   // the 38 symbols of the map become one sheet (`ui/minimap.webp`), see build-minimap.ts
   add("ui", (await buildMinimap()).bytes);
@@ -113,6 +120,18 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
     await promisify(execFile)(ffmpegPath!, ["-y", "-loglevel", "error", "-i", crow, "-an", "-vf", "scale=192:192", "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "38", "-deadline", "good", "-cpu-used", "4", crowOut]);
   }
   add("ui", statSync(crowOut).size);
+
+  // the animated pictures of the town services (the optional "Animated town scenes"): the old 1764 x 1176 H.264 clips of 10 s (3 to 16 MB each)
+  // as 640 px VP9 loops without sound, a few hundred KB each. The window shows them at 530 px at most.
+  for (const name of ["bank", "guild", "inn", "smith", "tavern", "temple", "training_grounds"]) {
+    const src = join(TEX, `town_${name}.mp4`);
+    const out = join(OUT, "ui", "town", `town_${name}.webm`);
+    if (!upToDate(out, src)) {
+      ensureDir(out);
+      await promisify(execFile)(ffmpegPath!, ["-y", "-loglevel", "error", "-i", src, "-an", "-vf", "scale=640:-2", "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "36", "-deadline", "good", "-cpu-used", "4", "-row-mt", "1", out]);
+    }
+    add("screens", statSync(out).size);
+  }
 
   writeFileSync(join(OUT, "textures.stats.json"), JSON.stringify(stats, null, 1));
   return stats;

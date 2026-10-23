@@ -20,10 +20,12 @@ export interface Settings {
   music: boolean;
   /** Sound effects and the background sounds of the surroundings. */
   sfx: boolean;
+  /** The service windows of the towns show the old game's moving pictures (`ui/townScenes.ts`) instead of stills. */
+  animatedTown: boolean;
 }
 
 const KEY = "mm3-seed-rpg:settings:v1";
-export const DEFAULT_SETTINGS: Settings = { floorModel: true, viewDistance: "medium", resolution: "normal", showFps: false, music: true, sfx: true };
+export const DEFAULT_SETTINGS: Settings = { floorModel: true, viewDistance: "medium", resolution: "normal", showFps: false, music: true, sfx: true, animatedTown: false };
 
 /** The chunk radius of the old quality setting (`low` 2, `med` 3, `high` and `ultra` 4) is what the view distance is now. */
 const OLD_QUALITY_VIEW: Record<string, ViewDistance> = { low: "close", med: "medium", high: "far", ultra: "far" };
@@ -58,6 +60,7 @@ export function parseSettings(raw: string | null): Settings {
   if (typeof stored.showFps === "boolean") out.showFps = stored.showFps;
   if (typeof stored.music === "boolean") out.music = stored.music;
   if (typeof stored.sfx === "boolean") out.sfx = stored.sfx;
+  if (typeof stored.animatedTown === "boolean") out.animatedTown = stored.animatedTown;
   return out;
 }
 

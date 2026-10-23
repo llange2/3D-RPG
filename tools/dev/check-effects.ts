@@ -68,14 +68,23 @@ try {
   // an attack spell: Ralvar (the archer) casts his third spell at the next monster
   const clickOption = (index: number) =>
     page.evaluate(`(() => { const o = document.querySelectorAll(".modal-back .opt"); if (!o[${index}]) return false; o[${index}].click(); return true; })()`) as Promise<boolean>;
+  // the spell window shows the spells as plates, not as list entries
+  const clickSlot = (index: number) =>
+    page.evaluate(`(() => { const o = document.querySelectorAll(".modal-back .spell-slot"); if (!o[${index}]) return false; o[${index}].click(); return true; })()`) as Promise<boolean>;
   if (await page.evaluate(`__game.gotoMonster(4)`)) {
     await sleep(1000);
     const count = () => page.evaluate(`__game.game.internals.props.instanceCount()`) as Promise<number>;
     const before = await count();
+    // the monsters of the arrow volley may have knocked a hero out: the casters must be whole for the menus below
+    await page.evaluate(`(() => { for (const c of __game.state.party.characters) { c.hp = c.health; c.conditions = ["Healthy"]; } })()`);
     await page.keyboard.press("f");
     await sleep(300);
-    const picked = (await clickOption(0)) && (await sleep(300), await clickOption(2));
-    if (!picked) problems.push("could not pick the attack spell in the menus");
+    const picked = (await clickOption(0)) && (await sleep(300), await clickSlot(2));
+    if (!picked) {
+      problems.push("could not pick the attack spell in the menus");
+      console.log("modal:", JSON.stringify(await page.evaluate(`(document.querySelector(".modal-back") || {}).innerText`)));
+      await page.screenshot({ path: join(outDir, "spell-menu-failed.png" ) });
+    }
     let peak = 0;
     for (let i = 0; i < 12; i++) {
       peak = Math.max(peak, (await count()) - before);
@@ -91,7 +100,7 @@ try {
   await page.evaluate(`(() => { const p = __game.state.party; p.characters[0].hp = 2; __game.game.ui.updateHud(p, { place: "", sub: "", facing: "N", x: 0, y: 0, battle: false, attacker: null }); })()`);
   await page.keyboard.press("f");
   await sleep(300);
-  const healed = (await clickOption(1)) && (await sleep(300), await clickOption(3)) && (await sleep(300), await clickOption(0));
+  const healed = (await clickOption(1)) && (await sleep(300), await clickSlot(3)) && (await sleep(300), await clickOption(0));
   if (!healed) problems.push("could not pick the healing spell in the menus");
   await sleep(500);
   const fx = (await page.evaluate(`[...document.querySelectorAll(".fx")].map((e) => e.getAttribute("src"))`)) as string[];

@@ -94,12 +94,40 @@ export interface Character {
   defensiveStance: boolean;
   spells: number[];
   inventory: Inventory;
+  /** Game minute of the birth. Absent: the hero was 18 at the start of the game (`ageOf`). */
+  born?: number;
+  /** Years that magic added (Resurrect, Divine Intervention, aging monsters); the old `magic_additional_age`. */
+  magicAge?: number;
+  /** Spell effects that live on the hero alone (`CharacterMods`). */
+  mods?: CharacterMods;
+  /** Lloyd's Beacon: the fire this hero lit, and the only one the hero can go back to. */
+  beacon?: Place;
+}
+
+/** Where a party can stand: the same two shapes as `Location` of the game state, kept here so that `sim` does not depend on it. */
+export type Place =
+  | { mode: "overworld"; x: number; y: number; facing: "N" | "E" | "S" | "W" }
+  | { mode: "interior"; poiId: string; x: number; y: number; facing: "N" | "E" | "S" | "W"; ret: { x: number; y: number; facing: "N" | "E" | "S" | "W" } };
+
+/**
+ * Spells that change one hero. Stone Skin and Rage run for 12 hours (their `TimedEffect` takes them off again), Dimensional Rift
+ * counts monster turns and ends when the party moves.
+ */
+export interface CharacterMods {
+  /** Stone Skin: armor added, and the hero's speed is halved. */
+  stoneSkin?: number;
+  /** Rage: damage added to every blow and shot, and the hero's armor is halved. */
+  rage?: number;
+  /** Dimensional Rift: monster turns left. The hero cannot act and nothing can hit them. */
+  rift?: number;
 }
 
 export interface TimedEffect {
-  kind: "light" | "levitate" | "walk_on_water" | "protection" | "blessed" | "wizard_eye";
+  kind: "light" | "levitate" | "walk_on_water" | "protection" | "blessed" | "wizard_eye" | "stone_skin" | "rage" | "power_shield" | "detect_monster";
   /** Game minute at which the effect ends. */
   until: number;
+  /** Walk on Water ran out while the party was in deep water: it holds until the party leaves it (`advanceTime`). */
+  held?: boolean;
   character?: number;
   element?: "acid" | "fire" | "ice" | "magic";
   amount?: number;

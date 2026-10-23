@@ -1590,6 +1590,1806 @@
    "shape": "inner",
    "at": "tr"
   },
+  "mix_cobblestone_cobblestone_desert_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "desert",
+    "water"
+   ]
+  },
+  "mix_cobblestone_cobblestone_dirt_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "dirt",
+    "water"
+   ]
+  },
+  "mix_cobblestone_cobblestone_grass_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "grass",
+    "water"
+   ]
+  },
+  "mix_cobblestone_cobblestone_snow_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "snow",
+    "water"
+   ]
+  },
+  "mix_cobblestone_cobblestone_swamp_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "swamp",
+    "water"
+   ]
+  },
+  "mix_cobblestone_cobblestone_water_desert": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "water",
+    "desert"
+   ]
+  },
+  "mix_cobblestone_cobblestone_water_dirt": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "water",
+    "dirt"
+   ]
+  },
+  "mix_cobblestone_cobblestone_water_grass": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "water",
+    "grass"
+   ]
+  },
+  "mix_cobblestone_cobblestone_water_snow": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "water",
+    "snow"
+   ]
+  },
+  "mix_cobblestone_cobblestone_water_swamp": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "cobblestone",
+    "water",
+    "swamp"
+   ]
+  },
+  "mix_cobblestone_desert_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "desert",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_cobblestone_desert_desert_water": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "desert",
+    "desert",
+    "water"
+   ]
+  },
+  "mix_cobblestone_desert_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "desert",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_desert_water_desert": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "desert",
+    "water",
+    "desert"
+   ]
+  },
+  "mix_cobblestone_desert_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "desert",
+    "water",
+    "water"
+   ]
+  },
+  "mix_cobblestone_dirt_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "dirt",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_cobblestone_dirt_dirt_water": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "dirt",
+    "dirt",
+    "water"
+   ]
+  },
+  "mix_cobblestone_dirt_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "dirt",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_dirt_water_dirt": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "dirt",
+    "water",
+    "dirt"
+   ]
+  },
+  "mix_cobblestone_dirt_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "dirt",
+    "water",
+    "water"
+   ]
+  },
+  "mix_cobblestone_grass_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "grass",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_cobblestone_grass_grass_water": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "grass",
+    "grass",
+    "water"
+   ]
+  },
+  "mix_cobblestone_grass_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "grass",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_grass_water_grass": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "grass",
+    "water",
+    "grass"
+   ]
+  },
+  "mix_cobblestone_grass_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "grass",
+    "water",
+    "water"
+   ]
+  },
+  "mix_cobblestone_snow_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "snow",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_cobblestone_snow_snow_water": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "snow",
+    "snow",
+    "water"
+   ]
+  },
+  "mix_cobblestone_snow_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "snow",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_snow_water_snow": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "snow",
+    "water",
+    "snow"
+   ]
+  },
+  "mix_cobblestone_snow_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "snow",
+    "water",
+    "water"
+   ]
+  },
+  "mix_cobblestone_swamp_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "swamp",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_cobblestone_swamp_swamp_water": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "swamp",
+    "swamp",
+    "water"
+   ]
+  },
+  "mix_cobblestone_swamp_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "swamp",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_swamp_water_swamp": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "swamp",
+    "water",
+    "swamp"
+   ]
+  },
+  "mix_cobblestone_swamp_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "swamp",
+    "water",
+    "water"
+   ]
+  },
+  "mix_cobblestone_water_cobblestone_desert": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "cobblestone",
+    "desert"
+   ]
+  },
+  "mix_cobblestone_water_cobblestone_dirt": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "cobblestone",
+    "dirt"
+   ]
+  },
+  "mix_cobblestone_water_cobblestone_grass": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "cobblestone",
+    "grass"
+   ]
+  },
+  "mix_cobblestone_water_cobblestone_snow": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "cobblestone",
+    "snow"
+   ]
+  },
+  "mix_cobblestone_water_cobblestone_swamp": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "cobblestone",
+    "swamp"
+   ]
+  },
+  "mix_cobblestone_water_desert_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "desert",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_water_desert_desert": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "desert",
+    "desert"
+   ]
+  },
+  "mix_cobblestone_water_desert_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "desert",
+    "water"
+   ]
+  },
+  "mix_cobblestone_water_dirt_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "dirt",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_water_dirt_dirt": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "dirt",
+    "dirt"
+   ]
+  },
+  "mix_cobblestone_water_dirt_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "dirt",
+    "water"
+   ]
+  },
+  "mix_cobblestone_water_grass_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "grass",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_water_grass_grass": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "grass",
+    "grass"
+   ]
+  },
+  "mix_cobblestone_water_grass_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "grass",
+    "water"
+   ]
+  },
+  "mix_cobblestone_water_snow_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "snow",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_water_snow_snow": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "snow",
+    "snow"
+   ]
+  },
+  "mix_cobblestone_water_snow_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "snow",
+    "water"
+   ]
+  },
+  "mix_cobblestone_water_swamp_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "swamp",
+    "cobblestone"
+   ]
+  },
+  "mix_cobblestone_water_swamp_swamp": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "swamp",
+    "swamp"
+   ]
+  },
+  "mix_cobblestone_water_swamp_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "swamp",
+    "water"
+   ]
+  },
+  "mix_cobblestone_water_water_desert": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "water",
+    "desert"
+   ]
+  },
+  "mix_cobblestone_water_water_dirt": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "water",
+    "dirt"
+   ]
+  },
+  "mix_cobblestone_water_water_grass": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "water",
+    "grass"
+   ]
+  },
+  "mix_cobblestone_water_water_snow": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "water",
+    "snow"
+   ]
+  },
+  "mix_cobblestone_water_water_swamp": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "cobblestone",
+    "water",
+    "water",
+    "swamp"
+   ]
+  },
+  "mix_desert_cobblestone_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "cobblestone",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_desert_cobblestone_desert_water": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "cobblestone",
+    "desert",
+    "water"
+   ]
+  },
+  "mix_desert_cobblestone_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "cobblestone",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_desert_cobblestone_water_desert": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "cobblestone",
+    "water",
+    "desert"
+   ]
+  },
+  "mix_desert_cobblestone_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "cobblestone",
+    "water",
+    "water"
+   ]
+  },
+  "mix_desert_desert_cobblestone_water": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "desert",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_desert_desert_water_cobblestone": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "desert",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_desert_water_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "water",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_desert_water_cobblestone_desert": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "water",
+    "cobblestone",
+    "desert"
+   ]
+  },
+  "mix_desert_water_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "water",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_desert_water_desert_cobblestone": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "water",
+    "desert",
+    "cobblestone"
+   ]
+  },
+  "mix_desert_water_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "desert",
+    "water",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_dirt_cobblestone_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "cobblestone",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_dirt_cobblestone_dirt_water": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "cobblestone",
+    "dirt",
+    "water"
+   ]
+  },
+  "mix_dirt_cobblestone_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "cobblestone",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_dirt_cobblestone_water_dirt": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "cobblestone",
+    "water",
+    "dirt"
+   ]
+  },
+  "mix_dirt_cobblestone_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "cobblestone",
+    "water",
+    "water"
+   ]
+  },
+  "mix_dirt_dirt_cobblestone_water": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "dirt",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_dirt_dirt_water_cobblestone": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "dirt",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_dirt_water_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "water",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_dirt_water_cobblestone_dirt": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "water",
+    "cobblestone",
+    "dirt"
+   ]
+  },
+  "mix_dirt_water_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "water",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_dirt_water_dirt_cobblestone": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "water",
+    "dirt",
+    "cobblestone"
+   ]
+  },
+  "mix_dirt_water_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "dirt",
+    "water",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_grass_cobblestone_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "cobblestone",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_grass_cobblestone_grass_water": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "cobblestone",
+    "grass",
+    "water"
+   ]
+  },
+  "mix_grass_cobblestone_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "cobblestone",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_grass_cobblestone_water_grass": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "cobblestone",
+    "water",
+    "grass"
+   ]
+  },
+  "mix_grass_cobblestone_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "cobblestone",
+    "water",
+    "water"
+   ]
+  },
+  "mix_grass_grass_cobblestone_water": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "grass",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_grass_grass_water_cobblestone": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "grass",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_grass_water_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "water",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_grass_water_cobblestone_grass": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "water",
+    "cobblestone",
+    "grass"
+   ]
+  },
+  "mix_grass_water_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "water",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_grass_water_grass_cobblestone": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "water",
+    "grass",
+    "cobblestone"
+   ]
+  },
+  "mix_grass_water_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "grass",
+    "water",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_snow_cobblestone_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "cobblestone",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_snow_cobblestone_snow_water": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "cobblestone",
+    "snow",
+    "water"
+   ]
+  },
+  "mix_snow_cobblestone_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "cobblestone",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_snow_cobblestone_water_snow": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "cobblestone",
+    "water",
+    "snow"
+   ]
+  },
+  "mix_snow_cobblestone_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "cobblestone",
+    "water",
+    "water"
+   ]
+  },
+  "mix_snow_snow_cobblestone_water": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "snow",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_snow_snow_water_cobblestone": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "snow",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_snow_water_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "water",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_snow_water_cobblestone_snow": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "water",
+    "cobblestone",
+    "snow"
+   ]
+  },
+  "mix_snow_water_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "water",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_snow_water_snow_cobblestone": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "water",
+    "snow",
+    "cobblestone"
+   ]
+  },
+  "mix_snow_water_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "snow",
+    "water",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_swamp_cobblestone_cobblestone_water": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "cobblestone",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_swamp_cobblestone_swamp_water": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "cobblestone",
+    "swamp",
+    "water"
+   ]
+  },
+  "mix_swamp_cobblestone_water_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "cobblestone",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_swamp_cobblestone_water_swamp": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "cobblestone",
+    "water",
+    "swamp"
+   ]
+  },
+  "mix_swamp_cobblestone_water_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "cobblestone",
+    "water",
+    "water"
+   ]
+  },
+  "mix_swamp_swamp_cobblestone_water": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "swamp",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_swamp_swamp_water_cobblestone": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "swamp",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_swamp_water_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "water",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_swamp_water_cobblestone_swamp": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "water",
+    "cobblestone",
+    "swamp"
+   ]
+  },
+  "mix_swamp_water_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "water",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_swamp_water_swamp_cobblestone": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "water",
+    "swamp",
+    "cobblestone"
+   ]
+  },
+  "mix_swamp_water_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "swamp",
+    "water",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_water_cobblestone_cobblestone_desert": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "cobblestone",
+    "desert"
+   ]
+  },
+  "mix_water_cobblestone_cobblestone_dirt": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "cobblestone",
+    "dirt"
+   ]
+  },
+  "mix_water_cobblestone_cobblestone_grass": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "cobblestone",
+    "grass"
+   ]
+  },
+  "mix_water_cobblestone_cobblestone_snow": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "cobblestone",
+    "snow"
+   ]
+  },
+  "mix_water_cobblestone_cobblestone_swamp": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "cobblestone",
+    "swamp"
+   ]
+  },
+  "mix_water_cobblestone_desert_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "desert",
+    "cobblestone"
+   ]
+  },
+  "mix_water_cobblestone_desert_desert": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "desert",
+    "desert"
+   ]
+  },
+  "mix_water_cobblestone_desert_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "desert",
+    "water"
+   ]
+  },
+  "mix_water_cobblestone_dirt_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "dirt",
+    "cobblestone"
+   ]
+  },
+  "mix_water_cobblestone_dirt_dirt": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "dirt",
+    "dirt"
+   ]
+  },
+  "mix_water_cobblestone_dirt_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "dirt",
+    "water"
+   ]
+  },
+  "mix_water_cobblestone_grass_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "grass",
+    "cobblestone"
+   ]
+  },
+  "mix_water_cobblestone_grass_grass": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "grass",
+    "grass"
+   ]
+  },
+  "mix_water_cobblestone_grass_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "grass",
+    "water"
+   ]
+  },
+  "mix_water_cobblestone_snow_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "snow",
+    "cobblestone"
+   ]
+  },
+  "mix_water_cobblestone_snow_snow": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "snow",
+    "snow"
+   ]
+  },
+  "mix_water_cobblestone_snow_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "snow",
+    "water"
+   ]
+  },
+  "mix_water_cobblestone_swamp_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "swamp",
+    "cobblestone"
+   ]
+  },
+  "mix_water_cobblestone_swamp_swamp": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "swamp",
+    "swamp"
+   ]
+  },
+  "mix_water_cobblestone_swamp_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "swamp",
+    "water"
+   ]
+  },
+  "mix_water_cobblestone_water_desert": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "water",
+    "desert"
+   ]
+  },
+  "mix_water_cobblestone_water_dirt": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "water",
+    "dirt"
+   ]
+  },
+  "mix_water_cobblestone_water_grass": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "water",
+    "grass"
+   ]
+  },
+  "mix_water_cobblestone_water_snow": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "water",
+    "snow"
+   ]
+  },
+  "mix_water_cobblestone_water_swamp": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "cobblestone",
+    "water",
+    "swamp"
+   ]
+  },
+  "mix_water_desert_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "desert",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_water_desert_cobblestone_desert": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "desert",
+    "cobblestone",
+    "desert"
+   ]
+  },
+  "mix_water_desert_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "desert",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_water_desert_desert_cobblestone": {
+   "terrain": "desert",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "desert",
+    "desert",
+    "cobblestone"
+   ]
+  },
+  "mix_water_desert_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "desert",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_water_dirt_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "dirt",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_water_dirt_cobblestone_dirt": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "dirt",
+    "cobblestone",
+    "dirt"
+   ]
+  },
+  "mix_water_dirt_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "dirt",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_water_dirt_dirt_cobblestone": {
+   "terrain": "dirt",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "dirt",
+    "dirt",
+    "cobblestone"
+   ]
+  },
+  "mix_water_dirt_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "dirt",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_water_grass_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "grass",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_water_grass_cobblestone_grass": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "grass",
+    "cobblestone",
+    "grass"
+   ]
+  },
+  "mix_water_grass_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "grass",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_water_grass_grass_cobblestone": {
+   "terrain": "grass",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "grass",
+    "grass",
+    "cobblestone"
+   ]
+  },
+  "mix_water_grass_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "grass",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_water_snow_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "snow",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_water_snow_cobblestone_snow": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "snow",
+    "cobblestone",
+    "snow"
+   ]
+  },
+  "mix_water_snow_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "snow",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_water_snow_snow_cobblestone": {
+   "terrain": "snow",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "snow",
+    "snow",
+    "cobblestone"
+   ]
+  },
+  "mix_water_snow_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "snow",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_water_swamp_cobblestone_cobblestone": {
+   "terrain": "cobblestone",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "swamp",
+    "cobblestone",
+    "cobblestone"
+   ]
+  },
+  "mix_water_swamp_cobblestone_swamp": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "swamp",
+    "cobblestone",
+    "swamp"
+   ]
+  },
+  "mix_water_swamp_cobblestone_water": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "swamp",
+    "cobblestone",
+    "water"
+   ]
+  },
+  "mix_water_swamp_swamp_cobblestone": {
+   "terrain": "swamp",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "swamp",
+    "swamp",
+    "cobblestone"
+   ]
+  },
+  "mix_water_swamp_water_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "swamp",
+    "water",
+    "cobblestone"
+   ]
+  },
+  "mix_water_water_cobblestone_desert": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "cobblestone",
+    "desert"
+   ]
+  },
+  "mix_water_water_cobblestone_dirt": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "cobblestone",
+    "dirt"
+   ]
+  },
+  "mix_water_water_cobblestone_grass": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "cobblestone",
+    "grass"
+   ]
+  },
+  "mix_water_water_cobblestone_snow": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "cobblestone",
+    "snow"
+   ]
+  },
+  "mix_water_water_cobblestone_swamp": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "cobblestone",
+    "swamp"
+   ]
+  },
+  "mix_water_water_desert_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "desert",
+    "cobblestone"
+   ]
+  },
+  "mix_water_water_dirt_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "dirt",
+    "cobblestone"
+   ]
+  },
+  "mix_water_water_grass_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "grass",
+    "cobblestone"
+   ]
+  },
+  "mix_water_water_snow_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "snow",
+    "cobblestone"
+   ]
+  },
+  "mix_water_water_swamp_cobblestone": {
+   "terrain": "water",
+   "shape": "mix",
+   "quarters": [
+    "water",
+    "water",
+    "swamp",
+    "cobblestone"
+   ]
+  },
   "snow_cobblestone_corner-bl": {
    "terrain": "snow",
    "other": "cobblestone",

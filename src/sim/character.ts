@@ -149,11 +149,46 @@ export function conditionAdjusted(c: Character): Record<Attribute, number> & { b
 /** Attribute including equipment. `base = true` uses the unmodified value, false the condition-adjusted one. */
 export function attr(c: Character, a: Attribute, base = true): number {
   const value = base ? c[a] : conditionAdjusted(c)[a];
-  return value + itemBonus(c, ATTR_BONUS_KEY[a]);
+  const total = value + itemBonus(c, ATTR_BONUS_KEY[a]);
+  // Stone Skin halves the speed (see `fightSpeed`); the sheet shows it
+  return a === "spd" && !base && c.mods?.stoneSkin ? Math.max(1, Math.trunc(total / 2)) : total;
 }
 
+/** Armor of the worn items; Rage halves it, Stone Skin adds to what is left. */
 export function armor(c: Character): number {
-  return itemBonus(c, "arm");
+  let total = itemBonus(c, "arm");
+  if (c.mods?.rage) total = Math.trunc(total / 2);
+  if (c.mods?.stoneSkin) total += c.mods.stoneSkin;
+  return total;
+}
+
+/** Speed in a fight: Stone Skin halves it (never below 1). */
+export function fightSpeed(c: Character): number {
+  return c.mods?.stoneSkin ? Math.max(1, Math.trunc(c.spd / 2)) : c.spd;
+}
+
+/** Game minutes in a year (the old `get_age`: ten weeks of ten days). */
+export const MINUTES_PER_YEAR = 60 * 24 * 10 * 10;
+/** Heroes begin at 18; the default birth is that many years before the first game minute (480, eight in the morning). */
+const START_AGE = 18;
+const START_MINUTE = 480;
+
+/** Natural age in years and the years magic added on top (the sheet shows the sum, the tooltip both). */
+export function ageOf(c: Character, minutes: number): { natural: number; magic: number; total: number } {
+  const born = c.born ?? START_MINUTE - START_AGE * MINUTES_PER_YEAR;
+  const natural = Math.max(0, Math.floor((minutes - born) / MINUTES_PER_YEAR));
+  const magic = c.magicAge ?? 0;
+  return { natural, magic, total: natural + magic };
+}
+
+/** Birth minute of a hero who is 18 now (a hero made in the inn). */
+export function bornAtStart(minutes: number): number {
+  return minutes - START_AGE * MINUTES_PER_YEAR;
+}
+
+/** Dimensional Rift: out of the fight, untouchable. */
+export function isRifted(c: Character): boolean {
+  return (c.mods?.rift ?? 0) > 0;
 }
 
 /** The Orb mascot raises the spell points of every hero who has any by this share. */
@@ -227,7 +262,12 @@ export function levelUp(c: Character, talents: readonly string[], levels = 1, ma
 }
 
 export function canAct(c: Character): boolean {
-  return !c.conditions.some((cond) => INCAPACITATED.includes(cond));
+  return !c.conditions.some((cond) => INCAPACITATED.includes(cond)) && !isRifted(c);
+}
+
+/** Somebody who is (or will be again) able to fight: a hero in the Rift counts, because the spell ends. */
+export function anyoneLeft(characters: readonly Character[]): boolean {
+  return characters.some((c) => canAct(c) || isRifted(c) && !c.conditions.some((cond) => INCAPACITATED.includes(cond)));
 }
 
 export function isAlive(c: Character): boolean {

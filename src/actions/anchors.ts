@@ -202,6 +202,8 @@ export function computeAnchors(map: InteriorMap, topo: Topology): AnchorSet {
       for (let x = 1; x < map.width - 1; x++) {
         const wall = map.cells[idx(x, y)];
         if (wall !== CELL.SOLID && !(map.kind === "town" && wall === CELL.BUILDING)) continue;
+        // a shop's door and its sign are on walls that stay: a wall that gives way next to them would leave the door or the sign hanging
+        if (map.lots.some((l) => Math.abs(l.door.x - x) <= 1 && Math.abs(l.door.y - y) <= 1)) continue;
         for (const [a, b] of [
           ["N", "S"],
           ["E", "W"],

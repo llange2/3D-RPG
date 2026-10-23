@@ -1,10 +1,10 @@
 import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation";
 import { BLOCKS as CAMPAIGN_BLOCKS } from "../campaign/blocks";
-import { LegacyEngine, hasItem, tidy, trapReloading, trapRotation, type CampaignHost } from "../campaign/engine";
+import { LegacyEngine, hasItem, textOf, tidy, trapReloading, trapRotation, type CampaignHost } from "../campaign/engine";
 import { arrival, loadCampaignMap } from "../campaign/loader";
 import type { CampaignMapModel } from "../campaign/model";
 import { crossesSlab, slabBetween, stepFacing, type SlabMap } from "../campaign/slabs";
-import { CAMPAIGN_START, facingOfRotation, type TrapKind } from "../campaign/types";
+import { CAMPAIGN_START, facingOfRotation, mapSlugOf, type TrapKind } from "../campaign/types";
 import { CampaignView } from "../render/campaignView";
 import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, validateContent } from "../actions";
 import { resolveAction, type ActionContext, type Effect } from "../actions/handlers";
@@ -37,18 +37,22 @@ import { LANDMARK_MODELS, landmarkItemAt, setFlatGround, setUltraGround, tileMod
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, itemModelKey, itemProp } from "../render/itemProps";
-import { addCondition, canAct, xpToNextLevel } from "../sim/character";
+import { addCondition, canAct, recalcValues, xpToNextLevel } from "../sim/character";
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
 import { monsterById } from "../sim/combat";
 import {
-  battleActor, createEncounter, createMonster, isAdjacent, monsterTurn, monstersReaching, partyAttack, spellInLine, spellRound, updateBattleMode, MONSTER_ACTION_RADIUS,
+  battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, partyAttack, phaseMonsters, pullMonsters,
+  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS,
   type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
-import { ACTION_MINUTES, activeCharacters, advanceTime, giveItem, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes } from "../sim/party";
-import { castSpell, isAttackSpell, learnBlock, quickCast } from "../sim/spells";
+import { ACTION_MINUTES, activeCharacters, advanceTime, giveItem, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
+import { RIFT_TURNS, SPELL_AGING, castSpell, isAttackSpell, learnBlock, needsAdjacent, quickCast, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
+import { canCombine, combine, combineGroups, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
+import { pickGateSpot, safeCells, type Spot } from "./spellSites";
+import { pickFromBackpack } from "../ui/itemSpells";
 import { visibleCells } from "../sim/vision";
-import type { Character, TimedEffect } from "../sim/types";
+import type { Character, Place, TimedEffect } from "../sim/types";
 import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, GROUND, WORLD_SIZES, isTileWalkable, parseWorldSize, poiEntrances, wrap, wrapDelta, type Poi, type PoiKind, type TileInfo, type WorldSize } from "../world/types";
 import { chunkSpawns, type OverworldSpawn } from "../world/spawns";
 import { World } from "../world/world";
@@ -65,6 +69,7 @@ import { readSettings, writeSettings, type Settings } from "./settings";
 import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
 import { askSpellDetails, openInventory, pickSpell, quickCastOption, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
+import { setAnimatedTown } from "../ui/townScenes";
 import { BIRD_PERCH, BLUE_MUSHROOM, MASCOT_ASK, MASCOT_ITEM, isSolidSpotItem, mascotSpotItem } from "../data/mascots";
 import { propLine } from "../data/prop-texts";
 import { overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
@@ -118,6 +123,28 @@ const LOAD_MODELS = 0.5;
 const LOAD_BUILT = 0.6;
 
 type PartyAttackEvent = Extract<CombatEvent, { type: "party_attack" }>;
+
+/** What a spell that did not work says, by reason (the rest read "The spell fizzles (reason)"). */
+const FIZZLE_TEXT: Partial<Record<FizzleReason, (caster: string) => string>> = {
+  mana: (n) => `${n} lacks the spell points.`,
+  in_town: () => "It is too dangerous to cast Pandora's box in a town.",
+  in_battle: () => "That spell cannot be cast while monsters are next to the party.",
+  no_beacon: (n) => `${n} has not lit a fire to go back to yet. Set one first.`,
+  no_food: () => "The party has no food to rest on.",
+  no_effect: () => "It would have no effect.",
+  cannot_revive: () => "Nobody can bring that hero back: no Endurance is left.",
+  no_hp: (n) => `${n} has too few hit points to pay for it.`,
+  needs_target: () => "That spell needs somebody else to work on.",
+  cannot_act: (n) => `${n} cannot act.`,
+};
+
+/** What a spell that lasts says when it is cast: the caster, and the hero it works on. */
+const BUFF_TEXT: Partial<Record<TimedEffect["kind"], (caster: string, target: string) => string>> = {
+  stone_skin: (_, t) => `${t}'s skin turns to stone: more armor, but half the speed.`,
+  rage: (_, t) => `${t} flies into a rage: more damage, but half the armor.`,
+  power_shield: () => "A shield of force surrounds the party and takes a tenth off every blow.",
+  detect_monster: () => "The monsters of the land show themselves on the map.",
+};
 
 const VIEW_NAMES: Record<ViewDistance, string> = { close: "Close", medium: "Medium", far: "Far" };
 /** Loudness of the music and the effects when switched on (the menu only turns them on and off). */
@@ -257,6 +284,7 @@ export class Game {
     this.audio.enableButtonSounds();
     this.audio.setMusicVolume(this.settings.music ? MUSIC_VOLUME : 0);
     this.audio.sfxVolume = this.settings.sfx ? SFX_VOLUME : 0;
+    setAnimatedTown(this.settings.animatedTown);
     this.textures = new TextureCache(this.r.scene);
     this.terrain = new TerrainMaterials(this.r.scene, this.textures);
     this.flatTiles = await this.loadFlatTiles();
@@ -572,7 +600,7 @@ export class Game {
     return !!a && a.kind === "door" && !this.state.opened.has(a.uid);
   }
 
-  private canEnter(x: number, y: number): boolean {
+  private canEnter(x: number, y: number, ghost = false): boolean {
     if (this.over) return false;
     if (this.monsterAt(x, y)) return false;
     if (this.mascotSpotAt(x, y)) return false;
@@ -585,7 +613,7 @@ export class Game {
       const i = y * map.width + x;
       // a brittle wall's cell is open to the party from the side opposite its wall piece; the wall piece itself is a wall
       const open = !blocked.has(i) || !!this.interior.slabs?.has(i);
-      return cell === CELL.FLOOR && open && !crossesSlab(this.interior.slabs, map.width, this.player.tx, this.player.ty, x, y) && !this.isClosedDoor(x, y);
+      return cell === CELL.FLOOR && open && (ghost || !crossesSlab(this.interior.slabs, map.width, this.player.tx, this.player.ty, x, y)) && !this.isClosedDoor(x, y);
     }
     const t = this.world.tile(x, y);
     // shallow water (a ford, a shore) is swum, not walked: only for the Swimmer, and for whoever can cross deep water
@@ -986,6 +1014,8 @@ export class Game {
    * begins, and the trap has struck about when the party arrives.
    */
   private onStepStarted(x: number, y: number): void {
+    // the party moves: a hero in the Dimensional Rift is back
+    for (const i of cancelRifts(this.state.party)) this.ui.log(`${this.state.party.characters[i]!.name} steps back into the world.`, "info");
     const rt = this.interior;
     if (!rt) return;
     const a = rt.actionAt.get(this.cellIndex(x, y));
@@ -1015,6 +1045,7 @@ export class Game {
   private async onArrived(x: number, y: number): Promise<void> {
     const s = this.state;
     s.steps++;
+    this.syncSurroundings();
     // a levitating party does not walk: the wind takes the place of the footsteps
     if (hasEffect(s.party, "levitate")) this.audio.windStep(0.6);
     else this.audio.play(this.mode === "overworld" ? stepSound(this.world.tile(x, y)) : 9010, 0.6);
@@ -1069,6 +1100,7 @@ export class Game {
 
   /** Lets game time pass and tells which spells and conditions ran out. */
   private passTime(minutes: number): void {
+    this.syncSurroundings();
     const passed = advanceTime(this.state.party, minutes);
     this.logEnded(passed.expired);
     this.logConditions(passed.conditions);
@@ -1814,26 +1846,13 @@ export class Game {
     if (!rt) return;
     const here = PORTAL_KEY + rt.poi.id;
     this.state.opened.add(here);
-    const options = [...this.state.opened]
-      .filter((k) => k.startsWith(PORTAL_KEY) && k !== here)
-      .map((k) => this.world.poiById(k.slice(PORTAL_KEY.length)))
-      .flatMap((p) => (p ? [{ label: p.name, value: p.id }] : []))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    const options = this.portalOptions(here);
     this.audio.play(9041, 0.5);
     if (options.length === 0) {
       this.ui.log(`The portal of ${rt.poi.name} flickers and remembers you. It knows no other town yet: touch the portals of other towns first.`, "info");
       return;
     }
-    this.player.locked = true;
-    const choice = await this.ui.choose(TEXTS[412]!, "", options);
-    this.player.locked = false;
-    const to = choice ? this.world.poiById(choice) : null;
-    if (!to) return;
-    // the party appears next to the portal of that town
-    const map = generateInterior(this.world, to, 0);
-    const arrival = portalStart(map, buildMapContent(this.world, to, map));
-    this.audio.play(9041);
-    await this.openInterior(to, arrival);
+    await this.portalTravel(options);
   }
 
   /**
@@ -1944,7 +1963,7 @@ export class Game {
       const x = tx + dx * i;
       const y = ty + dy * i;
       const m = this.monsterAt(x, y);
-      if (m) return m;
+      if (m && !isPhased(m)) return m;
       if (view.opaque(x, y) || view.obstacle?.(x, y)) return null;
     }
     return null;
@@ -2069,6 +2088,15 @@ export class Game {
             this.monsters.moveTo(m.uid, p.x, p.y, p.z);
           });
           break;
+        case "monster_pull":
+          // Gravity: a quick slide to the place it would have walked to, no walking clip
+          at(0, () => {
+            const m = this.enc.monsters.find((x) => x.uid === e.uid);
+            if (!m) return;
+            const p = this.monsterWorld(m);
+            this.monsters.slideTo(m.uid, p.x, p.y, p.z);
+          });
+          break;
         case "monster_attack": {
           const target = party.characters[e.target]!;
           const name = monsterById(this.enc.monsters.find((x) => x.uid === e.uid)?.defId ?? 1).name;
@@ -2153,6 +2181,412 @@ export class Game {
     this.minimapDirty = true;
   }
 
+  // ---------------------------------------------------------------- spells that need the map
+
+  /** Where the party stands, as a save keeps it (Lloyd's Beacon remembers it). */
+  private locationNow(): Place {
+    const s = this.state;
+    const { tx, ty, facing } = this.player;
+    return this.campaignLocation() ?? (this.mode === "interior" && s.at.mode === "interior" ? { ...s.at, x: tx, y: ty, facing } : { mode: "overworld", x: tx, y: ty, facing });
+  }
+
+  /** In a town: Pandora's box is too dangerous there. (The campaign's open country is filed as a town of the old maps, but it is no town.) */
+  private inTown(): boolean {
+    const rt = this.interior;
+    return this.mode === "interior" && !!rt && rt.poi.kind === "town" && rt.campaign?.slug !== CAMPAIGN_OUTSIDE;
+  }
+
+  /** Whether the party stands in deep water (the sea of the generated world, the campaign's `seafarer` water). */
+  private deepWaterHere(): boolean {
+    const { tx, ty } = this.player;
+    if (this.mode === "overworld") {
+      const t = this.world.tile(tx, ty);
+      return t.ground === GROUND.WATER && t.deco === 0;
+    }
+    const rt = this.interior;
+    if (!rt?.campaign) return false;
+    const abs = rt.campaign.model.toAbsolute(tx, ty);
+    return rt.campaign.model.blockDef(abs.x, abs.y)?.water === "seafarer";
+  }
+
+  /** Whether the party stands on water of any depth (a ford, a shore, the sea, a campaign river): there is no camping there, not even with magic. */
+  private onWater(): boolean {
+    const { tx, ty } = this.player;
+    if (this.mode === "overworld") {
+      const g = this.world.tile(tx, ty).ground;
+      return g === GROUND.WATER || g === GROUND.SHALLOW;
+    }
+    const rt = this.interior;
+    if (!rt?.campaign) return false;
+    const abs = rt.campaign.model.toAbsolute(tx, ty);
+    return !!rt.campaign.model.blockDef(abs.x, abs.y)?.water;
+  }
+
+  /** Tells the simulation where the party stands: Walk on Water holds while it is in deep water. */
+  private syncSurroundings(): void {
+    surroundings.inDeepWater = !!this.state && this.mode !== "title" && this.deepWaterHere();
+  }
+
+  /** Monsters that Dimensional Phasing has taken out of the world are drawn purple and still; the ones that came back normal. */
+  private syncMonsterEffects(): void {
+    for (const m of this.enc.monsters) this.monsters.setPhased(m.uid, isPhased(m));
+  }
+
+  /**
+   * Is the cell between two cells of a straight line free to be passed over (Jump)? Inside a map a jump clears floor, a pit or a
+   * hole in the floor, but not a wall, a closed door or a brittle wall; the overworld has no walls to speak of.
+   */
+  private clearBetween(x0: number, y0: number, x1: number, y1: number): boolean {
+    const rt = this.interior;
+    if (this.mode !== "interior" || !rt) return true;
+    const { map, blocked } = rt;
+    const sx = Math.sign(x1 - x0);
+    const sy = Math.sign(y1 - y0);
+    for (let x = x0 + sx, y = y0 + sy; x !== x1 || y !== y1; x += sx, y += sy) {
+      if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
+      const i = y * map.width + x;
+      const cell = map.cells[i];
+      if (cell !== CELL.FLOOR && cell !== CELL.LOW) return false;
+      if (blocked.has(i) && !rt.slabs?.has(i)) return false;
+      if (this.isClosedDoor(x, y)) return false;
+    }
+    return !crossesSlab(rt.slabs, map.width, x0, y0, x1, y1);
+  }
+
+  /**
+   * The first of the distances ahead whose cell the party can reach, as a cell; null when none. "hop" (Jump) also needs the cells
+   * in between to be open, "ghost" (Etherealise) passes doors and brittle walls on its way and only needs the target to be free,
+   * "warp" (Teleport) is the plain check.
+   */
+  private ahead(distances: number[], how: "hop" | "ghost" | "warp" = "warp"): { x: number; y: number } | null {
+    const { tx, ty, facing } = this.player;
+    const [dx, dy] = FACING_VEC[facing];
+    for (const d of distances) {
+      const x = tx + dx * d;
+      const y = ty + dy * d;
+      if (!this.canEnter(x, y, how === "ghost")) continue;
+      if (how === "hop" && !this.clearBetween(tx, ty, x, y)) continue;
+      return { x, y };
+    }
+    return null;
+  }
+
+  private moveAhead(distances: number[], how: "hop" | "ghost" | "warp" = "warp"): boolean {
+    if (this.player.busy) return false;
+    const to = this.ahead(distances, how);
+    if (!to) return false;
+    const p = this.worldPos(to.x, to.y);
+    this.player.place(to.x, to.y, this.player.facing, p.x, p.z);
+    void this.onArrived(to.x, to.y);
+    this.audio.play(9039);
+    return true;
+  }
+
+  private jump(): void {
+    if (!this.moveAhead([2], "hop")) this.ui.log("There is no room to jump there.", "bad");
+  }
+
+  /** The party's wild-card spells that move it are checked before the spell points are paid. */
+  private spellRefusal(spellId: number): string | null {
+    const { tx, ty } = this.player;
+    const view = this.gridView();
+    const near = (radius: number) => this.enc.monsters.filter((m) => m.hp > 0 && !isPhased(m) && (m.x - tx) ** 2 + (m.y - ty) ** 2 <= radius * radius);
+    if (isAttackSpell(spellId)) {
+      const m = this.focusMonster();
+      if (!m) return "There is nothing to aim at.";
+      if (needsAdjacent(spellId) && !isAdjacent(m.x, m.y, tx, ty, view)) return "That spell only works on a monster next to the party.";
+      return null;
+    }
+    switch (spellId) {
+      case 13:
+        return near(PHASE_RADIUS).length === 0 ? "No monster is near enough." : null;
+      case 22:
+        return near(GRAVITY_RADIUS).some((m) => !isAdjacent(m.x, m.y, tx, ty, view)) ? null : "No monster is near enough to be pulled.";
+      case 26:
+        return identifyMonsters(this.enc, tx, ty).length === 0 ? "There is no monster in range to identify." : null;
+      case 66:
+        return this.enc.battleMode ? "A town portal cannot be opened in a fight." : this.portalOptions().length === 0 ? "The party knows no town portal yet. Touch the portal of a town first." : null;
+      case 42:
+        return this.safeSpots().length === 0 ? "There is no safe place close enough." : null;
+      case 52:
+        return this.onWater() ? "The party cannot rest on water." : null;
+      case 45:
+        this.gateSpot = this.pickGate();
+        return this.outsideNow() ? (this.gateSpot ? null : "Nature's Gate finds nowhere to open.") : "Nature's Gate only opens in the open country.";
+      case 47:
+        return this.ahead([9, 8, 7, 6, 5, 4, 3, 2]) ? null : "There is no room to teleport there.";
+      case 62:
+        return this.ahead([2], "ghost") ? null : "There is no room beyond.";
+      case 16:
+        return this.ahead([2], "hop") ? null : "There is no room to jump there.";
+      default:
+        return null;
+    }
+  }
+
+  /** Time Distortion: the cells nearest to the party that no monster can reach. */
+  private safeSpots(): Spot[] {
+    const { tx, ty } = this.player;
+    return safeCells(this.enc, tx, ty, (x, y) => this.canEnter(x, y));
+  }
+
+  /** The open country: the generated overworld and the campaign's outside map. */
+  private outsideNow(): boolean {
+    return this.mode === "overworld" || this.interior?.campaign?.slug === CAMPAIGN_OUTSIDE;
+  }
+
+  /** Where Nature's Gate would put the party: a different kind of ground, no monster near. Null when there is nowhere. */
+  private gateSpot: { x: number; y: number; facing: Facing } | null = null;
+
+  private pickGate(): { x: number; y: number; facing: Facing } | null {
+    const rng = this.combatRng();
+    const facingAt = (ok: (x: number, y: number) => boolean, x: number, y: number): Facing => (["N", "E", "S", "W"] as const).find((f) => ok(x + FACING_VEC[f][0], y + FACING_VEC[f][1])) ?? "N";
+    if (this.mode === "overworld") {
+      const here = this.world.tile(this.player.tx, this.player.ty).biome;
+      const spot = pickGateSpot(this.world, rng, here);
+      return spot ? { x: spot.x, y: spot.y, facing: facingAt((x, y) => isTileWalkable(this.world.tile(x, y)), spot.x, spot.y) } : null;
+    }
+    const rt = this.interior;
+    if (!rt?.campaign) return null;
+    const model = rt.campaign.model;
+    const abs = model.toAbsolute(this.player.tx, this.player.ty);
+    const here = model.blockDef(abs.x, abs.y)?.id;
+    const { tx, ty } = this.player;
+    const spots = model
+      .entries()
+      .filter(([x, y]) => model.isEnterable(x, y) && model.blockDef(x, y)?.family === "outside" && model.blockDef(x, y)?.id !== here)
+      .map(([x, y]) => model.toLocal(x, y))
+      .filter((l) => this.canEnter(l.x, l.y) && !this.enc.monsters.some((m) => m.hp > 0 && (m.x - l.x) ** 2 + (m.y - l.y) ** 2 <= (MONSTER_ACTION_RADIUS + 2) ** 2) && (l.x !== tx || l.y !== ty));
+    const l = spots[rng.int(spots.length)];
+    return l ? { x: l.x, y: l.y, facing: facingAt((x, y) => this.canEnter(x, y), l.x, l.y) } : null;
+  }
+
+  /** Brings the party to a place it lit a fire at (Lloyd's Beacon): the same ways in as loading a save. */
+  private async travelTo(at: Place): Promise<void> {
+    this.state.at = at;
+    if (isCampaignPlace(at) && this.state.campaign) {
+      await this.openCampaignMap(at.poiId.slice("campaign:".length), { x: at.x, y: at.y, rotation: { N: 0, E: 90, S: 180, W: 270 }[at.facing] });
+      return;
+    }
+    if (at.mode === "interior") {
+      const poi = this.world.poiById(at.poiId);
+      if (poi) {
+        await this.openInterior(poi, { x: at.x, y: at.y, facing: at.facing }, at.ret);
+        return;
+      }
+    }
+    const free = at.mode === "overworld" ? at : { ...this.world.startPosition() };
+    await this.enterOverworld(free.x, free.y, free.facing as Facing);
+  }
+
+  /** The towns whose portal the party knows, as the entries of the portal list (the generated world and the campaign each keep their own record). */
+  private portalOptions(exclude = ""): Option<string>[] {
+    const camp = this.state.campaign;
+    if (camp) {
+      return Object.keys(camp.progress.portals)
+        .slice(0, 12)
+        .map((k) => ({ label: textOf(k), value: k }));
+    }
+    return [...this.state.opened]
+      .filter((k) => k.startsWith(PORTAL_KEY) && k !== exclude)
+      .map((k) => this.world.poiById(k.slice(PORTAL_KEY.length)))
+      .flatMap((p) => (p ? [{ label: p.name, value: p.id }] : []))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /** Asks which town and goes there; the party appears next to that town's portal. */
+  private async portalTravel(options: Option<string>[]): Promise<void> {
+    this.player.locked = true;
+    const choice = await this.ui.choose(TEXTS[412]!, "", options);
+    this.player.locked = false;
+    if (choice === null) return;
+    const camp = this.state.campaign;
+    if (camp) {
+      const p = camp.progress.portals[choice];
+      if (!p) return;
+      this.audio.play(9041);
+      await this.openCampaignMap(mapSlugOf(p.map), { x: p.x, y: p.y, rotation: p.rot });
+      return;
+    }
+    const to = this.world.poiById(choice);
+    if (!to) return;
+    const map = generateInterior(this.world, to, 0);
+    const arrival = portalStart(map, buildMapContent(this.world, to, map));
+    this.audio.play(9041);
+    await this.openInterior(to, arrival);
+  }
+
+  /**
+   * The results of the spells the game carries out. Returns whether the cast costs a round of the monsters: spells that move the party
+   * to another place (or let it rest) do not, the monsters of the old place are gone.
+   */
+  private async worldSpell(spellId: number, caster: Character, pick: SpellChoice, result: Extract<SpellResult, { kind: "world" }>): Promise<boolean> {
+    const party = this.state.party;
+    const { tx, ty } = this.player;
+    const events: CombatEvent[] = [];
+    switch (spellId) {
+      case 13: {
+        const caught = phaseMonsters(this.enc, tx, ty);
+        this.audio.play(9041);
+        this.ui.log(`${caught.length} monster${caught.length === 1 ? "" : "s"} slip out of this world for ${PHASE_TURNS} turns.`, "good");
+        return true;
+      }
+      case 22: {
+        events.push(...pullMonsters(this.gridView(), this.enc, tx, ty));
+        this.audio.play(9029);
+        this.ui.log(events.length ? "Gravity drags the monsters to the party." : "Nothing moves.", events.length ? "good" : "info");
+        this.handleEvents(events);
+        return true;
+      }
+      case 26: {
+        const lines = identifyMonsters(this.enc, tx, ty).map((m) => `${m.name}: ${m.hp}/${m.maxHp} hit points, armor ${m.armor}, ${m.attacks} attack${m.attacks === 1 ? "" : "s"} a round${m.abilities ? `, ${m.abilities}` : ""}`);
+        this.audio.play(9039);
+        await this.ui.message(lines.join("\n"), "Identify Monster");
+        return true;
+      }
+      case 32: {
+        if (result.beacon === "set") {
+          this.audio.play(9039);
+          this.ui.log(`${caster.name} lights a fire here. ${caster.name} can come back to it with Lloyd's Beacon.`, "good");
+          return true;
+        }
+        if (!result.place) return false;
+        this.audio.play(9041);
+        this.ui.log(`${caster.name} follows the beacon back to the fire.`, "good");
+        await this.travelTo(result.place);
+        return false;
+      }
+      case 42: {
+        const spots = this.safeSpots();
+        const spot = spots[this.combatRng().int(spots.length)];
+        if (!spot) return true;
+        const p = this.worldPos(spot.x, spot.y);
+        this.player.place(spot.x, spot.y, this.player.facing, p.x, p.z);
+        this.audio.play(9041);
+        this.ui.log("Time bends, and the party stands where nothing can reach it.", "good");
+        void this.onArrived(spot.x, spot.y);
+        return false;
+      }
+      case 45: {
+        const spot = this.gateSpot ?? this.pickGate();
+        this.gateSpot = null;
+        if (!spot) return true;
+        this.audio.play(9041);
+        this.ui.log("The gate opens on another land.", "good");
+        if (this.mode === "overworld") await this.enterOverworld(spot.x, spot.y, spot.facing);
+        else {
+          const p = this.worldPos(spot.x, spot.y);
+          this.player.place(spot.x, spot.y, spot.facing, p.x, p.z);
+          void this.onArrived(spot.x, spot.y);
+        }
+        return false;
+      }
+      case 47:
+        if (!this.moveAhead([9, 8, 7, 6, 5, 4, 3, 2])) this.ui.log("There is no room to teleport there.", "bad");
+        return false;
+      case 62:
+        // Etherealise: one field is skipped, doors and brittle walls included (the party passes through them like a shadow)
+        if (!this.moveAhead([2], "ghost")) this.ui.log("There is no room beyond.", "bad");
+        else this.ui.log(`${caster.name} turns to mist, and the party slips through.`, "good");
+        return false;
+      case 52: {
+        // Super Shelter: the same as resting with no monster about
+        const r = rest(party);
+        if (!r.ok) {
+          this.ui.log("No food available. The party cannot rest!", "bad");
+          return false;
+        }
+        this.audio.play(9030);
+        this.ui.log("A shelter of magic closes round the party, which rests and recovers.", "good");
+        this.logConditions(r.conditions ?? []);
+        this.save("auto");
+        return false;
+      }
+      case 66:
+        await this.portalTravel(this.portalOptions());
+        return false;
+      default:
+        void pick;
+        return true;
+    }
+  }
+
+  /** Pandora's box: gold, an item, a monster. */
+  private pandora(outcome: PandoraOutcome): void {
+    const party = this.state.party;
+    switch (outcome.type) {
+      case "gold":
+        party.gold += outcome.amount;
+        this.audio.play(9020);
+        this.ui.log(`Gold pours out of the rift: ${thousands(outcome.amount)}.`, "loot");
+        break;
+      case "item": {
+        this.audio.play(9018);
+        if (giveItem(party, outcome.item)) this.ui.log(`Out of the rift falls ${outcome.item.name.trim()}.`, "loot");
+        else {
+          this.dropLoot(this.player.tx, this.player.ty, 0, [outcome.item]);
+          this.ui.log(`Out of the rift falls ${outcome.item.name.trim()}, and it lies at your feet: the backpacks are full.`, "loot");
+        }
+        break;
+      }
+      case "monster": {
+        const { tx, ty, facing } = this.player;
+        const [dx, dy] = FACING_VEC[facing];
+        const view = this.gridView();
+        const spot = [1, 2, 3].map((d) => ({ x: tx + dx * d, y: ty + dy * d })).find((c) => view.walkable(c.x, c.y) && !this.monsterAt(c.x, c.y));
+        if (!spot) {
+          this.ui.log("The rift closes before anything comes through.", "info");
+          break;
+        }
+        const m = createMonster(`pandora:${this.state.steps}:${party.minutes}`, outcome.defId, spot.x, spot.y);
+        this.enc.monsters.push(m);
+        this.addMonsterView(m, APPEAR_SECONDS);
+        this.audio.play(9044);
+        this.ui.log(`${monsterById(outcome.defId).name} steps out of the rift!`, "bad");
+        updateBattleMode(this.enc, tx, ty, view);
+        break;
+      }
+    }
+  }
+
+  /** Combine, Duplication and Transform Ring: which items, then the change. The spell points are spent whatever is chosen (the spell sheet says so). */
+  private async itemSpell(spellId: number, hero: number): Promise<void> {
+    const c = this.state.party.characters[hero]!;
+    const ui = this.ui;
+    const cancelled = (why: string) => {
+      this.audio.play(9040);
+      ui.log(`${why} The spell is cancelled.`, "bad");
+    };
+    if (spellId === 55) {
+      const groups = combineGroups(c);
+      if (groups.length === 0) return cancelled(`${c.name} carries no three items of one kind and material.`);
+      const picked = await pickFromBackpack(ui, c, { title: "Combine", text: "pick three items of the same kind and material.", allowed: groups.flatMap((g) => g.slots), count: 3, valid: (s) => canCombine(c, s), verb: "Combine" });
+      if (!picked) return cancelled("Nothing was combined.");
+      const made = combine(c, picked, this.combatRng());
+      if (!made) return cancelled("That was no combination.");
+      this.audio.play(9024);
+      ui.log(`Three items melt into ${made.name.trim()}.`, "good");
+    } else if (spellId === 58) {
+      const slots = duplicableSlots(c);
+      if (slots.length === 0) return cancelled(`${c.name} carries nothing to copy.`);
+      const picked = await pickFromBackpack(ui, c, { title: "Duplication", text: "pick the item to copy. It may fail, and it may be lost.", allowed: slots, count: 1, valid: () => true, verb: "Duplicate" });
+      if (!picked) return cancelled("Nothing was copied.");
+      const name = c.inventory[picked[0]!]!.name.trim();
+      const r = duplicate(this.state.party, c, picked[0]!, this.combatRng());
+      this.audio.play(r === "destroyed" ? 9040 : 9024);
+      ui.log(r === "duplicated" ? `${name} is copied.` : r === "destroyed" ? `${name} crumbles to dust.` : r === "no_room" ? `${name} would have been copied, but there is no room in the backpacks.` : "Nothing happens.", r === "duplicated" ? "good" : r === "nothing" ? "info" : "bad");
+    } else {
+      const slots = ringSlots(c);
+      if (slots.length === 0) return cancelled(`${c.name} carries no ring.`);
+      const picked = await pickFromBackpack(ui, c, { title: "Transform Ring", text: "pick the ring to change. It may be lost.", allowed: slots, count: 1, valid: () => true, verb: "Transform" });
+      if (!picked) return cancelled("No ring was changed.");
+      const r = transformRing(c, picked[0]!, this.combatRng());
+      this.audio.play(r.result === "changed" ? 9024 : 9040);
+      ui.log(r.result === "changed" ? `The ring becomes ${r.ring!.name.trim()}.` : "The ring shatters.", r.result === "changed" ? "good" : "bad");
+    }
+    recalcValues(c, this.state.party.talents, false, this.state.party.mascot);
+  }
+
   private async castSpells(): Promise<void> {
     if (this.busy || this.over || this.inFlight()) return;
     const party = this.state.party;
@@ -2182,25 +2616,29 @@ export class Game {
       }
     }
     this.busy = true;
-    pick ??= await pickSpell(this.ui, party, who, quick);
+    pick ??= await pickSpell(this.ui, party, who, quick, (id) => this.audio.play(id));
     if (!pick) {
       this.busy = false;
       return;
     }
-    // casting at nothing would only spend the spell points
-    if (isAttackSpell(pick.spellId) && !this.focusMonster()) {
+    // what cannot work now is refused before the spell points are spent
+    const refusal = this.spellRefusal(pick.spellId);
+    if (refusal) {
       this.audio.play(9014);
-      this.ui.log("There is nothing to aim at.", "bad");
+      this.ui.log(refusal, "bad");
       this.busy = false;
       return;
     }
     party.lastCast = { caster: party.characters[who]!.name, spellId: pick.spellId, target: pick.target, element: pick.element };
-    const result = castSpell(party, who, pick.spellId, this.combatRng(), pick);
+    this.syncSurroundings();
+    const result = castSpell(party, who, pick.spellId, this.combatRng(), { ...pick, here: this.locationNow(), town: this.inTown(), battle: this.enc.battleMode });
     const c = party.characters[who]!;
+    // spells that carry the party off or let it rest do not give the monsters a round: they are left behind
+    let round = result.kind !== "fizzle" && result.kind !== "attack" && result.kind !== "jump";
     switch (result.kind) {
       case "fizzle":
         this.audio.play(9040);
-        this.ui.log(result.reason === "mana" ? `${c.name} lacks the spell points.` : `The spell fizzles (${result.reason.replace(/_/g, " ")}).`, "bad");
+        this.ui.log(FIZZLE_TEXT[result.reason]?.(c.name) ?? `The spell fizzles (${result.reason.replace(/_/g, " ")}).`, "bad");
         break;
       case "attack": {
         const target = this.focusMonster();
@@ -2208,10 +2646,14 @@ export class Game {
         this.audio.play(ATTACK_SOUND[result.type] ?? 9029);
         const magic = { damage: result.damage, type: result.type };
         const { tx, ty } = this.player;
-        const events = result.penetrate
-          ? spellInLine(party, this.gridView(), this.enc, tx, ty, this.combatRng(), target.uid, magic, result.undead)
-          : partyAttack(party, this.gridView(), this.enc, tx, ty, this.combatRng(), { kind: "magic", targetUid: target.uid, magic });
+        const events = result.special
+          ? specialSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), result.special, target.uid, magic)
+          : result.penetrate
+            ? spellInLine(party, this.gridView(), this.enc, tx, ty, this.combatRng(), target.uid, magic, result.undead)
+            : partyAttack(party, this.gridView(), this.enc, tx, ty, this.combatRng(), { kind: "magic", targetUid: target.uid, magic });
         this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic");
+        for (const healed of result.healed ?? []) this.ui.avatarEffect(healed.target, "cure_hp");
+        if (result.healed?.length) this.ui.log("Moonlight washes over the party and heals it.", "good");
         break;
       }
       // the picture of the spell appears over the portrait of whoever it works on (the old Avatar.avatar_effect)
@@ -2219,6 +2661,7 @@ export class Game {
         this.audio.play(9031);
         this.ui.avatarEffect(result.target, "cure_hp");
         this.ui.log(`${party.characters[result.target]!.name} is healed for ${result.amount}.`, "good");
+        if (result.paid) this.ui.log(`${c.name} pays ${result.paid} hit points for it.`, "info");
         break;
       case "cure":
         this.audio.play(9031);
@@ -2234,6 +2677,13 @@ export class Game {
         this.audio.play(9031);
         this.ui.avatarEffect(result.target, "cure_hp");
         this.ui.log(`${party.characters[result.target]!.name} returns to life.`, "good");
+        if (result.endurance) this.ui.log(`${party.characters[result.target]!.name} comes back with one point of Endurance less, and ${c.name} feels older.`, "info");
+        break;
+      case "intervention":
+        this.audio.play(9031);
+        for (const i of result.healed) this.ui.avatarEffect(i, "cure_hp");
+        this.ui.log(result.revived.length ? "Divine light lifts the fallen and heals the whole party." : "Divine light heals the whole party.", "good");
+        this.ui.log(`${c.name} feels ${SPELL_AGING} years older.`, "info");
         break;
       case "bless":
         this.audio.play(9032);
@@ -2243,35 +2693,48 @@ export class Game {
         this.audio.play(result.effect.kind === "light" ? 9035 : result.effect.kind === "protection" ? 9047 : 9039);
         if (result.effect.kind === "protection" && result.effect.element) this.ui.avatarEffect(who, protectionEffect(result.effect.element));
         else if (result.effect.kind === "levitate") this.ui.avatarEffect(who, "gui_levitate");
-        this.ui.log(`${c.name} casts ${result.effect.kind.replace(/_/g, " ")}.`, "good");
+        this.ui.log(BUFF_TEXT[result.effect.kind]?.(c.name, party.characters[result.effect.character ?? -1]?.name ?? "") ?? `${c.name} casts ${result.effect.kind.replace(/_/g, " ")}.`, "good");
+        break;
+      case "rift":
+        this.audio.play(9041);
+        this.ui.log(`${party.characters[result.target]!.name} steps out of the world for ${RIFT_TURNS} turns, or until the party moves.`, "good");
+        break;
+      case "food":
+        this.audio.play(9039);
+        this.ui.log("A ration of food appears in the party's hands.", "good");
+        break;
+      case "monster_effect": {
+        const target = this.focusMonster();
+        if (!target) break;
+        const name = monsterById(target.defId).name;
+        this.audio.play(9039);
+        if (result.spellId === 31) this.ui.log(immobilize(target) ? `${name} cannot move for ${IMMOBILIZE_TURNS} turns.` : `${name} has been held once already: nothing happens.`, "info");
+        else this.ui.log(makeClumsy(target) ? `${name} stumbles about: its attacks miss more often.` : `${name} is clumsy already.`, "info");
+        break;
+      }
+      case "pandora":
+        this.audio.play(9041);
+        this.pandora(result.outcome);
+        break;
+      case "items":
+        this.audio.play(9039);
+        await this.itemSpell(result.spellId, result.target);
+        break;
+      case "world":
+        round = await this.worldSpell(result.spellId, c, pick, result);
         break;
       case "jump":
         this.jump();
         break;
     }
     // every spell that worked and did not strike a monster costs a round (an attack spell has had its round already)
-    if (result.kind !== "fizzle" && result.kind !== "attack" && result.kind !== "jump") {
+    if (round) {
       const { tx, ty } = this.player;
       this.handleEvents(spellRound(party, this.gridView(), this.enc, tx, ty, this.combatRng()));
       updateBattleMode(this.enc, tx, ty, this.gridView());
     }
     this.busy = false;
     this.refresh();
-  }
-
-  private jump(): void {
-    const { tx, ty, facing } = this.player;
-    const [dx, dy] = FACING_VEC[facing];
-    const x = tx + dx * 2;
-    const y = ty + dy * 2;
-    if (this.canEnter(x, y) && !this.player.busy) {
-      const p = this.worldPos(x, y);
-      this.player.place(x, y, facing, p.x, p.z);
-      void this.onArrived(x, y);
-      this.audio.play(9039);
-    } else {
-      this.ui.log("There is no room to jump there.", "bad");
-    }
   }
 
   private async gameOver(): Promise<void> {
@@ -2377,6 +2840,10 @@ export class Game {
   private async camp(): Promise<void> {
     if (this.busy || this.over || this.inFlight()) return;
     const party = this.state.party;
+    if (this.onWater()) {
+      this.ui.log("The party cannot rest on water.", "bad");
+      return;
+    }
     const { tx, ty } = this.player;
     const hunters = monstersReaching(this.gridView(), this.enc, tx, ty);
     const warning = hunters.length > 0 ? " Monsters are about: they will find the camp, and most of the party will be asleep when they do." : "";
@@ -2720,6 +3187,7 @@ export class Game {
         { label: () => `Models: ${draft.models === "original" ? "original" : "low poly"}`, flip: () => (draft.models = draft.models === "original" ? "lowpoly" : "original") },
         { label: () => `Distance: ${VIEW_NAMES[draft.viewDistance]}`, flip: () => (draft.viewDistance = VIEW_DISTANCES[(VIEW_DISTANCES.indexOf(draft.viewDistance) + 1) % VIEW_DISTANCES.length]!) },
         { label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
+        { label: () => `Animated town scenes: ${onOff(draft.animatedTown)}`, flip: () => (draft.animatedTown = !draft.animatedTown) },
         { label: () => `Show FPS: ${onOff(draft.showFps)}`, flip: () => (draft.showFps = !draft.showFps) },
         { label: () => `Music: ${onOff(draft.music)}`, flip: () => (draft.music = !draft.music) },
         { label: () => `Sound effects: ${onOff(draft.sfx)}`, flip: () => (draft.sfx = !draft.sfx) },
@@ -2763,6 +3231,7 @@ export class Game {
       this.campaignView.setViewShare(VIEW_SHARE[next.viewDistance]);
     }
     if (next.resolution !== before.resolution) this.r.setResolution(next.resolution);
+    setAnimatedTown(next.animatedTown);
     if (!next.showFps) this.ui.setFps(null);
     this.audio.setMusicVolume(next.music ? MUSIC_VOLUME : 0);
     this.audio.sfxVolume = next.sfx ? SFX_VOLUME : 0;
@@ -2957,18 +3426,25 @@ export class Game {
     if (this.mode === "title") return;
     if (cheats.god) maintainGod(this.state.party);
     this.ui.updateHud(this.state.party, this.hudInfo());
+    this.syncMonsterEffects();
     this.minimapDirty = true;
     if (!activeCharacters(this.state.party).length && !this.over) void this.gameOver();
+  }
+
+  /** Detect Monster is on: the maps show every monster, not only the ones on ground the party has seen. */
+  private detectOn(): boolean {
+    return !!this.state && hasEffect(this.state.party, "detect_monster");
   }
 
   private drawMinimap(): void {
     const canvas = this.ui.minimap;
     const monsters = this.enc.monsters.filter((m) => m.hp > 0).map((m) => ({ x: m.x, y: m.y }));
+    const detect = this.detectOn();
     if (this.mode === "interior" && this.interior) {
       const rt = this.interior;
-      drawInteriorMap(canvas, rt.map, rt.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.trapsShown(), undefined, this.minimapIcons, this.eyeOn());
+      drawInteriorMap(canvas, rt.map, rt.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.trapsShown(), undefined, this.minimapIcons, this.eyeOn(), detect);
     } else {
-      drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.eyeOn(), undefined, this.minimapIcons);
+      drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.eyeOn(), undefined, this.minimapIcons, detect);
     }
     canvas.classList.toggle("eye", this.eyeOn());
   }

@@ -114,6 +114,11 @@ export class FlatTileSet {
     return this.byQuarters.has(`${terrain}|${terrain}|${terrain}|${terrain}`);
   }
 
+  /** Is there a painted tile for exactly these four quarters? (Without one `pick` has to leave a terrain out.) */
+  hasExact(tl: FlatTerrain, tr: FlatTerrain, bl: FlatTerrain, br: FlatTerrain): boolean {
+    return this.byQuarters.has(`${tl}|${tr}|${bl}|${br}`);
+  }
+
   /**
    * The tile for the four map tiles around a corner (top left, top right, bottom left, bottom right). With one or two terrains there is
    * exactly one tile. Where three or more meet, or a pair has no pictures, the tile shows the most common terrain and the most common
