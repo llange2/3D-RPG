@@ -152,8 +152,13 @@ describe("the Monster Huts on the overworld", () => {
       const world = new World(seed, "default");
       const huts = hutsOf(world);
       const at = (name: string) => levelAt(world, huts.find((h) => h.monster === id(name))!.x, huts.find((h) => h.monster === id(name))!.y);
-      expect(at("Goblin"), seed).toBeLessThan(at("Giant Spider"));
-      expect(at("Magic Mantis"), seed).toBeLessThan(at("Ghoul"));
+      // levels 1 and 2 (the start island) grow harder with the distance from Starthaven, strictly in the order of the monsters' XP (25th playtest)
+      const home = world.poiById("p:0:0:0")!;
+      for (const level of [1, 2]) {
+        const ranked = huts.filter((h) => MONSTERS[h.monster]!.treasure_level === level).sort((a, b) => MONSTERS[a.monster]!.xp - MONSTERS[b.monster]!.xp || a.monster - b.monster);
+        const dist = ranked.map((h) => (h.x - home.x) ** 2 + (h.y - home.y) ** 2);
+        expect(dist, `${seed} level ${level}`).toEqual([...dist].sort((a, b) => a - b));
+      }
       expect(at("Archer"), seed).toBeLessThan(at("Mini Dragon"));
       // and the scale of the monsters runs the same way
       expect(monsterLevel(id("Goblin"))).toBeLessThan(monsterLevel(id("Giant Spider")));
