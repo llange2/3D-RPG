@@ -77,5 +77,8 @@
  * 21 = the user's monster sheet (docs/RPG_0.1.xlsx): treasure levels and XP of the monsters changed, so the monsters of the interiors changed; the overworld holds
  * Monster Huts (`world/huts.ts`: ten monsters each within ten tiles, one hut per monster with an entity-9 value, two of each on large and huge worlds) and the wild
  * groups are the sheet's "x" monsters by the level of the spot (`world/difficulty.ts`), no longer drawn from the family of the biome.
+ * 22 = twenty-fifth playtest: the towns of level 1 and 2 stand at the opposite ends of the start island (the level-2 monsters no longer roam next to Starthaven);
+ * every Monster Hut stands once on every size of world, with 4, 6, 8 and 10 monsters (small, default, large, huge) within five tiles of it, and the huts keep much
+ * more room from each other and from the start (`world/huts.ts`).
  */
-export const GEN_VERSION = 21;
+export const GEN_VERSION = 22;

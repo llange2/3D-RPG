@@ -12,6 +12,8 @@ export const MONSTER_ACTION_RADIUS = 7;
 /** Share of a Clumsy monster's attacks that do not take place. */
 const CLUMSY_MISS = 0.1;
 const PATH_STEP_LIMIT = 30;
+/** The search that goes round other monsters needs more room than the old game's 30 steps: a detour round a crowd is longer than the straight way. */
+const MOVE_STEP_LIMIT = 80;
 
 /** What the combat engine needs to know about the map under it. */
 export interface GridView {
@@ -45,6 +47,13 @@ export interface MonsterInstance {
   clumsy?: boolean;
   /** Gravity drew the monster to the party this turn: it spent the turn on that and does not strike until the next one. */
   pulled?: boolean;
+  /** The share (in percent) of the sheet's XP this monster gives; 100 when unset. The monsters of a Monster Hut give more or less by world size. */
+  xpPercent?: number;
+}
+
+/** The XP the party gets for this monster. */
+export function monsterXp(m: MonsterInstance, def: MonsterDef): number {
+  return Math.floor((def.xp * (m.xpPercent ?? 100)) / 100);
 }
 
 export interface Encounter {
@@ -143,11 +152,23 @@ class MinHeap {
  * Path from a monster to a tile next to the player, limited to a box around the player and to 30 expansions,
  * exactly like way_to_player of the old game. Returns the cells to walk (without the start), or null.
  */
-export function wayToPlayer(view: GridView, def: MonsterDef, mx: number, my: number, px: number, py: number, radius = MONSTER_ACTION_RADIUS): [number, number][] | null {
+export function wayToPlayer(
+  view: GridView,
+  def: MonsterDef,
+  mx: number,
+  my: number,
+  px: number,
+  py: number,
+  radius = MONSTER_ACTION_RADIUS,
+  /** Tiles that another monster stands on: no way leads through them, and none of them is a goal. Without it monsters queue up behind the first one. */
+  taken?: (x: number, y: number) => boolean,
+  stepLimit = PATH_STEP_LIMIT,
+): [number, number][] | null {
   const water = def.terrain === "water";
-  const blocked = (x: number, y: number) => (water ? !view.water(x, y) : def.terrain === "both" ? !view.walkable(x, y) && !view.water(x, y) : !view.walkable(x, y));
+  const blocked = (x: number, y: number) => (water ? !view.water(x, y) : def.terrain === "both" ? !view.walkable(x, y) && !view.water(x, y) : !view.walkable(x, y)) || (taken?.(x, y) ?? false);
   // a tile on the far side of a wall piece is next to the party on the map only
-  const reachable = DIRS.filter(([dx, dy]) => !view.wallBetween?.(px, py, px + dx, py + dy));
+  const reachable = DIRS.filter(([dx, dy]) => !view.wallBetween?.(px, py, px + dx, py + dy) && !taken?.(px + dx, py + dy));
+  if (reachable.length === 0) return null;
   const goals = new Set<string>(reachable.map(([dx, dy]) => `${px + dx},${py + dy}`));
   const goalList = reachable.map(([dx, dy]) => [px + dx, py + dy] as [number, number]);
   const heuristic = (x: number, y: number) => Math.min(...goalList.map(([gx, gy]) => Math.abs(x - gx) + Math.abs(y - gy)));
@@ -157,7 +178,7 @@ export function wayToPlayer(view: GridView, def: MonsterDef, mx: number, my: num
   const heap = new MinHeap();
   heap.push({ priority: 0, dist: 0, x: mx, y: my });
   let steps = 0;
-  while (heap.size > 0 && steps < PATH_STEP_LIMIT) {
+  while (heap.size > 0 && steps < stepLimit) {
     steps++;
     const { dist, x, y } = heap.pop();
     const key = `${x},${y}`;
@@ -347,26 +368,20 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
   const events: CombatEvent[] = [];
   const occupied = (x: number, y: number) => enc.monsters.some((m) => m.hp > 0 && m.x === x && m.y === y);
 
-  // 1. movement
+  // 1. movement: the nearest monster first, each one round the monsters that stand in the way (a monster that is next to the party holds a side
+  // of it, the others look for a free side instead of waiting in a row behind it)
   for (const s of scan(view, enc, px, py, radius)) {
-    if (s.monster.immobile) continue;
-    const first = s.path?.[0];
+    const m = s.monster;
+    // no way at all, or already next to the party (the way is empty)
+    if (m.immobile || !s.path || s.path.length === 0) continue;
+    const other = (x: number, y: number) => enc.monsters.some((o) => o !== m && o.hp > 0 && o.x === x && o.y === y);
+    const first = wayToPlayer(view, monsterById(m.defId), m.x, m.y, px, py, radius, other, MOVE_STEP_LIMIT)?.[0];
     if (!first) continue;
     const [nx, ny] = first;
-    if (nx === px && ny === py) continue;
-    if (!occupied(nx, ny)) {
-      events.push({ type: "monster_move", uid: s.monster.uid, from: [s.monster.x, s.monster.y], to: [nx, ny] });
-      s.monster.x = nx;
-      s.monster.y = ny;
-    } else {
-      // blocked by another monster: look for another way
-      const alt = wayToPlayer(view, monsterById(s.monster.defId), s.monster.x, s.monster.y, px, py, radius)?.[0];
-      if (alt && !occupied(alt[0], alt[1]) && !(alt[0] === px && alt[1] === py)) {
-        events.push({ type: "monster_move", uid: s.monster.uid, from: [s.monster.x, s.monster.y], to: [alt[0], alt[1]] });
-        s.monster.x = alt[0];
-        s.monster.y = alt[1];
-      }
-    }
+    if ((nx === px && ny === py) || occupied(nx, ny)) continue;
+    events.push({ type: "monster_move", uid: m.uid, from: [m.x, m.y], to: [nx, ny] });
+    m.x = nx;
+    m.y = ny;
   }
 
   // 2. attacks
@@ -448,8 +463,9 @@ function killIfDead(party: Party, enc: Encounter, m: MonsterInstance, rng: Rng, 
   }
   if (m.hp > 0) return;
   enc.monsters = enc.monsters.filter((x) => x.uid !== m.uid);
-  addXp(party, def.xp);
-  events.push({ type: "monster_dead", uid: m.uid, defId: m.defId, x: m.x, y: m.y, xp: def.xp, loot: rollLoot(rng, def) });
+  const xp = monsterXp(m, def);
+  addXp(party, xp);
+  events.push({ type: "monster_dead", uid: m.uid, defId: m.defId, x: m.x, y: m.y, xp, loot: rollLoot(rng, def) });
 }
 
 /**

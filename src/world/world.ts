@@ -3,7 +3,7 @@ import { derive, LAYER, rngFor, seedFromString, type SeedState } from "../core/r
 import { placeName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { planPlaces } from "../interiors/dungeonPlan";
-import { FIELD_UNIT, ISLAND_EDGE, along, buildLayout, fieldAt, isqrt, tierOn, wrapDist2, type Island, type Layout } from "./islands";
+import { FIELD_UNIT, ISLAND_EDGE, buildLayout, fieldAt, isqrt, tierOn, wrapDist2, type Island, type Layout } from "./islands";
 import { roadThrough, type Pt, type RoadSeg } from "./roads";
 import {
   BIOME,
@@ -120,6 +120,8 @@ const TOWN_CLEARANCE = 6;
 const COAST_MARGIN = 2;
 /** A place prefers this many tiles of land round it: the ground it clears (`FLATTEN`) then takes no sea, so the channel to the next island keeps its deep tile. */
 const PLACE_ROOM = 3;
+/** The towns of the start island aim at the land that reaches within this many tiles of the farthest point along the axis (the land search finds the ground). */
+const START_END_BAND = 8;
 /** Places closer than this (Manhattan) that the road tree does not join get a second road with a chance of 50 %. */
 const LOOP_DISTANCE = 14;
 const LOOP_PERMILLE = 350;
@@ -540,10 +542,24 @@ export class World {
       const eastWest = rng.chance(500);
       let target: { x: number; y: number };
       if (twoLevels) {
-        // the start island: the towns of a level stand in the half of that level, half a radius from the middle along the axis
-        const o = along(tier === isl.tiers[0] ? isl.axis : { x: -isl.axis.x, y: -isl.axis.y }, spread);
-        const jitter = Math.max(1, isl.r >> 2);
-        target = { x: isl.x + o.x + rng.range(-jitter, jitter), y: isl.y + o.y + rng.range(-jitter, jitter) };
+        // the start island: the towns of a level stand in the half of that level, at its far end (the level-2 monsters must not roam next to
+        // Starthaven); the search for land below moves a target in the sea inwards
+        const dir = tier === isl.tiers[0] ? isl.axis : { x: -isl.axis.x, y: -isl.axis.y };
+        // the land of the island reaches farthest along the axis in some places only: the targets are the tiles within a few tiles of that reach
+        // (the shape of the island is not the shape of its box), one chosen by chance for each town
+        const inland: { x: number; y: number; a: number }[] = [];
+        let reach = -Infinity;
+        for (let dy = isl.box.y0; dy <= isl.box.y1; dy++) {
+          for (let dx = isl.box.x0; dx <= isl.box.x1; dx++) {
+            if (fieldAt(isl, dx, dy) < COAST_MARGIN * FIELD_UNIT) continue;
+            const a = dx * dir.x + dy * dir.y;
+            inland.push({ x: dx, y: dy, a });
+            reach = Math.max(reach, a);
+          }
+        }
+        const ends = inland.filter((e) => e.a >= reach - START_END_BAND);
+        const end = ends[rng.int(Math.max(1, ends.length))];
+        target = end ? { x: isl.x + end.x, y: isl.y + end.y } : { x: isl.x + dir.x * spread, y: isl.y + dir.y * spread };
       } else {
         target =
           t === 0

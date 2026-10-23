@@ -28,6 +28,7 @@
     "check:effects": "tsx tools/dev/check-effects.ts",
     "check:inn": "tsx tools/dev/check-inn.ts",
     "check:models": "tsx tools/dev/check-models.ts",
+    "check:melee": "tsx tools/dev/check-melee.ts",
     "check:options": "tsx tools/dev/check-options.ts",
     "check:spells": "tsx tools/dev/check-spells.ts",
     "sheet:tiles": "tsx tools/dev/tile-sheet.ts",
