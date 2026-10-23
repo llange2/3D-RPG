@@ -5,6 +5,7 @@ import { chunkHash, World } from "../world/world";
 import { installCursor } from "../ui/cursor";
 import { preloadImages } from "../ui/dom";
 import { preloadSpellIcons } from "../ui/spellIcons";
+import { preloadItemIcons } from "../ui/itemIcons";
 import { splitLegacySaves } from "./state";
 import { parseWorldSize, type WorldSize } from "../world/types";
 
@@ -15,6 +16,8 @@ async function main(): Promise<void> {
   preloadImages(["ui/scroll.webp"]);
   // the 78 spell pictures are one sheet: fetched and decoded now, so that the spell window opens with every plate in place
   void preloadSpellIcons();
+  // the same for the item pictures: every slot of an inventory or a shop is a window onto one decoded sheet
+  void preloadItemIcons();
   splitLegacySaves();
 
   const canvas = document.createElement("canvas");

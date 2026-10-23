@@ -28,7 +28,7 @@ const WATER_CONTRAST = 0.2;
 const PAINTED_DARK = 54;
 const PAINTED_LIGHT = 130;
 
-const showsWater = (t: FlatTile): boolean => t.terrain === "water" || t.other === "water";
+const showsWater = (t: FlatTile): boolean => t.terrain === "water" || t.other === "water" || (t.quarters?.includes("water") ?? false);
 
 /** Replaces the water of a raw RGB picture in place. */
 export function calmWater(rgb: Buffer): void {

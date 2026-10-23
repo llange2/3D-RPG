@@ -368,11 +368,14 @@ export class InteriorView {
 
   /** Cells (`y * width + x`) that look like wall although they are floor: closed doors and walls that can be broken. */
   private wallLike = new Set<number>();
+  /** Cells (`y * width + x`) that an object stands on (a chest, a statue, a person): another object does not turn its front to them. */
+  private objectCells = new Set<number>();
 
   private buildObjects(): void {
     const map = this.map!;
     const instances: PropInstance[] = [];
     this.wallLike = new Set(this.content!.actions.filter((a) => a.kind === "door" || (a.kind === "breakable_wall" && !this.brokenWalls.has(a.uid))).map((a) => a.y * map.width + a.x));
+    this.objectCells = new Set(this.content!.actions.filter((a) => a.kind !== "service" && a.kind !== "trap" && a.kind !== "transfer" && a.kind !== "ambush" && !this.wallLike.has(a.y * map.width + a.x)).map((a) => a.y * map.width + a.x));
     for (const a of this.content!.actions) {
       const x = cellCenterX(a.x);
       const z = cellCenterZ(a.y);
@@ -450,18 +453,34 @@ export class InteriorView {
     const wallAt = (s: number) => map.cells[(door.y + s * -ox) * map.width + (door.x + s * -oz)] === CELL.BUILDING;
     if (!wallAt(1) && wallAt(-1)) side = -1;
     // a shop of the old ground plans is a cell of the street itself: the sign hangs over it
-    const px = cellCenterX(door.x) + (inline ? 0 : (ox + side * -oz) * CELL_SIZE);
-    const pz = cellCenterZ(door.y) + (inline ? 0 : (oz + side * ox) * CELL_SIZE);
+    let px = cellCenterX(door.x) + (inline ? 0 : (ox + side * -oz) * CELL_SIZE);
+    let pz = cellCenterZ(door.y) + (inline ? 0 : (oz + side * ox) * CELL_SIZE);
     // lowest point of the board: 2.0 model units above the origin, which the original placed 0.9 above the floor;
     // the loaded model extends along -x from its origin, so +x of the model points away from the wall
     let rotY = Math.atan2(-oz, ox);
     if (inline) {
       // the bracket sits on a wall at the side of the street, so the board stands across the way and is read from the street; hung from the
       // wall that carries the door it would be seen edge-on by everyone who walks up to the shop (the sixteenth-playtest follow-up)
-      const walls = [1, -1].filter((s) => map.cells[(door.y + s * out.dx) * map.width + (door.x + s * -out.dy)] !== CELL.FLOOR);
-      const wallSide = walls.length > 0 ? walls[(hash2(0x73, door.x, door.y) >>> 4) % walls.length]! : 0;
-      // grid delta of the side wall; the model's +x points away from it
-      if (wallSide !== 0) rotY = Math.atan2(-(wallSide * out.dx), -(wallSide * -out.dy));
+      const solidAt = (x: number, y: number) => map.cells[y * map.width + x] !== CELL.FLOOR;
+      const beside = (s: number) => ({ x: door.x + s * -out.dy, y: door.y + s * out.dx });
+      const walls = [1, -1].filter((s) => solidAt(beside(s).x, beside(s).y));
+      if (walls.length > 0) {
+        const wallSide = walls[(hash2(0x73, door.x, door.y) >>> 4) % walls.length]!;
+        // grid delta of the side wall; the model's +x points away from it
+        rotY = Math.atan2(-(wallSide * out.dx), -(wallSide * -out.dy));
+      } else {
+        // the street runs along the wall of the door: the bracket goes on that wall one cell along the street, beside the door, never on it
+        // (the generator leaves the wall standing on both sides of its door, so the cell beside is a wall)
+        const along = [1, -1].filter((s) => {
+          const c = beside(s);
+          return !solidAt(c.x, c.y) && solidAt(c.x - out.dx, c.y - out.dy);
+        });
+        if (along.length > 0) {
+          const c = beside(along[(hash2(0x73, door.x, door.y) >>> 4) % along.length]!);
+          px = cellCenterX(c.x);
+          pz = cellCenterZ(c.y);
+        }
+      }
     }
     return { model, x: px, y: 0.9 + 2 * SIGN_SCALE, z: pz, rotY, scale: SIGN_SCALE };
   }
@@ -474,8 +493,15 @@ export class InteriorView {
   private faceOpen(map: InteriorMap, a: ActionInstance, pick: number): number {
     const bearings: [Facing, Facing, number][] = [["N", "S", 0], ["E", "W", 90], ["S", "N", 180], ["W", "E", 270]];
     // a closed door or a wall that can be broken is a floor cell in the map but looks like a wall: an object does not face it
-    const openAt = (x: number, y: number) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !this.wallLike.has(y * map.width + x);
-    const floorAt = (f: Facing) => openAt(a.x + FACING_DELTA[f].dx, a.y + FACING_DELTA[f].dy);
+    const floorCell = (x: number, y: number) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !this.wallLike.has(y * map.width + x);
+    // the front looks at an empty cell if there is one: a lectern or chest facing a statue or a person is worse than one facing a bare street
+    const sides = (empty: boolean) => {
+      const openAt = (x: number, y: number) => floorCell(x, y) && !(empty && this.objectCells.has(y * map.width + x));
+      const floorAt = (f: Facing) => openAt(a.x + FACING_DELTA[f].dx, a.y + FACING_DELTA[f].dy);
+      return { openAt, floorAt };
+    };
+    const emptySides = sides(true);
+    const { openAt, floorAt } = bearings.some(([front]) => emptySides.floorAt(front)) ? emptySides : sides(false);
     /** Open cells in a row from this one in a direction (up to 8). */
     const run = (f: Facing) => {
       let n = 0;

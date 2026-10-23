@@ -1,6 +1,6 @@
 import { BAG_SLOTS, type Character } from "../sim/types";
 import { clear, h } from "./dom";
-import { itemIcon } from "./panels";
+import { itemIcon } from "./itemIcons";
 import type { UI } from "./ui";
 
 export interface BackpackChoice {
@@ -48,7 +48,7 @@ export async function pickFromBackpack(ui: UI, hero: Character, choice: Backpack
               draw();
             },
           },
-          item ? h("img", { src: itemIcon(item), alt: item.name }) : null,
+          item ? itemIcon(item) : null,
         );
         grid.append(el);
       }

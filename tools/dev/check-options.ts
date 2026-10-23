@@ -57,7 +57,7 @@ try {
   await sleep(300);
   const first = await rows();
   expect(
-    JSON.stringify(first) === JSON.stringify(["Ground and floors: 3D", "Models: low poly", "Distance: Medium", "Resolution: normal", "Show FPS: off", "Music: on", "Sound effects: on"]),
+    JSON.stringify(first) === JSON.stringify(["Ground and floors: 3D", "Models: low poly", "Distance: Medium", "Resolution: normal", "Animated town scenes: off", "Show FPS: off", "Music: on", "Sound effects: on"]),
     `the options list the switches in order (${first.join(" | ")})`,
   );
   await page.screenshot({ path: join(outDir, "options-title.png") });
@@ -65,7 +65,7 @@ try {
   await click(".parchment .opt", "Distance");
   await click(".parchment .opt", "Show FPS");
   const turned = await rows();
-  expect(turned[0] === "Ground and floors: flat" && turned[2] === "Distance: Far" && turned[4] === "Show FPS: on", `a click turns the switch over (${turned.join(" | ")})`);
+  expect(turned[0] === "Ground and floors: flat" && turned[2] === "Distance: Far" && turned[5] === "Show FPS: on", `a click turns the switch over (${turned.join(" | ")})`);
   expect((await stored()) === null, "nothing is stored before Apply");
   await click(".parchment .buttons .btn", "Back");
   await sleep(200);

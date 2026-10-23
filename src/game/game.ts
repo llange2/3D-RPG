@@ -69,6 +69,7 @@ import { readSettings, writeSettings, type Settings } from "./settings";
 import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
 import { askSpellDetails, openInventory, pickSpell, quickCastOption, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
+import { setAnimatedTown } from "../ui/townScenes";
 import { BIRD_PERCH, BLUE_MUSHROOM, MASCOT_ASK, MASCOT_ITEM, isSolidSpotItem, mascotSpotItem } from "../data/mascots";
 import { propLine } from "../data/prop-texts";
 import { overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
@@ -283,6 +284,7 @@ export class Game {
     this.audio.enableButtonSounds();
     this.audio.setMusicVolume(this.settings.music ? MUSIC_VOLUME : 0);
     this.audio.sfxVolume = this.settings.sfx ? SFX_VOLUME : 0;
+    setAnimatedTown(this.settings.animatedTown);
     this.textures = new TextureCache(this.r.scene);
     this.terrain = new TerrainMaterials(this.r.scene, this.textures);
     this.flatTiles = await this.loadFlatTiles();
@@ -2207,6 +2209,19 @@ export class Game {
     return rt.campaign.model.blockDef(abs.x, abs.y)?.water === "seafarer";
   }
 
+  /** Whether the party stands on water of any depth (a ford, a shore, the sea, a campaign river): there is no camping there, not even with magic. */
+  private onWater(): boolean {
+    const { tx, ty } = this.player;
+    if (this.mode === "overworld") {
+      const g = this.world.tile(tx, ty).ground;
+      return g === GROUND.WATER || g === GROUND.SHALLOW;
+    }
+    const rt = this.interior;
+    if (!rt?.campaign) return false;
+    const abs = rt.campaign.model.toAbsolute(tx, ty);
+    return !!rt.campaign.model.blockDef(abs.x, abs.y)?.water;
+  }
+
   /** Tells the simulation where the party stands: Walk on Water holds while it is in deep water. */
   private syncSurroundings(): void {
     surroundings.inDeepWater = !!this.state && this.mode !== "title" && this.deepWaterHere();
@@ -2293,6 +2308,8 @@ export class Game {
         return this.enc.battleMode ? "A town portal cannot be opened in a fight." : this.portalOptions().length === 0 ? "The party knows no town portal yet. Touch the portal of a town first." : null;
       case 42:
         return this.safeSpots().length === 0 ? "There is no safe place close enough." : null;
+      case 52:
+        return this.onWater() ? "The party cannot rest on water." : null;
       case 45:
         this.gateSpot = this.pickGate();
         return this.outsideNow() ? (this.gateSpot ? null : "Nature's Gate finds nowhere to open.") : "Nature's Gate only opens in the open country.";
@@ -2823,6 +2840,10 @@ export class Game {
   private async camp(): Promise<void> {
     if (this.busy || this.over || this.inFlight()) return;
     const party = this.state.party;
+    if (this.onWater()) {
+      this.ui.log("The party cannot rest on water.", "bad");
+      return;
+    }
     const { tx, ty } = this.player;
     const hunters = monstersReaching(this.gridView(), this.enc, tx, ty);
     const warning = hunters.length > 0 ? " Monsters are about: they will find the camp, and most of the party will be asleep when they do." : "";
@@ -3166,6 +3187,7 @@ export class Game {
         { label: () => `Models: ${draft.models === "original" ? "original" : "low poly"}`, flip: () => (draft.models = draft.models === "original" ? "lowpoly" : "original") },
         { label: () => `Distance: ${VIEW_NAMES[draft.viewDistance]}`, flip: () => (draft.viewDistance = VIEW_DISTANCES[(VIEW_DISTANCES.indexOf(draft.viewDistance) + 1) % VIEW_DISTANCES.length]!) },
         { label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
+        { label: () => `Animated town scenes: ${onOff(draft.animatedTown)}`, flip: () => (draft.animatedTown = !draft.animatedTown) },
         { label: () => `Show FPS: ${onOff(draft.showFps)}`, flip: () => (draft.showFps = !draft.showFps) },
         { label: () => `Music: ${onOff(draft.music)}`, flip: () => (draft.music = !draft.music) },
         { label: () => `Sound effects: ${onOff(draft.sfx)}`, flip: () => (draft.sfx = !draft.sfx) },
@@ -3209,6 +3231,7 @@ export class Game {
       this.campaignView.setViewShare(VIEW_SHARE[next.viewDistance]);
     }
     if (next.resolution !== before.resolution) this.r.setResolution(next.resolution);
+    setAnimatedTown(next.animatedTown);
     if (!next.showFps) this.ui.setFps(null);
     this.audio.setMusicVolume(next.music ? MUSIC_VOLUME : 0);
     this.audio.sfxVolume = next.sfx ? SFX_VOLUME : 0;

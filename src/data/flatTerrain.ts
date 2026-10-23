@@ -12,6 +12,8 @@
  *   diag-xxyy   the second fills the two opposite quarters xx and yy
  *   inner-xx    the first fills the quarter xx, the second the rest
  * `island` and `pond` have the same border as a full tile (one terrain all round, a blob of the other in the middle).
+ * `mix_<tl>_<tr>_<bl>_<br>` names the terrain of each quarter outright: the corner where a road leaves a coast on a bridge meets cobblestone, land and
+ * water, three terrains, which no pair tile shows (`tools/assets/gen-mixed-tiles.py` paints them). One terrain is on two of the quarters and counts as the tile's.
  * A tile counts as the terrain that covers most of it, on a tie as the first one in the file name (measured on the pictures: the share
  * of the first terrain is 75 % for corner, 50 % for edge and diag, 25 % for inner, and a blob of 15 to 20 % for island and pond).
  */
@@ -53,9 +55,11 @@ export interface FlatTile {
   terrain: FlatTerrain;
   /** The other terrain on the tile (absent on a full tile). */
   other?: FlatTerrain;
-  shape: FlatShape | "full";
+  shape: FlatShape | "full" | "mix";
   /** Where `other` is: a corner (tl, tr, bl, br), a side (top, bottom, left, right) or both corners of a diagonal (tlbr, trbl). Absent for full, island and pond. */
   at?: string;
+  /** The terrain of each quarter (top left, top right, bottom left, bottom right) of a `mix` tile, which shows three terrains. */
+  quarters?: [FlatTerrain, FlatTerrain, FlatTerrain, FlatTerrain];
 }
 
 export interface FlatRegister {
@@ -71,6 +75,16 @@ const isShape = (s: string): s is FlatShape => (FLAT_SHAPES as readonly string[]
 export function parseFlatName(name: string): FlatTile {
   const parts = name.split("_");
   if (parts.length === 2 && parts[1] === "full" && isTerrain(parts[0]!)) return { terrain: parts[0], shape: "full" };
+  if (parts.length === 5 && parts[0] === "mix") {
+    const quarters = parts.slice(1);
+    if (!quarters.every(isTerrain)) throw new Error(`flat terrain: cannot read "${name}"`);
+    const q = quarters as [FlatTerrain, FlatTerrain, FlatTerrain, FlatTerrain];
+    const counts = new Map<FlatTerrain, number>();
+    for (const t of q) counts.set(t, (counts.get(t) ?? 0) + 1);
+    const doubled = [...counts].find(([, n]) => n === 2);
+    if (counts.size !== 3 || !doubled) throw new Error(`flat terrain: "${name}" must show three terrains, one of them twice`);
+    return { terrain: doubled[0], shape: "mix", quarters: q };
+  }
   if (parts.length !== 3) throw new Error(`flat terrain: cannot read "${name}"`);
   const [first, second, rest] = parts as [string, string, string];
   const [shape, at] = rest.split("-") as [string, string | undefined];
@@ -89,6 +103,7 @@ export function parseFlatName(name: string): FlatTile {
 /** The terrain of each quarter of a tile (top left, top right, bottom left, bottom right); null for island and pond, whose border is that of a full tile. */
 export function quartersOf(tile: FlatTile): [FlatTerrain, FlatTerrain, FlatTerrain, FlatTerrain] | null {
   if (tile.shape === "island" || tile.shape === "pond") return null;
+  if (tile.shape === "mix") return tile.quarters ?? null;
   const q: Record<Quadrant, FlatTerrain> = { tl: tile.terrain, tr: tile.terrain, bl: tile.terrain, br: tile.terrain };
   if (tile.other && tile.at) for (const quadrant of QUADRANTS_AT[tile.at]!) q[quadrant] = tile.other;
   return [q.tl, q.tr, q.bl, q.br];
@@ -100,7 +115,7 @@ export function quartersOf(tile: FlatTile): [FlatTerrain, FlatTerrain, FlatTerra
  */
 export function missingFlatTiles(names: string[]): string[] {
   const have = new Set(names);
-  const pairs = new Set(names.filter((n) => !n.endsWith("_full")).map((n) => n.split("_").slice(0, 2).join("_")));
+  const pairs = new Set(names.filter((n) => !n.endsWith("_full") && !n.startsWith("mix_")).map((n) => n.split("_").slice(0, 2).join("_")));
   const missing: string[] = [];
   for (const pair of [...pairs].sort()) {
     for (const shape of FLAT_SHAPES) {

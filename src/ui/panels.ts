@@ -3,6 +3,7 @@ import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, eq
 import { bonusLines, combineItems, isTwoHanded, makeItem, weaponHands, type Hands } from "../sim/items";
 import { SPELL_GRID, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
+import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
 import { portraitImage } from "./avatarFx";
 import { assetPath, clear, h } from "./dom";
@@ -39,10 +40,6 @@ const RESISTANCES: [keyof Pick<Character, "resFire" | "resIce" | "resAcid" | "re
   ["resAcid", "res_acid", "Acid resistance"],
   ["resMagic", "res_magic", "Magic resistance"],
 ];
-
-export function itemIcon(item: Item): string {
-  return assetPath(`icons/items/${item.texture}.webp`);
-}
 
 const BAG_FULL_FOR_SHIELD = "The backpack is full: taking off the shield needs one more free place.";
 
@@ -248,7 +245,7 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
             dbl(slot);
           },
         },
-        item ? h("img", { src: itemIcon(item), alt: item.name }) : null,
+        item ? itemIcon(item) : null,
         label ? h("div", { class: "label", text: label }) : null,
       );
       el.addEventListener("mouseenter", () => {

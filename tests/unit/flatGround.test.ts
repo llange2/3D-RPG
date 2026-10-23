@@ -54,10 +54,11 @@ describe.skipIf(!existsSync(REGISTER))("flat ground tiles", () => {
   it("blends the most common terrain with the most common other one where more than two meet, and lets ties go by priority", () => {
     const register = read();
     const set = new FlatTileSet(register);
-    // grass, grass, water, cobblestone: grass has two quarters, water and cobblestone one each, cobblestone wins the tie
-    expect(quarters(set, register, ["grass", "grass", "water", "cobblestone"])).toEqual(["grass", "grass", "grass", "cobblestone"]);
+    // (cobblestone, water and a land have tiles of their own, `mix_…`; snow beside grass and water has none)
+    // grass, grass, water, snow: grass has two quarters, water and snow one each, water wins the tie
+    expect(quarters(set, register, ["grass", "grass", "water", "snow"])).toEqual(["grass", "grass", "water", "grass"]);
     // the same corner with the quarters in another order picks the same pair
-    expect(quarters(set, register, ["cobblestone", "water", "grass", "grass"])).toEqual(["cobblestone", "grass", "grass", "grass"]);
+    expect(quarters(set, register, ["snow", "water", "grass", "grass"])).toEqual(["grass", "water", "grass", "grass"]);
     // three quarters of one terrain stay as they are
     expect(quarters(set, register, ["water", "water", "water", "cobblestone"])).toEqual(["water", "water", "water", "cobblestone"]);
   });

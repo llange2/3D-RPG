@@ -13,9 +13,10 @@ import type { SeedState } from "../core/rng";
 import type { Poi } from "../world/types";
 import type { World } from "../world/world";
 import { tidy } from "../campaign/engine";
-import { assetPath, clear, h } from "./dom";
+import { clear, h } from "./dom";
+import { stopTownScene, townArt, type SceneName } from "./townScenes";
 import { thousands } from "../core/format";
-import { itemIcon } from "./panels";
+import { itemIcon } from "./itemIcons";
 import { openRoster } from "./roster";
 import type { UI } from "./ui";
 
@@ -58,6 +59,7 @@ export const serviceMusic = (s: ServiceKind): number => MUSIC[s];
 
 /** Opens the shop screen of a town service. Resolves when the party leaves. */
 export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Promise<void> {
+  const scene: SceneName = kind === "training" ? "training_grounds" : kind;
   return ui.panel((close, panel) => {
     const party = ctx.party;
     // Layout: a fixed head (title, way out), the whole picture on the left and the part that changes on the right. Only
@@ -67,7 +69,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
     panel.classList.add("service");
     panel.append(
       h("div", { class: "svc-head" }, h("h2", { text: `${TITLES[kind]}${ctx.poi ? ` of ${ctx.poi.name}` : ""}` }), h("button", { class: "btn", text: "Leave (Esc)", onclick: close })),
-      h("div", { class: "svc-body" }, h("div", { class: "svc-art" }, h("img", { src: assetPath(`ui/town/town_${kind === "training" ? "training_grounds" : kind}.webp`), alt: "" }), gold), root),
+      h("div", { class: "svc-body" }, h("div", { class: "svc-art" }, townArt(scene), gold), root),
     );
     /** Updates the gold line; kept under the name `header` so every view starts with it. */
     const header = (extra?: string): never[] => {
@@ -155,7 +157,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           if (ctx.soldOut?.has(soldKey(n)) || s.shelf !== smithShelf) return;
           left++;
           const bonus = bonusDescription(s.item).replace(/\n/g, ", ");
-          root.append(row(h("span", { style: "display:flex;gap:10px;align-items:center" }, h("img", { src: itemIcon(s.item), style: "width:44px;height:44px;object-fit:contain" }), h("span", {}, h("div", { text: s.item.name.trim() }), h("div", { class: "small", style: "opacity:0.75", text: bonus }))), `${thousands(s.price)} gold`, () => {
+          root.append(row(h("span", { style: "display:flex;gap:10px;align-items:center" }, itemIcon(s.item, 44), h("span", {}, h("div", { text: s.item.name.trim() }), h("div", { class: "small", style: "opacity:0.75", text: bonus }))), `${thousands(s.price)} gold`, () => {
             const r = buyItem(party, s);
             if (r.ok) {
               ctx.soldOut?.add(soldKey(n));
@@ -175,7 +177,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           const item = c.inventory[slot];
           if (!item || item.quest) continue;
           any = true;
-          root.append(row(h("span", { style: "display:flex;gap:10px;align-items:center" }, h("img", { src: itemIcon(item), style: "width:40px;height:40px;object-fit:contain" }), h("span", { text: item.name.trim() })), `sell for ${thousands(sellPrice(item, party))}`, () => {
+          root.append(row(h("span", { style: "display:flex;gap:10px;align-items:center" }, itemIcon(item, 40), h("span", { text: item.name.trim() })), `sell for ${thousands(sellPrice(item, party))}`, () => {
             if (sellItem(party, sellWho, slot)) {
               ctx.sound?.(9000);
               note(`Sold ${item.name.trim()}.`, "good");
@@ -328,7 +330,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       return h(
         "span",
         { style: "display:flex;gap:10px;align-items:center" },
-        h("img", { src: itemIcon(item ?? spellScroll(spellId)), style: "width:40px;height:40px;object-fit:contain" }),
+        itemIcon(item ?? spellScroll(spellId), 40),
         h(
           "span",
           {},
@@ -345,5 +347,5 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       views[kind]();
     };
     render();
-  });
+  }).finally(() => stopTownScene(scene));
 }

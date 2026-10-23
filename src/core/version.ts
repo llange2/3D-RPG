@@ -72,5 +72,7 @@
  * triangles, strips, rings of land round a bay with a small island in it); there are never more small islands than big ones and the number of big ones grows with the world
  * (the number of big ones follows the land share asked for: 50, 46, 43 and 40 %); the sea at the edge is two tiles at least; a lava island is ringed by mountains with one way in (`World.coastRing`); rivers by climate (meadow and swamp
  * have them, desert and lava none) and an inland water at most three tiles wide is shallow throughout (`World.narrowInland`).
+ * 20 = twenty-third playtest: a door of a town stands in a wall that goes on on both sides (no free cell beside the wall cell that carries a shop's door or the way out),
+ * and a wall that gives way is never beside a shop.
  */
-export const GEN_VERSION = 19;
+export const GEN_VERSION = 20;

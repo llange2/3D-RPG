@@ -25,6 +25,9 @@ export const OWN_MODELS: Record<number, { model: string; scale: number }> = {
 /** Old items that hang on a wall: the model's cloth lies a cell's wall distance behind its origin, so it is turned like the old game's, not like the standing GLB objects. */
 export const WALL_HUNG: ReadonlySet<number> = new Set([103, 104, 105]);
 
+/** Old items whose model has its working side (the lectern's sloping top) where the others have their back: turned by this many degrees on top of the rule above. */
+const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180 };
+
 /** The kinds of action whose `item` param is an old item they stand on their cell as (a statue, a gong, a lever, a head, a rune on the floor). */
 const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal"]);
 
@@ -61,6 +64,7 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   // The banners (items 103 to 105) are the exception: the model is a flat cloth at z = -0.9 (1.35 units with its scale), which the old maps hang on the wall behind
   // the cell, emblem to the room. The half circle moved the cloth to the room side, 2.85 units from the wall and with its emblem to the wall (21st playtest, point 7).
   if (isGlbItem(item) && !OWN_MODELS[item] && !WALL_HUNG.has(item)) bearing += 180;
+  bearing += FRONT_TURN[item] ?? 0;
   const own = OWN_MODELS[item];
   if (own) return { model: own.model, x, y: 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale };
   return itemProp(item, bearing, x, z, staticInfo);

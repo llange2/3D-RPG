@@ -112,15 +112,23 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
   for (const [x, y] of walls) if (touchesOutside(x, y)) b.set(x, y, CELL.SOLID);
 
   const isWall = (x: number, y: number) => b.get(x, y) !== CELL.FLOOR;
+  /** The two sides of a wall, along it. */
+  const along = (f: Facing): Facing[] => (f === "N" || f === "S" ? ["W", "E"] : ["N", "S"]);
+  /**
+   * A door goes in a wall that goes on to both sides: no free cell beside the wall cell that carries it (a wall piece standing alone between two
+   * streets, or at the end of a house, gives a door with the street round the corner; the user's rule, 23rd playtest).
+   */
+  const wallGoesOn = (wx: number, wy: number, back: Facing): boolean => along(back).every((f) => !b.isFloor(wx + FACING_DELTA[f].dx, wy + FACING_DELTA[f].dy));
 
   // the way out: one of the old ways out, with the wall behind it and the street in front
-  const exits = plan.exits
+  const exitWays = plan.exits
     .map(([ex, ey]) => place(ex, ey))
     .flatMap(([x, y]) =>
       SIDES.filter((back) => isWall(x + FACING_DELTA[back].dx, y + FACING_DELTA[back].dy) && b.isFloor(x - FACING_DELTA[back].dx, y - FACING_DELTA[back].dy)).map((back) => ({ x, y, back })),
     );
-  if (exits.length === 0) throw new Error(`town ${plan.id}: no usable way out`);
-  const way = rng.pick(exits);
+  if (exitWays.length === 0) throw new Error(`town ${plan.id}: no usable way out`);
+  const flanked = exitWays.filter((e) => wallGoesOn(e.x + FACING_DELTA[e.back].dx, e.y + FACING_DELTA[e.back].dy, e.back));
+  const way = rng.pick(flanked.length > 0 ? flanked : exitWays);
   const exit = { x: way.x, y: way.y };
   const spawn = { x: way.x - FACING_DELTA[way.back].dx, y: way.y - FACING_DELTA[way.back].dy, facing: opposite(way.back) };
 
@@ -221,8 +229,8 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
   // which carries the door (and the sign over the cell); stepping onto the cell enters it
   const lots: Lot[] = [];
   const shopCells: [number, number][] = [];
-  const addShop = (x: number, y: number): boolean => {
-    const backs = SIDES.filter((s) => isWall(x + FACING_DELTA[s].dx, y + FACING_DELTA[s].dy));
+  const addShop = (x: number, y: number, strict = true): boolean => {
+    const backs = SIDES.filter((s) => isWall(x + FACING_DELTA[s].dx, y + FACING_DELTA[s].dy) && (!strict || wallGoesOn(x + FACING_DELTA[s].dx, y + FACING_DELTA[s].dy, s)));
     if (backs.length === 0) return false;
     // a wall with a street in front of it (the cell opposite is open) is the better door; otherwise any wall will do
     const open = backs.filter((s) => b.isFloor(x - FACING_DELTA[s].dx, y - FACING_DELTA[s].dy));
@@ -240,7 +248,7 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
     const [x, y] = place(px, py);
     if (nearStart(x, y)) continue;
     const at = claim(px, py);
-    if (at) addShop(at[0], at[1]);
+    if (at && !addShop(at[0], at[1])) used.delete(at[1] * width + at[0]);
   }
   if (lots.length < SHOPS_WANTED) {
     const free: [number, number][] = [];
@@ -253,14 +261,17 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
     }
     const order = rng.shuffle(free);
     // as far apart as the plan allows: the gap shrinks until every service has a shop
-    for (const gap of [SHOP_GAP, 2, 1]) {
-      for (const [x, y] of order) {
-        if (lots.length >= SHOPS_WANTED) break;
-        if (used.has(y * width + x)) continue;
-        if (shopCells.some(([sx, sy]) => Math.abs(sx - x) + Math.abs(sy - y) < gap)) continue;
-        // next to a talker or a chest is too close as well: the door of a shop must not be hidden behind a person
-        if (sites.some((s) => Math.abs(s.x - x) + Math.abs(s.y - y) < 2)) continue;
-        if (addShop(x, y)) used.add(y * width + x);
+    // (a plan whose walls leave no better door is given one in any wall at the end, so that every service has its shop)
+    for (const strict of [true, false]) {
+      for (const gap of [SHOP_GAP, 2, 1]) {
+        for (const [x, y] of order) {
+          if (lots.length >= SHOPS_WANTED) break;
+          if (used.has(y * width + x)) continue;
+          if (shopCells.some(([sx, sy]) => Math.abs(sx - x) + Math.abs(sy - y) < gap)) continue;
+          // next to a talker or a chest is too close as well: the door of a shop must not be hidden behind a person
+          if (sites.some((s) => Math.abs(s.x - x) + Math.abs(s.y - y) < 2)) continue;
+          if (addShop(x, y, strict)) used.add(y * width + x);
+        }
       }
     }
   }
@@ -393,9 +404,12 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
     if (!spot) {
       // a niche: a house wall cell with one street cell beside it and wall on its other sides, which no shop, person or object uses
       const walls: [number, number][] = [];
+      // the wall that carries a shop's door goes on to both sides: no niche is dug beside it
+      const doorWalls = lots.map((l) => at(l.door.x - FACING_DELTA[l.door.facing].dx, l.door.y - FACING_DELTA[l.door.facing].dy));
       for (let y = 1; y < height - 1; y++) {
         for (let x = 1; x < width - 1; x++) {
           if (b.get(x, y) !== CELL.BUILDING || !interior(x, y) || away(x, y) < 3) continue;
+          if (SIDES.some((f) => doorWalls.includes(at(x + FACING_DELTA[f].dx, y + FACING_DELTA[f].dy)))) continue;
           const open = SIDES.filter((f) => b.isFloor(x + FACING_DELTA[f].dx, y + FACING_DELTA[f].dy));
           if (open.length !== 1) continue;
           const street = at(x + FACING_DELTA[open[0]!].dx, y + FACING_DELTA[open[0]!].dy);
