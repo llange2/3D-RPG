@@ -111,6 +111,13 @@ export function monsterLevel(id: number): number {
   return ranks.get(id) ?? MONSTERS[id]!.treasure_level * 1000;
 }
 
+/**
+ * How far (in thousandths of a level) a wild monster may lie from the level of the spot and still be drawn there. It was 700, so that nearly every monster of
+ * a level could stand nearly anywhere on it, and a Wicked Witch (the 16th of 18 monsters of level 1) stood eight tiles from Starthaven (25th playtest). With 150 a
+ * spot has the one or two monsters whose place on the scale it is.
+ */
+export const WILD_WINDOW = 150;
+
 /** The monsters that roam the overworld without a hut, the sheet's "x". `water`: those of the open sea, else those that walk. */
 function wildPool(water: boolean): MonsterDef[] {
   return MONSTER_IDS.map((id) => MONSTERS[id]!).filter((m) => m.outside === "wild" && (water ? m.terrain === "water" : walksOnLand(m)));
@@ -118,15 +125,19 @@ function wildPool(water: boolean): MonsterDef[] {
 const pools = { land: wildPool(false), water: wildPool(true) };
 
 /**
- * A wild monster for a spot: the monsters of the sheet's "x" whose place on the scale lies close to the level of the spot, the nearer the more
- * likely. The way to the next town only reaches `FULL_WAY` of the scale, so that the hardest monsters of a level are not left for a single tile.
+ * A wild monster for a spot: the monsters of the sheet's "x" whose place on the scale lies within `WILD_WINDOW` of the level of the spot, the nearer the
+ * more likely. The way to the next town only reaches `FULL_WAY` of the scale, so that the hardest monsters of a level are not left for a single tile.
  */
 export function pickWildMonster(rng: Rng, world: World, x: number, y: number, water: boolean): MonsterDef {
-  const pool = water ? pools.water : pools.land;
+  const all = water ? pools.water : pools.land;
   const tier = world.tierAt(x, y);
-  const way = Math.min(1000, Math.floor((wayAt(world, x, y, tier) * 1000) / FULL_WAY));
+  // on land the monsters are those of the level of the island: the hardest of level 1 do not stand at the border of level 2 (25th playtest)
+  const own = water ? [] : all.filter((m) => m.treasure_level === tier);
+  const pool = own.length > 0 ? own : all;
+  // levels 1 and 2 have their way measured over their whole half of the start island already (`wayAt`); the others keep the last seventh free
+  const way = tier <= 2 ? wayAt(world, x, y, tier) : Math.min(1000, Math.floor((wayAt(world, x, y, tier) * 1000) / FULL_WAY));
   const here = tier * 1000 + way;
-  const weights = pool.map((m) => Math.max(0, 1000 - Math.floor((Math.abs(monsterLevel(m.id) - here) * 1000) / 700)));
+  const weights = pool.map((m) => Math.max(0, 1000 - Math.floor((Math.abs(monsterLevel(m.id) - here) * 1000) / WILD_WINDOW)));
   if (weights.every((w) => w === 0)) {
     // nothing within reach (the sea of level 1 has no monster of its own): the one nearest on the scale
     return [...pool].sort((a, b) => Math.abs(monsterLevel(a.id) - here) - Math.abs(monsterLevel(b.id) - here) || a.id - b.id)[0]!;

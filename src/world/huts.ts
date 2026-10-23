@@ -4,6 +4,7 @@ import { caravansOf } from "./caravans";
 import { levelAt } from "./difficulty";
 import { wrapDist2 } from "./islands";
 import { overworldMascotSpots } from "./mascots";
+import { SAFE_RADIUS, inSafeZone, safeSpots } from "./spawns";
 import { DECO, GROUND, wrapDelta, type WorldSize } from "./types";
 import type { World } from "./world";
 
@@ -33,30 +34,27 @@ export function hutMonsters(size: WorldSize): number {
 export function hutXpPercent(size: WorldSize): number {
   return Math.round((100 * MONSTERS_PER_HUT[XP_SIZE]) / MONSTERS_PER_HUT[size]);
 }
-/** The wild monsters keep this far from the start (`SAFE_RADIUS`), and so does every monster of a hut. */
-const MONSTER_START_CLEARANCE = 12;
-/** No hut stands nearer to the start than this, in any pass (the level-1 half of a small start island is not big, and Starthaven lies at its end). */
-const LEAST_START = 8;
+/** No hut stands nearer to Starthaven than this, in any pass; its monsters keep out of the safe zone round the town (`SAFE_RADIUS`) like the wild ones. */
+const LEAST_START = SAFE_RADIUS + 2;
 /**
  * How a hut is placed, the strict way first: a hut needs room for `share` of its monsters (in percent), keeps `apart` tiles from every other hut and
- * `start` tiles from the start. The strictest pass keeps the monsters of two huts a good way apart (two radii and then some) and the first hut out
- * of the young party's first steps (the monsters stand up to `HUT_RADIUS` tiles from their hut), so that the party meets one hut's monsters at a
- * time and no horde from two huts runs it down in the open. A small island cannot hold twenty-one huts that far apart, and every monster of the
+ * `start` tiles from Starthaven. The strictest pass keeps the monsters of two huts a good way apart (two radii and then some), so that the party meets
+ * one hut's monsters at a time and no horde from two huts runs it down in the open. A small island cannot hold twenty-one huts that far apart, and every monster of the
  * sheet has its hut, so the rules loosen pass by pass, for the hut that does not fit, until it does.
  */
 const PASSES: readonly { share: number; apart: number; start: number }[] = [
-  { share: 100, apart: 24, start: 17 },
-  { share: 100, apart: 20, start: 17 },
-  { share: 90, apart: 17, start: 16 },
-  { share: 80, apart: 14, start: 16 },
-  { share: 70, apart: 12, start: 15 },
-  { share: 60, apart: 10, start: 14 },
-  { share: 50, apart: 8, start: 14 },
-  { share: 40, apart: 7, start: 13 },
-  { share: 30, apart: 6, start: 12 },
-  { share: 25, apart: 5, start: 12 },
-  { share: 1, apart: 4, start: 10 },
-  { share: 1, apart: 3, start: 10 },
+  { share: 100, apart: 24, start: 9 },
+  { share: 100, apart: 20, start: 9 },
+  { share: 90, apart: 17, start: 8 },
+  { share: 80, apart: 14, start: 8 },
+  { share: 70, apart: 12, start: 7 },
+  { share: 60, apart: 10, start: 7 },
+  { share: 50, apart: 8, start: 6 },
+  { share: 40, apart: 7, start: 6 },
+  { share: 30, apart: 6, start: 5 },
+  { share: 25, apart: 5, start: 5 },
+  { share: 1, apart: 4, start: 5 },
+  { share: 1, apart: 3, start: LEAST_START },
   { share: 1, apart: 2, start: LEAST_START },
 ];
 /** Spots tried on each island for a level. */
@@ -109,7 +107,8 @@ export function hutIndex(world: World): { huts: HutSpot[]; byId: Map<string, Hut
 }
 
 function makeHuts(world: World): HutSpot[] {
-  const start = world.startPosition();
+  // the town the game begins in: nothing stands within `SAFE_RADIUS` of it, and the huts of levels 1 and 2 are laid out outwards from it
+  const start = world.anchorOf(0, 0);
   const wanted = hutMonsters(world.size);
   // what already stands on open ground and must keep its ways: the mascots, the wagons of the talent traders
   const blockers: { x: number; y: number }[] = [...overworldMascotSpots(world)];
@@ -122,7 +121,7 @@ function makeHuts(world: World): HutSpot[] {
     // Levels 1 and 2 share the start island and are ordered by the plain distance from Starthaven: the weakest hut of a level is the nearest to it, the
     // next weakest the second nearest, and so on, so the monsters grow harder from the town outwards, across the border of level 2 to the end of the island.
     // The later levels have an island of their own: they go by `levelAt`, the way from the town of the level to that of the next.
-    const home = level <= 2 ? world.poiById("p:0:0:0") : null;
+    const home = level <= 2 ? start : null;
     // spots on the islands of the level, ordered by how hard the level is there
     const spots: { x: number; y: number; island: number; reach: number; fromStart: number }[] = [];
     const seen = new Set<number>();
@@ -137,7 +136,7 @@ function makeHuts(world: World): HutSpot[] {
         const t = world.tile(x, y);
         if (t.ground !== GROUND.LAND || t.deco !== DECO.NONE || t.poiId !== null) continue;
         const fromStart = wrapDist2(x, y, start.x, start.y, world.width, world.height);
-        if (fromStart < LEAST_START * LEAST_START) continue;
+        if (fromStart < LEAST_START * LEAST_START || safeSpots(world).some((p) => wrapDist2(x, y, p.x, p.y, world.width, world.height) < LEAST_START * LEAST_START)) continue;
         const reach = home ? wrapDist2(x, y, home.x, home.y, world.width, world.height) : levelAt(world, x, y);
         spots.push({ x, y, island: isl.index, reach, fromStart });
       }
@@ -218,7 +217,7 @@ function slotsAround(world: World, id: string, hx: number, hy: number, island: n
     if (world.islandAt(x, y)?.index !== island) continue;
     const t = world.tile(x, y);
     if (t.ground !== GROUND.LAND || t.deco !== DECO.NONE || t.poiId !== null) continue;
-    if (near(world, x, y, start.x, start.y, MONSTER_START_CLEARANCE)) continue;
+    if (inSafeZone(world, x, y)) continue;
     if (out.some((s) => Math.max(Math.abs(s.x - cx), Math.abs(s.y - cy)) < 2)) continue;
     if (world.poiAtEntrance(x, y) !== null || !world.isOpenGround(x, y)) continue;
     out.push({ x: cx, y: cy });

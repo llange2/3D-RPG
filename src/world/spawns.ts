@@ -12,13 +12,34 @@ export interface OverworldSpawn {
   monsterIds: number[];
 }
 
-/** Within this many tiles of Starthaven no wild monsters appear. */
-export const SAFE_RADIUS = 12;
+/**
+ * Within this many tiles of the first town, Starthaven, and of the spot in front of it where a new game begins, no monsters appear (wild groups and the
+ * monsters of huts alike).
+ */
+export const SAFE_RADIUS = 3;
 
 /** Groups per chunk of 10 x 10 tiles, in permille by count: 0, 1, 2 or 3 (a tenth of the old 16 x 16 chunk's 1.75 groups on average per 100 tiles: 0.7). */
 const COUNT_WEIGHTS: readonly number[] = [500, 350, 120, 30];
 
 const cache = new WeakMap<World, Map<number, OverworldSpawn[]>>();
+
+/** The two spots the safe zone lies round: the first town and where the party begins. */
+const homes = new WeakMap<World, { x: number; y: number }[]>();
+
+export function safeSpots(world: World): { x: number; y: number }[] {
+  let spots = homes.get(world);
+  if (!spots) {
+    const town = world.anchorOf(0, 0);
+    const begin = world.startPosition();
+    homes.set(world, (spots = [{ x: town.x, y: town.y }, { x: begin.x, y: begin.y }]));
+  }
+  return spots;
+}
+
+/** Is the tile inside the safe zone? */
+export function inSafeZone(world: World, x: number, y: number): boolean {
+  return safeSpots(world).some((p) => wrapDist2(x, y, p.x, p.y, world.width, world.height) <= SAFE_RADIUS * SAFE_RADIUS);
+}
 
 /**
  * Wild monster groups of one chunk of the world (`ccx`, `ccy` inside it). A pure function of (world seed, chunk): the same chunk always holds the same
@@ -30,7 +51,6 @@ function groupsOf(world: World, ccx: number, ccy: number): OverworldSpawn[] {
   const key = ccy * world.chunksAcross + ccx;
   const cached = byChunk.get(key);
   if (cached) return cached;
-  const start = world.anchorOf(0, 0);
   const rng = rngFor(world.rootSeed, LAYER.SPAWN, ccx, ccy);
   const roll = rng.int(1000);
   const count = roll < COUNT_WEIGHTS[0]! ? 0 : roll < COUNT_WEIGHTS[0]! + COUNT_WEIGHTS[1]! ? 1 : roll < 1000 - COUNT_WEIGHTS[3]! ? 2 : 3;
@@ -41,7 +61,7 @@ function groupsOf(world: World, ccx: number, ccy: number): OverworldSpawn[] {
     for (let attempt = 0; attempt < 6 && !found; attempt++) {
       const x = ccx * CHUNK_SIZE + rng.int(CHUNK_SIZE);
       const y = ccy * CHUNK_SIZE + rng.int(CHUNK_SIZE);
-      if (wrapDist2(x, y, start.x, start.y, world.width, world.height) < SAFE_RADIUS * SAFE_RADIUS) continue;
+      if (inSafeZone(world, x, y)) continue;
       const tile = world.tile(x, y);
       if (tile.poiId !== null) continue;
       const inWater = tile.ground === GROUND.WATER || tile.ground === GROUND.SHALLOW;

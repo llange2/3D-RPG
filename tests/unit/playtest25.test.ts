@@ -5,8 +5,11 @@ import { MONSTER_IDS, MONSTERS } from "../../src/data/tables";
 import { createEncounter, createMonster, monsterTurn, monsterXp, partyAttack, updateBattleMode, type GridView } from "../../src/sim/encounter";
 import { createDefaultParty } from "../../src/sim/party";
 import { castSpell, movesParty } from "../../src/sim/spells";
+import { WILD_WINDOW, monsterLevel, wayAt } from "../../src/world/difficulty";
+import { wrapDist2 } from "../../src/world/islands";
 import { HUT_RADIUS, hutMonsters, hutsOf, hutXpPercent } from "../../src/world/huts";
-import { wrapDelta, type WorldSize } from "../../src/world/types";
+import { SAFE_RADIUS, chunkSpawns, inSafeZone } from "../../src/world/spawns";
+import { CHUNK_SIZE, wrapDelta, type WorldSize } from "../../src/world/types";
 import { World } from "../../src/world/world";
 
 const rng = (s: string) => new Rng(seedFromString(s));
@@ -70,14 +73,48 @@ describe("the Monster Huts by world size (25th playtest, 3 and 7)", () => {
     });
   }
 
-  it("keeps the huts out of the start's first steps", () => {
+  it("keeps only a small safe zone round the first town and the start: three tiles", () => {
+    expect(SAFE_RADIUS).toBe(3);
     for (const size of SIZES) {
       const world = new World("p25-start", size);
-      const s = world.startPosition();
       for (const h of hutsOf(world)) {
-        for (const slot of h.slots) expect(Math.hypot(wrapDelta(s.x, slot.x, world.width), wrapDelta(s.y, slot.y, world.height)), h.id).toBeGreaterThanOrEqual(12);
+        expect(inSafeZone(world, h.x, h.y), h.id).toBe(false);
+        for (const slot of h.slots) expect(inSafeZone(world, slot.x, slot.y), h.id).toBe(false);
       }
     }
+    // and no more than that: the nearest hut of a world stands within a dozen tiles of the town
+    for (const seed of ["onyx-peak-873", "kelp-peak-430"]) {
+      const world = new World(seed, "small");
+      const home = world.anchorOf(0, 0);
+      const nearest = Math.min(...hutsOf(world).map((h) => Math.hypot(h.x - home.x, h.y - home.y)));
+      expect(nearest, seed).toBeLessThanOrEqual(12);
+    }
+  });
+
+  it("gives the wild groups of levels 1 and 2 no monster much harder than their place on the scale (onyx-peak-873: no Wicked Witch near Starthaven)", () => {
+    let groups = 0;
+    for (const [seed, size] of [["onyx-peak-873", "small"], ["kelp-peak-430", "small"], ["p25-a", "default"], ["p25-b", "default"]] as const) {
+      const world = new World(seed, size);
+      const home = world.anchorOf(0, 0);
+      for (let cy = 0; cy < world.height / CHUNK_SIZE; cy++) {
+        for (let cx = 0; cx < world.width / CHUNK_SIZE; cx++) {
+          for (const g of chunkSpawns(world, cx, cy)) {
+            const tier = world.tierAt(g.x, g.y);
+            if (tier > 2 || g.monsterIds.some((m) => MONSTERS[m]!.terrain === "water")) continue;
+            groups++;
+            const here = tier * 1000 + wayAt(world, g.x, g.y, tier);
+            // the easiest wild monster of a level is the one chosen where nothing lies within reach (right next to the town)
+            const easiest = MONSTER_IDS.filter((x) => MONSTERS[x]!.outside === "wild" && MONSTERS[x]!.treasure_level === tier && MONSTERS[x]!.terrain !== "water").sort((a, b) => monsterLevel(a) - monsterLevel(b))[0]!;
+            for (const m of g.monsterIds) {
+              expect(MONSTERS[m]!.treasure_level, `${seed} ${g.uid}`).toBe(tier);
+              if (m === easiest) continue;
+              expect(monsterLevel(m) - here, `${seed} ${g.uid} ${MONSTERS[m]!.name} at ${Math.round(Math.hypot(g.x - home.x, g.y - home.y))} tiles`).toBeLessThanOrEqual(WILD_WINDOW);
+            }
+          }
+        }
+      }
+    }
+    expect(groups).toBeGreaterThan(40);
   });
 
   it("stands the huts of levels 1 and 2 from the weakest to the strongest monster, outwards from Starthaven (kelp-peak-430)", () => {
@@ -89,7 +126,7 @@ describe("the Monster Huts by world size (25th playtest, 3 and 7)", () => {
           const ranked = hutsOf(world)
             .filter((h) => MONSTERS[h.monster]!.treasure_level === level)
             .sort((a, b) => MONSTERS[a.monster]!.xp - MONSTERS[b.monster]!.xp || a.monster - b.monster);
-          const dist = ranked.map((h) => (h.x - home.x) ** 2 + (h.y - home.y) ** 2);
+          const dist = ranked.map((h) => wrapDist2(h.x, h.y, home.x, home.y, world.width, world.height));
           expect(dist, `${seed} ${size} level ${level}`).toEqual([...dist].sort((a, b) => a - b));
         }
       }
@@ -99,7 +136,7 @@ describe("the Monster Huts by world size (25th playtest, 3 and 7)", () => {
     const home = world.poiById("p:0:0:0")!;
     const nearest = hutsOf(world)
       .filter((h) => MONSTERS[h.monster]!.treasure_level === 1)
-      .sort((a, b) => (a.x - home.x) ** 2 + (a.y - home.y) ** 2 - ((b.x - home.x) ** 2 + (b.y - home.y) ** 2))
+      .sort((a, b) => wrapDist2(a.x, a.y, home.x, home.y, world.width, world.height) - wrapDist2(b.x, b.y, home.x, home.y, world.width, world.height))
       .slice(0, 3)
       .map((h) => MONSTERS[h.monster]!.name);
     expect(nearest).toEqual(["Goblin", "Vampire Bat", "Wild Fungus"]);
