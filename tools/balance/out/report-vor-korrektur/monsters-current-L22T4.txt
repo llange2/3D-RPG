@@ -1,0 +1,18 @@
+current: Standardgruppe Stufe 22 gegen 2 gleiche Monster der Klasse 4
+Monster               HP    Rues  Schaden x Angr.  Tempo  Sonder                      Sieg   Tote  HP-Verl  Runden
+Black Knight           375    30  4-160 x 7         50  Ranged Attack, Causes Weak   99%   0.00     41%     3.4
+Dark Pegasus           125    20  2-40 x 4          40  Causes Crazy                100%   0.00      0%     2.0
+Death Agent            300    15  20-200 x 2        30  Causes Poisoned             100%   0.00      0%     2.8
+Dinosaur               500    10  10-500 x 2        12  None                        100%   0.00      0%     4.0
+ED-409                 400    40  50-100 x 3        75  Ranged Attack                14%   0.00     98%     4.6
+Evil Eye               100    25  50-50 x 4         35  Causes Crazy                100%   0.00      0%     1.5
+Ghost                  100    13  10-100 x 1        25  Undead, Aging Touch(+5)     100%   0.00      0%     2.3
+Guardian               250    20  75-150 x 1        15  None                        100%   0.00      0%     2.5
+Major Demon            333    16  2-40 x 6          33  Causes Paralyzed            100%   0.00      0%     3.0
+Paladin                175    30  3-90 x 5          30  Ranged Attack               100%   0.00      4%     1.9
+Reaper                 150    15  4-80 x 1          25  Ranged Attack               100%   0.00      3%     2.6
+Sorcerer               100    10  8-80 x 1          40  Ranged Attack               100%   0.00      1%     1.5
+Spirit Shield          100    35  6-120 x 2         80  None                        100%   0.00      0%     2.1
+Toxic worm             300    25  2-60 x 2          60  Causes Poisoned             100%   0.00      0%     2.9
+Troll                  125    15  3-45 x 3          25  Targets Dwarves             100%   0.00      0%     1.6
+Moo Master             500    20  8-64 x 2          30  Ranged Attack, Hits All     100%   0.00     13%     3.9

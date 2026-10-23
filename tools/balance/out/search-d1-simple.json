@@ -1,0 +1,32 @@
+{
+ "params": {
+  "hpScale": 1.1191624594271277,
+  "hpPow": 1,
+  "hpFlat": 23,
+  "manaScale": 0.9746189687265031,
+  "mWeapon": 1.1,
+  "mScale": 1.4347110396475569,
+  "mStr": 0.1,
+  "mPow": 1,
+  "rWeapon": 0.8820777340959165,
+  "rScale": 0.9595367562443522,
+  "rAcc": 0.1,
+  "rClass": 0.8,
+  "rArmor": 1,
+  "rHit": 1.0544198431770464,
+  "armorVsHeroes": 0.4,
+  "floorVsHeroes": 0,
+  "armorVsMonsters": 0.7265272655913027,
+  "floorVsMonsters": 0.4805655765490283,
+  "blendVsHeroes": 0,
+  "blendVsMonsters": 0,
+  "missFix": 1,
+  "wolfBelow": 0.9,
+  "wolfMaxTier": 5,
+  "deathHit": 0.5,
+  "deathBelow": 0.3,
+  "specialCap": 1
+ },
+ "score": 0.2043810154728405,
+ "from": "d1"
+}

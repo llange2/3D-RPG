@@ -1,0 +1,26 @@
+current: Standardgruppe Stufe 36 gegen 2 gleiche Monster der Klasse 5
+Monster               HP    Rues  Schaden x Angr.  Tempo  Sonder                      Sieg   Tote  HP-Verl  Runden
+Terminator            1000   100  232-928 x 1      200  Causes Eradication           62%   2.28     73%     7.6
+Minotaur King         2500    90  3-300 x 3         80  Causes Dead, Resists Magic   72%   1.14     54%     8.0
+Minotaur              1000    90  3-300 x 2         80  Causes Dead                 100%   0.06      4%     4.6
+Green Dragon           800    40  250-250 x 1       60  Ranged Attack               100%   0.02     31%     4.0
+Dragon Lord           1500    50  10-200 x 2        60  Ranged Attack, Causes Fire  100%   0.01     48%     5.9
+Cyclops                500    25  6-150 x 2         40  Causes Crazy                100%   0.00      0%     2.9
+Death Snake            500    25  4-200 x 1         90  Causes Paralyzed            100%   0.00      0%     2.9
+Great Hydra           5000    60  12-144 x 12       75  Causes Poisoned               6%   0.00     99%    10.0
+Jouster                600    35  20-400 x 1        50  None                        100%   0.00      0%     3.3
+Lich                   200    12  5-25 x 1          50  Causes Dead                 100%   0.00      0%     2.0
+Major Devil            666    33  2-80 x 4          66  Causes Unconscious          100%   0.00      0%     3.6
+Medusa                1000    40  8-64 x 1          60  Ranged Attack, Causes Petr  100%   0.00      5%     4.5
+Mummy                  250    15  2-80 x 2          30  Causes Diseased             100%   0.00      0%     2.3
+Priest of Moo          200    20  4-60 x 1          40  None                        100%   0.00      0%     1.8
+Vampire                400    30  10-100 x 3        45  Drains Spell Points         100%   0.00      0%     3.1
+Vulture Roc           2000    50  5-250 x 2        100  Causes Paralyzed             97%   0.00     19%     7.2
+Werewolf               500    30  8-120 x 2         40  Causes Diseased             100%   0.00      0%     2.9
+Wizard                 250    20  232-232 x 1       80  Ranged Attack, Resists All  100%   0.00      5%     1.7
+Cyclops King          1000    25  6-150 x 3         40  Causes Crazy                100%   0.00      1%     4.4
+Eye Master             200    30  6-60 x 3          50  Causes Crazy                100%   0.00      0%     1.5
+Mummy King             500    15  2-80 x 3          30  Causes Diseased             100%   0.00      0%     3.0
+Titanic Automaton      500    15  2-80 x 3          30  Causes Diseased             100%   0.00      0%     3.0
+Top Jouster           1000    35  20-400 x 2        50  None                        100%   0.00      5%     4.4
+Vampire King           800    40  30-300 x 3        60  Drains Spell Points, Targe  100%   0.00      8%     4.8

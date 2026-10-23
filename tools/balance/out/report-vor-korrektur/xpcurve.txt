@@ -1,0 +1,47 @@
+Mittel ueber alpha/beta/gamma (Standardgroesse):
+  Tier 1: 434 Monster in 259 Gruppen, 1631k XP (kumuliert 1631k), 67k Gold
+  Tier 2: 241 Monster in 115 Gruppen, 2018k XP (kumuliert 3648k), 132k Gold
+  Tier 3: 667 Monster in 246 Gruppen, 17398k XP (kumuliert 21046k), 838k Gold
+  Tier 4: 1621 Monster in 509 Gruppen, 105591k XP (kumuliert 126637k), 4311k Gold
+  Tier 5: 1462 Monster in 439 Gruppen, 503794k XP (kumuliert 630431k), 12464k Gold
+XP je Gruppe: T1 6k  T2 18k  T3 71k  T4 207k  T5 1148k
+
+=== current: Aktueller Stand des Spiels
+Kaempfe je Stufe (Baender ab 1/5/12/20/34): L1:0 L2:1 L3:1 L4:2 L5:1 L6:3 L8:12 L10:47 L12:14 L15:14 L18:14 L20:5 L25:5 L30:5 L35:1 L40:1 L45:1 L50:1
+Stufe nach Raeumen von x % aller Tiers bis t (Mittel der Helden des Standardtrupps):
+   25 %  T1: L8.8   T2: L9.8   T3: L14.0   T4: L39.8   T5: L162.8
+   50 %  T1: L9.8   T2: L10.8   T3: L19.0   T4: L70.8   T5: L300.0
+   75 %  T1: L10.0   T2: L11.8   T3: L24.0   T4: L101.8   T5: L300.0
+  100 %  T1: L10.8   T2: L12.8   T3: L29.8   T4: L132.8   T5: L300.0
+
+=== xp_g10: XP: ab Stufe 10 +10 % je Stufe (Vorschlag des Nutzers)
+Kaempfe je Stufe (Baender ab 1/5/12/20/34): L1:0 L2:1 L3:1 L4:2 L5:1 L6:3 L8:12 L10:47 L12:14 L15:19 L18:25 L20:10 L25:17 L30:27 L35:8 L40:13 L45:20 L50:33
+Stufe nach Raeumen von x % aller Tiers bis t (Mittel der Helden des Standardtrupps):
+   25 %  T1: L8.8   T2: L9.8   T3: L13.8   T4: L25.5   T5: L41.3
+   50 %  T1: L9.8   T2: L10.8   T3: L17.5   T4: L32.3   T5: L48.3
+   75 %  T1: L10.0   T2: L11.8   T3: L20.5   T4: L36.3   T5: L52.3
+  100 %  T1: L10.8   T2: L12.8   T3: L22.5   T4: L38.5   T5: L55.3
+
+=== xs_25_125_18_106: XP glatt: 25 x Basis, +25 % bis Stufe 18, danach +6 %
+Kaempfe je Stufe (Baender ab 1/5/12/20/34): L1:6 L2:8 L3:10 L4:13 L5:6 L6:7 L8:11 L10:17 L12:7 L15:13 L18:26 L20:10 L25:13 L30:17 L35:4 L40:6 L45:8 L50:10
+Stufe nach Raeumen von x % aller Tiers bis t (Mittel der Helden des Standardtrupps):
+   25 %  T1: L5.8   T2: L8.8   T3: L16.5   T4: L28.3   T5: L48.0
+   50 %  T1: L8.8   T2: L11.8   T3: L19.5   T4: L36.0   T5: L59.0
+   75 %  T1: L9.8   T2: L13.8   T3: L21.8   T4: L41.0   T5: L65.8
+  100 %  T1: L11.5   T2: L14.8   T3: L24.3   T4: L45.0   T5: L70.8
+
+=== xs_25_125_18_108: XP glatt: 25 x Basis, +25 % bis Stufe 18, danach +8 %
+Kaempfe je Stufe (Baender ab 1/5/12/20/34): L1:6 L2:8 L3:10 L4:13 L5:6 L6:7 L8:11 L10:17 L12:7 L15:13 L18:26 L20:10 L25:15 L30:22 L35:6 L40:9 L45:13 L50:18
+Stufe nach Raeumen von x % aller Tiers bis t (Mittel der Helden des Standardtrupps):
+   25 %  T1: L5.8   T2: L8.8   T3: L16.5   T4: L27.3   T5: L44.3
+   50 %  T1: L8.8   T2: L11.8   T3: L19.5   T4: L34.3   T5: L52.3
+   75 %  T1: L9.8   T2: L13.8   T3: L21.5   T4: L38.3   T5: L57.3
+  100 %  T1: L11.5   T2: L14.8   T3: L23.5   T4: L41.3   T5: L61.0
+
+=== xs_25_125_18_110: XP glatt: 25 x Basis, +25 % bis Stufe 18, danach +10 %
+Kaempfe je Stufe (Baender ab 1/5/12/20/34): L1:6 L2:8 L3:10 L4:13 L5:6 L6:7 L8:11 L10:17 L12:7 L15:13 L18:26 L20:11 L25:17 L30:27 L35:8 L40:13 L45:21 L50:33
+Stufe nach Raeumen von x % aller Tiers bis t (Mittel der Helden des Standardtrupps):
+   25 %  T1: L5.8   T2: L8.8   T3: L16.5   T4: L26.5   T5: L41.3
+   50 %  T1: L8.8   T2: L11.8   T3: L19.5   T4: L32.5   T5: L48.3
+   75 %  T1: L9.8   T2: L13.8   T3: L21.5   T4: L36.3   T5: L52.3
+  100 %  T1: L11.5   T2: L14.8   T3: L23.5   T4: L39.3   T5: L55.3

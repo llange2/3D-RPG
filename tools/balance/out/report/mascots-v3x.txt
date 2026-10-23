@@ -1,0 +1,20 @@
+Formeln v3x: ohne Maskottchen HP-Verlust 29.7%, Tote je Kampf 0.18 (Mittel ueber 6 Zellen x 4 Gruppen)
+Wolf (toetet Monster unter dem Anteil seiner Lebenspunkte):
+  Schwelle 90 %                      HP-Verlust   6.9%  ( -77%)   Tote 0.01  ( -95%)
+  Schwelle 60 %                      HP-Verlust  16.7%  ( -44%)   Tote 0.07  ( -63%)
+  Schwelle 40 %                      HP-Verlust  21.4%  ( -28%)   Tote 0.09  ( -48%)
+  Schwelle 30 %                      HP-Verlust  23.8%  ( -20%)   Tote 0.12  ( -32%)
+  Schwelle 20 %                      HP-Verlust  26.3%  ( -12%)   Tote 0.13  ( -28%)
+  Schwelle 10 %                      HP-Verlust  28.5%  (  -4%)   Tote 0.15  ( -16%)
+  Schwelle 5 %                       HP-Verlust  29.3%  (  -1%)   Tote 0.17  (  -7%)
+  Schwelle 30 %, nicht ueber Tier 4  HP-Verlust  26.9%  (  -9%)   Tote 0.15  ( -18%)
+  Schwelle 30 %, nicht ueber Tier 3  HP-Verlust  28.8%  (  -3%)   Tote 0.16  ( -11%)
+Fee (nimmt jedem Elementartreffer so viel ab):
+  10 Punkte                          HP-Verlust  27.5%  (  -7%)   Tote 0.17  (  -3%)
+  20 Punkte                          HP-Verlust  25.6%  ( -14%)   Tote 0.18  (  -0%)
+  40 Punkte                          HP-Verlust  21.6%  ( -27%)   Tote 0.17  (  -7%)
+  80 Punkte                          HP-Verlust  19.6%  ( -34%)   Tote 0.17  (  -7%)
+Orb (mehr Mana fuer Zauberer):
+  +20 % Mana                         HP-Verlust  29.8%  (   0%)   Tote 0.18  (  -2%)
+  +50 % Mana                         HP-Verlust  29.9%  (   1%)   Tote 0.18  (  -1%)
+  +100 % Mana                        HP-Verlust  29.4%  (  -1%)   Tote 0.16  ( -10%)

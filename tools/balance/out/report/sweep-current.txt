@@ -1,0 +1,18 @@
+7150 cells in 8 s -> C:\Sonstiges\3D RPG\game\.claude\worktrees\balance-fehler-3-5\tools\balance\out\sweep-current.csv
+L3 tier 1 none : HP-Verlust Mittel 2%  10%-Quantil 0%  Median 1%  90% 4%  | leichteste: Knight+Paladin+Thief+Archer (0%)  schwerste: Druid+Wizard+Wizard+Wizard (17%)
+L3 tier 1 Wolf : HP-Verlust Mittel 0%  10%-Quantil 0%  Median 0%  90% 1%  | leichteste: Knight+Knight+Paladin+Barbarian (0%)  schwerste: Archer+Archer+Archer+Wizard (3%)
+L11 tier 3 none : HP-Verlust Mittel 22%  10%-Quantil 13%  Median 21%  90% 33%  | leichteste: Knight+Ranger+Ranger+Ranger (7%)  schwerste: Wizard+Wizard+Wizard+Wizard (60%)
+L11 tier 3 Wolf : HP-Verlust Mittel 11%  10%-Quantil 6%  Median 10%  90% 16%  | leichteste: Knight+Thief+Cleric+Wizard (1%)  schwerste: Archer+Wizard+Wizard+Wizard (33%)
+L19 tier 4 none : HP-Verlust Mittel 40%  10%-Quantil 28%  Median 40%  90% 52%  | leichteste: Ninja+Archer+Archer+Archer (11%)  schwerste: Ranger+Cleric+Cleric+Cleric (70%)
+L19 tier 4 Wolf : HP-Verlust Mittel 11%  10%-Quantil 5%  Median 10%  90% 18%  | leichteste: Knight+Knight+Thief+Ranger (1%)  schwerste: Paladin+Ninja+Thief+Thief (31%)
+L33 tier 5 none : HP-Verlust Mittel 41%  10%-Quantil 27%  Median 41%  90% 54%  | leichteste: Paladin+Archer+Cleric+Wizard (16%)  schwerste: Ranger+Ranger+Druid+Druid (80%)
+L33 tier 5 Wolf : HP-Verlust Mittel 5%  10%-Quantil 1%  Median 4%  90% 10%  | leichteste: Knight+Druid+Wizard+Wizard (0%)  schwerste: Knight+Knight+Barbarian+Barbarian (21%)
+L45 tier 5 none : HP-Verlust Mittel 22%  10%-Quantil 13%  Median 21%  90% 33%  | leichteste: Knight+Barbarian+Archer+Wizard (7%)  schwerste: Thief+Ranger+Druid+Druid (51%)
+L45 tier 5 Wolf : HP-Verlust Mittel 3%  10%-Quantil 1%  Median 2%  90% 6%  | leichteste: Knight+Ninja+Archer+Cleric (0%)  schwerste: Knight+Knight+Knight+Knight (12%)
+
+Einfluss einer Klasse in der Gruppe auf den HP-Verlust (Faktor gegenueber dem Klassenmittel; unter 1 = leichter):
+L3: Knight 0.95  Paladin 1.01  Barbarian 0.95  Ninja 0.89  Thief 0.97  Ranger 0.97  Archer 0.91  Cleric 1.14  Druid 1.02  Wizard 1.23
+L11: Knight 0.94  Paladin 1.03  Barbarian 0.94  Ninja 0.91  Thief 0.98  Ranger 1.02  Archer 0.91  Cleric 1.10  Druid 1.06  Wizard 1.15
+L19: Knight 0.97  Paladin 1.03  Barbarian 0.98  Ninja 0.97  Thief 1.00  Ranger 1.00  Archer 0.93  Cleric 1.05  Druid 1.03  Wizard 1.05
+L33: Knight 1.00  Paladin 1.03  Barbarian 1.02  Ninja 0.98  Thief 1.05  Ranger 1.06  Archer 0.88  Cleric 1.06  Druid 1.07  Wizard 0.87
+L45: Knight 0.99  Paladin 1.04  Barbarian 1.02  Ninja 0.97  Thief 1.07  Ranger 1.08  Archer 0.83  Cleric 1.10  Druid 1.10  Wizard 0.85

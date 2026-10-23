@@ -1,0 +1,41 @@
+Party: Standard (Knight, Ninja, Archer, Druid)   gear: by tier   mascot: none   chain: 1   runs: 300
+
+=== current: Aktueller Stand des Spiels
+level | tier 1                            | tier 2                            | tier 3                            | tier 4                            | tier 5                            
+    1 |  99% dn0.2 dd0.14 hp  7% r 3.5    |  79% dn1.1 dd1.08 hp 31% r 7.6    |  43% dn2.4 dd2.39 hp 64% r 7.0    |   6% dn3.8 dd3.76 hp 95% r 4.6    |   1% dn4.0 dd3.88 hp 98% r 4.6    
+    2 | 100% dn0.0 dd0.02 hp  2% r 2.8    |  96% dn0.4 dd0.25 hp 13% r 5.4    |  47% dn2.2 dd2.13 hp 60% r 5.6    |  12% dn3.6 dd3.53 hp 90% r 3.8    |   6% dn3.8 dd3.62 hp 92% r 5.0    
+    3 | 100% dn0.0 dd0.00 hp  2% r 2.6    |  99% dn0.1 dd0.04 hp  6% r 4.3    |  58% dn1.8 dd1.63 hp 49% r 5.7    |  14% dn3.5 dd3.38 hp 88% r 4.0    |   5% dn3.8 dd3.53 hp 91% r 5.0    
+    4 | 100% dn0.0 dd0.00 hp  1% r 2.4    | 100% dn0.0 dd0.01 hp  3% r 3.9    |  61% dn1.6 dd1.43 hp 45% r 5.2    |  20% dn3.3 dd3.01 hp 84% r 4.5    |   7% dn3.7 dd3.38 hp 90% r 5.1    
+    5 | 100% dn0.0 dd0.00 hp  1% r 2.2    | 100% dn0.0 dd0.00 hp  1% r 3.4    |  70% dn1.4 dd1.13 hp 39% r 5.2    |  28% dn3.0 dd2.70 hp 78% r 4.6    |   8% dn3.6 dd3.29 hp 88% r 5.2    
+    6 | 100% dn0.0 dd0.00 hp  0% r 2.2    | 100% dn0.0 dd0.00 hp  1% r 3.3    |  80% dn1.0 dd0.76 hp 32% r 4.9    |  35% dn2.8 dd2.31 hp 73% r 4.5    |  11% dn3.5 dd3.10 hp 86% r 5.3    
+    8 | 100% dn0.0 dd0.00 hp  0% r 1.9    | 100% dn0.0 dd0.00 hp  0% r 2.8    |  81% dn0.9 dd0.58 hp 30% r 4.6    |  40% dn2.5 dd1.79 hp 68% r 4.8    |  14% dn3.3 dd2.87 hp 80% r 5.4    
+   10 | 100% dn0.0 dd0.00 hp  0% r 1.9    | 100% dn0.0 dd0.00 hp  0% r 2.6    |  91% dn0.6 dd0.03 hp 25% r 4.5    |  46% dn2.3 dd1.39 hp 63% r 4.6    |  14% dn3.3 dd2.76 hp 81% r 5.4    
+   12 | 100% dn0.0 dd0.00 hp  0% r 1.8    | 100% dn0.0 dd0.00 hp  0% r 2.5    |  98% dn0.2 dd0.00 hp 16% r 3.9    |  53% dn2.0 dd1.00 hp 58% r 4.6    |  24% dn2.9 dd2.33 hp 71% r 5.7    
+   15 | 100% dn0.0 dd0.00 hp  0% r 1.7    | 100% dn0.0 dd0.00 hp  0% r 2.3    | 100% dn0.0 dd0.00 hp  9% r 3.5    |  62% dn1.7 dd0.68 hp 50% r 4.6    |  21% dn3.0 dd2.23 hp 74% r 5.8    
+   18 | 100% dn0.0 dd0.00 hp  0% r 1.7    | 100% dn0.0 dd0.00 hp  0% r 2.3    | 100% dn0.0 dd0.00 hp  7% r 3.1    |  77% dn1.1 dd0.32 hp 39% r 4.4    |  32% dn2.7 dd1.89 hp 66% r 5.9    
+   20 | 100% dn0.0 dd0.00 hp  0% r 1.7    | 100% dn0.0 dd0.00 hp  0% r 2.2    | 100% dn0.0 dd0.00 hp  6% r 3.1    |  80% dn1.0 dd0.32 hp 35% r 4.4    |  35% dn2.6 dd1.62 hp 65% r 6.2    
+   25 | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  2% r 2.2    |  99% dn0.2 dd0.04 hp 18% r 3.3    |  54% dn1.8 dd0.94 hp 48% r 5.8    
+   30 | 100% dn0.0 dd0.00 hp  0% r 1.5    | 100% dn0.0 dd0.00 hp  0% r 1.7    | 100% dn0.0 dd0.00 hp  1% r 2.2    |  99% dn0.1 dd0.01 hp 12% r 3.0    |  66% dn1.5 dd0.79 hp 42% r 6.0    
+   35 | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  0% r 1.7    | 100% dn0.0 dd0.00 hp  1% r 2.1    | 100% dn0.0 dd0.00 hp  8% r 2.8    |  76% dn1.1 dd0.64 hp 38% r 6.2    
+   40 | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  0% r 1.8    | 100% dn0.0 dd0.00 hp  1% r 2.1    | 100% dn0.0 dd0.00 hp  7% r 2.9    |  88% dn0.7 dd0.38 hp 27% r 5.7    
+   50 | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  0% r 1.8    | 100% dn0.0 dd0.00 hp  0% r 2.2    | 100% dn0.0 dd0.00 hp  4% r 2.6    |  97% dn0.2 dd0.20 hp 13% r 4.8    
+
+=== v3x: Vorschlag komplett: Kampf v3, XP glatt (30 x Basis, +25 %, +8 %), Training Stufe^2 x 10, Wolf 1/3, Fee 30
+level | tier 1                            | tier 2                            | tier 3                            | tier 4                            | tier 5                            
+    1 | 100% dn0.0 dd0.00 hp  7% r 4.1    |  75% dn1.2 dd0.28 hp 48% r 6.1    |  27% dn2.9 dd1.79 hp 81% r 4.5    |   4% dn3.8 dd3.45 hp 97% r 3.4    |   3% dn3.9 dd3.57 hp 95% r 4.5    
+    2 | 100% dn0.0 dd0.00 hp  4% r 3.8    |  88% dn0.7 dd0.13 hp 35% r 5.8    |  30% dn2.7 dd1.40 hp 78% r 5.1    |  10% dn3.6 dd3.04 hp 94% r 3.6    |   2% dn3.9 dd3.33 hp 93% r 4.4    
+    3 | 100% dn0.0 dd0.00 hp  3% r 3.4    |  94% dn0.4 dd0.03 hp 24% r 5.3    |  45% dn2.2 dd0.94 hp 69% r 5.5    |  12% dn3.5 dd2.77 hp 91% r 3.7    |   4% dn3.7 dd3.16 hp 91% r 4.7    
+    4 | 100% dn0.0 dd0.00 hp  2% r 3.0    |  99% dn0.2 dd0.01 hp 16% r 4.9    |  54% dn1.8 dd0.65 hp 60% r 5.5    |  20% dn3.2 dd2.37 hp 85% r 4.0    |   6% dn3.7 dd3.12 hp 91% r 4.8    
+    5 | 100% dn0.0 dd0.00 hp  1% r 2.8    | 100% dn0.1 dd0.01 hp  9% r 4.2    |  58% dn1.7 dd0.60 hp 56% r 5.4    |  21% dn3.0 dd1.88 hp 81% r 4.2    |   8% dn3.7 dd2.77 hp 88% r 4.8    
+    6 | 100% dn0.0 dd0.00 hp  1% r 2.9    | 100% dn0.1 dd0.00 hp  8% r 4.3    |  66% dn1.3 dd0.38 hp 49% r 5.3    |  20% dn3.1 dd1.60 hp 83% r 4.5    |   8% dn3.6 dd2.83 hp 87% r 4.9    
+    8 | 100% dn0.0 dd0.00 hp  0% r 2.5    | 100% dn0.0 dd0.00 hp  4% r 3.8    |  77% dn1.0 dd0.06 hp 41% r 5.5    |  30% dn2.6 dd1.13 hp 74% r 4.6    |  14% dn3.4 dd2.44 hp 80% r 5.1    
+   10 | 100% dn0.0 dd0.00 hp  0% r 2.3    | 100% dn0.0 dd0.00 hp  2% r 3.5    |  92% dn0.3 dd0.00 hp 26% r 5.0    |  36% dn2.4 dd0.89 hp 70% r 4.5    |  11% dn3.5 dd2.35 hp 82% r 5.1    
+   12 | 100% dn0.0 dd0.00 hp  0% r 1.7    | 100% dn0.0 dd0.00 hp  1% r 3.0    |  97% dn0.2 dd0.00 hp 19% r 4.3    |  48% dn1.9 dd0.49 hp 59% r 4.5    |  20% dn3.1 dd2.04 hp 76% r 5.6    
+   15 | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  1% r 2.7    | 100% dn0.1 dd0.00 hp 11% r 3.8    |  62% dn1.5 dd0.39 hp 49% r 4.7    |  26% dn2.9 dd1.72 hp 71% r 5.8    
+   18 | 100% dn0.0 dd0.00 hp  0% r 1.5    | 100% dn0.0 dd0.00 hp  0% r 2.3    | 100% dn0.0 dd0.00 hp  8% r 3.4    |  73% dn1.1 dd0.28 hp 42% r 4.8    |  34% dn2.7 dd1.41 hp 66% r 6.1    
+   20 | 100% dn0.0 dd0.00 hp  0% r 1.4    | 100% dn0.0 dd0.00 hp  0% r 2.2    | 100% dn0.0 dd0.00 hp  6% r 3.3    |  76% dn1.0 dd0.27 hp 38% r 4.4    |  38% dn2.5 dd1.19 hp 62% r 6.1    
+   25 | 100% dn0.0 dd0.00 hp  0% r 1.4    | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  2% r 2.1    |  99% dn0.1 dd0.01 hp 16% r 3.3    |  62% dn1.7 dd0.73 hp 47% r 5.7    
+   30 | 100% dn0.0 dd0.00 hp  0% r 1.4    | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  1% r 2.1    | 100% dn0.0 dd0.01 hp 12% r 3.1    |  74% dn1.2 dd0.36 hp 36% r 5.4    
+   35 | 100% dn0.0 dd0.00 hp  0% r 1.3    | 100% dn0.0 dd0.00 hp  0% r 1.5    | 100% dn0.0 dd0.00 hp  1% r 2.0    | 100% dn0.0 dd0.00 hp  8% r 2.9    |  84% dn0.8 dd0.31 hp 32% r 5.6    
+   40 | 100% dn0.0 dd0.00 hp  0% r 1.4    | 100% dn0.0 dd0.00 hp  0% r 1.5    | 100% dn0.0 dd0.00 hp  1% r 1.9    | 100% dn0.0 dd0.00 hp  6% r 2.7    |  90% dn0.6 dd0.22 hp 23% r 5.1    
+   50 | 100% dn0.0 dd0.00 hp  0% r 1.6    | 100% dn0.0 dd0.00 hp  0% r 1.5    | 100% dn0.0 dd0.00 hp  0% r 2.1    | 100% dn0.0 dd0.00 hp  3% r 2.5    |  99% dn0.1 dd0.07 hp 11% r 4.5    

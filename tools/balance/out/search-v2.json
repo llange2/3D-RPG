@@ -1,0 +1,1 @@
+{"params": {"hpScale": 1.1, "hpFlat": 25, "mWeapon": 1.1, "mScale": 1.5, "armorVsHeroes": 0.4, "rWeapon": 0.9, "rScale": 1.0, "rClass": 0.8, "rArmor": 1, "rHit": 1, "armorVsMonsters": 0.7, "floorVsMonsters": 0.5, "missFix": 1, "deathHit": 0.75, "deathBelow": 1}}

@@ -76,7 +76,7 @@ betretbaren Orten plus die 34 handgebauten Kampagnenkarten des Altspiels. Alles 
 ## Vor dem Abschluss einer Änderung
 ```
 npm run typecheck
-npm test            # 635 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
+npm test            # 640 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
 npm run check:chrome   # nur bei Generatoränderungen, braucht laufenden Dev-Server (npm run dev) und Chrome
 npm run check:render   # nur bei Rendering-Änderungen (Monster, Innenräume, Materialien), gleiche Voraussetzungen
 npm run check:effects -- <Ordner>   # nur bei Änderungen an Kampf-Darstellung, Zauberbildern, Zeiger (Screenshots in <Ordner>)
@@ -145,4 +145,5 @@ Ein Playtest-Fehler gilt erst als behoben, wenn er im Browser nachgestellt und d
 - **„Animated town scenes“** (`Settings.animatedTown`, Standard aus; `ui/townScenes.ts`): die sieben Dienstfenster zeigen, wenn an, die Altfilme als `ui/town/town_<Dienst>.webm` (ein `<video>` je Film, vorgeladen, pausiert beim Schließen); aus: die Standbilder `town_<Dienst>.webp`. Neue Dienste brauchen ein Standbild und einen Eintrag in `SERVICE_SCENES` und `build-textures.ts`.
 - **Mischkacheln (drei Böden an einer Ecke)** gibt es nur als `mix_…` für Kopfstein + Wasser + ein Land (Wüste, Erde, Gras, Schnee, Sumpf); `parseFlatName` verlangt genau drei Böden, einer zweimal. Ein neuer Boden oder eine neue Mischung: Skript `gen-mixed-tiles.py` (`LAND`, `STYLES`), nicht von Hand malen und nie die Quellen der Paarkacheln ändern (die Seiten der Mischkacheln übernehmen sie).
 - **Brückenköpfe (Kopfstein, Land, Wasser an einer Ecke) zeigen die Mischkacheln** `mix_<tl>_<tr>_<bl>_<br>` (180, gemalt von `tools/assets/gen-mixed-tiles.py` mit der Mischung des Tile Generators, an den Seiten die gemalten Nachbarn): `tools/dev/corner-stats.ts` und `corner-keys.ts` zählen Ecken ohne Kachel, es sollen null sein. Straßen über Wasser sind immer Brücken (Dämme wurden ausprobiert und auf Wunsch des Nutzers verworfen).
-- **`GEN_VERSION` 20** (war 19); `tests` 635.
+- **Kampfformeln lesen Attribute und Resistenzen mit Ausrüstung** (`attr(c, …)`, `resistance(c, element)`, nie `c.str`, `c.acc`, `c.lck`, `c.resFire` allein), ein Schlag ist nie negativ (`meleeDamage`, `rangedDamage` enden in `Math.max(0, …)`), ein verfehlter Schuss eines Monsters richtet nie Schaden an (`monsterDamage` kehrt vor jeder Rüstung zurück) und Ringe mit Schaden zählen auch im Fernkampf (`ringDamage`). „Causes Dead“ und „Eradication“ treffen mit halber Chance (`applyHit`). Das sind die vier Korrekturen aus `docs/KAMPF_BALANCE.md` 3.5 (`tests/unit/combatFixes.test.ts`); `tools/balance/verify.ts` muss nach jeder Änderung der Formeln „OK“ melden.
+- **`GEN_VERSION` 20** (war 19); `tests` 640.

@@ -154,6 +154,14 @@ export function attr(c: Character, a: Attribute, base = true): number {
   return a === "spd" && !base && c.mods?.stoneSkin ? Math.max(1, Math.trunc(total / 2)) : total;
 }
 
+const RESISTANCE_FIELD = { fire: "resFire", ice: "resIce", acid: "resAcid", magic: "resMagic" } as const;
+const RESISTANCE_BONUS = { fire: "res_fire", ice: "res_ice", acid: "res_acid", magic: "res_magic" } as const;
+
+/** Resistance in percent against an element: the hero's own value plus what the worn items add. */
+export function resistance(c: Character, element: keyof typeof RESISTANCE_FIELD): number {
+  return c[RESISTANCE_FIELD[element]] + itemBonus(c, RESISTANCE_BONUS[element]);
+}
+
 /** Armor of the worn items; Rage halves it, Stone Skin adds to what is left. */
 export function armor(c: Character): number {
   let total = itemBonus(c, "arm");
