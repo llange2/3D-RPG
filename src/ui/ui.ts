@@ -29,6 +29,9 @@ export interface HudInfo {
 }
 
 type TitlePage = "main" | "new" | "load";
+/** Size of `title.webp` and the height of the middle of its grey rock (fraction of the picture height). */
+const TITLE_IMAGE = { w: 1600, h: 995 };
+const TITLE_ROCK_Y = 0.69;
 
 /** What the title screen resolves with: a new game (endless world or campaign, with its seed) or one of the saves it was given. */
 export type TitleChoice<S> = { action: "new" | "campaign"; seed: string; size: WorldSize } | { action: "load"; save: S };
@@ -503,12 +506,19 @@ export class UI {
         page = to;
         clear(menu);
         menu.append(...pages[to]());
+        menu.classList.toggle("on-rock", to !== "load");
+        placeMenu();
+      };
+      // The picture carries the name of the game itself; the menu sits on the grey rock of its island. The picture is drawn
+      // with `cover` (1600 x 995), so the rock moves with the window shape and the menu has to follow it.
+      const placeMenu = () => {
+        const scale = Math.max(window.innerWidth / TITLE_IMAGE.w, window.innerHeight / TITLE_IMAGE.h);
+        const top = (window.innerHeight - TITLE_IMAGE.h * scale) / 2;
+        el.style.setProperty("--rock-y", `${Math.round(top + TITLE_IMAGE.h * scale * TITLE_ROCK_Y)}px`);
       };
       const el = h(
         "div",
         { class: "title" },
-        h("h1", { text: "Might & Magic" }),
-        h("div", { class: "sub", text: "Isles of Terra  -  a world of islands from a single seed" }),
         menu,
         h("div", { class: "credit", text: "Move: W A S D / arrow keys   Turn: Q E / arrows   Sidestep: Ctrl + arrows   Attack: Space   Spells: F   Inventory: I   Mascot: 5   Rest: R   Map: M" }),
       );
@@ -518,6 +528,7 @@ export class UI {
       };
       const done = (choice: TitleChoice<S>) => {
         window.removeEventListener("keydown", onKey);
+        window.removeEventListener("resize", placeMenu);
         el.remove();
         resolve(choice);
       };
@@ -525,6 +536,7 @@ export class UI {
         if (e.key === "Enter") done({ action: "new", seed: seed(), size });
       });
       window.addEventListener("keydown", onKey);
+      window.addEventListener("resize", placeMenu);
       show("main");
       this.root.append(el);
     });

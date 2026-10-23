@@ -35,6 +35,31 @@ const PHASE_ALPHA = 0.5;
  */
 const HOVER: Record<number, number> = { 62: 1.6, 74: 1.7, 75: 1.7 };
 
+/** The height of the party's eyes above the floor (the camera in `engine.ts`). */
+const EYE_LEVEL = 1.7;
+
+/**
+ * Static monsters without feet (heads, hands, eyes, ghosts, wizards on a cloud) float with their eyes at the height of the party's eyes, so that
+ * the party looks them in the eye and the middle of the screen is where the monster looks. Where the eyes are in the model, as a share of its
+ * height (0 the bottom, 1 the top), measured on the contact sheet of `npm run sheet:monsters`. A monster with feet stands on the floor.
+ */
+export const EYES_AT: Readonly<Record<number, number>> = {
+  7: 0.5, // Carnage Hand (no eyes: the middle of the palm)
+  15: 0.64, // Death Agent
+  23: 0.59, // Evil Eye
+  28: 0.84, // Ghost
+  34: 0.66, // Guardian
+  43: 0.58, // Medusa
+  48: 0.57, // Mystic cloud
+  52: 0.88, // Oh No Bug
+  56: 0.55, // Phase Head
+  66: 0.79, // Sorcerer
+  67: 0.58, // Spirit Shield
+  69: 0.59, // Terminator
+  77: 0.82, // Wicked Witch
+  84: 0.65, // Eye Master
+};
+
 /**
  * Factor on a monster's colour texture. The old paint is dark, and some monsters are nearly black (the Moo Master's robe averages 0.08,
  * the vampires' 0.10): under the party's torch they read as unlit. A texture below the target is lifted towards it, the rest keeps the
@@ -204,8 +229,15 @@ export class MonsterRenderer {
     const scale = info.scale;
     holder.scaling.setAll(scale);
     const hover = info.animated ? undefined : HOVER[defId];
+    const eyes = info.animated ? undefined : EYES_AT[defId];
     // a static model's origin is the middle of its mesh: standing means lifting it by its depth below the origin
-    const lift = info.animated ? 0 : hover !== undefined ? hover - ((info.bounds[1] + info.bounds[4]) / 2) * scale : -info.bounds[1] * scale;
+    const lift = info.animated
+      ? 0
+      : eyes !== undefined
+        ? EYE_LEVEL - (info.bounds[1] + eyes * (info.bounds[4] - info.bounds[1])) * scale
+        : hover !== undefined
+          ? hover - ((info.bounds[1] + info.bounds[4]) / 2) * scale
+          : -info.bounds[1] * scale;
     holder.position.set(x, y + lift, z);
     const view: View = {
       uid,
@@ -214,7 +246,7 @@ export class MonsterRenderer {
       skeletons: entries.skeletons,
       animated: info.animated,
       lift,
-      hovers: hover !== undefined,
+      hovers: hover !== undefined || eyes !== undefined,
       info,
       npc,
       from: { x, y: holder.position.y, z },

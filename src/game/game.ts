@@ -155,7 +155,7 @@ const NIGHT_FOG = 0.05;
 /** Chunks around the party (of 10 x 10 tiles) whose wild monsters are alive: nine across, which is 90 tiles, more than any view distance reaches. */
 const SPAWN_CHUNKS = 4;
 
-/** Reveal map in the overworld: half the side of the square it uncovers, in tiles. */
+/** Reveal map in the campaign's outside map, which has no edge: half the side of the square it uncovers, in tiles. */
 const REVEAL_RADIUS = 150;
 /** Seconds between the noise of a chest opening and the sound of what is in it. */
 const CHEST_SOUND_GAP = 0.35;
@@ -3091,7 +3091,7 @@ export class Game {
         { label: "+100k Gold", value: "gold" },
         { label: "All spells", value: "spells", note: "of each hero's school" },
         { label: "All talents", value: "talents" },
-        { label: "Reveal map", value: "map", note: this.mode === "overworld" ? "150 tiles around" : "this level" },
+        { label: "Reveal map", value: "map", note: this.mode === "overworld" ? (this.state.campaign ? "150 tiles around" : "the whole world") : "this level" },
         { label: "Identify", value: "identify", note: this.mode === "overworld" ? "the nearest place" : "this place" },
       ]);
       if (!choice) return false;
@@ -3156,7 +3156,7 @@ export class Game {
     await this.ui.message(rest.join("\n"), title);
   }
 
-  /** Marks the whole level as explored (the overworld has no end: the square of `REVEAL_RADIUS` tiles around the party). */
+  /** Marks the whole level as explored: the whole globe of a generated world (the huge one is wider than a square of `REVEAL_RADIUS` tiles), the square around the party in the campaign. */
   private revealMap(): void {
     const ex = this.state.explored;
     if (this.mode === "interior" && this.interior) {
@@ -3165,8 +3165,13 @@ export class Game {
       const size = map.width * map.height;
       for (let i = 0; i < size; i++) ex.mark(key, i, size);
     } else {
-      const { tx, ty } = this.player;
-      for (let y = ty - REVEAL_RADIUS; y <= ty + REVEAL_RADIUS; y++) for (let x = tx - REVEAL_RADIUS; x <= tx + REVEAL_RADIUS; x++) ex.markOverworld(x, y);
+      if (this.state.campaign) {
+        const { tx, ty } = this.player;
+        for (let y = ty - REVEAL_RADIUS; y <= ty + REVEAL_RADIUS; y++) for (let x = tx - REVEAL_RADIUS; x <= tx + REVEAL_RADIUS; x++) ex.markOverworld(x, y);
+      } else {
+        const { w, h } = spanOf(this.state.size);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) ex.markOverworld(x, y);
+      }
     }
     this.minimapDirty = true;
   }

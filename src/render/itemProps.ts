@@ -1,4 +1,4 @@
-import { tunedItemModels } from "../data/item-tuning";
+import { GROUNDED_ITEMS, tunedItemModels } from "../data/item-tuning";
 import type { GateDirection, TrapKind } from "../campaign/types";
 import type { StaticModelInfo } from "./assets";
 import type { PropInstance } from "./terrainMesher";
@@ -85,9 +85,12 @@ export function itemProp(item: number, rotationDeg: number, px: number, pz: numb
   if (!key || !info) return null;
   const bounds = staticInfo[key]?.bounds;
   const [, sy] = info.scale3;
-  const y = originY ?? info.y;
+  // things that stand on the ground rest their lowest point on it, whatever size the model has now (see `GROUNDED_ITEMS`)
+  const bottom = bounds ? bounds[1] * sy : 0;
+  const grounded = GROUNDED_ITEMS.has(item) && info.rotX === 0 && info.rotZ === 0;
+  const y = originY ?? (grounded ? -bottom : info.y);
   // the old game put the model's origin at `y`; the prop renderer rests the model's lowest point on `y`
-  const lift = y + (bounds ? bounds[1] * sy : 0);
+  const lift = y + bottom;
   const inst: PropInstance = { model: key, x: px, y: lift, z: pz, rotY: ((rotationDeg + info.yaw) % 360) * RAD, scale: info.scale, scaleXYZ: info.scale3 };
   if (info.rotX !== 0 || info.rotZ !== 0) {
     // tipped over (a trap door lies flat, a metal gate hangs upside down): the old game placed the origin at `y`, and
