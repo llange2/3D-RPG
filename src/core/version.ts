@@ -80,5 +80,7 @@
  * 22 = twenty-fifth playtest: the towns of level 1 and 2 stand at the opposite ends of the start island (the level-2 monsters no longer roam next to Starthaven);
  * every Monster Hut stands once on every size of world, with 4, 6, 8 and 10 monsters (small, default, large, huge) within five tiles of it, and the huts keep much
  * more room from each other and from the start (`world/huts.ts`).
+ * 23 = the safe zone round Starthaven (and the spot where a game begins) is three tiles (was twelve); the huts of levels 1 and 2 stand in the order of their monsters
+ * outwards from the town, and the wild groups draw only monsters within 150 thousandths of the level of the spot (was 700).
  */
-export const GEN_VERSION = 22;
+export const GEN_VERSION = 23;

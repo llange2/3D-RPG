@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MONSTERS } from "../../src/data/tables";
 import { wrapDist2 } from "../../src/world/islands";
 import { CHUNK_SIZE, GROUND, isTileWalkable, wrap } from "../../src/world/types";
-import { SAFE_RADIUS, chunkSpawns } from "../../src/world/spawns";
+import { SAFE_RADIUS, chunkSpawns, inSafeZone } from "../../src/world/spawns";
 import { World } from "../../src/world/world";
 
 describe("overworld spawns", () => {
@@ -30,7 +30,8 @@ describe("overworld spawns", () => {
     const start = world.anchorOf(0, 0);
     for (const s of all) {
       expect(s.uid.startsWith(`c:${Math.floor(s.x / CHUNK_SIZE)}:${Math.floor(s.y / CHUNK_SIZE)}:`)).toBe(true);
-      expect(wrapDist2(s.x, s.y, start.x, start.y, world.width, world.height)).toBeGreaterThanOrEqual(SAFE_RADIUS * SAFE_RADIUS);
+      expect(wrapDist2(s.x, s.y, start.x, start.y, world.width, world.height)).toBeGreaterThan(SAFE_RADIUS * SAFE_RADIUS);
+      expect(inSafeZone(world, s.x, s.y)).toBe(false);
       const t = world.tile(s.x, s.y);
       expect(t.poiId).toBeNull();
       const water = MONSTERS[s.monsterIds[0]!]!.terrain === "water";

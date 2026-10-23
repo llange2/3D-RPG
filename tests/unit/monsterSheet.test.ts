@@ -6,6 +6,7 @@ import { createEncounter, createMonster, monsterTurn, type CombatEvent, type Gri
 import { applyHit } from "../../src/sim/combat";
 import { createDefaultParty } from "../../src/sim/party";
 import { levelAt, monsterLevel } from "../../src/world/difficulty";
+import { wrapDist2 } from "../../src/world/islands";
 import { HUT_RADIUS, hutGold, hutMonsters, hutsOf, hutXpPercent } from "../../src/world/huts";
 import { chunkSpawns } from "../../src/world/spawns";
 import { CHUNK_SIZE, GROUND } from "../../src/world/types";
@@ -156,7 +157,7 @@ describe("the Monster Huts on the overworld", () => {
       const home = world.poiById("p:0:0:0")!;
       for (const level of [1, 2]) {
         const ranked = huts.filter((h) => MONSTERS[h.monster]!.treasure_level === level).sort((a, b) => MONSTERS[a.monster]!.xp - MONSTERS[b.monster]!.xp || a.monster - b.monster);
-        const dist = ranked.map((h) => (h.x - home.x) ** 2 + (h.y - home.y) ** 2);
+        const dist = ranked.map((h) => wrapDist2(h.x, h.y, home.x, home.y, world.width, world.height));
         expect(dist, `${seed} level ${level}`).toEqual([...dist].sort((a, b) => a - b));
       }
       expect(at("Archer"), seed).toBeLessThan(at("Mini Dragon"));
