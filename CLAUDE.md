@@ -76,7 +76,7 @@ betretbaren Orten plus die 34 handgebauten Kampagnenkarten des Altspiels. Alles 
 ## Vor dem Abschluss einer Änderung
 ```
 npm run typecheck
-npm test            # 639 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
+npm test            # 644 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
 npm run check:chrome   # nur bei Generatoränderungen, braucht laufenden Dev-Server (npm run dev) und Chrome
 npm run check:render   # nur bei Rendering-Änderungen (Monster, Innenräume, Materialien), gleiche Voraussetzungen
 npm run check:effects -- <Ordner>   # nur bei Änderungen an Kampf-Darstellung, Zauberbildern, Zeiger (Screenshots in <Ordner>)
@@ -147,4 +147,5 @@ Ein Playtest-Fehler gilt erst als behoben, wenn er im Browser nachgestellt und d
 - **Brückenköpfe (Kopfstein, Land, Wasser an einer Ecke) zeigen die Mischkacheln** `mix_<tl>_<tr>_<bl>_<br>` (180, gemalt von `tools/assets/gen-mixed-tiles.py` mit der Mischung des Tile Generators, an den Seiten die gemalten Nachbarn): `tools/dev/corner-stats.ts` und `corner-keys.ts` zählen Ecken ohne Kachel, es sollen null sein. Straßen über Wasser sind immer Brücken (Dämme wurden ausprobiert und auf Wunsch des Nutzers verworfen).
 - **Dinge am Boden stehen mit der Unterkante auf dem Boden** (`GROUNDED_ITEMS` in `data/item-tuning.ts`, `itemProp`): nie über `info.y` des Altspiels, sobald eine Größenkorrektur (`HEIGHT_FACTOR`, `WIDTH_FACTOR`) das Modell verändert; ein neues Objekt, das am Boden steht, gehört in die Menge. **Monster ohne Füße** schweben mit den Augen auf Kamerahöhe (`EYES_AT` in `render/monsters.ts`, Augenanteil der Höhe am Kontaktbogen `npm run sheet:monsters` gemessen).
 - **Das Ladebild lädt sein Bild in einem eigenen `<img>`** (`LoadingScreen.fetchPicture`) und tauscht es nur bei unsichtbarem Schirm; `tools/dev/check-loading.ts` beobachtet den Bildwechsel. **„Reveal map“ deckt in erzeugten Welten die ganze Kugel auf** (die huge-Welt ist breiter als ein Quadrat von 301 Kacheln).
-- **`GEN_VERSION` 20** (war 19); `tests` 639.
+- **Kampfformeln lesen Attribute und Resistenzen mit Ausrüstung** (`attr(c, …)`, `resistance(c, element)`, nie `c.str`, `c.acc`, `c.lck`, `c.resFire` allein), ein Schlag ist nie negativ (`meleeDamage`, `rangedDamage` enden in `Math.max(0, …)`), ein verfehlter Schuss eines Monsters richtet nie Schaden an (`monsterDamage` kehrt vor jeder Rüstung zurück) und Ringe mit Schaden zählen auch im Fernkampf (`ringDamage`). „Causes Dead“ und „Eradication“ treffen mit halber Chance (`applyHit`). Das sind die vier Korrekturen aus `docs/KAMPF_BALANCE.md` 3.5 (`tests/unit/combatFixes.test.ts`); `tools/balance/verify.ts` muss nach jeder Änderung der Formeln „OK“ melden.
+- **`GEN_VERSION` 20** (war 19); `tests` 644.

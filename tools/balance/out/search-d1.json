@@ -1,0 +1,72 @@
+{
+ "params": {
+  "hpScale": 1.1191624594271277,
+  "hpPow": 1,
+  "hpFlat": 23.020245815762816,
+  "manaScale": 0.9746189687265031,
+  "mWeapon": 1.0969724455122953,
+  "mScale": 1.4347110396475569,
+  "mStr": 0.1,
+  "mPow": 1,
+  "rWeapon": 0.8820777340959165,
+  "rScale": 0.9595367562443522,
+  "rAcc": 0.1,
+  "rClass": 0.8164065046797907,
+  "rArmor": 0.9421626023983443,
+  "rHit": 1.0544198431770464,
+  "armorVsHeroes": 0.4,
+  "floorVsHeroes": 0,
+  "armorVsMonsters": 0.7265272655913027,
+  "floorVsMonsters": 0.4805655765490283,
+  "blendVsHeroes": 0,
+  "blendVsMonsters": 0,
+  "missFix": 1,
+  "wolfBelow": 0.9,
+  "wolfMaxTier": 5,
+  "deathHit": 0.5,
+  "deathBelow": 0.3333333,
+  "specialCap": 1
+ },
+ "score": 0.18774620212172236,
+ "loss": 0.12516930506011179,
+ "deaths": 0.045177331349206366,
+ "bows": 0.019089352499536777,
+ "robust": 0.008074037925456896,
+ "targets": {
+  "bands": [
+   1,
+   5,
+   11,
+   18,
+   32
+  ],
+  "endLevel": 50,
+  "entry": [
+   0.2,
+   0.1,
+   0.4,
+   0.4,
+   0.4
+  ],
+  "exit": [
+   0.03,
+   0.04,
+   0.12,
+   0.12,
+   0.1
+  ],
+  "deaths": [
+   0.1,
+   0.1,
+   0.2,
+   0.2,
+   0.25
+  ],
+  "earlyLevel": 4,
+  "earlyDeaths": 0.1,
+  "bowRatio": [
+   1.15,
+   1.6
+  ]
+ }
+}

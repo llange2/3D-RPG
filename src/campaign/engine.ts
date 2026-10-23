@@ -13,7 +13,7 @@
 import { thousands } from "../core/format";
 import type { Rng } from "../core/rng";
 import { RIDDLES_MASTER, TALENTS, TEXTS, talentInfo } from "../data/tables";
-import { thieveryRoll, levelUp, recalcValues, isAlive } from "../sim/character";
+import { thieveryRoll, levelUp, recalcValues, isAlive, resistance } from "../sim/character";
 import { applyHit } from "../sim/combat";
 import { serviceLevel } from "../sim/economy";
 import { generateItem, questItem, spellScroll } from "../sim/items";
@@ -219,24 +219,24 @@ export function trapDamageTo(host: CampaignHost, index: number, damage: number, 
   if (!kinds.includes(t) && !["crazy", "cursed", "diseased", "petrified", "rotten", "dead", "age"].includes(t)) t = kinds[host.rng.int(kinds.length)]!;
   let total = damage;
   const protection = (element: "acid" | "fire" | "ice" | "magic") => party.effects.filter((e) => e.kind === "protection" && e.element === element && e.until > party.minutes).reduce((s, e) => s + (e.amount ?? 0), 0);
-  const elemental = (res: number, element: "acid" | "fire" | "ice" | "magic") => {
-    let v = Math.round(total * (1 - res / 100)) - protection(element);
+  const elemental = (element: "acid" | "fire" | "ice" | "magic") => {
+    let v = Math.round(total * (1 - resistance(c, element) / 100)) - protection(element);
     if (party.mascot === "Fairy") v -= 20;
     return Math.max(0, v);
   };
   let special: string | null = null;
   switch (t) {
     case "acid":
-      total = elemental(c.resAcid, "acid");
+      total = elemental("acid");
       break;
     case "fire":
-      total = elemental(c.resFire, "fire");
+      total = elemental("fire");
       break;
     case "ice":
-      total = elemental(c.resIce, "ice");
+      total = elemental("ice");
       break;
     case "magic":
-      total = elemental(c.resMagic, "magic");
+      total = elemental("magic");
       break;
     case "crazy":
     case "cursed":

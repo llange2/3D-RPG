@@ -1,0 +1,14 @@
+Formeln: current, Party: Standard (Knight, Ninja, Archer, Druid). Zellen: Stufe/Tier L3/T2  L8/T3  L12/T3  L20/T4  L28/T4  L38/T5   (HP-Verlust, Tote je Kampf)
+Grundannahme                            4% 0.04   30% 0.47   12% 0.00   31% 0.17    8% 0.00   29% 0.28
+Attribute wachsen nicht                 7% 0.05   24% 0.42   19% 0.11   39% 0.35   18% 0.05   41% 1.02
+Attribute 40 erst bei Stufe 100         5% 0.04   35% 0.59   19% 0.03   39% 0.27   18% 0.03   35% 0.53
+Attribute 60 bei Stufe 50               5% 0.00   24% 0.19    8% 0.00   26% 0.22    9% 0.00   19% 0.13
+Ausruestung eine Stufe schlechter       7% 0.03   33% 0.49   14% 0.00   40% 0.20   12% 0.00   28% 0.26
+beste Ausruestung des Tiers             0% 0.00    7% 0.00    3% 0.00    6% 0.00    2% 0.00    4% 0.06
+Monster starten 2 Felder weg           17% 0.26   13% 0.11    8% 0.00   31% 0.38   13% 0.07   30% 0.32
+Monster starten 7 Felder weg            1% 0.02   33% 0.57   14% 0.01   33% 0.08   10% 0.00   22% 0.26
+Gang (1 Monster greift an)              2% 0.03   28% 0.42   12% 0.00   25% 0.17   11% 0.02   27% 0.26
+Halle (4 Monster greifen an)            4% 0.04   29% 0.46   16% 0.00   33% 0.26    8% 0.00   29% 0.13
+keine Salve beim Anlaufen              19% 0.26   38% 0.63   19% 0.00   43% 0.30   14% 0.03   30% 0.28
+kein Bogen im Nahkampf                  3% 0.04   28% 0.53   16% 0.00   34% 0.30    9% 0.01   30% 0.19
+keine Zauber                            4% 0.03   23% 0.34   14% 0.00   30% 0.21   19% 0.06   32% 0.28
