@@ -66,6 +66,20 @@ describe("fifteenth playtest: size and content of the levels", () => {
   });
 });
 
+/** Does the island under this tile have any ground in the open? */
+function islandHasOpenGround(w: World, x: number, y: number): boolean {
+  const isl = w.islandAt(x, y);
+  if (!isl) return true;
+  for (let dy = isl.box.y0; dy <= isl.box.y1; dy++) {
+    for (let dx = isl.box.x0; dx <= isl.box.x1; dx++) {
+      const tx = w.wrapX(isl.x + dx);
+      const ty = w.wrapY(isl.y + dy);
+      if (w.islandAt(tx, ty) === isl && isTileWalkable(w.tile(tx, ty)) && w.isOpenGround(tx, ty)) return true;
+    }
+  }
+  return false;
+}
+
 describe("fifteenth playtest: the overworld (points 2 and 8)", () => {
   const world = new World("playtest15-ow");
 
@@ -100,7 +114,8 @@ describe("fifteenth playtest: the overworld (points 2 and 8)", () => {
           for (const s of chunkSpawns(w, cx, cy)) {
             const t = w.tile(s.x, s.y);
             if (t.ground === GROUND.WATER) continue; // water monsters stay in the water
-            expect(w.isOpenGround(s.x, s.y), `${seed} ${s.uid} at ${s.x}/${s.y}`).toBe(true);
+            // a speck of an island that has no ground in the open at all holds its group in a pocket the party can only reach from the shore (26th playtest)
+            if (!w.isOpenGround(s.x, s.y)) expect(islandHasOpenGround(w, s.x, s.y), `${seed} ${s.uid} at ${s.x}/${s.y}`).toBe(false);
           }
         }
       }

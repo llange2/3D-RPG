@@ -1,10 +1,9 @@
 import { LAYER, rngFor } from "../core/rng";
 import { MONSTER_IDS, MONSTERS } from "../data/tables";
 import { caravansOf } from "./caravans";
-import { levelAt } from "./difficulty";
 import { wrapDist2 } from "./islands";
 import { overworldMascotSpots } from "./mascots";
-import { SAFE_RADIUS, inSafeZone, safeSpots } from "./spawns";
+import { SAFE_RADIUS, inSafeZone, safeSpots } from "./safezone";
 import { DECO, GROUND, wrapDelta, type WorldSize } from "./types";
 import type { World } from "./world";
 
@@ -118,11 +117,8 @@ function makeHuts(world: World): HutSpot[] {
     const spawners = MONSTER_IDS.filter((id) => MONSTERS[id]!.outside === "hut" && MONSTERS[id]!.treasure_level === level).sort((a, b) => MONSTERS[a]!.xp - MONSTERS[b]!.xp || a - b);
     if (spawners.length === 0) continue;
     const rng = rngFor(world.rootSeed, LAYER.SPAWN, "hutsites", level);
-    // Levels 1 and 2 share the start island and are ordered by the plain distance from Starthaven: the weakest hut of a level is the nearest to it, the
-    // next weakest the second nearest, and so on, so the monsters grow harder from the town outwards, across the border of level 2 to the end of the island.
-    // The later levels have an island of their own: they go by `levelAt`, the way from the town of the level to that of the next.
-    const home = level <= 2 ? start : null;
-    // spots on the islands of the level, ordered by how hard the level is there
+    // spots on the islands of the level, ordered by their distance from Starthaven: the weakest hut of a level is the nearest to it, the next weakest the
+    // second nearest, and so on, so the monsters grow harder from the town outwards (26th playtest: in every level, not only on the start island)
     const spots: { x: number; y: number; island: number; reach: number; fromStart: number }[] = [];
     const seen = new Set<number>();
     for (const isl of world.islands) {
@@ -137,7 +133,7 @@ function makeHuts(world: World): HutSpot[] {
         if (t.ground !== GROUND.LAND || t.deco !== DECO.NONE || t.poiId !== null) continue;
         const fromStart = wrapDist2(x, y, start.x, start.y, world.width, world.height);
         if (fromStart < LEAST_START * LEAST_START || safeSpots(world).some((p) => wrapDist2(x, y, p.x, p.y, world.width, world.height) < LEAST_START * LEAST_START)) continue;
-        const reach = home ? wrapDist2(x, y, home.x, home.y, world.width, world.height) : levelAt(world, x, y);
+        const reach = wrapDist2(x, y, start.x, start.y, world.width, world.height);
         spots.push({ x, y, island: isl.index, reach, fromStart });
       }
     }

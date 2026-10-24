@@ -639,6 +639,27 @@ export function buildLayout(seed: SeedState, size: WorldSize): Layout {
 const LAYOUTS = new Map<string, Layout>();
 const LAYOUT_CACHE = 24;
 
+/**
+ * About where Starthaven stands: the middle of the land of the start island that reaches farthest along its axis (the side of level 1), the place `World.placesOf`
+ * aims at. In tiles of the world.
+ */
+function startEnd(p: { x: number; y: number; built: Built }, axis: readonly [number, number]): { x: number; y: number } {
+  const b = p.built;
+  const inland: { dx: number; dy: number; a: number }[] = [];
+  let reach = -Infinity;
+  for (let dy = b.box.y0; dy <= b.box.y1; dy++) {
+    for (let dx = b.box.x0; dx <= b.box.x1; dx++) {
+      if (b.field[(dy + b.reach) * b.stride + dx + b.reach]! < 2 * FIELD_UNIT) continue;
+      const a = dx * axis[0] + dy * axis[1];
+      inland.push({ dx, dy, a });
+      reach = Math.max(reach, a);
+    }
+  }
+  const band = inland.filter((t) => t.a >= reach - 8);
+  if (band.length === 0) return { x: p.x, y: p.y };
+  return { x: p.x + Math.round(band.reduce((n, t) => n + t.dx, 0) / band.length), y: p.y + Math.round(band.reduce((n, t) => n + t.dy, 0) / band.length) };
+}
+
 function makeLayout(seed: SeedState, size: WorldSize): Layout {
   const { width, height } = WORLD_SIZES[size];
   const cellCount = width * height;
@@ -841,8 +862,14 @@ function makeLayout(seed: SeedState, size: WorldSize): Layout {
 
   const perTier = WORLD_SIZES[size].towns;
   const townTiers = (tiers: readonly number[]): number[] => tiers.flatMap((t) => new Array<number>(perTier).fill(t));
-  const tierRng = rngFor(seed, LAYER.TERRAIN, "extras");
-  const levels: (readonly number[])[] = placed.map((_, i) => (i < 4 ? [[1, 2], [3], [4], [5]][i]! : [tierRng.chance(500) ? 4 : 5]));
+  // The stronger the monsters, the farther they live: of the two main islands the farther from the start island is the one of level 5 (on a small world the
+  // islands sit snugly and the nearer one may have come out as level 5), and every other island is level 4 or 5 by whether it lies nearer than the middle between them.
+  // measured from where Starthaven will stand, the end of the level-1 half of the start island (`World.placesOf`), not from the middle of that island
+  const home = startEnd(placed[0]!, axis);
+  const fromStart = (i: number): number => wrapDist2(placed[i]!.x, placed[i]!.y, home.x, home.y, width, height);
+  if (fromStart(2) > fromStart(3)) [placed[2], placed[3]] = [placed[3]!, placed[2]!];
+  const middle = (fromStart(2) + fromStart(3)) / 2;
+  const levels: (readonly number[])[] = placed.map((_, i) => (i < 4 ? [[1, 2], [3], [4], [5]][i]! : [fromStart(i) < middle ? 4 : 5]));
   const islands: Island[] = placed.map((p, index) => {
     const tiers = levels[index]!;
     const towns = index < 4 ? townTiers(tiers) : [];

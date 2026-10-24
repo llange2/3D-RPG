@@ -82,5 +82,9 @@
  * more room from each other and from the start (`world/huts.ts`).
  * 23 = the safe zone round Starthaven (and the spot where a game begins) is three tiles (was twelve); the huts of levels 1 and 2 stand in the order of their monsters
  * outwards from the town, and the wild groups draw only monsters within 150 thousandths of the level of the spot (was 700).
+ * 24 = twenty-sixth playtest: the wild groups are planned for the whole world island by island (a number that follows the land of the island, at least one on every island,
+ * spread evenly and away from the huts) instead of drawn chunk by chunk; the sea has its own groups, picked by the distance from Starthaven; the stronger a monster, the farther it
+ * stands from the first town in every level (huts and wild groups); the farther of the two main islands is level 5 and the other islands are level 4 or 5 by their distance from
+ * Starthaven; the ground beside a place counts as open ground on an island without roads.
  */
-export const GEN_VERSION = 23;
+export const GEN_VERSION = 24;
