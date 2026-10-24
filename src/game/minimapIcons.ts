@@ -4,12 +4,18 @@ import { assetPath } from "../ui/dom";
  * The symbols of the map: the old game's `tex_mm_*` pictures as one sheet (`public/assets/ui/minimap.webp`, built by
  * `tools/assets/build-minimap.ts`). Meadow, desert, dirt, snow, swamp, lava and cobblestone are one neutral tile that this class multiplies by
  * the register's colours; mountains, trees and palms are drawings on a transparent ground that go on top. Tiles made this way are cached, so the
- * map draws from a handful of small canvases and the page loads one picture instead of 38.
+ * map draws from a handful of small canvases and the page loads one picture instead of 38. The places (town, castle, dungeon or cave, pyramid), the
+ * question mark of events and the way out are painted tiles in six grounds (`mm_tiles.png`, see `build-minimap.ts`): on the overworld each stands on
+ * the ground of its region, in an interior on the desert's, which is the colour of the old floor.
  */
 export type GroundName = "grass" | "forest" | "desert" | "snow" | "swamp" | "volcanic" | "dirt" | "bridge" | "floor" | "lava" | "cobble" | "shore";
 export type DrawingName = "mountain" | "trees" | "palms";
+/** The painted symbols of places and events; the ground is the colour of the tile they stand on. */
+export type PlaceName = "town" | "castle" | "dungeon" | "pyramid" | "event" | "exit";
+export type PlaceGround = "meadow" | "forest" | "desert" | "snow" | "swamp" | "lava";
+/** `event` and `exit` are the painted tiles on the interior ground (`INTERIOR_GROUND`). */
 export type SymbolName =
-  | "wall" | "floor" | "water" | "door" | "door_open" | "event" | "info" | "persona" | "trap" | "maptransfer"
+  | "wall" | "floor" | "water" | "door" | "door_open" | "event" | "info" | "persona" | "trap" | "exit"
   | "inn" | "training" | "tavern" | "smith" | "temple" | "bank" | "guild" | "unknown" | "pos1" | "pos2" | "teleporter_city";
 
 interface Register {
@@ -25,6 +31,16 @@ const DERIVED: Partial<Record<GroundName, { from: string; by: [number, number, n
   bridge: { from: "dirt", by: [0.72, 0.68, 0.64] },
   shore: { from: "desert", by: [0.95, 0.95, 0.95] },
 };
+
+/** The ground the painted tiles have inside a town, castle, dungeon or cave: the old floor's colour. */
+const INTERIOR_GROUND: PlaceGround = "desert";
+
+/** The painted ground that goes with a ground of the overworld map (the sheet has no cobblestone, bridge or plain dirt tile). */
+const PLACE_GROUND: Record<GroundName, PlaceGround> = {
+  grass: "meadow", forest: "forest", desert: "desert", snow: "snow", swamp: "swamp", volcanic: "lava", lava: "lava",
+  dirt: "desert", bridge: "desert", floor: "desert", cobble: "desert", shore: "desert",
+};
+export const placeGroundOf = (ground: GroundName): PlaceGround => PLACE_GROUND[ground];
 
 export class MinimapIcons {
   /** Side of one symbol on the sheet, in pixels. */
@@ -57,7 +73,7 @@ export class MinimapIcons {
   }
 
   private source(name: string): { x: number; y: number } {
-    const at = this.register.icons[name];
+    const at = this.register.icons[name] ?? this.register.icons[`${name}:${INTERIOR_GROUND}`];
     if (!at) throw new Error(`minimap symbol ${name} is not on the sheet`);
     return at;
   }
@@ -108,8 +124,14 @@ export class MinimapIcons {
     ctx.globalAlpha = old;
   }
 
-  /** A symbol or a ground as a small picture for the legend (a data URL). */
-  legendIcon(what: { symbol: SymbolName; frame?: string; veil?: boolean } | { ground: GroundName; drawing?: DrawingName }): string {
+  /** Draws a painted tile of a place (or the question mark of an event) on `ground` into a rectangle; a place of 2 x 2 tiles is one symbol over four. */
+  drawPlace(ctx: CanvasRenderingContext2D, name: PlaceName, ground: PlaceGround, x: number, y: number, w: number, h = w): void {
+    const at = this.source(`${name}:${ground}`);
+    ctx.drawImage(this.sheet, at.x, at.y, this.cell, this.cell, x, y, w, h);
+  }
+
+  /** A symbol, a painted place or a ground as a small picture for the legend (a data URL). */
+  legendIcon(what: { symbol: SymbolName; veil?: boolean } | { place: PlaceName; ground?: PlaceGround } | { ground: GroundName; drawing?: DrawingName }): string {
     const out = document.createElement("canvas");
     out.width = this.cell;
     out.height = this.cell;
@@ -121,12 +143,8 @@ export class MinimapIcons {
         ctx.fillStyle = "rgba(255,255,255,0.32)";
         ctx.fillRect(0, 0, this.cell, this.cell);
       }
-      if (what.frame) {
-        ctx.strokeStyle = what.frame;
-        ctx.lineWidth = 6;
-        ctx.strokeRect(3, 3, this.cell - 6, this.cell - 6);
-      }
-    } else this.drawGround(ctx, what.ground, what.drawing, 0, 0, this.cell);
+    } else if ("place" in what) this.drawPlace(ctx, what.place, what.ground ?? INTERIOR_GROUND, 0, 0, this.cell);
+    else this.drawGround(ctx, what.ground, what.drawing, 0, 0, this.cell);
     return out.toDataURL("image/png");
   }
 }

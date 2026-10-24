@@ -4,7 +4,8 @@ import { CELL, type Facing, type InteriorMap } from "../interiors/types";
 import { MAP_ITEMS, talentInfo } from "../data/tables";
 import { BIOME, DECO, GROUND, poiBounds, wrapDelta, type Poi, type TileInfo } from "../world/types";
 import type { World } from "../world/world";
-import type { DrawingName, GroundName, MinimapIcons, SymbolName } from "./minimapIcons";
+import { placeGroundOf } from "./minimapIcons";
+import type { DrawingName, GroundName, MinimapIcons, PlaceGround, PlaceName, SymbolName } from "./minimapIcons";
 import type { Explored } from "./state";
 
 const BIOME_COLOR: Record<number, string> = {
@@ -114,9 +115,12 @@ export interface MapEvent {
   label: string;
 }
 
-/** The frame that tells the kinds of place apart (the old map has one symbol for the way into another map). */
-export const POI_FRAME: Record<string, string> = { town: "#ffd54a", castle: "#c8d0e0", dungeon: "#b070ff", cave: "#c08850", pyramid: "#ff8a3a" };
-const poiKindOf = (p: { kind: string; size: number }): string => (p.kind === "dungeon" && p.size === 3 ? "pyramid" : p.kind);
+/** The painted symbol of each kind of place: a cave and a dungeon entrance share one, a pyramid is a dungeon of size 3. */
+const POI_SYMBOL: Record<string, PlaceName> = { town: "town", castle: "castle", dungeon: "dungeon", cave: "dungeon", pyramid: "pyramid" };
+const poiSymbolOf = (p: { kind: string; size: number }): PlaceName => POI_SYMBOL[p.kind === "dungeon" && p.size === 3 ? "pyramid" : p.kind] ?? "dungeon";
+
+/** The painted ground a place or an event stands on: the ground of its tile, so that the symbol says which region it lies in. */
+const placeGroundAt = (world: World, x: number, y: number): PlaceGround => placeGroundOf(groundName(world.tile(x, y)));
 
 /** One tile of the overworld as a picture of the sheet: ground (tinted), a drawing on it, or a symbol. Null for a tile of a place, which is drawn as a whole. */
 function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t: TileInfo, x: number, y: number, w: number): void {
@@ -202,10 +206,7 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
       const shiftY = once ? 0 : wrapDelta(my, poi.y, world.height) - (poi.y - my);
       const left = (b.x0 + shiftX - mx + half) * s;
       const top = (b.y0 + shiftY - my + half) * s;
-      icons.drawSymbol(ctx, "maptransfer", left, top, poi.size * s);
-      ctx.strokeStyle = POI_FRAME[poiKindOf(poi)] ?? "#ffd54a";
-      ctx.lineWidth = Math.max(1.5, s * 0.16);
-      ctx.strokeRect(left + ctx.lineWidth / 2, top + ctx.lineWidth / 2, poi.size * s - ctx.lineWidth, poi.size * s - ctx.lineWidth);
+      icons.drawPlace(ctx, poiSymbolOf(poi), placeGroundAt(world, poi.x, poi.y), left, top, poi.size * s);
     }
   }
   // the events of the open land get the old question mark of the chests and fountains in the places, once their tile has been seen
@@ -216,7 +217,7 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
     if (!revealAll && !explored.hasOverworld(ev.x, ev.y)) continue;
     const left = (dx + half) * s;
     const top = (dy + half) * s;
-    if (icons) icons.drawSymbol(ctx, "event", left, top, Math.ceil(s));
+    if (icons) icons.drawPlace(ctx, "event", placeGroundAt(world, ev.x, ev.y), left, top, Math.ceil(s));
     else {
       ctx.fillStyle = "#ffd54a";
       ctx.font = `bold ${Math.ceil(s)}px sans-serif`;
@@ -265,7 +266,7 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
   if (a.kind === "legacy") {
     const id = a.legacy?.id ?? -1;
     if (id >= 1 && id <= 7) return SERVICE_SYMBOLS[id - 1]!;
-    if (id === 11 || id === 27 || id === 28 || id === 51) return "maptransfer";
+    if (id === 11 || id === 27 || id === 28 || id === 51) return "exit";
     if (id === 12 || id === 21 || id === 36 || id === 44) return "event";
     if (id === 14 || id === 16 || id === 18) return opened.has(a.uid) ? "door_open" : "door";
     if (id === 13 || id === 15 || id === 19 || id === 20 || id === 29 || id === 37 || id === 53) return "persona";
@@ -274,7 +275,7 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
   switch (a.kind) {
     case "treasure": return "event";
     case "door": return opened.has(a.uid) ? "door_open" : "door";
-    case "transfer": return "maptransfer";
+    case "transfer": return "exit";
     case "service": return typeof a.params.service === "string" ? (SERVICE_SYMBOL[a.params.service] ?? "inn") : "inn";
     case "talent": case "work": return "persona";
     case "portal": return "teleporter_city";
@@ -365,7 +366,7 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
         } else icons.drawSymbol(ctx, "wall", left, top, Math.ceil(s));
         const mark = cell === CELL.FLOOR || cell === CELL.SOLID ? symbolAt.get(`${x},${y}`) : undefined;
         if (mark) icons.drawSymbol(ctx, mark.symbol, left, top, Math.ceil(s), Math.ceil(s), mark.used ? 0.4 : 1);
-        if (x === map.exit.x && y === map.exit.y) icons.drawSymbol(ctx, "maptransfer", left, top, Math.ceil(s));
+        if (x === map.exit.x && y === map.exit.y) icons.drawSymbol(ctx, "exit", left, top, Math.ceil(s));
         if (traps.has(`${x},${y}`)) icons.drawSymbol(ctx, "trap", left, top, Math.ceil(s));
         continue;
       }
@@ -405,7 +406,7 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
     const cy = (Math.round(ey * k) + half + 0.5) * s;
     if (icons) {
       const r = Math.max(3, s * 0.7);
-      icons.drawSymbol(ctx, "maptransfer", cx - r, cy - r, r * 2);
+      icons.drawSymbol(ctx, "exit", cx - r, cy - r, r * 2);
     } else {
       ctx.fillStyle = "#7ed0ff";
       ctx.beginPath();
@@ -427,8 +428,8 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
 
 // ---------------------------------------------------------------- legend and mouse-over of the big map
 
-/** The picture of a legend row: a symbol of the sheet (with a frame for the places), or a ground with a drawing on it. */
-export type LegendIcon = { symbol: SymbolName; frame?: string; veil?: boolean } | { ground: GroundName; drawing?: DrawingName };
+/** The picture of a legend row: a symbol of the sheet, a painted place or a ground with a drawing on it. */
+export type LegendIcon = { symbol: SymbolName; veil?: boolean } | { place: PlaceName; ground?: PlaceGround } | { ground: GroundName; drawing?: DrawingName };
 
 export interface LegendEntry {
   color: string;
@@ -443,7 +444,7 @@ export const OVERWORLD_LEGEND: LegendEntry[] = [
   { color: BIOME_COLOR[BIOME.MEADOW]!, label: "Meadow", icon: { ground: "grass" } },
   { color: "#1f4a1c", label: "Trees", icon: { ground: "grass", drawing: "trees" } },
   { color: "#a07a4a", label: "Landmark (well, stone head)", icon: { symbol: "info" } },
-  { color: "#ffd54a", label: "Something to meet (mascot, monster hut, caravan)", icon: { symbol: "event" } },
+  { color: "#ffd54a", label: "Something to meet (mascot, monster hut, caravan)", icon: { place: "event", ground: "meadow" } },
   { color: BIOME_COLOR[BIOME.DESERT]!, label: "Desert (palms)", icon: { ground: "desert", drawing: "palms" } },
   { color: BIOME_COLOR[BIOME.SNOW]!, label: "Snow", icon: { ground: "snow" } },
   { color: BIOME_COLOR[BIOME.SWAMP]!, label: "Swamp", icon: { ground: "swamp" } },
@@ -454,11 +455,10 @@ export const OVERWORLD_LEGEND: LegendEntry[] = [
   { color: "#b98b52", label: "Road or pass", icon: { ground: "dirt" } },
   { color: "#8a6638", label: "Bridge", icon: { ground: "bridge" } },
   { color: "#ff6a1a", label: "Lava", icon: { ground: "lava" } },
-  { color: "#ffd54a", label: "Town", icon: { symbol: "maptransfer", frame: POI_FRAME.town! } },
-  { color: "#c8d0e0", label: "Castle", icon: { symbol: "maptransfer", frame: POI_FRAME.castle! } },
-  { color: "#b070ff", label: "Dungeon", icon: { symbol: "maptransfer", frame: POI_FRAME.dungeon! } },
-  { color: "#c08850", label: "Cave", icon: { symbol: "maptransfer", frame: POI_FRAME.cave! } },
-  { color: "#ff8a3a", label: "Pyramid", icon: { symbol: "maptransfer", frame: POI_FRAME.pyramid! } },
+  { color: "#ffd54a", label: "Town", icon: { place: "town", ground: "meadow" } },
+  { color: "#c8d0e0", label: "Castle", icon: { place: "castle", ground: "meadow" } },
+  { color: "#b070ff", label: "Dungeon or cave", icon: { place: "dungeon", ground: "meadow" } },
+  { color: "#ff8a3a", label: "Pyramid", icon: { place: "pyramid", ground: "meadow" } },
   { color: MONSTER_COLOR, label: "Monster", icon: { symbol: "pos2" } },
   { color: "#fff", label: "You", icon: { symbol: "pos1" } },
 ];
@@ -471,7 +471,7 @@ const INTERIOR_LEGEND: (LegendEntry & { when: (map: InteriorMap, content: MapCon
   { color: "#4a4a50", label: "Pillars", icon: { symbol: "floor" }, when: (m) => (m.pillars?.length ?? 0) > 0 },
   { color: "#2c5fa0", label: "Water", icon: { symbol: "water" }, when: (m) => !!m.styles?.list.some((s) => s.water) },
   { color: "#4a4238", label: "Ground that cannot be entered", icon: { symbol: "unknown" }, when: (m) => m.cells.includes(CELL.LOW) },
-  { color: "#7ed0ff", label: "Way out or way to another place", icon: { symbol: "maptransfer" }, when: () => true },
+  { color: "#7ed0ff", label: "Way out or way to another place", icon: { symbol: "exit" }, when: () => true },
   { color: "#7ed0ff", label: "Portal to the other towns", icon: { symbol: "teleporter_city" }, when: (_, c) => c.actions.some((a) => a.kind === "portal") },
   { color: "#ffd54a", label: "Chest, fountain or something to find", icon: { symbol: "event" }, when: (_, c) => c.actions.some((a) => a.kind === "treasure" || a.kind === "fountain" || LEGACY_COLOR[a.legacy?.id ?? -1] === "#ffd54a") },
   { color: "#c9884a", label: "Door or gate", icon: { symbol: "door" }, when: (_, c) => c.actions.some((a) => a.kind === "door" || LEGACY_COLOR[a.legacy?.id ?? -1] === "#c9884a") },
