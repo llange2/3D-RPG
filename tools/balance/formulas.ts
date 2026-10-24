@@ -86,6 +86,8 @@ export interface Formulas {
   deathBelow: number;
   /** The Orb raises the mana of a caster by this share. */
   orbMana: number;
+  /** The Orb raises the damage of attack spells of every caster by this share (docs v4 proposal; 0 = the game). */
+  orbSpell: number;
   /** The Fairy takes this much off every elemental hit. */
   fairyReduction: number;
   /** Multiplier on the XP a monster gives (a hook for proposals that change monster XP as a function of the monster). */
@@ -201,6 +203,7 @@ export const CURRENT: Formulas = {
   deathHit: 1 / 2,
   deathBelow: 1 / 3,
   orbMana: 0.2,
+  orbSpell: 0,
   fairyReduction: CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION,
   monsterXp: () => 1,
 };

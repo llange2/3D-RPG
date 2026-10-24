@@ -16,17 +16,31 @@ interface LoadedChunk {
   multi: MultiMaterial;
   props: PropInstance[];
   /** True while the chunk is drawn with the simple stand-in models. */
-  far: boolean;
+  detail: Detail;
 }
 
-/** Chunks within this Chebyshev distance of the party get the detailed prop models (two chunks of 10 tiles: about 50 tiles across). */
-const NEAR_CHUNKS = 2;
+/** What a chunk draws: everything, without the ground lumps (`nearOnly`), or also with the stand-in models for trees and mountains. */
+type Detail = "full" | "thin" | "stand-in";
 
-function withLod(props: PropInstance[], far: boolean): PropInstance[] {
-  if (!far) return props;
-  // the stand-in has its own size: the tile model's per-axis scale (a mountain is taller than wide) must not stretch it;
-  // the old ground tiles are left out: far away the flat ground texture they stand on is all there is
-  return props.filter((p) => !p.nearOnly).map((p) => (p.lod ? { ...p, model: p.lod.model, scale: p.lod.scale, scaleXYZ: undefined, lod: undefined } : p));
+/**
+ * Chunks within this Chebyshev distance of the party get the detailed prop models: every chunk the farthest view draws (3 chunks, sight 25 tiles). Two
+ * made the outer ring stand-ins, and that ring begins 20 tiles out, inside the sight: the horizon showed simplified mountains and trees that turned
+ * into the real ones one step later. Only the spare ring beyond the view (never seen, cut by the sight limit) still gets the stand-ins.
+ */
+const NEAR_CHUNKS = 3;
+/** Ground lumps are low and the fog already veils them out there: beyond this many chunks the flat ground texture they stand on is all there is (they cost much). */
+const LUMP_CHUNKS = 2;
+
+function detailAt(dist: number): Detail {
+  return dist > NEAR_CHUNKS ? "stand-in" : dist > LUMP_CHUNKS ? "thin" : "full";
+}
+
+function withLod(props: PropInstance[], detail: Detail): PropInstance[] {
+  if (detail === "full") return props;
+  const thin = props.filter((p) => !p.nearOnly);
+  if (detail === "thin") return thin;
+  // the stand-in has its own size: the tile model's per-axis scale (a mountain is taller than wide) must not stretch it
+  return thin.map((p) => (p.lod ? { ...p, model: p.lod.model, scale: p.lod.scale, scaleXYZ: undefined, lod: undefined } : p));
 }
 
 export interface ChunkStats {
@@ -91,10 +105,10 @@ export class ChunkManager {
         this.unload(k, c);
         continue;
       }
-      const far = dist > NEAR_CHUNKS;
-      if (far !== c.far) {
-        c.far = far;
-        this.props.setInstances(k, withLod(c.props, far));
+      const detail = detailAt(dist);
+      if (detail !== c.detail) {
+        c.detail = detail;
+        this.props.setInstances(k, withLod(c.props, detail));
       }
     }
   }
@@ -144,9 +158,9 @@ export class ChunkManager {
     mesh.freezeWorldMatrix();
     mesh.doNotSyncBoundingInfo = true;
     mesh.alwaysSelectAsActiveMesh = false;
-    const far = Math.max(Math.abs(cx - this.centre.cx), Math.abs(cy - this.centre.cy)) > NEAR_CHUNKS;
-    this.chunks.set(this.key(cx, cy), { cx, cy, mesh, multi, props: geo.props, far });
-    this.props.setInstances(this.key(cx, cy), withLod(geo.props, far));
+    const detail = detailAt(Math.max(Math.abs(cx - this.centre.cx), Math.abs(cy - this.centre.cy)));
+    this.chunks.set(this.key(cx, cy), { cx, cy, mesh, multi, props: geo.props, detail });
+    this.props.setInstances(this.key(cx, cy), withLod(geo.props, detail));
 
     const ms = performance.now() - t0;
     this.stats.lastBuildMs = ms;

@@ -1,0 +1,6 @@
+v4: Tier | Eintrittsstufe | XP dafuer (Mittel der Helden) | XP der Welt unter dem Tier | davon noetig
+  T1 | L1 | 0k | 0k | -
+  T2 | L7 | 457k | 3165k | 14 %
+  T3 | L10 | 1048k | 8892k | 12 %
+  T4 | L24 | 20289k | 36141k | 56 %
+  T5 | L42 | 127505k | 147120k | 87 %
