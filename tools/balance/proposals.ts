@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONSTANTS } from "../../src/data/tables";
-import { CURRENT, type Formulas } from "./formulas";
+import { CURRENT, type Formulas, pyRound } from "./formulas";
 import { DEFAULT_PARAMS, type Params, makeFormulas } from "./parametric";
 
 /** XP step with a constant growth `g` per level from `fromLevel` on (the doubling before it stays as it is). */
@@ -71,6 +71,58 @@ export const trainingSquare = (level: number): number => level * level * 10;
 PROPOSALS.v3x = { ...PROPOSALS.v3!, id: "v3x", title: "Vorschlag komplett: Kampf v3, XP glatt (25 x Basis, +25 %, +8 %), Training Stufe^2 x 10, Wolf 1/3, Fee 30", xpStep: xpSmooth(25, 1.25, 18, 1.08), trainingCost: trainingSquare, wolfBelow: 1 / 3, fairyReduction: 30 };
 /** The same combat formulas with the XP table of the user's suggestion (+10 % after level 10) and the game's training cost. */
 PROPOSALS.v3u = { ...PROPOSALS.v3!, id: "v3u", title: "Kampf v3 mit XP-Vorschlag des Nutzers (+10 % ab Stufe 10)", xpStep: xpGrowth(1.1) };
+
+/**
+ * The revised proposal of the user (docs/KAMPF_BALANCE.md, summary table, state of 24.10.2026), called v4:
+ *  health `(END/2 + class + race) * level + 10`; melee `(weapon * (STR*0.1 + class) / 3 * level - armor) * (1 - res_physical)`;
+ *  bow hit chance `ACC / (speed * distance)`, bow damage as v3; monsters hit as today; Wolf kills below 10 %, Fairy -30, Orb +10 % spell damage
+ *  (no extra mana any more); XP and training as v3x.
+ * The melee line is ambiguous ("Waffe x (...) /3 x Stufe"): `melee` picks the reading (see `V4_MELEE`).
+ */
+const V4_MELEE = {
+  /** As written: the weapon multiplies the whole level term. */
+  mul: (weapon: number, a: number, level: number) => (weapon * a * level) / 3,
+  /** The weapon is added, the level term is a third of the old one. */
+  add3: (weapon: number, a: number, level: number) => weapon + (a * level) / 3,
+  /** The weapon is added, the level term as today (the old melee, but armor counts fully and `res_physical` applies). */
+  add1: (weapon: number, a: number, level: number) => weapon + a * level,
+} as const;
+
+export function makeV4(id: string, melee: keyof typeof V4_MELEE): Formulas {
+  const level = V4_MELEE[melee];
+  return {
+    ...CURRENT,
+    id,
+    title: `Vorschlag v4 des Nutzers (Nahkampf: ${melee})`,
+    maxHp(h) {
+      let calc = Math.max(1, h.end + h.gear.end) / 2 + h.classHp + h.raceHp;
+      if (calc <= 0) calc = 1;
+      return pyRound(h.level * calc) + 10;
+    },
+    meleeDamage(h, mon, roll) {
+      const a = (h.str + h.gear.str) / 10 + h.classMelee;
+      const raw = Math.ceil(level(roll === 0 ? 1 : roll, a, h.level));
+      return Math.max(0, Math.trunc((raw - mon.armor) * (1 - mon.res_physical)));
+    },
+    rangedHitChance(h, mon, distance) {
+      if (mon.speed > 0 && distance > 0) return Math.min(1, Math.max(0, (h.acc + h.gear.acc) / (mon.speed * distance)));
+      return 1;
+    },
+    rangedDamage(h, mon, roll) {
+      const raw = Math.ceil(roll + ((h.acc + h.gear.acc) / 10 + 0.8 * h.classRanged) * h.level);
+      return Math.max(0, Math.trunc(raw - Math.trunc(mon.armor / 2)));
+    },
+    xpStep: xpSmooth(25, 1.25, 18, 1.08),
+    trainingCost: trainingSquare,
+    wolfBelow: 0.1,
+    orbMana: 0,
+    orbSpell: 0.1,
+    fairyReduction: 30,
+  };
+}
+PROPOSALS.v4 = makeV4("v4", "mul");
+PROPOSALS.v4a = makeV4("v4a", "add3");
+PROPOSALS.v4b = makeV4("v4b", "add1");
 
 const outDir = join(dirname(fileURLToPath(import.meta.url)), "out");
 

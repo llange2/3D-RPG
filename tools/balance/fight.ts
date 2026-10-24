@@ -117,6 +117,8 @@ export function runFight(party: HeroRun[], defs: MonsterDef[], env: FightEnv, F:
     const list = mons.filter(alive);
     return dist <= 1 ? list.slice(0, env.maxAdjacent) : list;
   };
+  /** Damage factor of attack spells (the Orb in the v4 proposal; 1 in the game). */
+  const orb = env.mascot === "Orb" ? 1 + F.orbSpell : 1;
   const weakest = (list: Mon[]): Mon => list.reduce((a, b) => (b.hp < a.hp ? b : a));
 
   const kill = (m: Mon): void => {
@@ -165,7 +167,7 @@ export function runFight(party: HeroRun[], defs: MonsterDef[], env: FightEnv, F:
     const per = ((s.min + s.max) / 2) * (s.scales ? p.h.level : 1);
     let r = 0;
     for (const t of s.types) r += (target.d[`res_${t}` as "res_fire"] as number | undefined) ?? 0;
-    const hit = per * (1 - r / s.types.length);
+    const hit = per * (1 - r / s.types.length) * orb;
     const count = s.area ? aliveCount : s.penetrating ? 1 + (aliveCount - 1) * env.lineShare : 1;
     return hit * count;
   };
@@ -191,7 +193,8 @@ export function runFight(party: HeroRun[], defs: MonsterDef[], env: FightEnv, F:
     for (const m of hits) {
       let dmg = rng.range(s.min, s.max);
       if (s.scales) dmg *= p.h.level;
-      const res = ((m.d[`res_${type}` as "res_fire"] as number | undefined) ?? 0) as number;
+      dmg *= orb;
+      const res =((m.d[`res_${type}` as "res_fire"] as number | undefined) ?? 0) as number;
       dmg -= Math.trunc(dmg * res);
       p.dealt.spell += Math.max(0, Math.min(dmg, m.hp));
       hurt(m, dmg);

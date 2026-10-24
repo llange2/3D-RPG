@@ -51,4 +51,8 @@ for (const maxTier of [4, 3]) row(`Schwelle 30 %, nicht ueber Tier ${maxTier}`, 
 console.log("Fee (nimmt jedem Elementartreffer so viel ab):");
 for (const red of [10, 20, 40, 80]) row(`${red} Punkte`, { ...F0, fairyReduction: red }, "Fairy");
 console.log("Orb (mehr Mana fuer Zauberer):");
-for (const orb of [0.2, 0.5, 1.0]) row(`+${Math.round(orb * 100)} % Mana`, { ...F0, orbMana: orb }, "Orb");
+for (const orb of [0.2, 0.5, 1.0]) row(`+${Math.round(orb * 100)} % Mana`, { ...F0, orbMana: orb, orbSpell: 0 }, "Orb");
+console.log("Orb (mehr Schaden der Angriffszauber, kein Zusatzmana):");
+for (const orb of [0.1, 0.25, 0.5, 1.0]) row(`+${Math.round(orb * 100)} % Zauberschaden`, { ...F0, orbMana: 0, orbSpell: orb }, "Orb");
+console.log(`Maskottchen so, wie ${F0.id} sie fuehrt (Wolf ${F0.wolfBelow * 100} %, Fee ${F0.fairyReduction}, Orb +${F0.orbMana * 100} % Mana / +${F0.orbSpell * 100} % Zauberschaden):`);
+for (const m of ["Wolf", "Fairy", "Orb"] as const) row(m, F0, m);

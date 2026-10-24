@@ -1,0 +1,121 @@
+Parteien: Standard, Nahkampf, Fernkampf, Klassisch, Zauberer; Gegner: class; Ausruestung: typical; Maskottchen: none; 200 Laeufe je Zelle
+
+=== current: Aktueller Stand des Spiels
+Pfad xp: Eintrittsstufen der Tiers 1 / 11 / 16 / 23 / 35, Ende 52
+Tier | Stufe:  HP-Verlust  Tote  Sieg    (vier Stufen vom Eintritt bis zum Austritt)
+ T1  | L 1:  14% 0.39  94%  |  L 4:   2% 0.01 100%  |  L 8:   0% 0.00 100%  |  L11:   0% 0.00 100%
+ T2  | L11:   4% 0.02 100%  |  L13:   2% 0.00 100%  |  L14:   2% 0.00 100%  |  L16:   1% 0.00 100%
+ T3  | L16:   6% 0.00 100%  |  L18:   4% 0.00 100%  |  L21:   1% 0.00 100%  |  L23:   1% 0.00 100%
+ T4  | L23:  24% 0.22  95%  |  L27:  15% 0.09  98%  |  L31:  11% 0.03  99%  |  L35:   8% 0.01 100%
+ T5  | L35:  52% 0.40  66%  |  L41:  41% 0.25  82%  |  L46:  31% 0.14  90%  |  L52:  24% 0.03  96%
+
+Je Gruppe am Eintritt der Tiers (HP-Verlust, Tote je Kampf):
+  Standard   T1/L1:  12% 0.27   T2/L11:   3% 0.00  T3/L16:   4% 0.00  T4/L23:  17% 0.10  T5/L35:  51% 0.40 
+  Nahkampf   T1/L1:  12% 0.26   T2/L11:   3% 0.00  T3/L16:   7% 0.00  T4/L23:  36% 0.39  T5/L35:  63% 0.48 
+  Fernkampf  T1/L1:   8% 0.21   T2/L11:   3% 0.01  T3/L16:   4% 0.00  T4/L23:  18% 0.14  T5/L35:  49% 0.27 
+  Klassisch  T1/L1:  18% 0.55   T2/L11:   4% 0.03  T3/L16:   6% 0.01  T4/L23:  23% 0.20  T5/L35:  47% 0.40 
+  Zauberer   T1/L1:  19% 0.66   T2/L11:   7% 0.09  T3/L16:   7% 0.01  T4/L23:  23% 0.29  T5/L35:  49% 0.42 
+
+Iso-Stufe: niedrigste Stufe, ab der ein Kampf im Tier hoechstens x der Lebenspunkte kostet (und die Gruppe < 0,15 Tote je Kampf verliert)
+Tier |      12%      25%      40%  | Eintritt (Pfad)
+ T1  |       L2       L2       L2  | L1
+ T2  |       L7       L7       L7  | L11
+ T3  |      L12      L10      L10  | L16
+ T4  |      L32      L26      L26  | L23
+ T5  |      L74      L52      L44  | L35
+
+=== v3x: Vorschlag komplett: Kampf v3, XP glatt (25 x Basis, +25 %, +8 %), Training Stufe^2 x 10, Wolf 1/3, Fee 30
+Pfad xp: Eintrittsstufen der Tiers 1 / 11 / 16 / 23 / 35, Ende 52
+Tier | Stufe:  HP-Verlust  Tote  Sieg    (vier Stufen vom Eintritt bis zum Austritt)
+ T1  | L 1:   9% 0.00 100%  |  L 4:   2% 0.00 100%  |  L 8:   1% 0.00 100%  |  L11:   0% 0.00 100%
+ T2  | L11:   5% 0.01 100%  |  L13:   2% 0.00 100%  |  L14:   2% 0.00 100%  |  L16:   1% 0.00 100%
+ T3  | L16:   6% 0.00 100%  |  L18:   5% 0.00 100%  |  L21:   2% 0.00 100%  |  L23:   1% 0.00 100%
+ T4  | L23:  26% 0.13  91%  |  L27:  17% 0.05  97%  |  L31:  12% 0.02  99%  |  L35:   9% 0.02  99%
+ T5  | L35:  47% 0.25  72%  |  L41:  38% 0.16  84%  |  L46:  28% 0.07  93%  |  L52:  22% 0.03  96%
+
+Je Gruppe am Eintritt der Tiers (HP-Verlust, Tote je Kampf):
+  Standard   T1/L1:   6% 0.00   T2/L11:   4% 0.01  T3/L16:   6% 0.00  T4/L23:  22% 0.04  T5/L35:  43% 0.16 
+  Nahkampf   T1/L1:   9% 0.00   T2/L11:   5% 0.01  T3/L16:   8% 0.00  T4/L23:  43% 0.23  T5/L35:  55% 0.36 
+  Fernkampf  T1/L1:   6% 0.00   T2/L11:   4% 0.00  T3/L16:   6% 0.00  T4/L23:  20% 0.04  T5/L35:  46% 0.17 
+  Klassisch  T1/L1:  10% 0.00   T2/L11:   6% 0.01  T3/L16:   6% 0.00  T4/L23:  21% 0.13  T5/L35:  47% 0.22 
+  Zauberer   T1/L1:  12% 0.01   T2/L11:   8% 0.03  T3/L16:   5% 0.00  T4/L23:  27% 0.19  T5/L35:  45% 0.34 
+
+Iso-Stufe: niedrigste Stufe, ab der ein Kampf im Tier hoechstens x der Lebenspunkte kostet (und die Gruppe < 0,15 Tote je Kampf verliert)
+Tier |      12%      25%      40%  | Eintritt (Pfad)
+ T1  |       L1       L1       L1  | L1
+ T2  |       L7       L5       L5  | L11
+ T3  |      L13      L11       L9  | L16
+ T4  |      L32      L24      L24  | L23
+ T5  |      L74      L50      L42  | L35
+
+=== v4: Vorschlag v4 des Nutzers (Nahkampf: mul)
+Pfad xp: Eintrittsstufen der Tiers 1 / 11 / 16 / 23 / 35, Ende 52
+Tier | Stufe:  HP-Verlust  Tote  Sieg    (vier Stufen vom Eintritt bis zum Austritt)
+ T1  | L 1:  12% 0.12  98%  |  L 4:   2% 0.00 100%  |  L 8:   1% 0.00 100%  |  L11:   0% 0.00 100%
+ T2  | L11:   5% 0.03 100%  |  L13:   2% 0.00 100%  |  L14:   2% 0.00 100%  |  L16:   1% 0.00 100%
+ T3  | L16:   6% 0.00 100%  |  L18:   5% 0.00 100%  |  L21:   2% 0.00 100%  |  L23:   1% 0.00 100%
+ T4  | L23:  20% 0.15  97%  |  L27:  13% 0.06  99%  |  L31:  10% 0.02 100%  |  L35:   8% 0.01 100%
+ T5  | L35:  40% 0.47  77%  |  L41:  31% 0.29  87%  |  L46:  25% 0.17  94%  |  L52:  19% 0.10  96%
+
+Je Gruppe am Eintritt der Tiers (HP-Verlust, Tote je Kampf):
+  Standard   T1/L1:   8% 0.01   T2/L11:   4% 0.01  T3/L16:   5% 0.00  T4/L23:  14% 0.06  T5/L35:  42% 0.56 
+  Nahkampf   T1/L1:  13% 0.06   T2/L11:   4% 0.01  T3/L16:   7% 0.00  T4/L23:  31% 0.28  T5/L35:  48% 0.79 
+  Fernkampf  T1/L1:   8% 0.04   T2/L11:   4% 0.01  T3/L16:   5% 0.00  T4/L23:  14% 0.10  T5/L35:  39% 0.36 
+  Klassisch  T1/L1:  16% 0.20   T2/L11:   6% 0.04  T3/L16:   6% 0.00  T4/L23:  19% 0.20  T5/L35:  31% 0.26 
+  Zauberer   T1/L1:  18% 0.28   T2/L11:   7% 0.06  T3/L16:   7% 0.00  T4/L23:  22% 0.14  T5/L35:  40% 0.36 
+
+Iso-Stufe: niedrigste Stufe, ab der ein Kampf im Tier hoechstens x der Lebenspunkte kostet (und die Gruppe < 0,15 Tote je Kampf verliert)
+Tier |      12%      25%      40%  | Eintritt (Pfad)
+ T1  |       L1       L1       L1  | L1
+ T2  |       L6       L6       L6  | L11
+ T3  |      L13      L10      L10  | L16
+ T4  |      L30      L24      L24  | L23
+ T5  |      L68      L52      L52  | L35
+
+=== v4a: Vorschlag v4 des Nutzers (Nahkampf: add3)
+Pfad xp: Eintrittsstufen der Tiers 1 / 11 / 16 / 23 / 35, Ende 52
+Tier | Stufe:  HP-Verlust  Tote  Sieg    (vier Stufen vom Eintritt bis zum Austritt)
+ T1  | L 1:  10% 0.07  99%  |  L 4:   2% 0.00 100%  |  L 8:   1% 0.00 100%  |  L11:   0% 0.00 100%
+ T2  | L11:   5% 0.02 100%  |  L13:   2% 0.00 100%  |  L14:   2% 0.00 100%  |  L16:   1% 0.00 100%
+ T3  | L16:   6% 0.00 100%  |  L18:   4% 0.00 100%  |  L21:   2% 0.00 100%  |  L23:   1% 0.00 100%
+ T4  | L23:  25% 0.27  92%  |  L27:  17% 0.11  97%  |  L31:  12% 0.04  98%  |  L35:   8% 0.02 100%
+ T5  | L35:  55% 0.47  61%  |  L41:  44% 0.27  76%  |  L46:  37% 0.21  82%  |  L52:  30% 0.16  89%
+
+Je Gruppe am Eintritt der Tiers (HP-Verlust, Tote je Kampf):
+  Standard   T1/L1:   7% 0.02   T2/L11:   4% 0.01  T3/L16:   4% 0.00  T4/L23:  16% 0.10  T5/L35:  58% 0.45 
+  Nahkampf   T1/L1:  11% 0.04   T2/L11:   5% 0.01  T3/L16:   9% 0.00  T4/L23:  46% 0.52  T5/L35:  70% 0.61 
+  Fernkampf  T1/L1:   8% 0.06   T2/L11:   4% 0.01  T3/L16:   5% 0.00  T4/L23:  16% 0.13  T5/L35:  56% 0.55 
+  Klassisch  T1/L1:  13% 0.14   T2/L11:   8% 0.05  T3/L16:   6% 0.01  T4/L23:  27% 0.30  T5/L35:  46% 0.32 
+  Zauberer   T1/L1:  12% 0.12   T2/L11:   5% 0.03  T3/L16:   6% 0.00  T4/L23:  23% 0.30  T5/L35:  44% 0.43 
+
+Iso-Stufe: niedrigste Stufe, ab der ein Kampf im Tier hoechstens x der Lebenspunkte kostet (und die Gruppe < 0,15 Tote je Kampf verliert)
+Tier |      12%      25%      40%  | Eintritt (Pfad)
+ T1  |       L1       L1       L1  | L1
+ T2  |       L8       L8       L8  | L11
+ T3  |      L13      L11      L11  | L16
+ T4  |      L32      L26      L26  | L23
+ T5  |      L84      L60      L50  | L35
+
+=== v4b: Vorschlag v4 des Nutzers (Nahkampf: add1)
+Pfad xp: Eintrittsstufen der Tiers 1 / 11 / 16 / 23 / 35, Ende 52
+Tier | Stufe:  HP-Verlust  Tote  Sieg    (vier Stufen vom Eintritt bis zum Austritt)
+ T1  | L 1:  11% 0.09  99%  |  L 4:   2% 0.00 100%  |  L 8:   1% 0.00 100%  |  L11:   0% 0.00 100%
+ T2  | L11:   6% 0.02 100%  |  L13:   2% 0.00 100%  |  L14:   2% 0.00 100%  |  L16:   1% 0.00 100%
+ T3  | L16:   5% 0.00 100%  |  L18:   4% 0.00 100%  |  L21:   1% 0.00 100%  |  L23:   1% 0.00 100%
+ T4  | L23:  24% 0.22  94%  |  L27:  15% 0.08  98%  |  L31:  11% 0.03  99%  |  L35:   8% 0.01 100%
+ T5  | L35:  53% 0.41  66%  |  L41:  40% 0.31  80%  |  L46:  34% 0.18  87%  |  L52:  26% 0.14  93%
+
+Je Gruppe am Eintritt der Tiers (HP-Verlust, Tote je Kampf):
+  Standard   T1/L1:   8% 0.04   T2/L11:   4% 0.00  T3/L16:   4% 0.00  T4/L23:  18% 0.09  T5/L35:  54% 0.39 
+  Nahkampf   T1/L1:  11% 0.04   T2/L11:   5% 0.00  T3/L16:   7% 0.00  T4/L23:  38% 0.32  T5/L35:  65% 0.56 
+  Fernkampf  T1/L1:   6% 0.03   T2/L11:   4% 0.01  T3/L16:   4% 0.00  T4/L23:  17% 0.13  T5/L35:  55% 0.33 
+  Klassisch  T1/L1:  14% 0.13   T2/L11:   7% 0.04  T3/L16:   6% 0.00  T4/L23:  25% 0.27  T5/L35:  45% 0.41 
+  Zauberer   T1/L1:  13% 0.19   T2/L11:   8% 0.06  T3/L16:   6% 0.00  T4/L23:  23% 0.30  T5/L35:  45% 0.38 
+
+Iso-Stufe: niedrigste Stufe, ab der ein Kampf im Tier hoechstens x der Lebenspunkte kostet (und die Gruppe < 0,15 Tote je Kampf verliert)
+Tier |      12%      25%      40%  | Eintritt (Pfad)
+ T1  |       L1       L1       L1  | L1
+ T2  |       L8       L8       L8  | L11
+ T3  |      L13      L10      L10  | L16
+ T4  |      L30      L26      L26  | L23
+ T5  |      L80      L52      L48  | L35

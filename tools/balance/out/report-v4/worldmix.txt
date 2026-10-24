@@ -1,0 +1,11 @@
+Anteil der Monsterklassen je Tier des Ortes (Mittel ueber alpha/beta/gamma)
+T1 innen : C1  88%  C2   8%  C3   2%  C4   2%  C5   0%
+   aussen: C1  96%  C2   4%  C3   0%  C4   0%  C5   0%   (Gruppen 753, Mittel 1.7 Monster)
+T2 innen : C1  49%  C2  36%  C3  10%  C4   4%  C5   0%
+   aussen: C1   0%  C2  98%  C3   0%  C4   0%  C5   2%   (Gruppen 312, Mittel 2.1 Monster)
+T3 innen : C1  35%  C2  21%  C3  37%  C4   7%  C5   1%
+   aussen: C1   0%  C2   4%  C3  94%  C4   0%  C5   2%   (Gruppen 755, Mittel 2.7 Monster)
+T4 innen : C1  21%  C2  24%  C3  38%  C4  15%  C5   3%
+   aussen: C1   0%  C2   8%  C3   0%  C4  91%  C5   1%   (Gruppen 1440, Mittel 3.1 Monster)
+T5 innen : C1   7%  C2  25%  C3  37%  C4  17%  C5  14%
+   aussen: C1   0%  C2   4%  C3   0%  C4   0%  C5  96%   (Gruppen 1478, Mittel 3.3 Monster)
