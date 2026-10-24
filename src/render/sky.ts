@@ -6,7 +6,8 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { Scene } from "@babylonjs/core/scene";
 import type { TextureCache } from "./assets";
 
-const RADIUS = 700;
+/** Inside the nearest far plane (the camera's far plane is the fog's end, 30 units at `close`, see `VIEW_FOG_RANGE`); the dome is drawn first and writes no depth, so its radius does not matter otherwise. */
+const RADIUS = 25;
 const AROUND = 36;
 const RINGS = 16;
 const MIN_ELEVATION = -12; // degrees below the horizon, hidden by the terrain and the fog
