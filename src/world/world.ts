@@ -1161,7 +1161,7 @@ export class World {
 
   /**
    * Can a walker standing on this tile get out into the open? A flood fill over the walkable tiles (four neighbours, as the party moves)
-   * that succeeds when it reaches a road, a bridge, a pass or the tile of a place (they all lead somewhere) or has seen `OPEN_GROUND`
+   * that succeeds when it reaches a road, a bridge, a pass or the edge of a place (they all lead somewhere) or has seen `OPEN_GROUND`
    * tiles without finding a wall on every side. False for a pocket that mountains, trees and water close: a monster or mascot put
    * there could never be reached. Pure function of the seed, so generators may ask it for any tile.
    */
@@ -1268,7 +1268,11 @@ export class World {
         const k = key(x + dx, y + dy);
         if (seen.has(k)) continue;
         seen.add(k);
-        if (isTileWalkable(get(this.wrapX(x + dx), this.wrapY(y + dy)))) stack.push(x + dx, y + dy);
+        const next = get(this.wrapX(x + dx), this.wrapY(y + dy));
+        // the footprint of a place is no ground to walk (it asks to enter), so the walk ends at its edge: on an island with one place and no road that is
+        // the only way to tell that the ground leads somewhere
+        if (next.poiId !== null) return true;
+        if (isTileWalkable(next)) stack.push(x + dx, y + dy);
       }
     }
     return false;

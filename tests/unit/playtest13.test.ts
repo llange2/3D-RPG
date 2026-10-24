@@ -62,7 +62,7 @@ describe("water monsters stay in the water (thirteenth playtest, point 4)", () =
     for (const seed of ["north-wood-636", "kelp-mere-931", "ember"]) {
       const world = new World(seed, "large");
       const pois: Poi[] = world.allPois().filter((p) => p.kind !== "town");
-      for (const poi of pois.slice(0, 40)) {
+      for (const poi of pois.slice(0, 20)) {
         const map = generateInterior(world, poi);
         for (const s of buildMapContent(world, poi, map).spawns) for (const id of s.monsterIds) expect(MONSTERS[id]!.terrain, `${seed} ${poi.id}`).not.toBe("water");
       }

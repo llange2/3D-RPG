@@ -118,7 +118,8 @@ describe("the Monster Huts by world size (25th playtest, 3 and 7)", () => {
   });
 
   it("stands the huts of levels 1 and 2 from the weakest to the strongest monster, outwards from Starthaven (kelp-peak-430)", () => {
-    for (const size of SIZES) {
+    // (all four sizes and all levels are in playtest26)
+    for (const size of ["small", "default"] as const) {
       for (const seed of ["kelp-peak-430", "p25-a", "p25-b"]) {
         const world = new World(seed, size);
         const home = world.poiById("p:0:0:0")!;
