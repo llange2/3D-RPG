@@ -51,7 +51,7 @@ describe("the map marks the events of the open land (27th playtest, point 3)", (
   });
 
   it("explains the question mark in the legend", () => {
-    expect(OVERWORLD_LEGEND.some((e) => e.icon && "symbol" in e.icon && e.icon.symbol === "event")).toBe(true);
+    expect(OVERWORLD_LEGEND.some((e) => e.icon && "place" in e.icon && e.icon.place === "event")).toBe(true);
   });
 });
 

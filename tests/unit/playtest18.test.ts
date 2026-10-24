@@ -229,7 +229,7 @@ describe("eighteenth playtest: where a new game begins", () => {
 describe("eighteenth playtest: the map symbols and the ground pictures", () => {
   it("has one sheet for the symbols, with every symbol the map draws and the colours of the grounds", () => {
     const register = JSON.parse(readFileSync(join(ASSETS, "ui", "minimap.json"), "utf-8")) as { cell: number; icons: Record<string, unknown>; tints: Record<string, number[]> };
-    for (const name of ["ground", "mountain", "trees", "palms", "wall", "floor", "water", "door", "door_open", "event", "info", "persona", "trap", "maptransfer", "inn", "training", "tavern", "smith", "temple", "bank", "guild", "unknown", "pos1", "pos2"]) {
+    for (const name of ["ground", "mountain", "trees", "palms", "wall", "floor", "water", "door", "door_open", "info", "persona", "trap", "inn", "training", "tavern", "smith", "temple", "bank", "guild", "unknown", "pos1", "pos2"]) {
       expect(register.icons[name], name).toBeDefined();
     }
     for (const name of ["grass", "desert", "dirt", "floor", "lava", "swamp", "cobble", "snow"]) expect(register.tints[name], name).toHaveLength(3);
