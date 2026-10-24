@@ -42,7 +42,7 @@ import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
 import { monsterById } from "../sim/combat";
 import {
-  battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, partyAttack, phaseMonsters, pullMonsters,
+  battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters,
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS,
   type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
@@ -57,13 +57,13 @@ import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, GROUND, WORLD_SIZES, isTil
 import { chunkSpawns, type OverworldSpawn } from "../world/spawns";
 import { World } from "../world/world";
 import { MinimapIcons } from "./minimapIcons";
-import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend } from "./minimap";
+import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, type MapEvent, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend } from "./minimap";
 import { FACING_VEC, PlayerRig, type MoveDir } from "./player";
 import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode } from "./debug";
 import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
 import { sellerParams } from "../data/talent-sellers";
-import { CARAVAN_ITEM, caravansIn, type CaravanSpot } from "../world/caravans";
+import { CARAVAN_ITEM, caravansIn, caravansOf, type CaravanSpot } from "../world/caravans";
 import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, hutXpPercent, slotDistance, slotKey, type HutSpot } from "../world/huts";
 import { hutScene } from "../data/hut-texts";
 import { generateItem } from "../sim/items";
@@ -2119,7 +2119,10 @@ export class Game {
     return rngFor(this.world.rootSeed, LAYER.SPAWN, "combat", this.state.steps, this.state.kills, this.enc.monsters.length, this.state.party.minutes);
   }
 
-  /** The first monster in the facing direction within reach and sight: walls and closed gates hide what is behind them. */
+  /**
+   * What the party aims at: the first monster in the facing direction within reach and sight (walls and closed gates hide what is behind them), and
+   * where none stands on that line the nearest one within 45 degrees to either side that it can see, as the monsters can shoot along diagonals too.
+   */
   private focusMonster(): MonsterInstance | null {
     const { tx, ty, facing } = this.player;
     const [dx, dy] = FACING_VEC[facing];
@@ -2131,9 +2134,9 @@ export class Game {
       const y = ty + dy * i;
       const m = this.monsterAt(x, y);
       if (m && !isPhased(m)) return m;
-      if (view.opaque(x, y) || view.obstacle?.(x, y)) return null;
+      if (view.opaque(x, y) || view.obstacle?.(x, y)) break;
     }
-    return null;
+    return this.enc.monsters.length === 0 ? null : nearestInCone(view, this.enc, tx, ty, dx, dy);
   }
 
   /** True while the arrows or spells of the last action are still flying. */
@@ -3087,11 +3090,12 @@ export class Game {
     // the game stands still while the map is open, so what the Crow sees is the same until it is closed
     const traps = this.trapsShown();
     const eye = this.eyeOn();
+    const events = interior ? [] : this.overworldEvents();
     const draw = () => {
       if (interior) {
         drawInteriorMap(canvas, interior.map, interior.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, traps, view, this.minimapIcons, eye);
       } else {
-        drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, eye, view, this.minimapIcons);
+        drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, eye, view, this.minimapIcons, false, events);
       }
     };
     const show = (next: MapViewport) => {
@@ -3129,7 +3133,7 @@ export class Game {
         }
         const text = interior
           ? describeInteriorCell(interior.map, interior.content, this.state.explored, this.state.opened, cx, cy, monsters, traps, this.state.party.talents.includes("talent_perceptive"), eye)
-          : describeOverworldTile(this.world, this.state.explored, cx, cy, monsters);
+          : describeOverworldTile(this.world, this.state.explored, cx, cy, monsters, events);
         const me = here();
         const atParty = cx === me.x && cy === me.y;
         tip.classList.toggle("hud-hide", !!drag || (!text && !atParty));
@@ -3627,9 +3631,29 @@ export class Game {
       const rt = this.interior;
       drawInteriorMap(canvas, rt.map, rt.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.trapsShown(), undefined, this.minimapIcons, this.eyeOn(), detect);
     } else {
-      drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.eyeOn(), undefined, this.minimapIcons, detect);
+      drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.eyeOn(), undefined, this.minimapIcons, detect, this.overworldEvents());
     }
     canvas.classList.toggle("eye", this.eyeOn());
+  }
+
+  /** Every caravan of the world (fixed by the seed), for the maps. */
+  private caravanSites: { world: World; list: MapEvent[] } | null = null;
+
+  /**
+   * What the maps mark with a question mark on the open land: the mascots still waiting (the one in the party is gone from its place), the Monster Huts
+   * that still stand and the caravans of the talent traders. Where they stand is known from the seed, the maps show them once the tile has been seen.
+   */
+  private overworldEvents(): MapEvent[] {
+    if (!this.state) return [];
+    if (this.caravanSites?.world !== this.world) {
+      const list: MapEvent[] = [];
+      for (const poi of this.world.allPois()) for (const c of caravansOf(this.world, poi)) list.push({ x: c.x, y: c.y, label: "Caravan (talent trader)" });
+      this.caravanSites = { world: this.world, list };
+    }
+    const out = [...this.caravanSites.list];
+    for (const s of this.mode === "overworld" ? this.mascotSpots() : []) if (s.mascot !== this.state.party.mascot) out.push({ x: s.x, y: s.y, label: "Mascot" });
+    for (const h of hutIndex(this.world).huts) if (!this.hutBurnt(h)) out.push({ x: h.x, y: h.y, label: "Monster Hut" });
+    return out;
   }
 
   // ---------------------------------------------------------------- frame

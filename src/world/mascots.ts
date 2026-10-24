@@ -34,10 +34,11 @@ export function overworldMascotSpots(world: World): MascotSpot[] {
   const cx = start.x + side * (GROUP_DISTANCE + rng.int(3));
   const cy = start.y + rng.range(-2, 2);
   // the wagons of the talent traders near the towns are blockers as well: a mascot may not close the way round a town that a wagon narrows
-  const wagons = caravansIn(world, start.x - 40, start.y - 40, start.x + 40, start.y + 40);
+  const wagons = caravansIn(world, start.x - 55, start.y - 55, start.x + 55, start.y + 55);
   const free = (x: number, y: number, taken: MascotSpot[]) => {
     const t = world.tile(x, y);
-    return t.ground === GROUND.LAND && t.deco === DECO.NONE && t.poiId === null && !taken.some((s) => Math.max(Math.abs(s.x - x), Math.abs(s.y - y)) < 2) && world.poiAtEntrance(x, y) === null && world.leavesPassage(x, y) && world.keepsRingOpen(x, y, [...taken, ...wagons]) && world.isOpenGround(x, y);
+    // a wagon is no deco of the tile, so the tile alone does not tell: a wolf stood on the swimming trader's caravan (seed pearl-reach-537, 68/15)
+    return t.ground === GROUND.LAND && t.deco === DECO.NONE && t.poiId === null && !taken.some((s) => Math.max(Math.abs(s.x - x), Math.abs(s.y - y)) < 2) && !wagons.some((c) => Math.max(Math.abs(c.x - x), Math.abs(c.y - y)) < 2) && world.poiAtEntrance(x, y) === null && world.leavesPassage(x, y) && world.keepsRingOpen(x, y, [...taken, ...wagons]) && world.isOpenGround(x, y);
   };
   const order = rng.shuffle([...WILD]);
   const out: MascotSpot[] = [];

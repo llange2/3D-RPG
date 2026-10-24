@@ -48,18 +48,26 @@ export interface Renderer {
 export type ViewDistance = "close" | "medium" | "far";
 export const VIEW_DISTANCES: readonly ViewDistance[] = ["close", "medium", "far"];
 
-/** Chunks (10 tiles each) drawn around the party in every direction: 20, 40 and 60 tiles. */
-export const VIEW_CHUNKS: Record<ViewDistance, number> = { close: 2, medium: 4, far: 6 };
+/** The farthest the world is seen, in tiles, by view distance (the user's figures); everything below follows from it. */
+export const VIEW_TILES: Record<ViewDistance, number> = { close: 10, medium: 18, far: 25 };
+
+/** Chunks (10 tiles each) drawn around the party in every direction: the nearest edge is at least 10, 20 and 30 tiles out, so the fog (fully closed at 10, 18 and 25 tiles) hides it. */
+export const VIEW_CHUNKS: Record<ViewDistance, number> = { close: 1, medium: 2, far: 3 };
 export const chunkRadius = (view: ViewDistance): number => VIEW_CHUNKS[view];
 
-/** Share of the interiors' windows of models (cave rock, floor cobbles, the open campaign maps) that stays drawn. */
-export const VIEW_SHARE: Record<ViewDistance, number> = { close: 0.5, medium: 0.75, far: 1 };
+/** Share of the interiors' windows of models (cave rock, floor cobbles, the open campaign maps, 26 tiles wide) that stays drawn: 10, 18 and 25 tiles. */
+export const VIEW_SHARE: Record<ViewDistance, number> = { close: 0.4, medium: 0.7, far: 1 };
 
 /**
- * The fog of the open overworld by view distance, in world units (a tile is 3): `close` is clear for 10 tiles and fully fogged at 15, `medium`
- * for 22 and 38, so the edge of what is drawn (at least 20 and 40 tiles out) never shows. `far` keeps the exponential fog of the biome.
+ * The fog of the open overworld by view distance, in world units (a tile is 3): fully fogged at `VIEW_TILES` (10, 18 and 25 tiles), clear for
+ * the first 70 %, so nothing is seen farther and the edge of what is drawn never shows. Linear for all three; the biome's exponential fog
+ * only reaches interiors now.
  */
-export const VIEW_FOG_RANGE: Record<ViewDistance, { start: number; end: number } | null> = { close: { start: 30, end: 45 }, medium: { start: 66, end: 114 }, far: null };
+export const VIEW_FOG_RANGE: Record<ViewDistance, { start: number; end: number } | null> = {
+  close: { start: 21, end: 30 },
+  medium: { start: 38, end: 54 },
+  far: { start: 52, end: 75 },
+};
 
 /** `?view=close|medium|far` beats the stored choice (for tools and shared links). */
 export function readViewDistance(stored: ViewDistance = "medium"): ViewDistance {

@@ -191,10 +191,10 @@ describe("the map does not show what a wall hides (thirteenth playtest, point 5)
 });
 
 describe("view distance and flat ground (thirteenth playtest, points 10 and 12)", () => {
-  it("draws 2, 4 and 6 chunks (of 10 tiles) around the party at close, medium and far (the quality setting was folded into the distance)", () => {
-    expect(chunkRadius("close")).toBe(2);
-    expect(chunkRadius("medium")).toBe(4);
-    expect(chunkRadius("far")).toBe(6);
+  it("draws 1, 2 and 3 chunks (of 10 tiles) around the party at close, medium and far (the quality setting was folded into the distance)", () => {
+    expect(chunkRadius("close")).toBe(1);
+    expect(chunkRadius("medium")).toBe(2);
+    expect(chunkRadius("far")).toBe(3);
     expect(VIEW_SHARE.far).toBe(1);
     expect(VIEW_SHARE.close).toBeLessThan(VIEW_SHARE.medium);
   });

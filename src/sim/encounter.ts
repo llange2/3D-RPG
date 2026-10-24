@@ -549,6 +549,29 @@ function advanceRound(party: Party, view: GridView, enc: Encounter, px: number, 
 }
 
 /**
+ * The monster the party aims at when none stands on the line it faces: the nearest one in a cone of up to 45 degrees to either side of `(fx, fy)`
+ * (the unit step of the facing) within the monsters' own action radius and in clear sight. The monsters shoot along diagonals; this gives the
+ * party the same, but only as a second choice (the caller looks along the facing first). Monsters block each other's view, so a monster behind
+ * another one is never chosen.
+ */
+export function nearestInCone(view: GridView, enc: Encounter, px: number, py: number, fx: number, fy: number): MonsterInstance | null {
+  const candidates: { m: MonsterInstance; dist: number; side: number }[] = [];
+  for (const m of enc.monsters) {
+    if (m.hp <= 0 || isPhased(m)) continue;
+    const dx = m.x - px;
+    const dy = m.y - py;
+    // along = how far ahead of the party, across = how far to the side: across <= along is the 45 degree limit
+    const along = dx * fx + dy * fy;
+    const across = Math.abs(dx * fy - dy * fx);
+    if (along <= 0 || across > along || Math.max(Math.abs(dx), Math.abs(dy)) > MONSTER_ACTION_RADIUS) continue;
+    candidates.push({ m, dist: dx * dx + dy * dy, side: across });
+  }
+  candidates.sort((a, b) => a.dist - b.dist || a.side - b.side);
+  for (const c of candidates) if (lineOfSight(view, enc, px, py, c.m.x, c.m.y, true)) return c.m;
+  return null;
+}
+
+/**
  * One party action against a monster. In free roam everybody with a ranged weapon fires and the monsters answer;
  * in battle mode the characters act one after another in speed order and the monsters answer after the last one.
  * Port of attack_monster.
