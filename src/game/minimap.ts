@@ -107,6 +107,13 @@ function groundName(t: TileInfo): GroundName {
   }
 }
 
+/** Something to meet on the open land (a mascot, a monster hut, a talent trader's caravan): where it stands in the world and what the mouse-over calls it. */
+export interface MapEvent {
+  x: number;
+  y: number;
+  label: string;
+}
+
 /** The frame that tells the kinds of place apart (the old map has one symbol for the way into another map). */
 export const POI_FRAME: Record<string, string> = { town: "#ffd54a", castle: "#c8d0e0", dungeon: "#b070ff", cave: "#c08850", pyramid: "#ff8a3a" };
 const poiKindOf = (p: { kind: string; size: number }): string => (p.kind === "dungeon" && p.size === 3 ? "pyramid" : p.kind);
@@ -151,7 +158,7 @@ function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t
  * old game; without them the map is coloured squares. The world is a globe: the small map goes on round the seam, the big map (the one given a `view`) shows the world
  * once, tiles beyond its edge stay dark, and the party, places and monsters stand at their place in the world (the party's arrow jumps to the other side at the edge).
  */
-export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explored: Explored, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, revealAll = false, view?: MapView, icons?: MinimapIcons | null, detect = false): void {
+export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explored: Explored, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, revealAll = false, view?: MapView, icons?: MinimapIcons | null, detect = false, events: readonly MapEvent[] = []): void {
   const ctx = canvas.getContext("2d")!;
   const s = canvas.width / cells;
   const half = Math.floor(cells / 2);
@@ -199,6 +206,23 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
       ctx.strokeStyle = POI_FRAME[poiKindOf(poi)] ?? "#ffd54a";
       ctx.lineWidth = Math.max(1.5, s * 0.16);
       ctx.strokeRect(left + ctx.lineWidth / 2, top + ctx.lineWidth / 2, poi.size * s - ctx.lineWidth, poi.size * s - ctx.lineWidth);
+    }
+  }
+  // the events of the open land get the old question mark of the chests and fountains in the places, once their tile has been seen
+  for (const ev of events) {
+    const dx = once ? world.wrapX(ev.x) - mx : wrapDelta(mx, ev.x, world.width);
+    const dy = once ? world.wrapY(ev.y) - my : wrapDelta(my, ev.y, world.height);
+    if (Math.abs(dx) > half || Math.abs(dy) > half) continue;
+    if (!revealAll && !explored.hasOverworld(ev.x, ev.y)) continue;
+    const left = (dx + half) * s;
+    const top = (dy + half) * s;
+    if (icons) icons.drawSymbol(ctx, "event", left, top, Math.ceil(s));
+    else {
+      ctx.fillStyle = "#ffd54a";
+      ctx.font = `bold ${Math.ceil(s)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("?", left + s / 2, top + s / 2);
     }
   }
   ctx.fillStyle = "#ff3a2a";
@@ -418,7 +442,8 @@ const MONSTER_COLOR = "#ff3a2a";
 export const OVERWORLD_LEGEND: LegendEntry[] = [
   { color: BIOME_COLOR[BIOME.MEADOW]!, label: "Meadow", icon: { ground: "grass" } },
   { color: "#1f4a1c", label: "Trees", icon: { ground: "grass", drawing: "trees" } },
-  { color: "#a07a4a", label: "Landmark (well, hut, caravan)", icon: { symbol: "info" } },
+  { color: "#a07a4a", label: "Landmark (well, stone head)", icon: { symbol: "info" } },
+  { color: "#ffd54a", label: "Something to meet (mascot, monster hut, caravan)", icon: { symbol: "event" } },
   { color: BIOME_COLOR[BIOME.DESERT]!, label: "Desert (palms)", icon: { ground: "desert", drawing: "palms" } },
   { color: BIOME_COLOR[BIOME.SNOW]!, label: "Snow", icon: { ground: "snow" } },
   { color: BIOME_COLOR[BIOME.SWAMP]!, label: "Swamp", icon: { ground: "swamp" } },
@@ -510,10 +535,14 @@ function legacyLabel(id: number): string | null {
 }
 
 /** What is on a tile of the overworld map (only for tiles the party has seen). */
-export function describeOverworldTile(world: World, explored: Explored, x: number, y: number, monsters: MiniMonster[]): string | null {
+export function describeOverworldTile(world: World, explored: Explored, x: number, y: number, monsters: MiniMonster[], events: readonly MapEvent[] = []): string | null {
   if (!explored.hasOverworld(x, y)) return null;
   const t = world.tile(x, y);
   if (monsters.some((m) => m.x === x && m.y === y)) return "Monster";
+  const wx = world.wrapX(x);
+  const wy = world.wrapY(y);
+  const event = events.find((e) => world.wrapX(e.x) === wx && world.wrapY(e.y) === wy);
+  if (event) return event.label;
   if (t.poiId) {
     const poi = world.poiById(t.poiId);
     if (poi) return `${poi.name} (${poi.kind === "castle" ? "castle" : poi.kind === "town" ? "town" : poi.kind === "cave" ? "cave" : "dungeon"})`;

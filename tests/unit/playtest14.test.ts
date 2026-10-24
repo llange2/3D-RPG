@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { FlatRegister } from "../../src/data/flatTerrain";
 import { DEFAULT_SETTINGS, parseSettings } from "../../src/game/settings";
-import { VIEW_CHUNKS, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius } from "../../src/render/engine";
+import { VIEW_CHUNKS, VIEW_FOG_RANGE, VIEW_SHARE, VIEW_TILES, chunkRadius } from "../../src/render/engine";
 import { FlatTileSet } from "../../src/render/flatGround";
 import { setTileModels } from "../../src/render/heights";
 import { FLAT_SLAB_SINK, hasOwnSlab, meshChunk, setFlatGround } from "../../src/render/terrainMesher";
@@ -39,20 +39,21 @@ describe("options (fourteenth playtest, points 1, 2 and 6)", () => {
     expect(old("med", "close").viewDistance).toBe("close");
   });
 
-  it("draws 2, 4 and 6 chunks, with fog that ends well inside them", () => {
-    expect(VIEW_CHUNKS).toEqual({ close: 2, medium: 4, far: 6 });
-    expect(chunkRadius("close")).toBe(2);
+  it("draws 1, 2 and 3 chunks, with fog that closes at the farthest sight of 10, 18 and 25 tiles", () => {
+    expect(VIEW_CHUNKS).toEqual({ close: 1, medium: 2, far: 3 });
+    expect(chunkRadius("close")).toBe(1);
     const tile = 3;
-    const close = VIEW_FOG_RANGE.close!;
-    // close: clear for 10 tiles, fully fogged at 15 (the user's figures)
-    expect(close.start / tile).toBe(10);
-    expect(close.end / tile).toBe(15);
-    const medium = VIEW_FOG_RANGE.medium!;
-    expect(medium.start).toBeGreaterThan(close.start);
-    expect(medium.end).toBeGreaterThan(close.end);
-    expect(VIEW_FOG_RANGE.far).toBeNull(); // far keeps the exponential fog of the biome
-    // the nearest edge of what is drawn is the radius' chunks away, and the fog must have covered it by then
-    for (const view of ["close", "medium"] as const) expect(VIEW_FOG_RANGE[view]!.end).toBeLessThan(VIEW_CHUNKS[view] * CHUNK_SIZE * tile);
+    // the user's figures: nothing is seen farther than 10, 18 and 25 tiles
+    expect(VIEW_TILES).toEqual({ close: 10, medium: 18, far: 25 });
+    for (const view of ["close", "medium", "far"] as const) {
+      const fog = VIEW_FOG_RANGE[view]!;
+      expect(fog.end / tile).toBe(VIEW_TILES[view]);
+      expect(fog.start).toBeLessThan(fog.end);
+      // the nearest edge of what is drawn is the radius' chunks away, and the fog must have covered it by then
+      expect(fog.end).toBeLessThanOrEqual(VIEW_CHUNKS[view] * CHUNK_SIZE * tile);
+    }
+    expect(VIEW_FOG_RANGE.medium!.end).toBeGreaterThan(VIEW_FOG_RANGE.close!.end);
+    expect(VIEW_FOG_RANGE.far!.end).toBeGreaterThan(VIEW_FOG_RANGE.medium!.end);
     expect(VIEW_SHARE.close).toBeLessThan(VIEW_SHARE.medium);
   });
 });

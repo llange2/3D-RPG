@@ -592,6 +592,17 @@ Quelle: die Liste des Nutzers nach dem Test der Monster Huts. Tests in `tests/un
 
 **Umgebung des Worktrees:** unter `.claude/worktrees/<name>` braucht Vite `node_modules` im Worktree (sonst 403 für die Schriftdateien aus `game/node_modules`, harmlos), eine Junction auf `game/node_modules` genügt; der Test `sim.test.ts` „only ever produces textures …“ sucht `../old_code` relativ zum Worktree und schlägt dort fehl, im Hauptordner nicht.
 
+### Siebenundzwanzigster Playtest (2026-10-24, 4 Punkte, `GEN_VERSION` 24 unverändert)
+
+Tests in `tests/unit/playtest27.test.ts`; die Tests zur Sichtweite (`playtest13`, `playtest14`) sind angepasst. Im Browser geprüft (Seed `pearl-reach-537`, small): `view=far` zeichnet 49 Chunks, `view=close` 9, die Minikarte zeigt die Fragezeichen, mit der Diagonale zielt die Gruppe auf die Fledermaus links vorn.
+
+| # | Wunsch | Umsetzung |
+|---|---|---|
+| 1 | Sichtweite far 25, medium 18, close 10 Felder | `VIEW_TILES` (`render/engine.ts`) ist die Quelle: der Nebel ist für alle drei **linear** und endet bei 10 / 18 / 25 Kacheln (`VIEW_FOG_RANGE`; far hatte den Exponentialnebel des Bioms, der gilt jetzt nur noch in Innenräumen), der Chunk-Radius ist 1 / 2 / 3 (`VIEW_CHUNKS`: der nächste Rand liegt mindestens 10 / 20 / 30 Kacheln entfernt, hinter dem Nebel), die Fenster der Modelle (`VIEW_SHARE`) 0,4 / 0,7 / 1 des 26-Kacheln-Fensters. `refillHuts` richtet sich nach dem Radius, mehr war nicht anzupassen. |
+| 2 | Seed `pearl-reach-537` (small), 68/15: Karawane und Wolf auf einem Feld | Ursache: `overworldMascotSpots` kannte die Wagen nur für `keepsRingOpen`, nicht als belegte Felder (eine Karawane ist keine `deco` der Kachel). `free` hält jetzt zwei Kacheln Abstand zu jedem Wagen, das Fenster der Wagen wuchs auf ±55 (der Ersatzsuchlauf geht bis 45). Kein `GEN_VERSION` (Plätze, nicht Generator; der Golden-Test bleibt grün). Offen: wilde Gruppen kennen die Wagen nicht (Monster laufen, die Kachel bleibt begehbar). |
+| 3 | Ereignisse draußen mit Fragezeichen auf der Karte | `MapEvent` (`game/minimap.ts`), `Game.overworldEvents`: wartende Maskottchen (nicht das der Gruppe), Monster Huts, die noch stehen, und alle Karawanen; gezeichnet wie die Truhen der Orte (Symbol `event`), erst wenn die Kachel gesehen ist (oder bei Wizard's Eye), auf Minikarte und großer Karte. Mouse-over der großen Karte nennt „Mascot“, „Monster Hut“ oder „Caravan (talent trader)“, die Legende hat eine Zeile. Die Landmarken (Brunnen, Steinkopf) bleiben das „i“. |
+| 4 | Die Gruppe soll diagonal schießen | `nearestInCone` (`sim/encounter.ts`): steht in Blickrichtung kein Monster, zielt `Game.focusMonster` auf das nächste im Kegel bis 45° zu beiden Seiten (`along >= across`, Grenze eingeschlossen), im Radius der Monster und in freier Sicht (Monster verdecken einander). Gilt für Pfeile, Zauber (`spellRefusal`, `quickCast`) und die Zielanzeige, nicht für den Nahkampf-Sonderfall (ein diagonal angrenzendes Monster ist wie bisher `isAdjacent`). |
+
 ### Zauber der Tabelle „Spells“ und das Zauberfenster mit Bildern (2026-10-22, kein `GEN_VERSION`)
 
 Quelle: `old_code/documentation/MM3_Master_documentation.xlsx`, Blatt „Spells“ (die Definitionen des Nutzers, 33 Zeilen „to implement“), und `RPG_0.1.xlsx`, Blatt „Monster“, Spalte „entity 22: group“ (wer untot ist). Der Nutzer hat vorab 17 Fragen beantwortet; ihre Antworten sind unten als Regeln festgehalten. Tests: `tests/unit/spells23.test.ts` (40), Browserprüfung `npm run check:spells -- <Ordner>`.
@@ -703,7 +714,7 @@ Zum Zeitpunkt dieser Übergabe läuft im Hintergrund der Sitzung ein Vite-Dev-Se
 | `?campaign=1` oder `?campaign=<slug>` | Mit `autostart=1`: Kampagne starten, ggf. direkt auf Karte `<slug>` (z. B. `outside`, `castle-whiteshield`). Slugs: `public/assets/campaign/index.json`. |
 | `?debug=1` | FPS-/Draw-Call-/Dreieck-Overlay unten links. |
 | `?models=original\|lowpoly` | Modellsatz (übersteuert die im Menü gespeicherte Wahl). `original` braucht `npm run assets:originals`, sonst Rückfall auf `lowpoly`. |
-| `?view=close\|medium\|far` | Sichtweite: 2/3/4 Chunks und Nebel (übersteuert die im Menü gespeicherte Wahl). Default `medium`. |
+| `?view=close\|medium\|far` | Sichtweite: 1/2/3 Chunks und Nebel bis 10/18/25 Kacheln (übersteuert die im Menü gespeicherte Wahl). Default `medium`. |
 | `?bench=1&scenario=overworld\|interior\|campaign` | Skriptierter Kamerapfad, Ergebnis in `window.__bench.result`. |
 
 **Nicht umgesetzt**, obwohl im Plan genannt: `?gpu=webgpu`, `?pos=`, `?poi=`.
