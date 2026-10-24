@@ -66,10 +66,13 @@ export function worldGroups(tier: number): MonsterDef[][] {
   return out;
 }
 
+/** Names left out of the class pools (environment `BALANCE_EXCLUDE=Terminator,Minotaur`): shows how much single monsters decide a tier. */
+const EXCLUDED = new Set((process.env.BALANCE_EXCLUDE ?? "").split(",").filter(Boolean));
+
 /** Land monsters of exactly this difficulty class (`treasure_level`, the old game's own 1 to 5 rating). */
 export function classPool(level: number): { def: MonsterDef; w: number }[] {
   return Object.values(MONSTERS)
-    .filter((m) => m.id < 1000 && m.treasure_level === level && m.terrain === "land")
+    .filter((m) => m.id < 1000 && m.treasure_level === level && m.terrain === "land" && !EXCLUDED.has(m.name))
     .map((def) => ({ def, w: 1 }));
 }
 

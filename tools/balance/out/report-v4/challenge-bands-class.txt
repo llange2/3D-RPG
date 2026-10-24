@@ -1,0 +1,35 @@
+Parteien: Standard, Nahkampf, Fernkampf, Klassisch, Zauberer; Gegner: class; Ausruestung: typical; Maskottchen: none; 200 Laeufe je Zelle
+
+=== current: Aktueller Stand des Spiels
+Pfad bands: Eintrittsstufen der Tiers 1 / 5 / 11 / 19 / 33, Ende 50
+Tier | Stufe:  HP-Verlust  Tote  Sieg    (vier Stufen vom Eintritt bis zum Austritt)
+ T1  | L 1:  14% 0.39  94%  |  L 2:   6% 0.07 100%  |  L 4:   2% 0.01 100%  |  L 5:   1% 0.00 100%
+ T2  | L 5:  17% 0.36  94%  |  L 7:  10% 0.13  99%  |  L 9:   5% 0.04 100%  |  L11:   4% 0.02 100%
+ T3  | L11:  17% 0.08  98%  |  L14:   9% 0.01 100%  |  L16:   6% 0.00 100%  |  L19:   3% 0.00 100%
+ T4  | L19:  47% 0.75  72%  |  L24:  21% 0.20  95%  |  L28:  13% 0.05  99%  |  L33:   9% 0.02  99%
+ T5  | L33:  53% 0.45  64%  |  L39:  43% 0.27  79%  |  L44:  35% 0.13  89%  |  L50:  26% 0.07  94%
+
+Iso-Stufe: niedrigste Stufe, ab der ein Kampf im Tier hoechstens x der Lebenspunkte kostet (und die Gruppe < 0,15 Tote je Kampf verliert)
+Tier |      12%      25%      40%  | Eintritt (Pfad)
+ T1  |       L2       L2       L2  | L1
+ T2  |       L7       L7       L7  | L5
+ T3  |      L12      L10      L10  | L11
+ T4  |      L32      L26      L26  | L19
+ T5  |      L74      L52      L44  | L33
+
+=== v4: Vorschlag v4 des Nutzers (Nahkampf: mul)
+Pfad bands: Eintrittsstufen der Tiers 1 / 5 / 11 / 19 / 33, Ende 50
+Tier | Stufe:  HP-Verlust  Tote  Sieg    (vier Stufen vom Eintritt bis zum Austritt)
+ T1  | L 1:  12% 0.12  98%  |  L 2:   5% 0.01 100%  |  L 4:   2% 0.00 100%  |  L 5:   1% 0.00 100%
+ T2  | L 5:  14% 0.24  97%  |  L 7:  10% 0.09  99%  |  L 9:   6% 0.04 100%  |  L11:   5% 0.03 100%
+ T3  | L11:  20% 0.08  97%  |  L14:   8% 0.01 100%  |  L16:   6% 0.00 100%  |  L19:   4% 0.00 100%
+ T4  | L19:  43% 0.64  79%  |  L24:  19% 0.14  97%  |  L28:  12% 0.05  99%  |  L33:   9% 0.01 100%
+ T5  | L33:  45% 0.49  74%  |  L39:  33% 0.33  85%  |  L44:  27% 0.22  90%  |  L50:  21% 0.16  95%
+
+Iso-Stufe: niedrigste Stufe, ab der ein Kampf im Tier hoechstens x der Lebenspunkte kostet (und die Gruppe < 0,15 Tote je Kampf verliert)
+Tier |      12%      25%      40%  | Eintritt (Pfad)
+ T1  |       L1       L1       L1  | L1
+ T2  |       L6       L6       L6  | L5
+ T3  |      L13      L10      L10  | L11
+ T4  |      L30      L24      L24  | L19
+ T5  |      L68      L52      L52  | L33
