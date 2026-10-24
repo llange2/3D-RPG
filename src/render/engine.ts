@@ -8,6 +8,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/core/Meshes/thinInstanceMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { NO_SIGHT_LIMIT, registerSightLimit, setSight } from "./sightLimit";
 
 /** `low` renders the picture at two thirds of its size per side and lets the browser scale it up. */
 export type Resolution = "normal" | "low";
@@ -43,6 +44,9 @@ export interface Renderer {
   setResolution(resolution: Resolution): void;
   setAtmosphere(a: Atmosphere): void;
 }
+
+/** The far plane where no linear fog sets it (interiors, closed maps). */
+const SIGHT_FAR = 900;
 
 /** How far the world is drawn: how many chunks around the party and how thick the fog is. */
 export type ViewDistance = "close" | "medium" | "far";
@@ -84,6 +88,7 @@ const DUNGEON_GROUND = new Color3(0.28, 0.26, 0.24);
 export const NIGHT_GLOW = 0.06;
 
 export function createRenderer(canvas: HTMLCanvasElement, resolution: Resolution = "normal"): Renderer {
+  registerSightLimit();
   const engine = new Engine(canvas, true, { powerPreference: "high-performance", stencil: false, preserveDrawingBuffer: false }, true);
   engine.setHardwareScalingLevel(RESOLUTION_SCALING[resolution]);
   const scene = new Scene(engine);
@@ -94,9 +99,11 @@ export function createRenderer(canvas: HTMLCanvasElement, resolution: Resolution
   const camera = new UniversalCamera("camera", new Vector3(0, 1.7, 0), scene);
   camera.fov = 1.15;
   camera.minZ = 0.1;
-  camera.maxZ = 900;
+  camera.maxZ = SIGHT_FAR;
   camera.inputs.clear(); // the game drives the camera itself
   camera.rotation = new Vector3(0, 0, 0);
+  let sightRange = NO_SIGHT_LIMIT;
+  scene.onBeforeRenderObservable.add(() => setSight(camera.position.x, camera.position.y, camera.position.z, sightRange));
 
   const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
   hemi.groundColor = DUNGEON_GROUND;
@@ -139,6 +146,10 @@ export function createRenderer(canvas: HTMLCanvasElement, resolution: Resolution
         scene.fogEnd = a.fogRange.end;
       } else scene.fogDensity = a.fogDensity;
       scene.clearColor = new Color4(scene.fogColor.r, scene.fogColor.g, scene.fogColor.b, 1);
+      // beyond the fog's end everything is fog colour, which still showed as pale shapes against the sky (castles at the edge of the drawn chunks):
+      // the far plane and `sightLimit` cut there (by depth and by distance), so nothing is seen farther than the view distance
+      camera.maxZ = a.fogRange ? a.fogRange.end : SIGHT_FAR;
+      sightRange = a.fogRange ? a.fogRange.end : NO_SIGHT_LIMIT;
       const amb = hex(a.ambient);
       torch.intensity = a.torch.intensity;
       torch.range = a.torch.range;
