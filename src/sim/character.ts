@@ -258,7 +258,7 @@ export function xpToNextLevel(c: Character, level = c.level): number {
   const base = CONSTANTS.CHARACTER_XP[c.classType] ?? 2000;
   let total = 0;
   if (isV4()) {
-    // BALANCE v4: smooth table, the sum of `xpStepV4` (base × 2^(level − 1) up to level 18, then +8 % a level; the numbers are in RULES.v4)
+    // BALANCE v4: the old table up to level 10, then 1'024'000 × 1.08^(level − 10) a level instead of a flat 1'024'000 (sum of `xpStepV4`, numbers in RULES.v4)
     for (let i = 1; i <= level; i++) total += xpStepV4(base, i);
     return Math.max(0, total - c.xp);
   }
