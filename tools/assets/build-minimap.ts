@@ -36,9 +36,23 @@ const SHEET_GROUNDS = ["desert", "dirt", "snow", "forest", "lava"] as const;
  * by `target / its mean`, so the grain of the paint stays. Meadow is the forest's green made lighter and fresher, swamp its green made
  * darker and muddier. Black (frame, symbol) stays black.
  */
-const MADE_GROUNDS: Record<string, [number, number, number]> = { meadow: [152, 198, 66], swamp: [84, 94, 40] };
+const MADE_GROUNDS: Record<string, [number, number, number]> = { swamp: [84, 94, 40] };
 /** The grounds of the sheet in the register, as the game names them (`PlaceGround` in `minimapIcons.ts`). */
 const PLACE_GROUNDS = ["desert", "forest", "snow", "lava", "meadow", "swamp"] as const;
+/**
+ * Single tiles painted later to correct the colours of the sheet (the user's `tex_mm_<ground>_<symbol>.png`, 100 px, frame included). `grass`
+ * is the meadow, which was the desert row tinted green and came out too dull; `town` is the ground inside towns, castles and dungeons, where
+ * only the question mark and the way out are shown (`INTERIOR_GROUND`). The meadow has no way out (nothing draws one on the overworld), so
+ * that tile is the interior's one moved to the meadow's colour.
+ */
+const PAINTED_DIR = join(ROOT, "tools", "assets", "sources", "minimap", "tiles");
+const PAINTED: [string, string][] = [
+  ["town:meadow", "tex_mm_grass_town"], ["castle:meadow", "tex_mm_grass_castle"], ["dungeon:meadow", "tex_mm_grass_dungeon"],
+  ["pyramid:meadow", "tex_mm_grass_pyramid"], ["event:meadow", "tex_mm_grass_event"], ["event:town", "tex_mm_town_event"], ["exit:town", "tex_mm_town_exit"],
+];
+const paintedFile = (base: string): string => join(PAINTED_DIR, `${base}.png`);
+/** The tiles that exist only on the interior ground. */
+const INTERIOR_TILES = ["event:town", "exit:town"];
 
 /** The tiles that are the neutral ground in another colour: `name` in the register, source file. */
 const GROUNDS: [string, string][] = [
@@ -204,7 +218,7 @@ async function placeTiles(): Promise<Map<string, Buffer>> {
     }
   }
 
-  // meadow and swamp: the plain desert tiles with the colour of the ground moved to the wanted one
+  // the swamp: the plain desert tiles with the colour of the ground moved to the wanted one
   const sand = tiles.get("event:desert")!;
   const base = paintMean(sand);
   for (const [ground, target] of Object.entries(MADE_GROUNDS)) {
@@ -215,18 +229,26 @@ async function placeTiles(): Promise<Map<string, Buffer>> {
       tiles.set(`${kind}:${ground}`, made);
     }
   }
+
+  // the painted corrections replace what was made; the meadow's way out follows the interior's by the colour the question marks differ by
+  for (const [name, file] of PAINTED) tiles.set(name, (await raw(paintedFile(file))).data);
+  const from = paintMean(tiles.get("event:town")!);
+  const to = paintMean(tiles.get("event:meadow")!);
+  const exit = Buffer.from(tiles.get("exit:town")!);
+  for (let p = 0; p < exit.length; p += 4) for (let c = 0; c < 3; c++) exit[p + c] = Math.min(255, Math.round(exit[p + c]! * (to[c]! / from[c]!)));
+  tiles.set("exit:meadow", exit);
   return tiles;
 }
 
 export async function buildMinimap(): Promise<{ bytes: number }> {
   const out = join(OUT, "ui", "minimap.webp");
   const registerFile = join(OUT, "ui", "minimap.json");
-  const sources = [...SYMBOLS.map((s) => src(`tex_mm_${s}`)), ...GROUNDS.map(([, f]) => src(f)), ...DRAWINGS.flatMap(([, a, b]) => [src(a), src(b)]), src("tex_mm_snow"), PLACE_SHEET, join(import.meta.filename)];
+  const sources = [...SYMBOLS.map((s) => src(`tex_mm_${s}`)), ...GROUNDS.map(([, f]) => src(f)), ...DRAWINGS.flatMap(([, a, b]) => [src(a), src(b)]), src("tex_mm_snow"), PLACE_SHEET, ...PAINTED.map(([, f]) => paintedFile(f)), join(import.meta.filename)];
   if (upToDate(out, ...sources) && upToDate(registerFile, ...sources)) return { bytes: statSync(out).size + statSync(registerFile).size };
   ensureDir(out);
 
   // the sheet: neutral ground, three drawings, then the symbols
-  const places = PLACE_GROUNDS.flatMap((ground) => PLACE_KINDS.map((kind) => `${kind}:${ground}`));
+  const places = [...PLACE_GROUNDS.flatMap((ground) => PLACE_KINDS.map((kind) => `${kind}:${ground}`)), ...INTERIOR_TILES];
   const names = ["ground", "mountain", "trees", "palms", ...SYMBOLS, ...places];
   const sheetW = COLUMNS * CELL;
   const sheetH = Math.ceil(names.length / COLUMNS) * CELL;

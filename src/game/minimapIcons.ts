@@ -6,13 +6,13 @@ import { assetPath } from "../ui/dom";
  * the register's colours; mountains, trees and palms are drawings on a transparent ground that go on top. Tiles made this way are cached, so the
  * map draws from a handful of small canvases and the page loads one picture instead of 38. The places (town, castle, dungeon or cave, pyramid), the
  * question mark of events and the way out are painted tiles in six grounds (`mm_tiles.png`, see `build-minimap.ts`): on the overworld each stands on
- * the ground of its region, in an interior on the desert's, which is the colour of the old floor.
+ * the ground of its region, in an interior on the `town` ground, which is the colour of the old floor.
  */
 export type GroundName = "grass" | "forest" | "desert" | "snow" | "swamp" | "volcanic" | "dirt" | "bridge" | "floor" | "lava" | "cobble" | "shore";
 export type DrawingName = "mountain" | "trees" | "palms";
 /** The painted symbols of places and events; the ground is the colour of the tile they stand on. */
 export type PlaceName = "town" | "castle" | "dungeon" | "pyramid" | "event" | "exit";
-export type PlaceGround = "meadow" | "forest" | "desert" | "snow" | "swamp" | "lava";
+export type PlaceGround = "meadow" | "forest" | "desert" | "snow" | "swamp" | "lava" | "town";
 /** `event` and `exit` are the painted tiles on the interior ground (`INTERIOR_GROUND`). */
 export type SymbolName =
   | "wall" | "floor" | "water" | "door" | "door_open" | "event" | "info" | "persona" | "trap" | "exit"
@@ -32,8 +32,8 @@ const DERIVED: Partial<Record<GroundName, { from: string; by: [number, number, n
   shore: { from: "desert", by: [0.95, 0.95, 0.95] },
 };
 
-/** The ground the painted tiles have inside a town, castle, dungeon or cave: the old floor's colour. */
-const INTERIOR_GROUND: PlaceGround = "desert";
+/** The ground the painted tiles have inside a town, castle, dungeon or cave: the old floor's colour (only `event` and `exit` are painted on it). */
+const INTERIOR_GROUND: PlaceGround = "town";
 
 /** The painted ground that goes with a ground of the overworld map (the sheet has no cobblestone, bridge or plain dirt tile). */
 const PLACE_GROUND: Record<GroundName, PlaceGround> = {

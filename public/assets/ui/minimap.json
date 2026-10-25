@@ -2,7 +2,7 @@
  "version": 2,
  "cell": 48,
  "width": 288,
- "height": 480,
+ "height": 528,
  "icons": {
   "ground": {
    "x": 0,
@@ -239,6 +239,14 @@
   "exit:swamp": {
    "x": 192,
    "y": 432
+  },
+  "event:town": {
+   "x": 240,
+   "y": 432
+  },
+  "exit:town": {
+   "x": 0,
+   "y": 480
   }
  },
  "tints": {
