@@ -91,23 +91,29 @@ describe("Train all (fourteenth playtest, point 3)", () => {
   });
 
   it("trains as many as the gold reaches, lowest level first, and lets the rest wait", () => {
-    const p = party([2, 1, 3, 5], 1500);
+    // BALANCE v4: the gold is the price of the three lowest heroes, whatever the training formula is (it was a fixed 1500 at 250 × level)
+    const probe = party([2, 1, 3, 5], 0);
+    const price = (i: number) => trainingCost(probe.characters[i]!, probe);
+    const gold = price(1) + price(0) + price(2);
+    const p = party([2, 1, 3, 5], gold);
     const cost = (i: number) => trainingCost(p.characters[i]!, p);
-    expect(cost(1) + cost(0) + cost(2)).toBe(1500);
+    expect(cost(1) + cost(0) + cost(2)).toBe(gold);
     const done = trainAll(p);
     expect(done.who).toEqual([1, 0, 2]);
     expect(done.waiting).toEqual([3]);
-    expect(done.cost).toBe(1500);
+    expect(done.cost).toBe(gold);
     expect(p.gold).toBe(0);
     expect(p.characters.map((c) => c.level)).toEqual([3, 2, 4, 5]);
   });
 
   it("does nothing, and takes no gold, when not even the lowest can be paid", () => {
-    const p = party([2, 1, 3, 5], 100);
+    const probe = party([2, 1, 3, 5], 0);
+    const gold = trainingCost(probe.characters[1]!, probe) - 1; // one short of the lowest hero's price
+    const p = party([2, 1, 3, 5], gold);
     const done = trainAll(p);
     expect(done.who).toEqual([]);
     expect(done.waiting).toEqual([1, 0, 2, 3]);
-    expect(p.gold).toBe(100);
+    expect(p.gold).toBe(gold);
     expect(p.characters.map((c) => c.level)).toEqual([2, 1, 3, 5]);
   });
 

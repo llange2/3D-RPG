@@ -5,6 +5,7 @@ import { resolveAction, type ActionContext } from "../../src/actions/handlers";
 import type { ActionInstance } from "../../src/actions/types";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { MONSTERS, SPELLS } from "../../src/data/tables";
+import { setBalanceMode } from "../../src/sim/balance";
 import { armor, canEquip, createCharacter, equipSlots, itemBonus, levelUp, pyRound, recalcValues, swapSlots, xpToNextLevel } from "../../src/sim/character";
 import { applyHit, meleeDamage, monsterDamage, rangedDamage, specialCondition } from "../../src/sim/combat";
 import { createEncounter, createMonster, lineOfSight, monsterTurn, partyAttack, spellInLine, spellRound, updateBattleMode, wayToPlayer, type GridView } from "../../src/sim/encounter";
@@ -15,6 +16,19 @@ import { castSpell, isSpellImplemented, learnableSpells, learnBlock, SPELL_SCHOO
 import { BAG_SLOTS, type Party } from "../../src/sim/types";
 
 const rng = (s: string) => new Rng(seedFromString(s));
+
+/**
+ * BALANCE v4: the tests that pin the OLD numbers run in the legacy mode (sim/balance.ts), so the rollback branch stays covered until the
+ * clean-up deletes it. The numbers of the new rules are pinned in balanceV4.test.ts.
+ */
+function legacyRules<T>(fn: () => T): T {
+  setBalanceMode("legacy");
+  try {
+    return fn();
+  } finally {
+    setBalanceMode("v4");
+  }
+}
 
 /** The default party without its starter equipment and with 500 gold: formulas are easiest to check on bare characters. */
 function bareParty(): Party {
@@ -56,9 +70,9 @@ describe("python rounding", () => {
 
 describe("characters", () => {
   it("computes health and mana of the four default heroes like the old formulas", () => {
-    const party = createDefaultParty();
+    const party = legacyRules(() => createDefaultParty());
     const [maximus, elrin, ralvar, lyneth] = party.characters;
-    // health = round(level * (END/2 + class hp + race hp))
+    // health = round(level * (END/2 + class hp + race hp)); BALANCE v4 adds 10 (pinned in balanceV4.test.ts)
     expect([maximus!.health, elrin!.health, ralvar!.health, lyneth!.health]).toEqual([16, 10, 8, 8]);
     // mana: Archer = round(1 * (10 - 90/INT + race mana)); Druid = round(1 * (25 - 500/(PER+INT) + race mana)); fighters have none
     expect([maximus!.mana, elrin!.mana, ralvar!.mana, lyneth!.mana]).toEqual([0, 0, 6, 13]);
@@ -69,16 +83,19 @@ describe("characters", () => {
 
   it("needs a geometric amount of XP per level and 1,024,000 per level above 10", () => {
     const knight = createCharacter({ name: "K", classType: "Knight", raceType: "Human", avatar: "character04", attrs: { str: 17, int: 8, per: 12, end: 18, spd: 15, acc: 18, lck: 14 } });
-    expect(xpToNextLevel(knight)).toBe(1500);
-    expect(xpToNextLevel(knight, 2)).toBe(1500 + 3000);
-    expect(xpToNextLevel(knight, 10)).toBe(1500 * (2 ** 10 - 1));
-    expect(xpToNextLevel(knight, 12)).toBe(1500 * (2 ** 10 - 1) + 2 * 1_024_000);
-    knight.xp = 1200;
-    expect(xpToNextLevel(knight)).toBe(300);
-    levelUp(knight, [], 1);
-    expect(knight.level).toBe(2);
-    expect(knight.xp).toBe(1500);
-    expect(knight.hp).toBe(knight.health);
+    // BALANCE v4 replaced this table (pinned in balanceV4.test.ts); the old one is the legacy branch
+    legacyRules(() => {
+      expect(xpToNextLevel(knight)).toBe(1500);
+      expect(xpToNextLevel(knight, 2)).toBe(1500 + 3000);
+      expect(xpToNextLevel(knight, 10)).toBe(1500 * (2 ** 10 - 1));
+      expect(xpToNextLevel(knight, 12)).toBe(1500 * (2 ** 10 - 1) + 2 * 1_024_000);
+      knight.xp = 1200;
+      expect(xpToNextLevel(knight)).toBe(300);
+      levelUp(knight, [], 1);
+      expect(knight.level).toBe(2);
+      expect(knight.xp).toBe(1500);
+      expect(knight.hp).toBe(knight.health);
+    });
   });
 
   it("adds the talent mana bonus for casters", () => {
@@ -224,14 +241,17 @@ describe("combat formulas", () => {
   const noArmor = Object.values(MONSTERS).find((m) => m.armor === 0)!;
 
   it("melee: ceil((STR/10 + class melee) * level + weapon) minus monster armor", () => {
-    // Maximus: 21/10 + 3 = 5.1; no weapon -> 1; ceil(6.1) = 7
-    expect(meleeDamage(maximus, null, rng("m"))).toBe(7);
-    expect(meleeDamage(maximus, noArmor, rng("m"))).toBe(7);
-    const armored = Object.values(MONSTERS).find((m) => m.armor > 0 && m.armor < 7)!;
-    expect(meleeDamage(maximus, armored, rng("m"))).toBe(7 - armored.armor);
-    maximus.defensiveStance = true;
-    expect(meleeDamage(maximus, null, rng("m"))).toBe(Math.trunc(7 * 0.75));
-    maximus.defensiveStance = false;
+    // BALANCE v4 changed the formula (pinned in balanceV4.test.ts); this is the legacy branch
+    legacyRules(() => {
+      // Maximus: 21/10 + 3 = 5.1; no weapon -> 1; ceil(6.1) = 7
+      expect(meleeDamage(maximus, null, rng("m"))).toBe(7);
+      expect(meleeDamage(maximus, noArmor, rng("m"))).toBe(7);
+      const armored = Object.values(MONSTERS).find((m) => m.armor > 0 && m.armor < 7)!;
+      expect(meleeDamage(maximus, armored, rng("m"))).toBe(7 - armored.armor);
+      maximus.defensiveStance = true;
+      expect(meleeDamage(maximus, null, rng("m"))).toBe(Math.trunc(7 * 0.75));
+      maximus.defensiveStance = false;
+    });
   });
 
   it("characters who cannot act deal no damage", () => {
@@ -279,7 +299,8 @@ describe("combat formulas", () => {
     expect(specialCondition(MONSTERS[3]!)).toBe("Weak"); // "Ranged Attack, Causes Weak, Hatred:Paladins"
   });
 
-  it("knocks out or kills by the old rule", () => {
+  it("knocks out or kills by the old rule", () => legacyRules(() => {
+    // BALANCE v4: the heroes have 10 more health; the numbers below are those of 16 maximum health (legacy mode)
     const p = createDefaultParty();
     const c = p.characters[0]!; // 16 max health
     expect(applyHit(p, 0, 10, null, rng("h")).conditions).toEqual([]);
@@ -298,7 +319,7 @@ describe("combat formulas", () => {
     const p4 = createDefaultParty();
     p4.characters[0]!.hp = 3;
     expect(applyHit(p4, 0, 8, null, rng("h")).conditions).toEqual(["Dead"]);
-  });
+  }));
 
   it("wakes sleepers when they are hit and reports the end of the party", () => {
     const p = createDefaultParty();

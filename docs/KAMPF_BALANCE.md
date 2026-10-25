@@ -1,6 +1,6 @@
 # Kampfformeln, XP und Aufstiege – Befund und Vorschlag
 
-Stand 23.10.2026. **Am Spiel wurden nur die vier Fehler aus Abschnitt 3.5 behoben**; die Formeln des Vorschlags (Abschnitt 4) sind nicht umgesetzt. Alles, was hier steht, kommt aus dem neuen Werkzeug `tools/balance/` (Bedienung: `tools/balance/README.md`)
+Stand 23.10.2026. **Nachtrag 25.10.2026: Der überarbeitete Vorschlag (Tabelle in Abschnitt 1, „Vorschlag v4“) ist im Spiel umgesetzt, Stellen und Rückweg in `docs/BALANCE_V4_UMSETZUNG.md`, Messungen in `docs/KAMPF_BALANCE_V4.md`.** Die Zahlen unten beschreiben den Stand vor v4 („heute“ = nach den Korrekturen aus 3.5). Ursprünglich wurden am Spiel nur die vier Fehler aus Abschnitt 3.5 behoben; die Formeln des Vorschlags (Abschnitt 4) waren nicht umgesetzt. Alles, was hier steht, kommt aus dem neuen Werkzeug `tools/balance/` (Bedienung: `tools/balance/README.md`)
 und seinen Zwischenständen in `tools/balance/out/` (die Tabellen dieses Dokuments liegen als Rohausgabe in `tools/balance/out/report/`).
 **„Heute“ heißt in diesem Dokument: das Spiel nach den Korrekturen aus 3.5.** Alle Zahlen sind damit neu gerechnet; die ursprüngliche Rechnung vor den Korrekturen (Zielwert 0,76) liegt unverändert in `tools/balance/out/report-vor-korrektur/`.
 
@@ -37,7 +37,7 @@ und seinen Zwischenständen in `tools/balance/out/` (die Tabellen dieses Dokumen
 | Sonderangriff „Causes Dead / Eradication“ | `5 / (GLÜ² × 0,05)` (behoben, 3.5) | wie heute, alle anderen Zustände `10 / (GLÜ² × 0,05)` |
 | Wolf | tötet unter 90 % / −20 je Elementartreffer | Wenn Gegner Lebensenergie < 10% fällt > Tod |
 | Fee | −20 je Elementartreffer (nie unter 0) | '−30 je Elementartreffer (nie unter 0)' |
-| Orb | + 20% Mana | 'Angriffszaubersprüchen +10% Schaden'
+| Orb | + 20% Mana | 'Angriffszaubersprüchen +20% Schaden'
 | XP für den Aufstieg | `Basis × 2^(Stufe−1)`, ab Stufe 11 flach 1'024'000 | `Basis × 25 × 1,25^(Stufe−1)` bis Stufe 18, danach je Stufe +8 % |
 | Trainingskosten | `250 × Stufe` | `10 × Stufe²` (die Formel aus Ihrer Quellenliste) |
 

@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONSTANTS } from "../../src/data/tables";
+import { xpStepV4 } from "../../src/sim/balance";
 import { CURRENT, type Formulas, pyRound } from "./formulas";
 import { DEFAULT_PARAMS, type Params, makeFormulas } from "./parametric";
 
@@ -75,7 +76,7 @@ PROPOSALS.v3u = { ...PROPOSALS.v3!, id: "v3u", title: "Kampf v3 mit XP-Vorschlag
 /**
  * The revised proposal of the user (docs/KAMPF_BALANCE.md, summary table, state of 24.10.2026), called v4:
  *  health `(END/2 + class + race) * level + 10`; melee `(weapon * (STR*0.1 + class) / 3 * level - armor) * (1 - res_physical)`;
- *  bow hit chance `ACC / (speed * distance)`, bow damage as v3; monsters hit as today; Wolf kills below 10 %, Fairy -30, Orb +10 % spell damage
+ *  bow hit chance `ACC / (speed * distance)`, bow damage as v3; monsters hit as today; Wolf kills below 10 %, Fairy -30, Orb +20 % spell damage
  *  (no extra mana any more); XP and training as v3x.
  * The melee line is ambiguous ("Waffe x (...) /3 x Stufe"): `melee` picks the reading (see `V4_MELEE`).
  */
@@ -112,16 +113,18 @@ export function makeV4(id: string, melee: keyof typeof V4_MELEE): Formulas {
       const raw = Math.ceil(roll + ((h.acc + h.gear.acc) / 10 + 0.8 * h.classRanged) * h.level);
       return Math.max(0, Math.trunc(raw - Math.trunc(mon.armor / 2)));
     },
-    xpStep: xpSmooth(25, 1.25, 18, 1.08),
+    // the game's table (rounded per level, `xpStepV4` in src/sim/balance.ts); `xpSmooth(25, 1.25, 18, 1.08)` is the same without rounding
+    xpStep: (cls, level) => xpStepV4(CONSTANTS.CHARACTER_XP[cls] ?? 2000, level),
     trainingCost: trainingSquare,
     wolfBelow: 0.1,
     orbMana: 0,
-    orbSpell: 0.1,
+    orbSpell: 0.2,
     fairyReduction: 30,
   };
 }
-PROPOSALS.v4 = makeV4("v4", "mul");
-PROPOSALS.v4a = makeV4("v4a", "add3");
+// v4 is the reading the user confirmed on 25.10.2026: weapon + (STR*0.1 + class) / 3 * level (Knight, level 35, STR 30, weapon 10: 68.3)
+PROPOSALS.v4 = makeV4("v4", "add3");
+PROPOSALS.v4mul = makeV4("v4mul", "mul");
 PROPOSALS.v4b = makeV4("v4b", "add1");
 
 const outDir = join(dirname(fileURLToPath(import.meta.url)), "out");
