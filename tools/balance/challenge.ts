@@ -72,6 +72,24 @@ function main(): void {
   const partyIdx = nums(a.parties, [0, 1, 3, 4, 2]);
   const iso = (a.iso ?? "0.12,0.25,0.4").split(",").map(Number);
   console.log(`Parteien: ${partyIdx.map((i) => PARTIES[i]!.name.split(" (")[0]).join(", ")}; Gegner: ${a.groups ?? "class"}; Ausruestung: ${a.gear ?? "typical"}; Maskottchen: ${a.mascot ?? "none"}; ${a.runs ?? 150} Laeufe je Zelle`);
+  if (a.cells) {
+    // fixed (tier:level) pairs instead of the XP path, e.g. --cells=1:1,1:10,2:10,2:20
+    const cells = a.cells.split(",").map((c) => c.split(":").map(Number) as [number, number]);
+    for (const name of names) {
+      const F = formulasFrom(name);
+      console.log(`\n=== ${F.id}: ${F.title}`);
+      console.log("Tier/Stufe | Mittel: HP-Verlust  Tote  Sieg | " + partyIdx.map((i) => PARTIES[i]!.name.split(" (")[0]!.padEnd(13)).join(" "));
+      for (const [tier, level] of cells) {
+        const m = cellMean(F, level, tier, partyIdx, a);
+        const per = partyIdx.map((i) => {
+          const p = cellMean(F, level, tier, [i], a);
+          return `${pct(p.loss)} ${p.dead.toFixed(2)}`.padEnd(13);
+        });
+        console.log(`  T${tier} / L${String(level).padStart(2)}  | ${pct(m.loss)}  ${m.dead.toFixed(2)}  ${pct(m.win)} | ${per.join(" ")}`);
+      }
+    }
+    return;
+  }
   for (const name of names) {
     const F = formulasFrom(name);
     // the levels come from the XP table of `--pathxp` (default v4), not from the formula set under test: the path is the same for every set

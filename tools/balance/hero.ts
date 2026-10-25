@@ -210,11 +210,28 @@ export interface Hero extends HeroStats {
   spec: HeroSpec;
 }
 
+/**
+ * `BALANCE_WEAPON="t5:57,b5:57"` sets the mean melee weapon damage of a gear tier (end-game weapons are stronger than what the item generator
+ * gives the typical gear of the tier). The melee spread stays, the bow is scaled by the same factor as the melee weapon.
+ */
+const WEAPON_MEAN = new Map<string, number>((process.env.BALANCE_WEAPON ?? "").split(",").filter(Boolean).map((p) => [p.split(":")[0]!, Number(p.split(":")[1])]));
+
 export function makeHero(spec: HeroSpec, level: number, growth: Growth, gear: GearSpec, salt = 0): Hero {
   const cls = BASE_CLASS[spec.cls]!;
   const race = BASE_RACE[spec.race]!;
   const attrs = attrsAt(spec, level, growth);
-  const g = buildGear(spec.cls, gear, salt);
+  const g0 = buildGear(spec.cls, gear, salt);
+  const g = { ...g0 };
+  const wanted = WEAPON_MEAN.get(gear.name);
+  if (wanted !== undefined && g0.weaponMax > 0) {
+    const mean = (g0.weaponMin + g0.weaponMax) / 2;
+    const shift = wanted - mean;
+    g.weaponMin = g0.weaponMin + shift;
+    g.weaponMax = g0.weaponMax + shift;
+    const factor = wanted / Math.max(1, mean);
+    g.rangedMin = g0.rangedMin * factor;
+    g.rangedMax = g0.rangedMax * factor;
+  }
   const gearAttr = { str: g.bonus.str!, int: g.bonus.int!, per: g.bonus.per!, end: g.bonus.end!, spd: g.bonus.spd!, acc: g.bonus.acc!, lck: g.bonus.lck! };
   return {
     spec,

@@ -14,6 +14,7 @@ import { thousands } from "../core/format";
 import type { Rng } from "../core/rng";
 import { RIDDLES_MASTER, TALENTS, TEXTS, talentInfo } from "../data/tables";
 import { thieveryRoll, levelUp, recalcValues, isAlive, resistance } from "../sim/character";
+import { fairyReduction } from "../sim/balance";
 import { applyHit } from "../sim/combat";
 import { serviceLevel } from "../sim/economy";
 import { generateItem, questItem, spellScroll } from "../sim/items";
@@ -221,7 +222,8 @@ export function trapDamageTo(host: CampaignHost, index: number, damage: number, 
   const protection = (element: "acid" | "fire" | "ice" | "magic") => party.effects.filter((e) => e.kind === "protection" && e.element === element && e.until > party.minutes).reduce((s, e) => s + (e.amount ?? 0), 0);
   const elemental = (element: "acid" | "fire" | "ice" | "magic") => {
     let v = Math.round(total * (1 - resistance(c, element) / 100)) - protection(element);
-    if (party.mascot === "Fairy") v -= 20;
+    // BALANCE v4: the Fairy takes 30 off here too (the campaign trap had its own hard-coded 20); LEGACY (balance v4): 20
+    if (party.mascot === "Fairy") v -= fairyReduction(20);
     return Math.max(0, v);
   };
   let special: string | null = null;

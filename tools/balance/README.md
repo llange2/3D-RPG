@@ -24,6 +24,8 @@ eingetragen (das Spiel bleibt unberührt).
 
 ## Stand der Formeln
 
+**BALANCE v4 (25.10.2026): das Spiel rechnet seit dem mit den Formeln des Vorschlags `v4`** (`PROPOSALS.v4`, `makeV4` in `proposals.ts`; Schalter und Zahlen in `src/sim/balance.ts`, Umsetzung in `docs/BALANCE_V4_UMSETZUNG.md`). `CURRENT` ist damit der **alte** Stand (Modus `legacy` des Spiels) und die Vergleichsbasis aller Berichte („heute“). `verify.ts` folgt dem Modus des Spiels: `npx tsx tools/balance/verify.ts 5000` prüft `v4`, `… 5000 legacy` prüft `CURRENT`. Neu: `challenge.ts` (Herausforderung je Tier und Stufe, Paare mit `--cells=`), `weapons.ts`, `xpneed.ts`, `worldmix.ts`, `monlist.ts`; `BALANCE_EXCLUDE=Terminator` nimmt Monster aus den Klassenpools, `BALANCE_WEAPON=t5:57` setzt den mittleren Waffenschaden eines Ausrüstungsstands.
+
 `CURRENT` bildet das Spiel **nach den Korrekturen aus `docs/KAMPF_BALANCE.md` 3.5** ab (Attribute und Resistenzen mit Ausrüstung, kein negativer Schlag, Fehlschuss ohne Schaden, Ringschaden auch im Fernkampf, halbe Chance für „Dead“/„Eradication“).
 Die Berichte vor den Korrekturen liegen unverändert in `out/report-vor-korrektur/`; `out/report/` ist der neue Stand.
 

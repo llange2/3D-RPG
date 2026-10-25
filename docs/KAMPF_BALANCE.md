@@ -1,6 +1,6 @@
 # Kampfformeln, XP und Aufstiege – Befund und Vorschlag
 
-Stand 23.10.2026. **Am Spiel wurden nur die vier Fehler aus Abschnitt 3.5 behoben**; die Formeln des Vorschlags (Abschnitt 4) sind nicht umgesetzt. Alles, was hier steht, kommt aus dem neuen Werkzeug `tools/balance/` (Bedienung: `tools/balance/README.md`)
+Stand 23.10.2026. **Nachtrag 25.10.2026: Der überarbeitete Vorschlag (Tabelle in Abschnitt 1, „Vorschlag v4“) ist im Spiel umgesetzt, Stellen und Rückweg in `docs/BALANCE_V4_UMSETZUNG.md`, Messungen in `docs/KAMPF_BALANCE_V4.md`.** Die Zahlen unten beschreiben den Stand vor v4 („heute“ = nach den Korrekturen aus 3.5). Ursprünglich wurden am Spiel nur die vier Fehler aus Abschnitt 3.5 behoben; die Formeln des Vorschlags (Abschnitt 4) waren nicht umgesetzt. Alles, was hier steht, kommt aus dem neuen Werkzeug `tools/balance/` (Bedienung: `tools/balance/README.md`)
 und seinen Zwischenständen in `tools/balance/out/` (die Tabellen dieses Dokuments liegen als Rohausgabe in `tools/balance/out/report/`).
 **„Heute“ heißt in diesem Dokument: das Spiel nach den Korrekturen aus 3.5.** Alle Zahlen sind damit neu gerechnet; die ursprüngliche Rechnung vor den Korrekturen (Zielwert 0,76) liegt unverändert in `tools/balance/out/report-vor-korrektur/`.
 
@@ -28,14 +28,16 @@ und seinen Zwischenständen in `tools/balance/out/` (die Tabellen dieses Dokumen
 
 | Was | heute | Vorschlag |
 |---|---|---|
-| Leben | `(AUS/2 + Klasse + Rasse) × Stufe` | `1,1 × (AUS/2 + Klasse + Rasse) × Stufe + 25` |
-| Nahkampf | `(STÄ×0,1 + Klasse) × Stufe + Waffe − Rüstung`, nie unter 0 | `Waffe + 1,5 × (STÄ×0,1 + Klasse) × Stufe − 0,4 × Rüstung`, nie unter 0 |
-| Fernkampf, Trefferchance | `GEN / (Tempo × Entfernung × 0,5)` | `GEN / (Tempo × Entfernung)` |
+| Leben | `(AUS/2 + Klasse + Rasse) × Stufe` | `(AUS/2 + Klasse + Rasse) × Stufe + 10` |
+| Nahkampf | `(STÄ×0,1 + Klasse) × Stufe + Waffe − Rüstung(Gegner)`, nie unter 0 | `(Waffe + (STÄ×0,1 + Klasse) /3 × Stufe − Rüstung(Gegner))* (1-res_physical(Gegner))`, nie unter 0|
+| Fernkampf, Trefferchance | `GEN / (Tempo(Gegner) × Entfernung × 0,5)` | `GEN / (Tempo(Gegner) × Entfernung)` |
 | Fernkampf, Schaden | `(GEN×0,1 + Klasse) × Stufe + Waffe − 0,5 × Rüstung`, nie unter 0 | `Waffe + (GEN×0,1 + 0,8 × Klasse) × Stufe − 0,5 × Rüstung` |
-| Monsterschlag gegen Rüstung (physisch) | `Schaden − Rüstung`, bis 0 | `max(0,5 × Schaden, Schaden − Rüstung)` |
+| Monsterschlag gegen Rüstung (physisch) | `Schaden − Rüstung`, bis 0 | wie heute |
 | Verfehlter Schuss eines Monsters | richtet keinen Schaden an (behoben, 3.5) | wie heute |
 | Sonderangriff „Causes Dead / Eradication“ | `5 / (GLÜ² × 0,05)` (behoben, 3.5) | wie heute, alle anderen Zustände `10 / (GLÜ² × 0,05)` |
-| Wolf / Fee | tötet unter 90 % / −20 je Elementartreffer | tötet unter 33 % (ein Drittel) / −30 |
+| Wolf | tötet unter 90 % / −20 je Elementartreffer | Wenn Gegner Lebensenergie < 10% fällt > Tod |
+| Fee | −20 je Elementartreffer (nie unter 0) | '−30 je Elementartreffer (nie unter 0)' |
+| Orb | + 20% Mana | 'Angriffszaubersprüchen +20% Schaden'
 | XP für den Aufstieg | `Basis × 2^(Stufe−1)`, ab Stufe 11 flach 1'024'000 | `Basis × 25 × 1,25^(Stufe−1)` bis Stufe 18, danach je Stufe +8 % |
 | Trainingskosten | `250 × Stufe` | `10 × Stufe²` (die Formel aus Ihrer Quellenliste) |
 

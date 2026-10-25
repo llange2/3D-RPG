@@ -1,5 +1,6 @@
 import type { Rng } from "../core/rng";
 import { BASE_CLASS, BASE_RACE, CONSTANTS } from "../data/tables";
+import { healthFlat, isV4, orbManaBonus, xpStepV4 } from "./balance";
 import { isTwoHanded, sumBonus } from "./items";
 import { removeCondition } from "./conditions";
 import {
@@ -199,7 +200,10 @@ export function isRifted(c: Character): boolean {
   return (c.mods?.rift ?? 0) > 0;
 }
 
-/** The Orb mascot raises the spell points of every hero who has any by this share. */
+/**
+ * LEGACY (balance v4): the Orb mascot raised the spell points of every hero who has any by this share. Since v4 the Orb raises the damage
+ * of attack spells instead (`orbSpellBonus` in balance.ts, applied in `attackDamage` of spells.ts); `orbManaBonus()` is 0 then.
+ */
 export const ORB_MANA_BONUS = 0.2;
 
 /** Recomputes maximum health and mana (port of update_values). `mascot` is the party's: the Orb adds to the mana. */
@@ -208,7 +212,8 @@ export function recalcValues(c: Character, talents: readonly string[], refill: b
   const base = (key: string) => getBaseValue(c.raceType, c.classType, key);
   let calc = use("end") / 2 + base("health");
   if (calc <= 0) calc = 1;
-  c.health = pyRound(c.level * calc);
+  // BALANCE v4: +10 health on top (a level 1 Wizard had 2 points); `healthFlat()` is 0 in the legacy mode
+  c.health = pyRound(c.level * calc) + healthFlat();
 
   const mana = base("mana");
   const lvl = c.level;
@@ -237,7 +242,8 @@ export function recalcValues(c: Character, talents: readonly string[], refill: b
       c.mana = 0;
   }
   c.mana = Math.max(0, c.mana);
-  if (mascot === "Orb" && c.mana > 0) c.mana = pyRound(c.mana * (1 + ORB_MANA_BONUS));
+  // BALANCE v4: the Orb no longer adds spell points (`orbManaBonus()` is 0), it adds spell damage; LEGACY (balance v4): +20 % mana
+  if (mascot === "Orb" && c.mana > 0 && orbManaBonus() > 0) c.mana = pyRound(c.mana * (1 + orbManaBonus()));
   if (refill) {
     c.hp = c.health;
     c.sp = c.mana;
@@ -251,6 +257,12 @@ export function recalcValues(c: Character, talents: readonly string[], refill: b
 export function xpToNextLevel(c: Character, level = c.level): number {
   const base = CONSTANTS.CHARACTER_XP[c.classType] ?? 2000;
   let total = 0;
+  if (isV4()) {
+    // BALANCE v4: smooth table, the sum of `xpStepV4` (25 × base × 1.25^(level − 1) up to level 18, then +8 % a level)
+    for (let i = 1; i <= level; i++) total += xpStepV4(base, i);
+    return Math.max(0, total - c.xp);
+  }
+  // LEGACY (balance v4): doubling up to level 10, then a flat 1'024'000
   if (level <= 10) {
     for (let i = 0; i < level; i++) total += 2 ** i * base;
   } else {

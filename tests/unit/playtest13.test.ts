@@ -7,6 +7,7 @@ import { generateInterior } from "../../src/interiors";
 import { CELL, type Facing } from "../../src/interiors/types";
 import { chunkRadius, VIEW_SHARE } from "../../src/render/engine";
 import { tileHeight } from "../../src/render/heights";
+import { setBalanceMode } from "../../src/sim/balance";
 import { recalcValues } from "../../src/sim/character";
 import { smithStock } from "../../src/sim/economy";
 import { createEncounter, createMonster, partyAttack, type GridView } from "../../src/sim/encounter";
@@ -86,18 +87,36 @@ describe("the Wolf and the Orb (thirteenth playtest, points 7 and 9)", () => {
   const open: GridView = { walkable: () => true, water: () => false, opaque: () => false };
   const tough = Object.values(MONSTERS).find((m) => m.health >= 400 && m.terrain === "land")!;
 
-  it("kills a monster that falls under 90 percent of its health, only while the Wolf is the mascot", () => {
-    for (const [mascot, dies] of [["Wolf", true], ["Crow", false]] as const) {
-      const party = createDefaultParty();
-      setMascot(party, mascot);
-      const enc = createEncounter();
-      enc.monsters.push(createMonster("m", tough.id, 6, 2));
-      enc.monsters[0]!.hp = Math.floor(tough.health * 0.85);
-      const events = partyAttack(party, open, enc, 5, 2, new Rng(seedFromString("w")), { kind: "melee", targetUid: "m" });
-      expect(events.some((e) => e.type === "wolf_kill"), mascot).toBe(dies);
-      expect(events.some((e) => e.type === "monster_dead"), mascot).toBe(dies);
-      expect(enc.monsters.length).toBe(dies ? 0 : 1);
+  /** BALANCE v4: the Wolf's threshold is 10 percent (it was 90), so the test wounds the monster to 5 percent (v4) or 85 percent (legacy mode). */
+  it("kills a monster that falls under 10 percent of its health, only while the Wolf is the mascot", () => {
+    for (const mode of ["v4", "legacy"] as const) {
+      setBalanceMode(mode);
+      try {
+        for (const [mascot, dies] of [["Wolf", true], ["Crow", false]] as const) {
+          const party = createDefaultParty();
+          setMascot(party, mascot);
+          const enc = createEncounter();
+          enc.monsters.push(createMonster("m", tough.id, 6, 2));
+          enc.monsters[0]!.hp = Math.floor(tough.health * (mode === "v4" ? 0.05 : 0.85));
+          const events = partyAttack(party, open, enc, 5, 2, new Rng(seedFromString("w")), { kind: "melee", targetUid: "m" });
+          expect(events.some((e) => e.type === "wolf_kill"), `${mode} ${mascot}`).toBe(dies);
+          expect(events.some((e) => e.type === "monster_dead"), `${mode} ${mascot}`).toBe(dies);
+          expect(enc.monsters.length).toBe(dies ? 0 : 1);
+        }
+      } finally {
+        setBalanceMode("v4");
+      }
     }
+  });
+
+  it("leaves a monster at 85 percent of its health alone in v4 (the old Wolf killed it)", () => {
+    const party = createDefaultParty();
+    setMascot(party, "Wolf");
+    const enc = createEncounter();
+    enc.monsters.push(createMonster("m", tough.id, 6, 2));
+    enc.monsters[0]!.hp = Math.floor(tough.health * 0.85);
+    const events = partyAttack(party, open, enc, 5, 2, new Rng(seedFromString("w")), { kind: "melee", targetUid: "m" });
+    expect(events.some((e) => e.type === "wolf_kill")).toBe(false);
   });
 
   it("leaves a monster at full health alone", () => {
@@ -111,20 +130,26 @@ describe("the Wolf and the Orb (thirteenth playtest, points 7 and 9)", () => {
     expect(events.some((e) => e.type === "wolf_kill")).toBe(false);
   });
 
-  it("gives every hero with spell points 20 percent more with the Orb, and the knight nothing", () => {
-    const party = createDefaultParty();
-    const before = party.characters.map((c) => c.mana);
-    expect(before.some((m) => m > 0)).toBe(true);
-    setMascot(party, "Orb");
-    party.characters.forEach((c, i) => {
-      expect(c.mana).toBe(before[i]! > 0 ? Math.round(before[i]! * 1.2) : 0);
-    });
-    setMascot(party, "Crow");
-    party.characters.forEach((c, i) => expect(c.mana).toBe(before[i]));
-    // a later recalculation (a level, an item) keeps the bonus when it is given the mascot
-    const caster = party.characters.find((c) => c.mana > 0)!;
-    recalcValues(caster, party.talents, false, "Orb");
-    expect(caster.mana).toBe(Math.round(before[party.characters.indexOf(caster)]! * 1.2));
+  it("gives every hero with spell points 20 percent more with the Orb, and the knight nothing (legacy mode)", () => {
+    // BALANCE v4: the Orb gives spell damage instead of spell points (see balanceV4.test.ts); this is the old rule
+    setBalanceMode("legacy");
+    try {
+      const party = createDefaultParty();
+      const before = party.characters.map((c) => c.mana);
+      expect(before.some((m) => m > 0)).toBe(true);
+      setMascot(party, "Orb");
+      party.characters.forEach((c, i) => {
+        expect(c.mana).toBe(before[i]! > 0 ? Math.round(before[i]! * 1.2) : 0);
+      });
+      setMascot(party, "Crow");
+      party.characters.forEach((c, i) => expect(c.mana).toBe(before[i]));
+      // a later recalculation (a level, an item) keeps the bonus when it is given the mascot
+      const caster = party.characters.find((c) => c.mana > 0)!;
+      recalcValues(caster, party.talents, false, "Orb");
+      expect(caster.mana).toBe(Math.round(before[party.characters.indexOf(caster)]! * 1.2));
+    } finally {
+      setBalanceMode("v4");
+    }
   });
 });
 

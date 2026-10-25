@@ -1,6 +1,8 @@
 /**
- * Proves that `CURRENT` (formulas.ts) is the game: health, mana, melee, ranged and monster damage and the XP table are compared with the
- * real functions of `src/sim` on random heroes, gear and monsters. Usage: tsx tools/balance/verify.ts [samples]
+ * Proves that the tool's formulas are the game: health, mana, melee, ranged and monster damage and the XP table are compared with the
+ * real functions of `src/sim` on random heroes, gear and monsters. BALANCE v4: the formula set follows the game's mode
+ * (`BALANCE.mode` in src/sim/balance.ts): `PROPOSALS.v4` in mode "v4", `CURRENT` (the old rules) in mode "legacy".
+ * Usage: tsx tools/balance/verify.ts [samples]
  */
 import { Rng, seedFromString } from "../../src/core/rng";
 import { MONSTERS } from "../../src/data/tables";
@@ -8,12 +10,20 @@ import { createCharacter, recalcValues, xpToNextLevel } from "../../src/sim/char
 import { meleeDamage, monsterDamage, rangedDamage } from "../../src/sim/combat";
 import { createDefaultParty } from "../../src/sim/party";
 import type { Character } from "../../src/sim/types";
-import { CURRENT, type Mascot, xpForLevel } from "./formulas";
+import { BALANCE, setBalanceMode } from "../../src/sim/balance";
+import { CURRENT as LEGACY, type Mascot, xpForLevel } from "./formulas";
+import { PROPOSALS } from "./proposals";
 import { CLASSES, GEAR, GROWTH_USER, RACES, TEMPLATES, attrsAt, buildGear, makeHero } from "./hero";
 import { R } from "./rng";
 import { DEFAULT_PARAMS, makeFormulas } from "./parametric";
 
-const PARAM = makeFormulas(DEFAULT_PARAMS, "param-default", "parametric family at the game's values");
+// `tsx tools/balance/verify.ts 5000 legacy` checks the rollback branch of the game against the old formulas
+if (process.argv[3] === "legacy") setBalanceMode("legacy");
+// the formulas that must equal the game in the game's current mode (named CURRENT below, as before)
+const CURRENT = BALANCE.mode === "v4" ? PROPOSALS.v4! : LEGACY;
+// the parametric family reproduces the OLD rules only, so it is compared in legacy mode and skipped in v4
+const PARAM = BALANCE.mode === "legacy" ? makeFormulas(DEFAULT_PARAMS, "param-default", "parametric family at the game's values") : CURRENT;
+console.log(`game mode: ${BALANCE.mode}, tool formulas: ${CURRENT.id}`);
 
 const samples = Number(process.argv[2] ?? 3000);
 const pick = new R(12345);
@@ -83,9 +93,9 @@ for (let i = 0; i < samples; i++) {
     const hit = ranged ? b.float() : 1;
     const damage = b.range(Math.min(mon.damage_min, mon.damage_max), Math.max(mon.damage_min, mon.damage_max));
     const evade = !ranged && cls === "Ninja" ? b.float() : 1;
-    const mine = CURRENT.monsterDamage(mon, hero, { damage, hit: ranged ? hit : 0, evade, ranged, distance, fairy: party.mascot === "Fairy" ? 20 : 0 });
+    const mine = CURRENT.monsterDamage(mon, hero, { damage, hit: ranged ? hit : 0, evade, ranged, distance, fairy: party.mascot === "Fairy" ? CURRENT.fairyReduction : 0 });
     if (game !== mine) fail("monster", `${mon.name} (${mon.attack_type}) -> ${cls}/${race} armor ${hero.armor} ranged ${ranged} @${distance}: game ${game} tool ${mine}`);
-    const roll2 = { damage, hit: ranged ? hit : 0, evade, ranged, distance, fairy: party.mascot === "Fairy" ? 20 : 0 };
+    const roll2 = { damage, hit: ranged ? hit : 0, evade, ranged, distance, fairy: party.mascot === "Fairy" ? CURRENT.fairyReduction : 0 };
     if (PARAM.monsterDamage(mon, hero, roll2) !== mine) fail("monster-param", `${mon.name} -> ${cls}`);
   }
 }

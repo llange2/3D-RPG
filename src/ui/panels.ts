@@ -1,4 +1,5 @@
-import { BASE_CLASS, SPELLS, TEXTS, talentInfo } from "../data/tables";
+import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
+import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
 import { bonusLines, combineItems, isTwoHanded, makeItem, weaponHands, type Hands } from "../sim/items";
 import { SPELL_GRID, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, type QuickCast, type QuickCastBlock } from "../sim/spells";
@@ -114,10 +115,16 @@ function perkColumn(title: string, ids: readonly string[], empty: string): HTMLE
 /** The five mascots of the old game: their portrait files (`npc0n`, `_full` for the two with a big picture) and what they do. */
 export const MASCOTS: Record<string, { portrait: string; full?: string; text: string }> = {
   Crow: { portrait: "npc01", text: "Keeps watch. It comes alive when monsters or a trap are near." },
-  Wolf: { portrait: "npc02", text: "Fights alongside the party: a monster that drops below 90% of its health is killed by the wolf." },
+  // BALANCE v4: the texts of Wolf, Fairy and Orb follow the numbers in sim/balance.ts (v4: 10%, 30 points, 20% spell damage)
+  Wolf: { portrait: "npc02", text: `Fights alongside the party: a monster that drops below ${Math.round(wolfBelow() * 100)}% of its health is killed by the wolf.` },
   Donkey: { portrait: "npc03", full: "npc03_full", text: "Carries a backpack of 20 slots. Whatever the heroes cannot hold goes to the Donkey." },
-  Fairy: { portrait: "npc04", full: "npc04_full", text: "Takes 20 points off every elemental hit (fire, ice, acid and magic) that reaches a hero." },
-  Orb: { portrait: "npc05", text: "A floating orb of magic. Every hero who has spell points gets 20% more of them." },
+  Fairy: { portrait: "npc04", full: "npc04_full", text: `Takes ${fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION)} points off every elemental hit (fire, ice, acid and magic) that reaches a hero.` },
+  Orb: {
+    portrait: "npc05",
+    text: orbSpellBonus() > 0
+      ? `A floating orb of magic. Every attack spell of the party does ${Math.round(orbSpellBonus() * 100)}% more damage.`
+      : "A floating orb of magic. Every hero who has spell points gets 20% more of them.", // LEGACY (balance v4)
+  },
 };
 
 export const mascotPortrait = (name: string): string => MASCOTS[name]?.portrait ?? "character00";

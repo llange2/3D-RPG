@@ -1,0 +1,19 @@
+v4: Standardgruppe Stufe 60 gegen 2 gleiche Monster der Klasse 5
+Monster               HP    Rues  Schaden x Angr.  Tempo  Sonder                      Sieg   Tote  HP-Verl  Runden
+Terminator            1000   100  232-928 x 1      200  Causes Eradication           99%   0.10     15%     5.9
+Minotaur              1000    90  3-300 x 2         80  Causes Dead                 100%   0.01      0%     3.3
+ED-409                 400    40  50-100 x 3        75  Ranged Attack               100%   0.00      7%     3.2
+Great Hydra           5000    60  12-144 x 12       75  Causes Poisoned             100%   0.00     37%     8.8
+Green Dragon           800    40  250-250 x 1       60  Ranged Attack               100%   0.00      8%     2.9
+Jouster                600    35  20-400 x 1        50                              100%   0.00      0%     2.0
+Kudo crab             2500    80  8-240 x 4         80  Causes Paralyzed             97%   0.00     12%     6.1
+Major Devil            666    33  2-80 x 4          66  Causes Sleeping             100%   0.00      0%     2.6
+Medusa                1000    40  8-64 x 1          60  Ranged Attack, Causes Petr  100%   0.00      1%     3.3
+Vampire                400    30  10-100 x 3        45  Regenerates 10%, Drains 20  100%   0.00      0%     2.6
+Vulture Roc           2000    50  5-250 x 2        100  Causes Paralyzed            100%   0.00      3%     5.1
+Werewolf               500    30  8-120 x 2         40  Causes Diseased             100%   0.00      0%     1.8
+Cyclops King          1000    25  6-150 x 3         40  Causes Crazy                100%   0.00      0%     3.4
+Dragon Lord           1500    50  10-200 x 2        60  Ranged Attack               100%   0.00     15%     4.5
+Minotaur King         2500    90  3-300 x 3         80                              100%   0.00     10%     5.7
+Top Jouster           1000    35  20-400 x 2        50                              100%   0.00      0%     3.1
+Vampire King           800    40  30-300 x 3        60  Regenerates 15%, Drains 20  100%   0.00      2%     4.4

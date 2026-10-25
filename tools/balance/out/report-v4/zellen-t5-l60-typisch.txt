@@ -1,0 +1,9 @@
+Parteien: Standard, Nahkampf, Fernkampf, Klassisch, Zauberer; Gegner: class; Ausruestung: typical; Maskottchen: none; 300 Laeufe je Zelle
+
+=== current: Aktueller Stand des Spiels
+Tier/Stufe | Mittel: HP-Verlust  Tote  Sieg | Standard      Nahkampf      Fernkampf     Klassisch     Zauberer     
+  T5 / L60  |  17%  0.03   98% |  13% 0.02      27% 0.05      14% 0.02      17% 0.03      15% 0.02    
+
+=== v4: Vorschlag v4 des Nutzers (Nahkampf: add3)
+Tier/Stufe | Mittel: HP-Verlust  Tote  Sieg | Standard      Nahkampf      Fernkampf     Klassisch     Zauberer     
+  T5 / L60  |  22%  0.06   95% |  18% 0.05      43% 0.16      16% 0.03      21% 0.06      14% 0.02    
