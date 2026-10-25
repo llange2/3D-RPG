@@ -45,6 +45,8 @@ describe("the painted tiles of places, events and ways out on the map sheet", ()
         expect(at!.y + register.cell, `${kind}:${ground}`).toBeLessThanOrEqual(register.height);
       }
     }
+    // the interior's question mark and way out have their own ground (the old floor's colour)
+    for (const name of ["event:town", "exit:town"]) expect(register.icons[name], name).toBeDefined();
     // the plain old symbols for these were replaced
     expect(register.icons.maptransfer).toBeUndefined();
     expect(register.icons.event).toBeUndefined();
