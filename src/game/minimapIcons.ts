@@ -27,7 +27,7 @@ interface Register {
 /** Grounds that are another ground made darker (the register has the eight the old game painted). */
 const DERIVED: Partial<Record<GroundName, { from: string; by: [number, number, number] }>> = {
   forest: { from: "grass", by: [0.78, 0.85, 0.78] },
-  volcanic: { from: "dirt", by: [0.62, 0.52, 0.5] },
+  volcanic: { from: "dirt", by: [0.95, 0.3, 0.24] },
   bridge: { from: "dirt", by: [0.72, 0.68, 0.64] },
   shore: { from: "desert", by: [0.95, 0.95, 0.95] },
 };

@@ -86,5 +86,8 @@
  * spread evenly and away from the huts) instead of drawn chunk by chunk; the sea has its own groups, picked by the distance from Starthaven; the stronger a monster, the farther it
  * stands from the first town in every level (huts and wild groups); the farther of the two main islands is level 5 and the other islands are level 4 or 5 by their distance from
  * Starthaven; the ground beside a place counts as open ground on an island without roads.
+ * 25 = twenty-eighth playtest: the lava islands (the island of level 5 is always one; a large or huge world has a second; no other island has the climate) are rock
+ * and lava all over, their ways are streams of lava one or two tiles wide that run through the mountains (`RoadSeg.lava`), walkable at the price of 25 points of fire damage
+ * a step (`sim/lava.ts`); meadows and forests have patches of bare earth (`TileInfo.dirt`); the places of a lava island are fewer.
  */
-export const GEN_VERSION = 24;
+export const GEN_VERSION = 25;

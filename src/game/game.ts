@@ -41,6 +41,7 @@ import { addCondition, canAct, recalcValues, xpToNextLevel } from "../sim/charac
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
 import { monsterById } from "../sim/combat";
+import { walkOnLava } from "../sim/lava";
 import {
   battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters,
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS,
@@ -632,9 +633,8 @@ export class Game {
     // shallow water (a ford, a shore) is swum, not walked: only for the Swimmer, and for whoever can cross deep water
     if (t.ground === GROUND.SHALLOW && t.deco === 0) return this.canSwim();
     if (isTileWalkable(t)) return true;
-    // the Seafarer talent and spells let the party cross water (and lava, with Levitate) as long as they last
+    // the Seafarer talent and spells let the party cross deep water as long as they last (lava is walked, and burns: `lavaStep`)
     if (t.deco === 0 && t.ground === GROUND.WATER) return canSail(this.state.party);
-    if (t.deco === 0 && t.ground === GROUND.LAVA_POOL) return hasEffect(this.state.party, "levitate");
     return false;
   }
 
@@ -1075,6 +1075,7 @@ export class Game {
     if (this.mode === "overworld") {
       this.chunks?.update(x, y);
       this.syncOverworldMonsters();
+      this.lavaStep(x, y);
     } else if (this.interior) {
       const a = this.interior.actionAt.get(this.cellIndex(x, y));
       if (this.interior.campaign) {
@@ -2050,6 +2051,24 @@ export class Game {
     return CONSTANTS.CHARACTER_FEMALE.includes(avatar) ? 9021 : 9022;
   }
 
+  /** A step on lava burns every hero (`walkOnLava`); a hovering party and a party in a place are not touched. */
+  private lavaStep(x: number, y: number): void {
+    if (this.over || this.world.tile(x, y).ground !== GROUND.LAVA_POOL) return;
+    const party = this.state.party;
+    const step = walkOnLava(party, this.combatRng());
+    if (step.hits.length === 0) return;
+    this.audio.play(ATTACK_SOUND.fire!);
+    this.ui.hurtFlash();
+    const names = step.hits.map((h) => `${party.characters[h.character]!.name} ${h.damage}`).join(", ");
+    this.ui.log(`The lava burns the party: ${names}.`, "combat");
+    for (const hit of step.hits) {
+      this.ui.hitCard(hit.character, "fire");
+      if (hit.conditions.length) this.ui.log(`${party.characters[hit.character]!.name} is ${hit.conditions.join(" and ").toLowerCase()}!`, "bad");
+    }
+    this.audio.play(this.painSound(step.hits[0]!.character), 0.7);
+    if (step.defeated) void this.gameOver();
+  }
+
   /** A rune throws the party to another cell of the place. */
   private jumpTo(x: number, y: number): void {
     const rt = this.interior;
@@ -2394,7 +2413,7 @@ export class Game {
     const { tx, ty } = this.player;
     if (this.mode === "overworld") {
       const g = this.world.tile(tx, ty).ground;
-      return g === GROUND.WATER || g === GROUND.SHALLOW;
+      return g === GROUND.WATER || g === GROUND.SHALLOW || g === GROUND.LAVA_POOL;
     }
     const rt = this.interior;
     if (!rt?.campaign) return false;
@@ -2490,7 +2509,7 @@ export class Game {
       case 42:
         return this.safeSpots().length === 0 ? "There is no safe place close enough." : null;
       case 52:
-        return this.onWater() ? "The party cannot rest on water." : null;
+        return this.onWater() ? "The party cannot rest on water or lava." : null;
       case 45:
         this.gateSpot = this.pickGate();
         return this.outsideNow() ? (this.gateSpot ? null : "Nature's Gate finds nowhere to open.") : "Nature's Gate only opens in the open country.";
@@ -3022,7 +3041,7 @@ export class Game {
     if (this.busy || this.over || this.inFlight()) return;
     const party = this.state.party;
     if (this.onWater()) {
-      this.ui.log("The party cannot rest on water.", "bad");
+      this.ui.log("The party cannot rest on water or lava.", "bad");
       return;
     }
     const { tx, ty } = this.player;

@@ -113,6 +113,8 @@ const WOOD_BY_BIOME: Record<number, number> = { [BIOME.MEADOW]: 1000, [BIOME.FOR
  * 10 tiles or so; one in 54 tiles of the land of its finished strip): the places are dense, the sea between them is not.
  */
 const LAND_PER_PLACE = 60;
+/** The same on a lava island. */
+const LAVA_PER_PLACE = 100;
 const MIN_PLACE_DISTANCE = 6;
 /** Distance (Chebyshev) from a town inside which no other place is built. */
 const TOWN_CLEARANCE = 6;
@@ -131,11 +133,8 @@ const NEAREST_LAND = 8;
 const RISE_TILES = 6;
 /** An inland water this many tiles wide or less is shallow throughout (see `narrowInland`). */
 const NARROW_WATER = 3;
-/** The mountain ring of a lava island: two tiles deep along the coast, with a way in that is six tiles wide and looked for out to six tiles from the sea. */
-const RING = { NONE: 0, WALL: 1, WAY: 2 } as const;
-const RING_DEPTH = 2;
-const RING_WAY_DEPTH = 6;
-const RING_WAY_WIDTH = 3;
+/** The ground of a lava island is mountain all over; its ways are streams of lava one or two tiles wide (see `RoadSeg.lava`), the most between two places. Permille of the ways that are two tiles wide. */
+const LAVA_WIDE = 350;
 /** The rivers of an island by climate (none on desert and lava): distance between them, width and the noise level above which a stretch is shallow. */
 const RIVERS: Partial<Record<number, { period: number; band: number; ford: number }>> = {
   [BIOME.MEADOW]: { period: 56, band: 750, ford: 52000 },
@@ -143,6 +142,9 @@ const RIVERS: Partial<Record<number, { period: number; band: number; ford: numbe
   [BIOME.SNOW]: { period: 80, band: 350, ford: 50000 },
   [BIOME.SWAMP]: { period: 28, band: 1700, ford: 42000 },
 };
+/** The bare earth of meadows and forests: the size of a patch (tiles) and the noise level above which a tile is earth (a share of about a tenth). */
+const DIRT_PERIOD = 9;
+const DIRT_LEVEL = 41500;
 /** Size of a cell of the index that finds the islands near a tile. */
 const INDEX_CELL = 16;
 
@@ -153,6 +155,8 @@ export interface ChunkData {
   ground: Uint8Array;
   deco: Uint8Array;
   elevation: Uint16Array;
+  /** 1 where the ground is bare earth in a meadow or forest (`TileInfo.dirt`). */
+  dirt: Uint8Array;
   /** POI footprints (with flatten margin) that touch this chunk, at the position they have beside it (a place across the seam is shifted by the width of the world). */
   pois: Poi[];
 }
@@ -210,8 +214,8 @@ export class World {
   private readonly sClump: number;
   private readonly sWoods: number;
   private readonly sRidge: number;
+  private readonly sDirt: number;
   private readonly sLump: number;
-  private readonly sLava: number;
   private readonly sLattice: number;
   private readonly sThin: number;
   /** Indices of the islands that can reach a cell of `INDEX_CELL` x `INDEX_CELL` tiles. */
@@ -247,8 +251,8 @@ export class World {
     this.sClump = toInt(derive(this.seed, LAYER.PROPS, "clump"));
     this.sWoods = toInt(derive(this.seed, LAYER.PROPS, "woods"));
     this.sRidge = t("ridge");
+    this.sDirt = t("dirt");
     this.sLump = t("lump");
-    this.sLava = t("lava");
     this.sLattice = toInt(derive(this.seed, LAYER.PROPS, "lattice"));
     this.sThin = toInt(derive(this.seed, LAYER.PROPS, "thin"));
     this.layout = buildLayout(this.seed, size);
@@ -342,17 +346,15 @@ export class World {
     const landBiome = here.island.biome;
     // the land rises from the coast to a fifth of the way up to the mountains, over six tiles
     let elevation = SEA_LEVEL + 1 + Math.floor((Math.min(ONE, Math.floor((here.field * ONE) / (RISE_TILES * FIELD_UNIT))) * 9000) / ONE);
+    // a lava island is plain land here, so that its places can be found; `composeTile` makes the rock of it and the lava of its ways
+    if (landBiome === BIOME.LAVA) return { biome: landBiome, landBiome, ground: GROUND.LAND, deco: DECO.NONE, elevation };
 
     let ground: Ground = GROUND.LAND;
     const ridge = fbm2(this.sRidge, tx, ty, RIDGE_PERIOD, 2);
     const lump = this.lump(tx, ty);
-    const ring = this.coastRing(here.island, tx, ty);
-    const rock = ring === RING.WALL || (ring !== RING.WAY && ridge + lump > RIDGE_LEVEL);
+    const rock = ridge + lump > RIDGE_LEVEL;
     // a mountain whose core lies more than two tiles from open ground is a hollow: its range stays a wall of at most four tiles
-    if (ring === RING.WALL) {
-      ground = GROUND.MOUNTAIN;
-      elevation = MOUNTAIN_LEVEL + 1 + 2000;
-    } else if (rock && this.insideMass(tx, ty)) {
+    if (rock && this.insideMass(tx, ty)) {
       elevation = Math.min(elevation, MOUNTAIN_LEVEL);
     } else if (rock) {
       ground = GROUND.MOUNTAIN;
@@ -361,37 +363,8 @@ export class World {
       ground = this.riverGround(tx, ty, landBiome, elevation);
     }
 
-    if (ground === GROUND.LAND && landBiome === BIOME.LAVA && ring !== RING.WAY && valueNoise2(this.sLava, tx, ty, 14) > 52500) {
-      ground = GROUND.LAVA_POOL;
-    }
-
     const deco = ground === GROUND.LAND ? this.decoAt(tx, ty, landBiome, 0) : DECO.NONE;
     return { biome: landBiome, landBiome, ground, deco, elevation };
-  }
-
-  /**
-   * The mountain ring of a lava island (the user's rule, 22nd playtest: the lava island of the old outside map is surrounded by mountains, but the way in
-   * must never be shut). Tiles within two of the sea are `RING.WALL`; a strip about six tiles wide from the middle of the island out through the coast, in
-   * the direction of `Island.entry`, is `RING.WAY`: no mountain, no lava, so that the party can walk from the shore into the island. Other climates have no ring.
-   */
-  private coastRing(isl: Island, x: number, y: number): number {
-    if (isl.biome !== BIOME.LAVA) return RING.NONE;
-    const dx = wrapDelta(isl.x, x, this.width);
-    const dy = wrapDelta(isl.y, y, this.height);
-    let sea = RING_WAY_DEPTH + 1;
-    for (let k = 1; k < sea; k++) {
-      for (const [ax, ay] of AROUND) {
-        if (fieldAt(isl, dx + ax * k, dy + ay * k) <= 0) {
-          sea = k;
-          break;
-        }
-      }
-    }
-    if (sea > RING_WAY_DEPTH) return RING.NONE;
-    const along = dx * isl.entry.x + dy * isl.entry.y;
-    const across = Math.abs(dx * isl.entry.y - dy * isl.entry.x);
-    if (along > 0 && across <= RING_WAY_WIDTH * 1024) return RING.WAY;
-    return sea <= RING_DEPTH ? RING.WALL : RING.NONE;
   }
 
   /** Would this tile be a mountain before the ranges are thinned out? Same test as `baseTile`, without the coast and river. */
@@ -399,9 +372,7 @@ export class World {
     const x = this.wrapX(tx);
     const y = this.wrapY(ty);
     const here = this.landAt(x, y);
-    if (!here) return false;
-    const ring = this.coastRing(here.island, x, y);
-    if (ring !== RING.NONE) return ring === RING.WALL;
+    if (!here || here.island.biome === BIOME.LAVA) return false;
     return fbm2(this.sRidge, x, y, RIDGE_PERIOD, 2) + this.lump(x, y) > RIDGE_LEVEL;
   }
 
@@ -592,7 +563,8 @@ export class World {
     const towns = pois.length;
     // the other places: about one for every `LAND_PER_PLACE` tiles of the island (the finished strip of the old outside map has one in 54), on spots of
     // plain land with room round them, found by trying random spots of the island
-    const wanted = Math.max(2, Math.floor(isl.area / LAND_PER_PLACE) - towns);
+    // (a lava island is rock and lava, and every place clears a square of it: fewer, so that the ground stays what the user asked for)
+    const wanted = Math.max(2, Math.floor(isl.area / (isl.biome === BIOME.LAVA ? LAVA_PER_PLACE : LAND_PER_PLACE)) - towns);
     let placed = 0;
     for (let attempt = 0; attempt < 400 && placed < wanted; attempt++) {
       const rng = rngFor(this.seed, LAYER.POI, isl.index, 0, "pick", attempt);
@@ -796,8 +768,39 @@ export class World {
       const dy = q.y - p.y;
       p.side = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "E" : "W") : dy > 0 ? "S" : "N";
     }
-    const connectors = edges.flatMap(([a, b], i) => this.route(pois[a]!, pois[b]!, this.roadSeed("C", isl.index, i), pois));
+    const lava = isl.biome === BIOME.LAVA;
+    // on a lava island the roads are streams of lava through the mountains, one or two tiles wide, the whole way
+    const stream = (segs: RoadSeg[], n: number): RoadSeg[] => {
+      if (!lava) return segs;
+      const width = rngFor(this.seed, LAYER.ROAD, "lava-width", isl.index, n).int(1000) < LAVA_WIDE ? 2 : 1;
+      return segs.map((seg) => seg.asLava(width));
+    };
+    const connectors = edges.flatMap(([a, b], i) => stream(this.route(pois[a]!, pois[b]!, this.roadSeed("C", isl.index, i), pois), i));
+    if (lava) connectors.push(...stream(this.lavaEntry(isl, pois), edges.length));
     return { pois, connectors };
+  }
+
+  /**
+   * The way from the sea into a lava island: from the door of its first town the shortest straight run to the coast (not back through the town), the
+   * party's only landing place, as the coast of the island is a wall of mountains all round. Where the stream meets the water the land lies bare
+   * (`rawTile`), so that the party can step ashore.
+   */
+  private lavaEntry(isl: Island, pois: readonly Poi[]): RoadSeg[] {
+    const town = pois[0]!;
+    const front = poiEntrances(town)[0]!;
+    const out = SIDE_DELTA[town.side];
+    const stub = { x: front.x + 2 * out.dx, y: front.y + 2 * out.dy };
+    let best: { k: number; end: Pt } | null = null;
+    for (const s of SIDES) {
+      // not back into the town
+      if (s.dx === -out.dx && s.dy === -out.dy) continue;
+      let k = 1;
+      while (k <= isl.reach + 2 && fieldAt(isl, wrapDelta(isl.x, stub.x + s.dx * k, this.width), wrapDelta(isl.y, stub.y + s.dy * k, this.height)) > 0) k++;
+      if (!best || k < best.k) best = { k, end: { x: stub.x + s.dx * (k - 1), y: stub.y + s.dy * (k - 1) } };
+    }
+    if (!best) return [];
+    const boxes: Box[] = pois.map((p) => ({ ...poiBounds(p), own: p === town }));
+    return roadThrough(this.dodge([front, stub, best.end], boxes));
   }
 
   /** Plans every island (once, when the first tile is asked for): places, roads and the index that finds them near a chunk. */
@@ -920,6 +923,8 @@ export class World {
     this.plan();
     const base = this.baseTile(tx, ty);
     let { ground, deco, biome, elevation } = base;
+    // the rock of a lava island (its plain land, see `baseTile`): everything but the ground cleared round the places and the lava of its ways
+    const rock = base.landBiome === BIOME.LAVA && base.ground === GROUND.LAND;
     let poiId: string | null = null;
     // only the roads and places near this tile's chunk can matter
     const chunk = Math.floor(ty / CHUNK_SIZE) * this.chunksAcross + Math.floor(tx / CHUNK_SIZE);
@@ -938,22 +943,36 @@ export class World {
       biome = p.biome;
       elevation = this.flatElevation.get(p.id)!;
     }
+    if (rock && !cleared) {
+      ground = GROUND.MOUNTAIN;
+      elevation = MOUNTAIN_LEVEL + 1 + 2000;
+      deco = DECO.NONE;
+    }
 
-    // 2. roads override water (bridge), mountains (pass) and decoration
-    const rock = ground === GROUND.MOUNTAIN;
+    // 2. roads override water (bridge), mountains (pass) and decoration; the ways of a lava island are lava, which the cleared ground round a place does not take
+    const inRock = ground === GROUND.MOUNTAIN;
     let onRoad = false;
+    let onLava = false;
     let open = false;
     for (const road of this.chunkRoads[chunk]!) {
       if (!road.contains(tx, ty)) continue;
+      if (road.lava) {
+        onLava = true;
+        continue;
+      }
       onRoad = true;
       // where two roads share a tile, either of them may open the pass
-      if (rock && this.opensUp(road, tx, ty)) open = true;
-      else if (!rock) break;
+      if (inRock && this.opensUp(road, tx, ty)) open = true;
+      else if (!inRock) break;
     }
     if (onRoad) {
       if (ground === GROUND.WATER || ground === GROUND.LAVA_POOL) ground = GROUND.BRIDGE;
-      else if (rock && !open) ground = GROUND.PASS;
+      else if (inRock && !open) ground = GROUND.PASS;
       else ground = GROUND.ROAD;
+      deco = DECO.NONE;
+    } else if (onLava && !cleared) {
+      ground = GROUND.LAVA_POOL;
+      biome = base.landBiome;
       deco = DECO.NONE;
     }
 
@@ -1112,8 +1131,27 @@ export class World {
       if (this.narrowInland(tx, ty)) return { ...raw, ground: GROUND.SHALLOW };
     } else if (raw.deco === DECO.LANDMARK && !this.landmarkReachable(tx, ty)) {
       return { ...raw, deco: DECO.NONE };
+    } else if (this.dirtPatch(tx, ty, raw, groundAt)) {
+      return { ...raw, dirt: true };
     }
     return raw;
+  }
+
+  /**
+   * Bare earth in the grass of a meadow or forest island (the user's wish, 28th playtest, to make them less uniform): patches a few tiles across from a noise.
+   * The painted ground has a tile for two terrains that meet and none for three at a corner, so a patch keeps to open ground: the tile and the eight round it are
+   * plain land or mountain, never water, road, lava or a place, and no tree or landmark stands on it.
+   */
+  private dirtPatch(tx: number, ty: number, raw: TileInfo, groundAt: (x: number, y: number) => Ground): boolean {
+    if (raw.ground !== GROUND.LAND || (raw.biome !== BIOME.MEADOW && raw.biome !== BIOME.FOREST)) return false;
+    if (raw.deco === DECO.TREE || raw.deco === DECO.LANDMARK || raw.poiId !== null) return false;
+    // the world is a globe: a chunk beyond the seam is a copy and holds the same tiles, so the noise reads the tile's place in the world
+    if (valueNoise2(this.sDirt, this.wrapX(tx), this.wrapY(ty), DIRT_PERIOD) <= DIRT_LEVEL) return false;
+    for (const [dx, dy] of AROUND) {
+      const g = groundAt(tx + dx, ty + dy);
+      if (g !== GROUND.LAND && g !== GROUND.MOUNTAIN) return false;
+    }
+    return true;
   }
 
   /**
@@ -1288,6 +1326,7 @@ export class World {
       ground: new Uint8Array(n),
       deco: new Uint8Array(n),
       elevation: new Uint16Array(n),
+      dirt: new Uint8Array(n),
       pois: [],
     };
     const x0 = cx * CHUNK_SIZE;
@@ -1307,6 +1346,7 @@ export class World {
         data.ground[i] = t.ground;
         data.deco[i] = t.deco;
         data.elevation[i] = t.elevation;
+        data.dirt[i] = t.dirt ? 1 : 0;
       }
     }
     const m = 3;
@@ -1350,6 +1390,7 @@ export function chunkHash(c: ChunkData): number {
   feed(c.biome);
   feed(c.ground);
   feed(c.deco);
+  feed(c.dirt);
   feed(new Uint8Array(c.elevation.buffer, c.elevation.byteOffset, c.elevation.byteLength));
   return h >>> 0;
 }

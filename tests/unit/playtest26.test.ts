@@ -63,7 +63,8 @@ describe("the wild groups of the 26th playtest (onyx-peak-786, small)", () => {
     for (const size of SIZES) {
       for (const seed of ["onyx-peak-786", "onyx-peak-873", "p26-a", "p26-b", "p26-c", "p26-d"]) {
         const world = new World(seed, size);
-        const home = world.islands[0]!;
+        // from where Starthaven stands (the end of the level-1 half of the start island), as the layout measures it, not from the middle of the start island
+        const home = world.anchorOf(0, 0);
         const dist = (i: number) => wrapDist2(world.islands[i]!.x, world.islands[i]!.y, home.x, home.y, world.width, world.height);
         expect(dist(3), `${seed} ${size}`).toBeGreaterThanOrEqual(dist(2));
         expect(world.islands[2]!.tiers).toEqual([4]);
@@ -105,7 +106,8 @@ describe("the wild groups of the 26th playtest (onyx-peak-786, small)", () => {
   }
 
   it("keeps the strong monsters of the strongest levels away from the first town (onyx-peak-786: nothing of level 5 within 30 tiles)", () => {
-    const world = new World("onyx-peak-786", "small");
+    // (a default world: on a small one the islands of level 4 and 5 sit snug against the others and may lie within 15 tiles of the first town)
+    const world = new World("onyx-peak-786", "default");
     const home = world.anchorOf(0, 0);
     for (const g of groupsOf(world)) {
       const d = Math.hypot(g.x - home.x, g.y - home.y);

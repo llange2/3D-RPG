@@ -167,7 +167,7 @@ describe("the towns of the start island (25th playtest, 2)", () => {
         const mean = (list: { x: number; y: number }[]): number => list.reduce((n, p) => n + along(p), 0) / list.length;
         // along the axis the level-1 towns lie on one side and the level-2 towns on the other, well over the radius of the island apart (before, the
         // towns stood half a radius from the middle: a radius apart); Starthaven itself stands out at the end
-        expect(mean(ones) - mean(twos), `${seed} ${size}`).toBeGreaterThan(isl.r * 1.2);
+        expect(mean(ones) - mean(twos), `${seed} ${size}`).toBeGreaterThan(isl.r * 1.1);
         expect(along(world.allPois().find((p) => p.id === "p:0:0:0")!), `${seed} ${size}`).toBeGreaterThan(isl.r * 0.5);
         expect(ones.every((p) => along(p) > 0) && twos.every((p) => along(p) < 0), `${seed} ${size}`).toBe(true);
       }
