@@ -151,7 +151,7 @@ describe("BALANCE v4: mascots", () => {
 });
 
 describe("BALANCE v4: levels and training", () => {
-  it("the old table up to level 10, then 1'024'000 × 1.08^(level − 10) a level, rounded per level", () => {
+  it("the old table up to level 10, then 1'024'000 × 1.02^(level − 10) a level, rounded per level", () => {
     const k = knight(1); // class base 1500
     expect(xpToNextLevel(k, 1)).toBe(1_500);
     expect(xpToNextLevel(k, 2)).toBe(1_500 + 3_000);
@@ -163,12 +163,12 @@ describe("BALANCE v4: levels and training", () => {
     // up to level 10 exactly the old doubling (the class with base 2000 reaches 1'024'000 at level 10)
     expect(xpStepV4(1500, 10)).toBe(1500 * 2 ** 9);
     expect(xpStepV4(2000, 10)).toBe(1_024_000);
-    // from level 11 on: 8 % more than the step before it, the same for every class
-    expect(xpStepV4(1500, 11)).toBe(Math.round(1_024_000 * 1.08));
+    // from level 11 on: 2 % more than the step before it, the same for every class
+    expect(xpStepV4(1500, 11)).toBe(Math.round(1_024_000 * 1.02));
     expect(xpStepV4(2000, 11)).toBe(xpStepV4(1000, 11));
-    expect(xpStepV4(1500, 12)).toBe(Math.round(1_024_000 * 1.08 ** 2));
-    expect(xpStepV4(1500, 60)).toBe(Math.round(1_024_000 * 1.08 ** 50));
-    for (let l = 12; l <= 80; l++) expect(xpStepV4(1500, l) / xpStepV4(1500, l - 1)).toBeCloseTo(1.08, 3);
+    expect(xpStepV4(1500, 12)).toBe(Math.round(1_024_000 * 1.02 ** 2));
+    expect(xpStepV4(1500, 60)).toBe(Math.round(1_024_000 * 1.02 ** 50));
+    for (let l = 12; l <= 80; l++) expect(xpStepV4(1500, l) / xpStepV4(1500, l - 1)).toBeCloseTo(1.02, 3);
     // the cumulative XP of the old table up to level 10 is unchanged
     expect(xpToNextLevel(k, 10)).toBe(1500 * (2 ** 10 - 1));
     // the XP already earned is taken off
