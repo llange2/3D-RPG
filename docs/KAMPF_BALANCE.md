@@ -38,7 +38,7 @@ und seinen Zwischenständen in `tools/balance/out/` (die Tabellen dieses Dokumen
 | Wolf | tötet unter 90 % / −20 je Elementartreffer | Wenn Gegner Lebensenergie < 10% fällt > Tod |
 | Fee | −20 je Elementartreffer (nie unter 0) | '−30 je Elementartreffer (nie unter 0)' |
 | Orb | + 20% Mana | 'Angriffszaubersprüchen +20% Schaden'
-| XP für den Aufstieg | `Basis × 2^(Stufe−1)`, ab Stufe 11 flach 1'024'000 | `Basis × 25 × 1,25^(Stufe−1)` bis Stufe 18, danach je Stufe +8 % |
+| XP für den Aufstieg | `Basis × 2^(Stufe−1)`, ab Stufe 11 flach 1'024'000 | `Basis × 2^(Stufe−1)` bis Stufe 10 (alter Code), ab Stufe 11 jede Stufe 2 % mehr als die davor (`1'024'000 × 1,02^(Stufe−10)`) |
 | Trainingskosten | `250 × Stufe` | `10 × Stufe²` (die Formel aus Ihrer Quellenliste) |
 
 Die Zauber, die Monsterwerte (Leben, Schaden, Rüstung, Tempo), die Manaformel und die Todesregel bleiben, wie sie sind. Das Ergebnis im Zielbild des Werkzeugs (kleiner ist besser,

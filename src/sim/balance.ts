@@ -41,11 +41,15 @@ export const RULES = {
     orbSpellBonus: 0.2,
     /** ... and no longer the spell points. */
     orbManaBonus: 0,
-    /** XP step of a level: `base × 25 × 1.25^(level − 1)` up to level 18, then `× 1.08` for every further level. */
-    xpFactor: 25,
-    xpGrowth: 1.25,
-    xpGrowthUntil: 18,
-    xpGrowthAfter: 1.08,
+    /**
+     * XP step of a level (26.10.2026, the user's wish): the OLD table up to level 10 (`base × 2^(level − 1)`), and from level 11 on every
+     * step is 2 % more than the one before it (first 8 %, lowered to 2 % on 26.10.2026), starting from the old flat 1'024'000:
+     * step 11 = 1'024'000 × 1.02, step 12 = 1'024'000 × 1.02², …
+     * (history: the first v4 table was `base × 25 × 1.25^(level − 1)` up to 18, the second `base × 2^(level − 1)` up to 18; both overshot).
+     */
+    xpDoublingUntil: 10,
+    xpFlat: 1_024_000,
+    xpGrowthAfter: 1.02,
     /** Training costs `10 × level²` per hero. */
     trainingPerLevelSquared: 10,
   },
@@ -75,5 +79,6 @@ export const orbManaBonus = (): number => (isV4() ? RULES.v4.orbManaBonus : RULE
  */
 export function xpStepV4(base: number, level: number): number {
   const r = RULES.v4;
-  return Math.round(base * r.xpFactor * r.xpGrowth ** (Math.min(level, r.xpGrowthUntil) - 1) * r.xpGrowthAfter ** Math.max(0, level - r.xpGrowthUntil));
+  if (level <= r.xpDoublingUntil) return base * 2 ** (level - 1);
+  return Math.round(r.xpFlat * r.xpGrowthAfter ** (level - r.xpDoublingUntil));
 }

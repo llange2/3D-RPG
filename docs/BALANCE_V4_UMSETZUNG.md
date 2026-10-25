@@ -21,7 +21,7 @@ grep -rn "LEGACY (balance v4)" src             # alle alten Formeln, die beim Cl
 | 1 | `src/sim/balance.ts` (neu) | – | Schalter `BALANCE`, Zahlen `RULES`, Hilfen `healthFlat()`, `wolfBelow()`, `fairyReduction()`, `orbSpellBonus()`, `orbManaBonus()`, `xpStepV4()` | ein Ort für alle Zahlen und den Rückweg |
 | 2 | `src/sim/character.ts`, `recalcValues` | `Leben = rund(Stufe × (AUS/2 + Klasse + Rasse))` | `… + 10` | Ein Magier hatte auf Stufe 1 nur 2 Lebenspunkte |
 | 3 | `src/sim/character.ts`, `recalcValues` (Orb) | Orb: +20 % Zauberpunkte | Orb gibt keine Zauberpunkte mehr (`orbManaBonus()` = 0); `ORB_MANA_BONUS` bleibt für den Legacy-Modus | Orb wirkt jetzt als Zauberschaden (Nr. 9) |
-| 4 | `src/sim/character.ts`, `xpToNextLevel` | `Basis × 2^(Stufe−1)` bis Stufe 10, danach 1'024'000 je Stufe | Summe von `xpStepV4`: `Basis × 25 × 1,25^(Stufe−1)` bis Stufe 18, danach je Stufe × 1,08, je Stufe auf ganze Punkte gerundet | Die alte Tabelle wurde ab Stufe 11 flach |
+| 4 | `src/sim/character.ts`, `xpToNextLevel` | `Basis × 2^(Stufe−1)` bis Stufe 10, danach 1'024'000 je Stufe | Summe von `xpStepV4`: der alte Code bis Stufe 10 (`Basis × 2^(Stufe−1)`), ab Stufe 11 jede Stufe 2 % mehr als die davor (zuerst 8 %, am 26.10.2026 auf 2 % gesenkt), ausgehend von den alten 1'024'000: Stufe 11 = 1'024'000 × 1,02, Stufe 12 = 1'024'000 × 1,02², … (je Stufe auf ganze Punkte gerundet, für alle Klassen gleich; 26.10.2026 so festgelegt, `RULES.v4.xpDoublingUntil/xpFlat/xpGrowthAfter`). Verworfen: `Basis × 25 × 1,25^(Stufe−1)` bis 18 (erste Fassung) und `Basis × 2^(Stufe−1)` bis 18 (zweite, Stufe 18 hätte 196 Mio. gekostet) | Die alte Tabelle wurde ab Stufe 11 flach |
 | 5 | `src/sim/combat.ts`, `meleeDamage` | `aufrunden(Basis × Stufe + Waffe) − Rüstung` | `aufrunden(Waffe + Basis × Stufe / 3) − Rüstung`, danach `× (1 − res_physical)` des Monsters (Spalte des Monsterblatts, 0 bis 1), abgerundet, nie unter 0. Rage, Verteidigungshaltung und Rüstungsabzug bleiben an ihrer Stelle | Die Rüstung der Monster schluckte den Nahkampf; Terminator, Skelette, Geister sind jetzt nahkampfresistent |
 | 6 | `src/sim/combat.ts`, `rangedDamage` | Trefferchance `GEN / (Tempo × Entfernung × 0,5)`; Klassenwert × 1 | Trefferchance `GEN / (Tempo × Entfernung)`; Klassenwert × 0,8 | Der Bogen war die stärkste Waffe des Spiels |
 | 7 | `src/sim/combat.ts`, `elementalDamage` | Fee −20 (Konstante aus `constants.json`) | Fee −30 über `fairyReduction()`; die erzeugte `constants.json` bleibt unverändert | Fee soll auf Höhe von Wolf und Orb liegen |
@@ -38,6 +38,14 @@ grep -rn "LEGACY (balance v4)" src             # alle alten Formeln, die beim Cl
 ## Erwartetes Verhalten (aus der Simulation, `docs/KAMPF_BALANCE_V4.md`)
 
 Mittel über fünf Gruppen, Monster der Klasse t, typische Ausrüstung des Tiers: Tier 1 Stufe 1 10 % Lebenspunkteverlust je Kampf (0,08 Tote); Tier 2 Stufe 10 7 %; Tier 3 Stufe 20 3 %; Tier 4 Stufe 30 13 %; Tier 5 Stufe 40 46 %, Stufe 50 31 %, Stufe 60 22 %. Tier 5 ist auf den Stufen 40 und 50 also noch zu hart; der Terminator (Stufe 40: 35 % Sieg, Stufe 50: 99 %) ist für Helden der Stufe 60 keine besondere Herausforderung mehr. Die Nahkampfgruppe (Ritter, Barbar, Paladin, Kleriker) ist am schwächsten.
+
+## Beobachtung: Goblins treffen im Fernkampf kaum (26.10.2026, Gruppe Stufe 1)
+
+Geprüft mit `npx tsx tools/balance/goblin.ts`. **Kein Fehler in v4, sondern die Rüstungsregel für Monsterschläge, die „wie heute“ blieb** (`monsterDamage` in `sim/combat.ts`, unverändert seit der Korrektur 3.5):
+* Der Goblin (physisch, Schaden 3–9, Tempo 15) trifft mit seinem Schuss ganz normal: Trefferchance `Tempo / (Tempo des Helden × Entfernung × 0,5)`, also 100 % auf ein Feld, 94 % auf zwei, 63 % auf drei, 38 % auf fünf beim Ritter.
+* Der Schaden ist danach `Schaden − Rüstung − Rüstung/2` (Fernkampf), nie unter 0. Die Startrüstung der Helden: Ritter 11, Ninja 5, Bogenschütze 4, Druide 3. Der **Ritter nimmt 0 Schaden** (11 + 5 = 16 > 9), Ninja, Bogenschütze und Druide werden auf zwei Felder nur in 13 / 41 / 72 % der Schüsse verletzt (Mittel 0,2 / 0,8 / 2,2 Punkte), auf fünf Felder in 6 / 19 / 29 %.
+* Früher (vor der Korrektur 3.5) richtete ein **Fehlschuss** vollen Schaden an; das ist weg, deshalb wirkt der Goblin seitdem viel harmloser. v4 hat daran nichts geändert (der Vorschlag mit „Mindestdurchschlag 50 %“ ist in der Tabelle des Nutzers als „wie heute“ gestrichen).
+* Wenn Goblins (und alle anderen schwachen Schützen) wieder spürbar treffen sollen: Mindestschaden `max(½ × Schaden, Schaden − Rüstung)` für Monsterschläge (der Parameter `floorVsMonsters` 0,5 der Simulation, `v3x`), oder die Rüstung im Fernkampf nur einmal abziehen. Das ist eine Regeländerung und nicht gemacht.
 
 ## Offene Frage für das Clean-up
 

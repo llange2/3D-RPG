@@ -113,7 +113,7 @@ export function makeV4(id: string, melee: keyof typeof V4_MELEE): Formulas {
       const raw = Math.ceil(roll + ((h.acc + h.gear.acc) / 10 + 0.8 * h.classRanged) * h.level);
       return Math.max(0, Math.trunc(raw - Math.trunc(mon.armor / 2)));
     },
-    // the game's table (rounded per level, `xpStepV4` in src/sim/balance.ts); `xpSmooth(25, 1.25, 18, 1.08)` is the same without rounding
+    // the game's table (rounded per level, `xpStepV4` in src/sim/balance.ts, the old doubling up to level 10, then 1'024'000 × 1.08^(level − 10)); the first v4 table was `xpSmooth(25, 1.25, 18, 1.08)`
     xpStep: (cls, level) => xpStepV4(CONSTANTS.CHARACTER_XP[cls] ?? 2000, level),
     trainingCost: trainingSquare,
     wolfBelow: 0.1,

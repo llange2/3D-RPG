@@ -58,7 +58,7 @@ export interface MonsterDef {
   aging_years: number;
   /** Where it lives on the overworld: with a Monster Hut (`hut`), as a wild group without one (`wild`), or not at all (null). */
   outside: "hut" | "wild" | null;
-  /** XP of burning its Monster Hut down (13 times the monster's XP), 0 without a hut. */
+  /** XP of burning its Monster Hut down (`HUT_XP_FACTOR` times the monster's XP), 0 without a hut. */
   hut_xp: number;
   preferred_enemy?: string | null;
   anim_path?: string;
@@ -176,6 +176,9 @@ const SHEET_CAUSES: readonly [keyof MonsterSheetRow, string][] = [
 ];
 
 /** What the old table (`MONSTER_DATA.json`) has of a monster: the fields the sheet adds are missing. */
+/** Burning a Monster Hut down gives this many times the XP of its monster (the sheet says 13; the user lowered it to 10 on 26.10.2026). */
+export const HUT_XP_FACTOR = 10;
+
 type OldMonster = Omit<MonsterDef, "id" | "res_poison" | "ranged" | "hits_all" | "causes" | "regen" | "steal_mana" | "aging_years" | "outside" | "hut_xp">;
 
 const percent = (share: number): string => `${Math.round(share * 100)}%`;
@@ -232,7 +235,8 @@ function monsterFromSheet(id: number, old: OldMonster, row: MonsterSheetRow): Mo
     steal_mana: stealMana,
     aging_years: aging,
     outside: typeof row.hut === "number" ? "hut" : row.hut === "x" ? "wild" : null,
-    hut_xp: typeof row.hut === "number" ? row.hut : 0,
+    // the sheet's number is 13 times the XP; the game pays HUT_XP_FACTOR times (26.10.2026), the sheet itself stays untouched
+    hut_xp: typeof row.hut === "number" ? HUT_XP_FACTOR * row.xp : 0,
   };
 }
 

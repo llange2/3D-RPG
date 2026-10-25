@@ -151,24 +151,29 @@ describe("BALANCE v4: mascots", () => {
 });
 
 describe("BALANCE v4: levels and training", () => {
-  it("25 × base × 1.25^(level − 1) up to level 18, then +8 % a level, rounded per level", () => {
+  it("the old table up to level 10, then 1'024'000 × 1.02^(level − 10) a level, rounded per level", () => {
     const k = knight(1); // class base 1500
-    expect(xpToNextLevel(k, 1)).toBe(37_500);
-    expect(xpToNextLevel(k, 2)).toBe(37_500 + 46_875);
+    expect(xpToNextLevel(k, 1)).toBe(1_500);
+    expect(xpToNextLevel(k, 2)).toBe(1_500 + 3_000);
     let sum = 0;
     for (let l = 1; l <= 30; l++) {
       sum += xpStepV4(1500, l);
       expect(xpToNextLevel(k, l), `level ${l}`).toBe(sum);
     }
-    expect(xpStepV4(1500, 18)).toBe(Math.round(1500 * 25 * 1.25 ** 17));
-    expect(xpStepV4(1500, 19)).toBe(Math.round(1500 * 25 * 1.25 ** 17 * 1.08));
-    expect(xpStepV4(1500, 20)).toBe(Math.round(1500 * 25 * 1.25 ** 17 * 1.08 ** 2));
-    // it climbs on and does not go flat at 1'024'000 any more
-    expect(xpStepV4(1500, 40)).toBeGreaterThan(xpStepV4(1500, 39));
-    expect(xpStepV4(1500, 40)).toBeGreaterThan(1_024_000);
+    // up to level 10 exactly the old doubling (the class with base 2000 reaches 1'024'000 at level 10)
+    expect(xpStepV4(1500, 10)).toBe(1500 * 2 ** 9);
+    expect(xpStepV4(2000, 10)).toBe(1_024_000);
+    // from level 11 on: 2 % more than the step before it, the same for every class
+    expect(xpStepV4(1500, 11)).toBe(Math.round(1_024_000 * 1.02));
+    expect(xpStepV4(2000, 11)).toBe(xpStepV4(1000, 11));
+    expect(xpStepV4(1500, 12)).toBe(Math.round(1_024_000 * 1.02 ** 2));
+    expect(xpStepV4(1500, 60)).toBe(Math.round(1_024_000 * 1.02 ** 50));
+    for (let l = 12; l <= 80; l++) expect(xpStepV4(1500, l) / xpStepV4(1500, l - 1)).toBeCloseTo(1.02, 3);
+    // the cumulative XP of the old table up to level 10 is unchanged
+    expect(xpToNextLevel(k, 10)).toBe(1500 * (2 ** 10 - 1));
     // the XP already earned is taken off
-    k.xp = 30_000;
-    expect(xpToNextLevel(k, 1)).toBe(7_500);
+    k.xp = 1_200;
+    expect(xpToNextLevel(k, 1)).toBe(300);
     expect(inMode("legacy", () => xpToNextLevel(knight(1), 1))).toBe(1500);
   });
 

@@ -33,10 +33,11 @@ describe("the monster sheet (docs/RPG_0.1.xlsx)", () => {
     expect(MONSTERS[id("Vampire")]!.special_abilties).toBe("Regenerates 10%, Drains 20% of Spell Points");
   });
 
-  it("gives a hut to the 21 monsters with an outside XP, which is 13 times their XP", () => {
+  it("gives a hut to the 21 monsters with an outside XP, which is 10 times their XP (the sheet's 13 was lowered on 26.10.2026)", () => {
     const huts = MONSTER_IDS.filter((m) => MONSTERS[m]!.outside === "hut");
     expect(huts).toHaveLength(21);
-    for (const m of huts) expect(MONSTERS[m]!.hut_xp, MONSTERS[m]!.name).toBe(13 * MONSTERS[m]!.xp);
+    for (const m of huts) expect(MONSTERS[m]!.hut_xp, MONSTERS[m]!.name).toBe(10 * MONSTERS[m]!.xp);
+    for (const m of MONSTER_IDS.filter((x) => MONSTERS[x]!.outside !== "hut")) expect(MONSTERS[m]!.hut_xp).toBe(0);
     // no hut for the monsters of the deeper levels: they roam without one ("x")
     expect(huts.every((m) => MONSTERS[m]!.treasure_level <= 3)).toBe(true);
     expect(MONSTER_IDS.filter((m) => MONSTERS[m]!.outside === "wild").length).toBeGreaterThan(20);
