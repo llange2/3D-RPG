@@ -18,6 +18,9 @@ const BIOME_COLOR: Record<number, string> = {
   [BIOME.OCEAN]: "#2c5fa0",
 };
 
+/** Dark brown, so that road, pass and bridge differ from dirt (`#9a7a52`) on the map and in the legend. */
+const ROAD_COLOR = "#6f4f2c";
+
 function tileColor(t: TileInfo): string {
   switch (t.ground) {
     case GROUND.WATER:
@@ -29,7 +32,7 @@ function tileColor(t: TileInfo): string {
     case GROUND.ROAD:
     case GROUND.PASS:
     case GROUND.BRIDGE:
-      return "#b98b52";
+      return ROAD_COLOR;
     case GROUND.POI_BLOCK:
       return "#ffd54a";
     case GROUND.LAVA_POOL:
@@ -144,7 +147,7 @@ function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t
     case GROUND.ROAD:
     case GROUND.PASS:
     case GROUND.BRIDGE:
-      icons.drawGround(ctx, "dirt", undefined, x, y, w);
+      icons.drawGround(ctx, "road", undefined, x, y, w);
       return;
     case GROUND.LAVA_POOL:
       icons.drawGround(ctx, "lava", undefined, x, y, w);
@@ -455,7 +458,7 @@ export const OVERWORLD_LEGEND: LegendEntry[] = [
   { color: "#6c6860", label: "Mountains", icon: { ground: "grass", drawing: "mountain" } },
   { color: "#2c5fa0", label: "Deep water", icon: { symbol: "water" } },
   { color: "#5a95d0", label: "Shallow water", icon: { symbol: "water", veil: true } },
-  { color: "#b98b52", label: "Road or pass", icon: { ground: "dirt" } },
+  { color: ROAD_COLOR, label: "Road, pass or bridge", icon: { ground: "road" } },
   { color: "#ff6a1a", label: "Lava", icon: { ground: "lava" } },
   { color: "#ffd54a", label: "Town", icon: { place: "town", ground: "meadow" } },
   { color: "#c8d0e0", label: "Castle", icon: { place: "castle", ground: "meadow" } },
