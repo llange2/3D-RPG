@@ -1649,7 +1649,7 @@ export class Game {
   }
 
   /**
-   * The hut burns: it is replaced by its ruin, its monsters stay but no new ones come, and the party gets the XP of the sheet (entity 9), 13 times
+   * The hut burns: it is replaced by its ruin, its monsters stay but no new ones come, and the party gets `HUT_XP_FACTOR` (10) times the monster's XP (`hut_xp`), 13 times
    * the gold of the monster rounded up to the next thousand and seven items of its treasure level (a pile on the ruin, which is walked over).
    */
   private burnHut(hut: HutSpot): void {
