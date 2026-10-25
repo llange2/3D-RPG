@@ -28,9 +28,8 @@ function tileColor(t: TileInfo): string {
       return t.biome === BIOME.LAVA ? "#a04030" : "#6c6860";
     case GROUND.ROAD:
     case GROUND.PASS:
-      return "#b98b52";
     case GROUND.BRIDGE:
-      return "#8a6638";
+      return "#b98b52";
     case GROUND.POI_BLOCK:
       return "#ffd54a";
     case GROUND.LAVA_POOL:
@@ -144,10 +143,8 @@ function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t
       return;
     case GROUND.ROAD:
     case GROUND.PASS:
-      icons.drawGround(ctx, "dirt", undefined, x, y, w);
-      return;
     case GROUND.BRIDGE:
-      icons.drawGround(ctx, "bridge", undefined, x, y, w);
+      icons.drawGround(ctx, "dirt", undefined, x, y, w);
       return;
     case GROUND.LAVA_POOL:
       icons.drawGround(ctx, "lava", undefined, x, y, w);
@@ -459,7 +456,6 @@ export const OVERWORLD_LEGEND: LegendEntry[] = [
   { color: "#2c5fa0", label: "Deep water", icon: { symbol: "water" } },
   { color: "#5a95d0", label: "Shallow water", icon: { symbol: "water", veil: true } },
   { color: "#b98b52", label: "Road or pass", icon: { ground: "dirt" } },
-  { color: "#8a6638", label: "Bridge", icon: { ground: "bridge" } },
   { color: "#ff6a1a", label: "Lava", icon: { ground: "lava" } },
   { color: "#ffd54a", label: "Town", icon: { place: "town", ground: "meadow" } },
   { color: "#c8d0e0", label: "Castle", icon: { place: "castle", ground: "meadow" } },
@@ -557,9 +553,9 @@ export function describeOverworldTile(world: World, explored: Explored, x: numbe
     case GROUND.WATER: return "Deep water";
     case GROUND.SHALLOW: return "Shallow water";
     case GROUND.MOUNTAIN: return t.biome === BIOME.LAVA ? "Lava mountains" : "Mountains";
-    case GROUND.ROAD: return "Road";
+    case GROUND.ROAD:
+    case GROUND.BRIDGE: return "Road";
     case GROUND.PASS: return "Mountain pass";
-    case GROUND.BRIDGE: return "Bridge";
     case GROUND.LAVA_POOL: return "Lava";
   }
   if (t.deco === 1) return "Trees";
