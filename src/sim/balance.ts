@@ -41,9 +41,12 @@ export const RULES = {
     orbSpellBonus: 0.2,
     /** ... and no longer the spell points. */
     orbManaBonus: 0,
-    /** XP step of a level: `base × 25 × 1.25^(level − 1)` up to level 18, then `× 1.08` for every further level. */
-    xpFactor: 25,
-    xpGrowth: 1.25,
+    /**
+     * XP step of a level: `base × 2^(level − 1)` up to level 18, then `× 1.08` for every further level (26.10.2026, the user's wish;
+     * the first v4 table was `base × 25 × 1.25^(level − 1)`: set `xpFactor: 25` and `xpGrowth: 1.25` to get it back).
+     */
+    xpFactor: 1,
+    xpGrowth: 2,
     xpGrowthUntil: 18,
     xpGrowthAfter: 1.08,
     /** Training costs `10 × level²` per hero. */
