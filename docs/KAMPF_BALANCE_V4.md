@@ -3,6 +3,31 @@
 Stand 24.10.2026. Geprüft wurde die Zusammenfassungstabelle in `docs/KAMPF_BALANCE.md` in der Fassung des Nutzers (Abschnitt 1, Spalte „Vorschlag“), im Werkzeug `tools/balance/` als Formelsatz **`v4`** abgelegt.
 **Am Spiel wurde nichts geändert.** Geändert bzw. neu sind nur Dateien in `tools/balance/` und diese Datei. Rohdaten: `tools/balance/out/report-v4/`.
 
+## 0. Nachtrag vom 25.10.2026: Nahkampf-Lesart geklärt, feste Stufenpaare
+
+Der Nutzer hat die Nahkampfformel klargestellt: **`Waffe + (STÄ×0,1 + Klasse) / 3 × Stufe − Rüstung`**, dann `× (1 − res_physical)` (Ritter, Klassenwert +2, Stufe 35, Stärke 30, Waffe 10: 68,3 Schaden). Das ist im Werkzeug jetzt der Formelsatz **`v4`** (vorher `v4a`); die wörtliche Lesart mit `Waffe ×` heißt `v4mul`. **Die Abschnitte 1 bis 3 und 5 bis 7 unten rechnen noch mit der alten wörtlichen Lesart (`v4mul`)**; die Zahlen der richtigen Lesart stehen hier und in Abschnitt 4 (Zeile `v4a` = jetzt `v4`).
+
+Simuliert wurden die vom Nutzer genannten Paare: schwache Gruppe und starke Gruppe je Tier (Tier 1: Stufe 1 und 10, Tier 2: 10 und 20, Tier 3: 20 und 30, Tier 4: 30 und 40, Tier 5: 40 und 50). Die Quest-XP der Helden sind damit in den Stufen enthalten. Gegner: Monster der Klasse t, Gruppengröße wie im Generator; Ausrüstung typisch für das Tier; Attribute wachsen auf 40 bei Stufe 50; 300 Läufe je Zelle und Gruppe. Mittel über fünf Gruppen (HP-Verlust · Tote je Kampf · Sieg), `out/report-v4/zellen-class.txt`:
+
+| Tier | Stufe | heute | **v4** | v4 ohne Terminator |
+|---|---|---|---|---|
+| 1 | 1 | 13 % · 0,37 · 94 % | **10 % · 0,08 · 99 %** | |
+| 1 | 10 | 0 % | 0 % | |
+| 2 | 10 | 5 % · 0,03 | **7 % · 0,03 · 100 %** | |
+| 2 | 20 | 1 % | 1 % | |
+| 3 | 20 | 3 % | **3 % · 0,00 · 100 %** | |
+| 3 | 30 | 1 % | 1 % | |
+| 4 | 30 | 12 % · 0,05 · 99 % | **13 % · 0,06 · 98 %** | 13 % · 0,06 |
+| 4 | 40 | 5 % · 0,00 | 6 % · 0,01 · 100 % | 6 % · 0,01 |
+| 5 | 40 | 42 % · 0,27 · 78 % | **46 % · 0,31 · 72 %** | 43 % · 0,05 · 77 % |
+| 5 | 50 | 26 % · 0,08 · 94 % | **31 % · 0,13 · 90 %** | 27 % · 0,02 · 93 % |
+
+* **Auch mit diesen Paaren ist die Herausforderung nicht gleich:** schwach gegen schwach (Tier 1, Stufe 1) 10 %, stark gegen stark (Tier 5, Stufe 50) 31 %, und Tier 5 mit Stufe 40 sogar 46 %. Tier 2 und 3 kosten 1–7 %, Tier 4 6–13 %. Der Sprung kommt von Tier 4 auf Tier 5 (13 % → 46 % am unteren, 6 % → 31 % am oberen Paar); Am unteren Paar kosten Tier 1 bis 4 10 / 7 / 3 / 13 %: Tier 2 und 3 sind etwas zu leicht, Tier 4 passt zu Tier 1, Tier 5 ist die Wand.
+* **v4 ist gegen heute leichter für den Anfang** (Tote auf Stufe 1: 0,37 → 0,08), **aber in Tier 5 etwas härter** (31 gegen 26 % auf Stufe 50). Grund: Nahkampf (ein Drittel des Stufenanteils) und Bogen (Trefferchance ohne Faktor 0,5) sind schwächer als heute. Die Nahkampfgruppe (Ritter, Barbar, Paladin, Kleriker) ist am schwächsten: Tier 4 auf Stufe 30 **30 %** (heute 25 %), Tier 5 auf Stufe 40 **63 % · 0,51 Tote** (heute 56 % · 0,37), auf Stufe 50 noch 53 %. Mit `res_physical` 0,6 bis 1 (Terminator, Vampir, Geister, Mumien) trifft sie fast nichts.
+* **Der Terminator** bestimmt die Toten in Tier 5 (0,31 → 0,05 ohne ihn auf Stufe 40; 0,13 → 0,02 auf Stufe 50), **nicht den Verlust** (46 → 43 %). Tier 5 ist also auch ohne ihn zu hart.
+* **Was die Gruppe im Spiel wirklich trifft** (Gruppen, wie der Generator sie in Dungeons, Burgen und Höhlen setzt; `zellen-world.txt`): überall 1–7 % Verlust, nur Tier 1 auf Stufe 1 12 % · 0,36. Dort sind die Monster gemischt (in Tier-5-Orten nur 14 % der Klasse 5). Die Wand liegt in der Überwelt, in Hütten und bei Bossen.
+* **Wie viel Stufe Tier 5 braucht:** für 25 % Verlust ab Stufe etwa 60, für 12 % etwa 80 (Vergleich: Tier 4 hat 25 % schon auf Stufe 26, Tier 3 auf Stufe 11). Tier 5 liegt damit etwa 20 Stufen über dem, was die Paare vorsehen (Stufe 40 und 50). Entweder die Tier-5-Stufen steigen (Quest-XP und Tabelle), oder die Klasse-5-Monster (Lebenspunkte 400 bis 5'000, Rüstung 30 bis 100) sind zu stark für Stufe 40 bis 50.
+
 ## 1. Ergebnis in Kürze
 
 **Die Herausforderung ist mit v4 nicht gleichmäßig.** Entlang des XP-Pfads (Stufe, auf der die Gruppe ein Tier erreicht, wenn sie die Hälfte der darunterliegenden Tiers geräumt hat) kostet ein Kampf gegen Monster der Klasse t zu Beginn des Tiers im Mittel von fünf Gruppen:

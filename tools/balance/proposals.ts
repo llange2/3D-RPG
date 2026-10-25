@@ -120,8 +120,9 @@ export function makeV4(id: string, melee: keyof typeof V4_MELEE): Formulas {
     fairyReduction: 30,
   };
 }
-PROPOSALS.v4 = makeV4("v4", "mul");
-PROPOSALS.v4a = makeV4("v4a", "add3");
+// v4 is the reading the user confirmed on 25.10.2026: weapon + (STR*0.1 + class) / 3 * level (Knight, level 35, STR 30, weapon 10: 68.3)
+PROPOSALS.v4 = makeV4("v4", "add3");
+PROPOSALS.v4mul = makeV4("v4mul", "mul");
 PROPOSALS.v4b = makeV4("v4b", "add1");
 
 const outDir = join(dirname(fileURLToPath(import.meta.url)), "out");
