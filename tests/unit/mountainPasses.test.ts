@@ -55,6 +55,7 @@ describe("mountain passes", () => {
       sum += mountains / land;
     }
     expect(sum / seeds.length).toBeGreaterThan(0.04);
-    expect(sum / seeds.length).toBeLessThan(0.15);
+    // (the lava islands are rock all over; the places of them clear only a ring of one tile)
+    expect(sum / seeds.length).toBeLessThan(0.18);
   });
 });
