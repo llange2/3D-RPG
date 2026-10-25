@@ -26,6 +26,12 @@ export interface FightEnv {
   healBelow: number;
   /** A spell may cost at most this share of the caster's current mana (keeps some for later rounds). */
   manaShare: number;
+  /**
+   * Shots of a ranged monster per turn: "auto" (the formula set decides, `Formulas.rangedShots`: the game), "one" (the old game: a shot from afar
+   * was one a turn), "half" (half its
+   * melee attacks, rounded up), "two" (half, at most two), "all" (all of them; what this tool assumed before 26.10.2026, wrongly).
+   */
+  rangedShots: "auto" | "one" | "half" | "two" | "all";
 }
 
 export const DEFAULT_ENV: FightEnv = {
@@ -38,6 +44,7 @@ export const DEFAULT_ENV: FightEnv = {
   spells: true,
   healBelow: 0.4,
   manaShare: 0.34,
+  rangedShots: "auto",
 };
 
 /** 0 fine, 1 unconscious, 2 dead, 3 paralyzed or asleep, 4 petrified. */
@@ -84,6 +91,8 @@ export interface FightResult {
   /** Total XP of the monsters killed (before the hook), per hero who could act: see `HeroRun.xp`. */
   monsterXp: number;
   dealt: { melee: number; ranged: number; spell: number };
+  /** Hit points the heroes lost to shots from afar (a monster that was not next to the party). */
+  rangedLost: number;
 }
 
 interface Mon {
@@ -107,7 +116,7 @@ const alive = (m: Mon): boolean => m.hp > 0;
 export function runFight(party: HeroRun[], defs: MonsterDef[], env: FightEnv, F: Formulas, rng: R): FightResult {
   const mons: Mon[] = defs.map((d) => ({ d, hp: d.health, max: d.health }));
   const specials = defs.map((d) => specialState(d));
-  const res: FightResult = { won: false, rounds: 0, battleRounds: 0, hpLost: 0, hpMax: 0, down: 0, dead: 0, spUsed: 0, spMax: 0, gold: 0, kills: 0, monsterXp: 0, dealt: { melee: 0, ranged: 0, spell: 0 } };
+  const res: FightResult = { won: false, rounds: 0, battleRounds: 0, hpLost: 0, hpMax: 0, down: 0, dead: 0, spUsed: 0, spMax: 0, gold: 0, kills: 0, monsterXp: 0, dealt: { melee: 0, ranged: 0, spell: 0 }, rangedLost: 0 };
   const sp0 = party.map((p) => p.sp);
   let dist = env.startDistance;
 
@@ -146,6 +155,7 @@ export function runFight(party: HeroRun[], defs: MonsterDef[], env: FightEnv, F:
     if (dmg > 0) {
       p.hp -= dmg;
       p.lost += dmg;
+      if (!melee) res.rangedLost += Math.min(dmg, p.maxHp);
     }
     if (special !== null && melee && dmg > 0 && rng.float() < F.specialChance(p.h, special === 2) && p.st !== 2) {
       if (special === 2) p.st = 2;
@@ -245,7 +255,8 @@ export function runFight(party: HeroRun[], defs: MonsterDef[], env: FightEnv, F:
     live.forEach((m, idx) => {
       const adjacent = dist <= 1 && idx < env.maxAdjacent;
       const special = specials[mons.indexOf(m)] ?? null;
-      for (let n = 0; n < m.d.no_of_attacks; n++) {
+      const attacks = adjacent ? m.d.no_of_attacks : env.rangedShots === "auto" ? F.rangedShots(m.d.no_of_attacks) : env.rangedShots === "one" ? 1 : env.rangedShots === "half" ? Math.ceil(m.d.no_of_attacks / 2) : env.rangedShots === "two" ? Math.min(2, Math.ceil(m.d.no_of_attacks / 2)) : m.d.no_of_attacks;
+      for (let n = 0; n < attacks; n++) {
         let cands = party.filter(targetable);
         if (cands.length === 0) return;
         if (m.d.preferred_enemy) {
@@ -253,7 +264,7 @@ export function runFight(party: HeroRun[], defs: MonsterDef[], env: FightEnv, F:
           if (match.length > 0) cands = match;
         }
         const t = cands[rng.int(cands.length)]!;
-        if (!adjacent && !m.d.special_abilties?.includes("Ranged Attack")) continue;
+        if (!adjacent && !m.d.ranged) continue;
         const distance = adjacent ? 1 : Math.max(2, dist);
         const roll = rng.range(Math.min(m.d.damage_min, m.d.damage_max), Math.max(m.d.damage_min, m.d.damage_max));
         const dmg = F.monsterDamage(m.d, t.h, { damage: roll, hit: rng.float(), evade: rng.float(), ranged: !adjacent, distance, fairy: env.mascot === "Fairy" ? F.fairyReduction : 0 });

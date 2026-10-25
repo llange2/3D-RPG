@@ -66,14 +66,16 @@ describe("what a monster does in a turn (entity 4 and the abilities of entity 8)
     return { party, enc, events, attacks: events.filter((e): e is Extract<CombatEvent, { type: "monster_attack" }> => e.type === "monster_attack") };
   }
 
-  it("strikes as often in a row as entity 4 says in melee, but shoots once from afar", () => {
+  it("strikes as often in a row as entity 4 says in melee, but shoots half as often from afar (at most twice)", () => {
     expect(fight("Giant Spider", [5, 6], "a").attacks).toHaveLength(8);
     expect(fight("Giant Spider", [5, 6], "a").attacks.every((a) => !a.ranged)).toBe(true);
-    // the Archer has four attacks and a bow: next to the party four blows, from five tiles away one arrow
+    // the Archer has four attacks and a bow: next to the party four blows, from five tiles away two arrows (BALANCE v4: half of them, at most two)
     expect(fight("Archer", [5, 6], "b").attacks).toHaveLength(4);
     const shot = fight("Archer", [5, 10], "c");
-    expect(shot.attacks).toHaveLength(1);
-    expect(shot.attacks[0]!.ranged).toBe(true);
+    expect(shot.attacks).toHaveLength(2);
+    expect(shot.attacks.every((a) => a.ranged)).toBe(true);
+    // one attack, one arrow
+    expect(fight("Goblin", [5, 10], "g").attacks).toHaveLength(1);
   });
 
   it("does not shoot without a ranged attack", () => {

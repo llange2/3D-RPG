@@ -3,3 +3,6 @@ dist/
 .cache/
 .ignore/
 *.log
+
+# Office lock files (a spreadsheet that is open in Excel)
+~$*

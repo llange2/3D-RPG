@@ -1,6 +1,6 @@
 # Kampfformeln, XP und Aufstiege – Befund und Vorschlag
 
-Stand 23.10.2026. **Nachtrag 25.10.2026: Der überarbeitete Vorschlag (Tabelle in Abschnitt 1, „Vorschlag v4“) ist im Spiel umgesetzt, Stellen und Rückweg in `docs/BALANCE_V4_UMSETZUNG.md`, Messungen in `docs/KAMPF_BALANCE_V4.md`.** Die Zahlen unten beschreiben den Stand vor v4 („heute“ = nach den Korrekturen aus 3.5). Ursprünglich wurden am Spiel nur die vier Fehler aus Abschnitt 3.5 behoben; die Formeln des Vorschlags (Abschnitt 4) waren nicht umgesetzt. Alles, was hier steht, kommt aus dem neuen Werkzeug `tools/balance/` (Bedienung: `tools/balance/README.md`)
+Stand 23.10.2026. **Nachtrag nach v4: Abschnitt 8 (Fernkampf zu stark, Fernangriffe der Gegner zu schwach; im Spiel umgesetzt, Stellen in `docs/BALANCE_V4_UMSETZUNG.md` 15 bis 21).** **Nachtrag 25.10.2026: Der überarbeitete Vorschlag (Tabelle in Abschnitt 1, „Vorschlag v4“) ist im Spiel umgesetzt, Stellen und Rückweg in `docs/BALANCE_V4_UMSETZUNG.md`, Messungen in `docs/KAMPF_BALANCE_V4.md`.** Die Zahlen unten beschreiben den Stand vor v4 („heute“ = nach den Korrekturen aus 3.5). Ursprünglich wurden am Spiel nur die vier Fehler aus Abschnitt 3.5 behoben; die Formeln des Vorschlags (Abschnitt 4) waren nicht umgesetzt. Alles, was hier steht, kommt aus dem neuen Werkzeug `tools/balance/` (Bedienung: `tools/balance/README.md`)
 und seinen Zwischenständen in `tools/balance/out/` (die Tabellen dieses Dokuments liegen als Rohausgabe in `tools/balance/out/report/`).
 **„Heute“ heißt in diesem Dokument: das Spiel nach den Korrekturen aus 3.5.** Alle Zahlen sind damit neu gerechnet; die ursprüngliche Rechnung vor den Korrekturen (Zielwert 0,76) liegt unverändert in `tools/balance/out/report-vor-korrektur/`.
 
@@ -467,3 +467,209 @@ npx tsx tools/balance/search.ts neu 900 40                              # Parame
 ```
 
 Eigene Vorschläge: in `tools/balance/proposals.ts` einen Eintrag `{ ...CURRENT, … }` oder eine Parametermenge (`parametric.ts`) anlegen und mit `--formulas=<Name>` an alle Befehle geben.
+
+## 8. Nachtrag nach v4: Fernkampf zu stark, Fernangriffe der Gegner zu schwach (Quicksave `lunar-keep-429`)
+
+**Stand: Vorschlag aus dem Quicksave, danach im Spiel umgesetzt (8.7); die Tabellen unten sind die Rechnung vor der Umsetzung, die Gegenprobe mit der echten Engine steht am Ende von 8.5.** Auslöser war eine Beobachtung im Spiel (generierte Welt, Quicksave in `.ignore/quicksave.json`): zwei Zombies geradeaus, der Nahkampf hat ein gutes Herausforderungslevel, der Fernkampf ist zu stark, und die Fernangriffe der Gegner sind zu schwach. Grundlage sind v4 (das Spiel heute) und die Werkzeuge in `tools/balance/` (neu: `save.ts`, `bowgrid.ts`, `shots.ts`, der Formelsatz `v5:…` in `proposals.ts`, der Schalter `--rshots`). Rohausgaben: `tools/balance/out/report-fern/`.
+
+### 8.1 Die Lage im Quicksave
+
+Gruppe: Maximus (Ritter, Ork, Stufe 4, 74 LP, Flegel 9–18, Kurzbogen 6–9), Elrin (Ninja, Zwerg, Stufe 4, 48 LP, Katana, Kurzbogen 4–7), Ralvar (Bogenschütze, Mensch, Stufe 3, 34 LP, Langschwert, Kurzbogen 6–9), Lyneth (Druide, Gnom, Stufe 4, 42 LP, Stab, kein Bogen); Maskottchen Wolf. Der Zombie: 35 LP, Rüstung 2, **Tempo 2**, 2 Angriffe à 3–18, **physisch 80 % resistent** (Eis 75 %, Magie 25 %).
+
+Zwei Zombies auf 5 Felder Abstand, 400 Läufe, ohne Zauber (`tsx tools/balance/save.ts Zombie 2 400 5`; die echte Engine und der Simulator stimmen überein):
+
+| Spielweise | echte Engine: Sieg · Verlust an LP | Simulator (v4): Sieg · Verlust · Runden |
+|---|---|---|
+| Bogen (alle schießen, dann Bogen oder Schwert) | 100 % · **0 %** · 2 Aktionen | 100 % · **0 %** · 2,0 |
+| Gemischt (schießen beim Anlaufen, dann Nahkampf) | 100 % · 0 % · 2 Aktionen | 100 % · 0 % · 2,0 |
+| Nur Nahkampf (warten, bis sie da sind) | 100 % · **25 %** · 40 Aktionen | 100 % · **31 %** · 13,8 |
+
+Der Bogen tötet beide Zombies in **zwei Salven, bevor sie ankommen, und nimmt der Gruppe nichts** (60 Schaden je Salve gegen 35 LP); der Nahkampf gegen dieselben Zombies kostet ein Viertel bis ein Drittel der Lebenspunkte. Das deckt sich mit der Beobachtung. Mit vier Zombies (Simulator): Bogen 0 %, Nahkampf 78 % Verlust und 5 % Niederlagen.
+
+### 8.2 Befund Fernkampf
+
+Schaden je Aktion der vier Helden (Mittel, echte Funktionen, `tsx tools/balance/save.ts damage`): Nahkampfrunde der Gruppe / Bogensalve aller Bogenträger bei Abstand 1 · 3 · 5.
+
+| Gegner | Nahkampfrunde | Salve @1 | Salve @3 | Salve @5 |
+|---|---|---|---|---|
+| Zombie (res. 80 %, Tempo 2) | 7 | 59 | 59 | 59 |
+| Skelett (res. 80 %) | 7 | 57 | 21 | 12 |
+| Goblin (Rüstung 0) | 55 | 62 | 26 | 16 |
+| Orc Warrior (Rüstung 5) | 36 | 56 | 29 | 18 |
+| Oger (Rüstung 10) | 18 | 47 | 20 | 12 |
+| Troll (Rüstung 15) | 7 | 31 | 11 | 6 |
+
+Fünf Ursachen, die zusammen wirken:
+
+1. **Die physische Resistenz gilt nur für den Nahkampf.** `meleeDamage` multipliziert mit `1 − res_physical`, `rangedDamage` nicht. Die Salve gegen den Zombie ist **8,3-mal** so stark wie die Nahkampfrunde, gegen das Skelett (gleiche Resistenz) auf einem Feld 8-mal. 23 von 91 Monstern haben eine physische Resistenz (Zombie, Skelett, Ghoul, Mumie, Geister, Terminator …).
+2. **Der Stufenanteil des Bogens ist dreimal so groß wie der des Schwerts.** Bogen: `(GEN×0,1 + 0,8 × Klasse) × Stufe`, Schwert: `(STÄ×0,1 + Klasse) / 3 × Stufe`. Ralvar (Bogenschütze, Stufe 3) hat 18 Punkte Stufenanteil im Bogen und 2 im Schwert; sein Bogen macht **25,5** Schaden gegen den Goblin, sein Langschwert 10,9 (Ninja: 23,5 gegen 15,9). Der Bogen schlägt das Schwert damit auch **neben** dem Monster.
+3. **Nahschuss ohne Abzug.** Auf Abstand 1 ist die Trefferchance `GEN / (Tempo × 1)`, also bei allen Monstern bis Tempo 20 und GEN 20 gleich 100 %. Gegen den Goblin ist die Bogensalve auf einem Feld (62) stärker als die ganze Nahkampfrunde (55).
+4. **Freie Salven.** Die Monster laufen einen Schritt je Aktion, die Gruppe sieht sie auf 5 bis 7 Felder; es gibt 4 bis 6 Salven ohne Antwort. Bei Tempo ≤ 4 (nur der Zombie) trifft jeder Schuss auf jede Entfernung; bei Tempo 15 und GEN 20 sind es auf drei Felder 44 %.
+5. **Rüstung zählt beim Bogen nur halb**, beim Schwert voll (beabsichtigt aus v3/v4; gegen Rüstung 15 und mehr ist es aber ein Vorteil von 7 und mehr Punkten je Schuss).
+
+**Das Problem ist ein Problem der Stufen 1 bis 12, nicht des ganzen Spiels.** Mittel über fünf Gruppen (Standard, Nahkampf, Fernkampf, Klassisch, Zauberer), 250 Läufe je Zelle (`tools/balance/bowgrid.ts`, v4 heute): „Bogen“ = die Gruppe spielt wie ein Spieler, „Schwert“ = niemand benutzt den Bogen (Zauber bleiben an):
+
+| Tier/Stufe | Verlust mit Bogen | Verlust nur Schwert | Verhältnis | Bogen-Anteil am Schaden |
+|---|---|---|---|---|
+| T1 / 1 | 12 % | 18 % | 0,68 | 62 % |
+| T1 / 4 | 2 % | 4 % | 0,51 | **70 %** |
+| T2 / 8 | 10 % | 14 % | 0,73 | **65 %** |
+| T2 / 12 | 3 % | 3 % | 0,89 | 47 % |
+| T3 / 20 | 3 % | 3 % | 1,08 | 21 % |
+| T4 / 30 | 9 % | 11 % | 0,82 | 15 % |
+| T5 / 45 | 37 % | 39 % | 0,96 | 13 % |
+
+Ab Tier 3 ist der Bogen kaum noch ein Vorteil (Monstertempo 25 bis 80 drückt die Trefferchance, die Zauber übernehmen), auf Stufe 1 bis 12 trägt er zwei Drittel des Schadens und halbiert den Verlust. Die reine Fernkampfgruppe (Bogenschütze, Waldläufer, Ninja, Dieb) macht auf Stufe 1 bis 8 sogar 92 bis 99 % ihres Schadens mit dem Bogen.
+
+**Die Szene mit Widerständen (Wunsch aus der Sitzung): physische Resistenz auch im Fernkampf.** Waffen tragen im Spiel keinen Elementschaden (nur Zauber), die anderen Resistenzen (Feuer, Eis, Säure, Magie, Gift) wirken darum schon heute auf alles, was sie treffen kann (`spellDamageToMonster`, `elementalDamage` auf der Heldenseite). Offen ist allein `res_physical` beim Bogen. Mit dieser einen Änderung (`v5:bowRes=1`):
+
+| 2 Zombies, 5 Felder | Bogen | Nur Schwert |
+|---|---|---|
+| v4 heute | 0 % Verlust, 2,0 Runden | 31 % |
+| nur Resistenz auch im Bogen | **6 %**, 6,8 Runden | 31 % |
+| 4 Zombies: v4 / nur Resistenz | 0 % / **36 %** | 78 % |
+
+Das holt die Zombies von 0 auf 6 % Verlust, bleibt aber weit unter dem Nahkampf (31 %), und es **hilft nur gegen die 23 resistenten Monster**: gegen Goblin, Orc Warrior, Oger, Troll ändert sich nichts. Tier 1 des Quicksaves (alle 18 Monster, je zwei): Verlust mit Bogen 2 % (v4) gegen 4 % mit Resistenz, der Nahkampf allein kostet 16 %. Der Bogen bleibt auf Stufe 1 bis 12 dreimal bis viermal billiger. Mit Resistenz allein bleibt der Bogen-Anteil in Tier 1/2 bei 49 bis 60 %. Darum ist sie ein Teil des Vorschlags, aber nicht der ganze (Alternativen in 8.5).
+
+### 8.3 Befund Fernangriffe der Gegner
+
+24 von 91 Monstern haben `ranged` (5 in Tier 1, 2 in Tier 2, 6 in Tier 3, 7 in Tier 4, 4 in Tier 5). `monsterTurn` lässt sie auf Abstand **einen** Schuss je Zug abgeben (der Kommentar im Code: „a shot from afar is one a turn“), im Nahkampf alle Angriffe. Die physischen Schüsse ziehen die Rüstung **anderthalbfach** ab (`Schaden − Rüstung − Rüstung/2`, `monsterDamage`). Rechnung für die Standardgruppe mit typischer Ausrüstung des Tiers (Rüstung der Helden: 15 bis 21 in Tier 1, 24 bis 32 in Tier 2, 42 bis 51 in Tier 3, 51 bis 54 in Tier 4), Schaden eines Zuges auf einen zufälligen Helden in % seiner LP, Abstand 3 (`tsx tools/balance/shots.ts`):
+
+| Monster | Art, Schaden × Angriffe | Schuss heute (1 Schuss) | Nahkampf (alle Angriffe) |
+|---|---|---|---|
+| Goblin (T1) | physisch 3–9 × 1 | **0,0 %** | 0,0 % |
+| Orc Warrior (T1) | physisch 2–16 × 1 | **0,0 %** | 0,0 % |
+| Archer (T3) | physisch 5–30 × 4 | **0,0 %** | 0,0 % |
+| Evil Ranger (T3) | physisch 4–24 × 3 | **0,0 %** | 0,0 % |
+| Paladin (T4) | physisch 3–90 × 5 | **0,0 %** | 6,5 % |
+| Black Knight (T4) | physisch 4–160 × 7 | 2,6 % | 43 % |
+| Wicked Witch (T1) | Magie 4–16 × 1 | 7,8 % | 17 % |
+| Sorcerer (T2) | Eis 8–80 × 1 | 25 % | 28 % |
+| Wizard (T4) | Magie 232 × 1 | 33 % | 33 % |
+| Green Dragon (T5) | Eis 250 × 1 | 21 % | 22 % |
+
+Das Bild ist zweigeteilt: **Elementar- und Magieschützen** (Hexe, Sorcerer, Wizard, Drachen) geht es gut, sie ignorieren die Rüstung und verlieren auf Abstand fast nichts. **Die acht physischen Schützen richten gegen die Ausrüstung ihres Tiers praktisch nichts an**, auch nicht im Nahkampf: die Rüstung wächst auf 50 und mehr, ihr Schaden bleibt unter 30. Dazu sterben die Tier-1-Schützen vor dem ersten Schuss (Goblin 10 LP, eine Salve macht 373 % seiner LP). Der Simulator hat bis jetzt die Mehrfachschüsse der Schützen überschätzt (er ließ sie auf Abstand mit allen Angriffen schießen, das Spiel nur mit einem): `fight.ts` folgt jetzt dem Spiel (`--rshots=one`, vorher faktisch `all`). Gegen die alte Annahme ändert sich der Gesamtverlust der Gruppen von 16 % auf 15 % (v4, Mittel der Tabelle in 8.2), der Anteil durch Fernschüsse von 6 % auf 4 %; die Tabellen in Abschnitt 3 und 4 sind nicht neu gerechnet.
+
+### 8.4 Der Vorschlag
+
+Fünf Hebel, nichts an Monsterwerten, Zaubern, Nahkampf, Leben, XP oder Generator (`GEN_VERSION` bleibt):
+
+| Was | heute (v4) | Vorschlag |
+|---|---|---|
+| Physische Resistenz im Fernkampf | gilt nur für den Nahkampf | Schaden des Bogens `× (1 − res_physical)`, wie beim Schwert |
+| Stufenanteil des Bogens | `(GEN×0,1 + 0,8 × Klasse) × Stufe` | `… / 1,5` (also mal 0,67) |
+| Nahschuss (Monster neben der Gruppe, Abstand 1) | Trefferchance `GEN / Tempo` | Trefferchance **× 0,5** |
+| Schüsse eines Fernkämpfers auf Abstand | 1 | `aufrunden(Angriffe / 2)`, höchstens 2 |
+| Rüstung gegen einen physischen Fernschuss | `Schaden − Rüstung − Rüstung/2` | `max(abrunden(0,25 × Schaden), Schaden − abrunden(Rüstung / 2))` (Rüstung zählt halb, wie beim Bogen der Helden; mindestens ein Viertel kommt durch) |
+
+Als Formeln:
+
+```
+Fernkampf, Treffer   = GEN / ( Tempo des Monsters × Entfernung )                 [höchstens 1; bei Entfernung 1 mal 0,5]
+Fernkampf, Schaden   = ( aufrunden( Waffe + (GEN×0,1 + 0,8 × Klassenwert) / 1,5 × Stufe ) − abrunden( 0,5 × Rüstung ) ) × (1 − res_physical)    [nie unter 0]
+Nahkampf             = wie v4 (unverändert)
+Monster, Fernschuss  = Treffer? max( abrunden(0,25 × Schaden), Schaden − abrunden(0,5 × Rüstung des Helden) ) : 0     (physisch; Elementar wie heute)
+Schüsse je Zug       = Entfernung > 1 ? min(2, aufrunden(Angriffe / 2)) : alle Angriffe
+```
+
+Im Werkzeug: `v5:bowRes=1,bowDiv=1.5,bowAdj=0.5,eArmor=0.5,eFloor=0.25` mit `--rshots=two` (Bedeutung der Schalter im Kopf von `makeV5` in `tools/balance/proposals.ts`). Der Nahkampf bleibt, wie er ist, weil er „ein gutes Herausforderungslevel“ hat.
+
+### 8.5 Wirkung und verworfene Alternativen
+
+**Die Szene im Quicksave** (Simulator, 800 Läufe, Spielweise „Bogen“, Verlust an LP; Nahkampf allein: 31 % bzw. 78 %):
+
+| Variante | 2 Zombies, 5 Felder | 4 Zombies, 5 Felder | 2 Zombies, 3 / 6 / 7 Felder |
+|---|---|---|---|
+| v4 heute | 0 % | 0 % | 0 / 0 / 0 % |
+| nur Resistenz | 6 % | 36 % | 12 / 4 / 3 % |
+| Resistenz + Stufenanteil / 1,5 | 11 % | 46 % | – |
+| **Vorschlag (Resistenz, / 1,5, Nahschuss × 0,5)** | **14 %** | **57 %** | **21 / 10 / 8 %** |
+| Resistenz + / 2 + Nahschuss × 0,5 | 17 % | 64 % | – |
+
+Der Vorschlag setzt den Bogen gegen Zombies auf ungefähr die **Hälfte** der Kosten des Nahkampfs (14 gegen 31 %, vier Zombies 57 gegen 78 %): ein klarer Vorteil für die Gruppe, die auf Abstand beginnt, aber keine Salve, die den Kampf entscheidet. Mit Zaubern (`SPELLS=1`, die Zauber der Gruppe rechnen mit) ist die Szene für alle Spielweisen leicht (zwei Zombies: v4 Nahkampf 9 %, Bogen 0 %; Vorschlag Bogen 6 %).
+
+**Gegenprobe mit der echten Engine nach der Umsetzung** (`tsx tools/balance/save.ts Zombie 2 600 5`, Gruppe aus dem Quicksave, Verlust an LP): „gemischt“ heißt schießen beim Anlaufen, dann Nahkampf; „Bogen“ heißt auch neben dem Zombie schießen.
+
+| | gemischt | immer Bogen | nur Nahkampf | Simulator (Bogen/Schwert) |
+|---|---|---|---|---|
+| 2 Zombies, 5 Felder | **11 %** (vorher 0 %) | 17 % | 25 % | 14 % / 31 % |
+| 4 Zombies, 5 Felder | **51 %** (vorher 0 %) | 82 % (89 % Siege) | 73 % | 57 % / 78 % |
+
+Die echte Engine bestätigt den Simulator. „Immer Bogen“ ist jetzt schlechter als das Schwert, wie beabsichtigt (der Nahschuss trifft nur halb so oft).
+
+**Tier 1 des Quicksaves** (jedes Monster der Stufe 1, je zwei, Gruppe aus dem Save, 5 Felder; Verlust mit Bogen / nur Schwert): v4 2 % / 16 %, Vorschlag 6 % / 16 %; je drei Monster 5 % / 27 % gegen 15 % / 27 %.
+
+**Das ganze Spiel** (fünf Gruppen, 250 Läufe, `bowgrid.ts`): Bogen-Anteil am Schaden und Verlust:
+
+| Tier/Stufe | Verlust mit Bogen v4 → Vorschlag | Verhältnis Bogen/Schwert v4 → Vorschlag | Bogen-Anteil v4 → Vorschlag | Verlust durch Fernschüsse v4 → Vorschlag |
+|---|---|---|---|---|
+| T1 / 1 | 12 % → 14 % | 0,68 → 0,73 | 62 → 34 % | 4 → 4 % |
+| T1 / 4 | 2 % → 3 % | 0,51 → 0,73 | 70 → 46 % | 1 → 1 % |
+| T2 / 8 | 10 % → 12 % | 0,73 → 0,85 | 65 → 26 % | 5 → 4 % |
+| T2 / 12 | 3 % → 3 % | 0,89 → 0,87 | 47 → 21 % | 2 → 2 % |
+| T3 / 20 | 3 % → 3 % | 1,08 → 0,97 | 21 → 5 % | 2 → 2 % |
+| T4 / 25 | 16 % → 19 % | 0,89 → 0,96 | 14 → 2 % | 7 → 9 % |
+| T4 / 30 | 10 % → 12 % (3000 Läufe) | 0,91 → 0,98 | 16 → 3 % | 5 → 7 % |
+| T5 / 45 | 37 % → 40 % | 0,96 → 1,02 | 13 → 1 % | 5 → 5 % |
+| **Mittel** | **15 % → 17 %** (Tote 0,10 → 0,11) | **0,90 → 0,95** | **34 → 14 %** | **4 → 5 %** |
+
+Die Gruppen werden im Mittel um zwei Prozentpunkte härter, der Bogen-Anteil in Tier 1/2 sinkt von zwei Dritteln auf ein Viertel bis knapp die Hälfte, und das Verhältnis Bogen/Schwert liegt nirgends mehr unter 0,7 (vorher 0,51). Die Zelle T4 / 30 zeigte bei 250 Läufen 1,17 (Bogen kostet mehr als das Schwert); mit 1000 und 3000 Läufen sind es 0,97 und 0,98, das war Streuung. Zellen mit nur 250 Läufen schwanken um etwa ±2 Punkte Verlust. Die **reine Fernkampfgruppe bleibt spielbar**: Bogen-Anteil auf Stufe 1 bis 8 noch 60 bis 80 % (vorher 92 bis 99 %), Verlust im Mittel 15 % gegen 13 % heute, Verhältnis Bogen/Schwert 0,90 (0,78).
+
+**Die Fernschützen** (zwei von jedem Monster mit `ranged`, Verlust der Gruppe Mittel über die Tiers: 18 % → 21 %; Zahlen je Tier in `out/report-fern/ranged-groups-*.txt`). Schaden eines Zuges auf Abstand 3 in % der LP eines Helden (`out/report-fern/shots-*.txt`):
+
+| Monster | heute | Vorschlag |
+|---|---|---|
+| Goblin, Orc Warrior (T1) | 0,0 / 0,0 % | 0,7 / 0,7 % |
+| Archer (T3) | 0,0 % | 1,9 % |
+| Evil Ranger (T3) | 0,0 % | 0,6 % |
+| Paladin (T4) | 0,0 % | 2,2 % |
+| Black Knight (T4) | 2,6 % | 16 % |
+| Elementar- und Magieschützen | unverändert | unverändert (Rüstung spielt dort keine Rolle) |
+
+Die Tier-1-Schützen bleiben auch mit dem Vorschlag eine Kleinigkeit: sie treffen nach der Rüstung der Gruppe für 1 bis 2 Punkte. Das ist beabsichtigt, solange sie 10 bis 25 LP haben und nach einer Salve tot sind; ein Goblin soll kein Gegner sein, der den Bogenkampf entscheidet. Wo die Wirkung spürbar werden soll, ist es das Monsterblatt (Schaden, Tempo), nicht die Formel (8.6).
+
+**Verworfen.**
+* *Nur die Resistenz:* löst die Zombies, aber nicht den Rest; Bogen-Anteil in Tier 1/2 bleibt bei 49 bis 60 %, gegen Goblin und Orc Warrior ändert sich nichts.
+* *Stufenanteil / 2 oder / 3 statt / 1,5* (mit Resistenz): der Bogen-Anteil fällt ab Tier 3 auf 1 bis 5 % (bei / 3 liegt er in Tier 2 bei 9 bis 20 % und ab Tier 3 bei 1 %), das Verhältnis Bogen/Schwert liegt bei 1,0: der Bogen bringt dann nichts mehr. Für die Szene im Quicksave bringt / 2 (mit Nahschuss) nur 3 Punkte mehr Verlust als / 1,5 (17 gegen 14 %).
+* *Mindest-Tempo der Monster in der Trefferchance* (`minSpeed=8`): trifft praktisch nur den Zombie (Tempo 2; nur fünf Monster haben Tempo 10 oder weniger) und macht die Regel zur Sonderbehandlung eines Monsters; mit Resistenz und Nahschuss reicht es auch so (18 statt 14 % Verlust bei zwei Zombies).
+* *Gegnerschüsse mit der Hälfte der Angriffe ohne Deckel:* der Gesamtverlust ändert sich gegenüber dem Deckel nicht, nur die Spitze: Black Knight 32 % je Zug statt 16 %. Der Deckel auf zwei nimmt die Spitze.
+* *Rüstung gegen Schüsse nur zu einem Viertel* (`eArmor=0,25`, Hälfte der Angriffe): Goblin 0,9 %, Archer 3,2 %, Paladin 5,6 %, Black Knight 39 % je Zug; Tier 1 bleibt unter 1,5 %, die Spitze in Tier 4 wird dagegen noch größer.
+
+### 8.6 Offene Fragen und Risiken
+
+1. **Tier 1/2 mit Fernschützen wird auf Stufe 1 härter** (zwei Schützen je Monster, Stufe 1: Verlust 33 % → 44 %, Tote 0,52 → 0,63 je Kampf), weil der Bogen sie nicht mehr in einer Salve beseitigt. Die Gruppe hat dort noch die Zauber und den Nahkampf; falls es zu viel ist, `bowDiv=1,25` (Verlust Stufe 1 einen Punkt niedriger, Bogen-Anteil in Tier 1/2 um 2 bis 6 Punkte höher).
+2. **Bogenschütze und Ninja schießen auch nach dem Vorschlag neben dem Monster**, wenn ihr Schwert schwächer ist (Klassenwert Nahkampf des Bogenschützen 0 gegen 5 im Bogen): der Nahschuss mit halber Trefferchance nimmt dem Bogen den Vorteil gegenüber dem Ritter, nicht gegenüber dem eigenen Schwert. Das ist gewollt, ein Bogenschütze soll schießen.
+3. **Panzerung gegen Schaden:** die Ausrüstung eines Tiers erreicht Rüstung 43 bis 54 ab Tier 3, die physischen Monster schlagen mit 2 bis 30. Der Nahkampf der physischen Monster ist damit ebenfalls fast wirkungslos (Spalte „Nahkampf“ in 8.3: 0,0 % für Archer, Evil Ranger, Cult Leader). Das ist keine Fernkampffrage, aber der Grund, warum sich die Schützen in Tier 1 bis 3 nicht nur über Formeln spürbar machen lassen. Der Hebel dafür wäre der „Mindestdurchschlag“ der Monster (in der Tabelle von 4.1 als `floorVsMonsters` 0,5 geführt, von Ihnen als „wie heute“ gestrichen) oder das Monsterblatt (Schaden der Tier-1-Schützen).
+4. **Wirkung der Rüstungsregel auf Elementarschützen: keine**; die Reihe „Elementar- und Magieschützen“ in 8.3 ändert sich nicht.
+5. **Gegenprobe Simulator gegen Spiel** gilt für den heutigen Stand (Tabelle in 8.1, Abweichung beim Nahkampf: 25 gegen 31 % Verlust); der Vorschlag selbst kann erst gegen die echte Engine geprüft werden, wenn er umgesetzt ist.
+6. **Maskottchen:** Wolf, Fee und Orb sind in den Rechnungen wie in v4; die Szene im Quicksave rechnet mit dem Wolf des Saves.
+7. **Spielweise des Simulators:** der Held wählt je Zug die Aktion mit dem höchsten Mittelwert, ein Spieler spielt oft anders (immer Bogen, immer Schwert). Die Spalte „nur Schwert“ ist die Untergrenze für die Spielweise ohne Bogen.
+
+### 8.7 Umsetzung (erledigt)
+
+| Änderung | Datei und Stelle |
+|---|---|
+| Zahlen (`rangedLevelDivisor` 1,5, `rangedPointBlank` 0,5, `monsterShotArmor` 0,5, `monsterShotFloor` 0,25, `monsterShotsMax` 2; Legacy-Werte 1 / 1 / 1,5 / 0 / 1) | `src/sim/balance.ts`, `RULES` (alle mit dem Kommentar `BALANCE v4`) |
+| Bogenschaden: Stufenanteil, Resistenz, Nahschuss | `src/sim/combat.ts`, `rangedDamage` (`distance` ist schon ein Parameter; Abstand 1 = Monster neben der Gruppe) |
+| Fernschuss der Monster: Rüstung, Mindestschaden | `src/sim/combat.ts`, `monsterDamage`, Zweig `physical` und `ranged` |
+| Schüsse je Zug | `src/sim/encounter.ts`, `monsterTurn`, Zeile `const attacks = ranged ? 1 : def.no_of_attacks` |
+| Werkzeug | `tools/balance/proposals.ts`: `v4` ist jetzt `makeV5("v4", V4_RANGED)`, die alten Formeln heißen `v4pre`; `verify.ts` meldet „OK“ in beiden Modi |
+| Tests | `tests/unit/balanceV4.test.ts` (Bogen gegen Zombie, Nahschuss, Schüsse je Zug, beide Modi) |
+| Texte | `docs/BALANCE_V4_UMSETZUNG.md` (Tabelle ergänzen), `docs/HANDOVER.md` |
+
+`GEN_VERSION` bleibt (Regeln, kein Generator). Die Tabellen aus 8.2 und 8.5 sind nicht neu erzeugt; `v4` im Werkzeug ist ab jetzt das Spiel mit dem Paket, `v4pre` der Stand davor.
+
+### 8.8 Wiederholen
+
+```
+cd game
+npx tsx tools/balance/save.ts Zombie 2 400 5                       # echte Engine: Gruppe aus .ignore/quicksave.json gegen zwei Zombies (Bogen / gemischt / Nahkampf)
+npx tsx tools/balance/save.ts damage                                # Bogen gegen Schwert je Held und Gegner (echte Funktionen)
+npx tsx tools/balance/save.ts sim "v4;v5:bowRes=1;v5:bowRes=1,bowDiv=1.5,bowAdj=0.5" Zombie 2 800 5       # Simulator mit Formelvarianten (SPELLS=1: mit Zaubern)
+BRIEF=1 npx tsx tools/balance/save.ts battery "v4;v5:bowRes=1,bowDiv=1.5,bowAdj=0.5" 1 2 300 5            # alle Monster eines Tiers
+npx tsx tools/balance/bowgrid.ts "--formulas=v4;v5:bowRes=1,bowDiv=1.5,bowAdj=0.5,eArmor=0.5,eFloor=0.25" --rshots=two --runs=250   # Bogen gegen Schwert über das Spiel
+npx tsx tools/balance/bowgrid.ts "--formulas=v4" --only-ranged --type=physical --cells=1:4,3:20,4:30       # nur Gruppen von Fernschützen
+npx tsx tools/balance/shots.ts "--formulas=v4;v5:eArmor=0.5,eFloor=0.25" --rshots=two                     # Schuss gegen Nahkampf je Fernschütze
+```
+
+Die Optionen des Formelsatzes `v5:` (ohne Option = v4): `bowRes`, `bowDiv`, `bowArmor`, `bowAdj`, `minSpeed`, `eHit`, `eArmor`, `eFloor`, `eDmg`; Schüsse je Zug über `--rshots=one|half|two|all`.

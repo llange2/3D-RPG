@@ -134,9 +134,11 @@ export interface CellStats {
   shareSpell: number;
   /** Mean group size. */
   group: number;
+  /** Share of the party's hit points lost to shots from afar, per fight. */
+  rangedLostPct: number;
 }
 
-const zero = (): CellStats => ({ fights: 0, winRate: 0, down: 0, dead: 0, anyDead: 0, hpLostPct: 0, spUsedPct: 0, rounds: 0, battleRounds: 0, xp: 0, gold: 0, kills: 0, shareMelee: 0, shareRanged: 0, shareSpell: 0, group: 0 });
+const zero = (): CellStats => ({ fights: 0, winRate: 0, down: 0, dead: 0, anyDead: 0, hpLostPct: 0, spUsedPct: 0, rounds: 0, battleRounds: 0, xp: 0, gold: 0, kills: 0, shareMelee: 0, shareRanged: 0, shareSpell: 0, group: 0, rangedLostPct: 0 });
 
 function addResult(s: CellStats, r: FightResult, group: number): void {
   s.fights++;
@@ -155,6 +157,7 @@ function addResult(s: CellStats, r: FightResult, group: number): void {
   s.shareRanged += r.dealt.ranged;
   s.shareSpell += r.dealt.spell;
   s.group += group;
+  s.rangedLostPct += r.hpMax > 0 ? r.rangedLost / r.hpMax : 0;
 }
 
 function finish(s: CellStats): CellStats {
@@ -177,6 +180,7 @@ function finish(s: CellStats): CellStats {
     shareRanged: s.shareRanged / dmg,
     shareSpell: s.shareSpell / dmg,
     group: s.group / n,
+    rangedLostPct: s.rangedLostPct / n,
   };
 }
 

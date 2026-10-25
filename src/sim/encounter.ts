@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { isUndead, type MonsterDef } from "../data/tables";
-import { RULES, wolfBelow } from "./balance";
+import { monsterShots, RULES, wolfBelow } from "./balance";
 import { applyHit, meleeDamage, monsterById, monsterDamage, rangedDamage, spellDamageToMonster, type DamageType } from "./combat";
 import { anyoneLeft, canAct, isRifted, itemBonus } from "./character";
 import type { ConditionEvent } from "./conditions";
@@ -395,8 +395,9 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
       // MONSTER_CAN_RANGE_ATTACK_THROUGH_OTHERS is true in the old game: other monsters do not block a shot
       if (!lineOfSight(view, enc, s.monster.x, s.monster.y, px, py, false)) continue;
     }
-    // the number of attacks in a row counts in melee only; a shot from afar is one a turn
-    const attacks = ranged ? 1 : def.no_of_attacks;
+    // the number of attacks in a row counts in full in melee only; BALANCE v4: from afar half of them, at most two (`monsterShots`);
+    // LEGACY (balance v4): a shot from afar was one a turn
+    const attacks = ranged ? monsterShots(def.no_of_attacks) : def.no_of_attacks;
     const distance = Math.max(Math.abs(s.monster.x - px), Math.abs(s.monster.y - py));
     for (let n = 0; n < attacks; n++) {
       let candidates = targets(party);

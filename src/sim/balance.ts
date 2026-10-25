@@ -33,6 +33,18 @@ export const RULES = {
     rangedClassShare: 0.8,
     /** Ranged hit chance: `ACC / (monster speed × distance × factor)`. */
     rangedHitFactor: 1,
+    /** Ranged damage: the level term `(ACC × 0.1 + 0.8 × class) × level` is divided by this (the sword's is divided by 3). */
+    rangedLevelDivisor: 1.5,
+    /** The bow's hit chance is multiplied by this when the monster stands next to the party (distance 1). */
+    rangedPointBlank: 0.5,
+    /** The monster's physical resistance also holds back the bow (it always held back the sword). */
+    rangedResPhysical: true,
+    /** Share of the hero's armor that counts against a physical shot of a monster (the old rule took the armor and half of it again: 1.5). */
+    monsterShotArmor: 0.5,
+    /** A physical shot of a monster does at least this share of its roll, whatever the armor. */
+    monsterShotFloor: 0.25,
+    /** A monster with a ranged attack fires `ceil(attacks / 2)` shots a turn from afar, at most this many. */
+    monsterShotsMax: 2,
     /** The Wolf kills a monster that is below this share of its health. */
     wolfBelow: 0.1,
     /** The Fairy takes this many points off every elemental hit. */
@@ -58,6 +70,12 @@ export const RULES = {
     meleeLevelDivisor: 1,
     rangedClassShare: 1,
     rangedHitFactor: 0.5,
+    rangedLevelDivisor: 1,
+    rangedPointBlank: 1,
+    rangedResPhysical: false,
+    monsterShotArmor: 1.5,
+    monsterShotFloor: 0,
+    monsterShotsMax: 1,
     wolfBelow: 0.9,
     /** The old game's value lives in the generated constants (`MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION`, 20). */
     fairyReduction: 20,
@@ -66,6 +84,15 @@ export const RULES = {
     trainingPerLevel: 250,
   },
 } as const;
+
+/**
+ * Shots a monster with a ranged attack fires in one turn from afar. BALANCE v4: `ceil(attacks / 2)`, at most `monsterShotsMax` (the Black Knight,
+ * 7 attacks, fires 2); LEGACY (balance v4): always one. In melee a monster still makes all its attacks.
+ */
+export const monsterShots = (attacks: number): number => {
+  const rules = isV4() ? RULES.v4 : RULES.legacy;
+  return Math.max(1, Math.min(rules.monsterShotsMax, Math.ceil(attacks / 2)));
+};
 
 export const healthFlat = (): number => (isV4() ? RULES.v4.healthFlat : RULES.legacy.healthFlat);
 export const wolfBelow = (): number => (isV4() ? RULES.v4.wolfBelow : RULES.legacy.wolfBelow);
