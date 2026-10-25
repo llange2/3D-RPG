@@ -371,8 +371,8 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
       }
       // the old ground tile under whatever else stands on the tile, trees and mountains too: their models bring a slab of their own, but some
       // (the swamp's old tree, the mountains) sink it or lack it, and the dark base quad showed around them as a lower floor. The ground tile
-      // lies a hair above such a slab, so the slab is hidden and the ground is the same all over. A bridge and water have none.
-      const groundTile = tileModels && !flatTiles && tile.ground !== GROUND.BRIDGE ? GROUND_TILES[tile.ground === GROUND.MOUNTAIN ? landMaterial(tile.biome) : material] : undefined;
+      // lies a hair above such a slab, so the slab is hidden and the ground is the same all over. Water has none; a bridge is cobblestone like the road.
+      const groundTile = tileModels && !flatTiles ? GROUND_TILES[tile.ground === GROUND.MOUNTAIN ? landMaterial(tile.biome) : material] : undefined;
       if (groundTile) {
         const model = groundModel(groundTile.model);
         // the full tiles of the original set are nearly square, they keep the old game's size

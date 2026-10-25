@@ -8,7 +8,7 @@ import { assetPath } from "../ui/dom";
  * question mark of events and the way out are painted tiles in six grounds (`mm_tiles.png`, see `build-minimap.ts`): on the overworld each stands on
  * the ground of its region, in an interior on the `town` ground, which is the colour of the old floor.
  */
-export type GroundName = "grass" | "forest" | "desert" | "snow" | "swamp" | "volcanic" | "dirt" | "floor" | "lava" | "cobble" | "shore";
+export type GroundName = "grass" | "forest" | "desert" | "snow" | "swamp" | "volcanic" | "dirt" | "road" | "floor" | "lava" | "cobble" | "shore";
 export type DrawingName = "mountain" | "trees" | "palms";
 /** The painted symbols of places and events; the ground is the colour of the tile they stand on. */
 export type PlaceName = "town" | "castle" | "dungeon" | "pyramid" | "event" | "exit";
@@ -28,6 +28,8 @@ interface Register {
 const DERIVED: Partial<Record<GroundName, { from: string; by: [number, number, number] }>> = {
   forest: { from: "grass", by: [0.78, 0.85, 0.78] },
   volcanic: { from: "dirt", by: [0.95, 0.3, 0.24] },
+  // dark brown, so that a road does not read as a patch of dirt
+  road: { from: "dirt", by: [0.62, 0.52, 0.42] },
   shore: { from: "desert", by: [0.95, 0.95, 0.95] },
 };
 
@@ -37,7 +39,7 @@ const INTERIOR_GROUND: PlaceGround = "town";
 /** The painted ground that goes with a ground of the overworld map (the sheet has no cobblestone, bridge or plain dirt tile). */
 const PLACE_GROUND: Record<GroundName, PlaceGround> = {
   grass: "meadow", forest: "forest", desert: "desert", snow: "snow", swamp: "swamp", volcanic: "lava", lava: "lava",
-  dirt: "desert", floor: "desert", cobble: "desert", shore: "desert",
+  dirt: "desert", road: "desert", floor: "desert", cobble: "desert", shore: "desert",
 };
 export const placeGroundOf = (ground: GroundName): PlaceGround => PLACE_GROUND[ground];
 
