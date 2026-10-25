@@ -75,6 +75,10 @@ const SHORE_LAND: ReadonlySet<Ground> = new Set([GROUND.LAND, GROUND.ROAD, GROUN
  * in the sea is an island the party can walk round, with the shore (shallow water) outside it.
  */
 const FLATTEN = 2;
+/** The ring of lava round a place on a lava island (see `composeTile`); the footprint itself stays a block. */
+const LAVA_RING = 1;
+/** Tiles of sea in a row that the lava stream into an island may cross on its way to the open sea (see `lavaEntry`). */
+const LANDING_GAP = 3;
 /**
  * Light vegetation near the ways: within `VEG_NEAR` tiles of a road or a place the trees stand on a loose lattice (at least two free tiles
  * between any two), out to `VEG_FAR` the old woods thin out step by step. Further away woods and mountains stay as thick as the noise makes them,
@@ -794,9 +798,16 @@ export class World {
     for (const s of SIDES) {
       // not back into the town
       if (s.dx === -out.dx && s.dy === -out.dy) continue;
-      let k = 1;
-      while (k <= isl.reach + 2 && fieldAt(isl, wrapDelta(isl.x, stub.x + s.dx * k, this.width), wrapDelta(isl.y, stub.y + s.dy * k, this.height)) > 0) k++;
-      if (!best || k < best.k) best = { k, end: { x: stub.x + s.dx * (k - 1), y: stub.y + s.dy * (k - 1) } };
+      // a notch of sea in the coast (up to three tiles) does not end the run: the landing is where the raster of the island really ends
+      let last = 0;
+      for (let k = 1, gap = 0; k <= isl.reach + 2 && gap <= LANDING_GAP; k++) {
+        if (fieldAt(isl, wrapDelta(isl.x, stub.x + s.dx * k, this.width), wrapDelta(isl.y, stub.y + s.dy * k, this.height)) > 0) {
+          last = k;
+          gap = 0;
+        } else gap++;
+      }
+      const k = last + 1;
+      if (!best || k < best.k) best = { k, end: { x: stub.x + s.dx * last, y: stub.y + s.dy * last } };
     }
     if (!best) return [];
     const boxes: Box[] = pois.map((p) => ({ ...poiBounds(p), own: p === town }));
@@ -934,11 +945,15 @@ export class World {
     let cleared = false;
     for (const p of places) {
       const b = poiBounds(p);
-      if (tx < b.x0 - FLATTEN || tx > b.x1 + FLATTEN || ty < b.y0 - FLATTEN || ty > b.y1 + FLATTEN) continue;
+      // a lava island clears one tile of lava round a place, other islands `FLATTEN` tiles of plain ground
+      const lavaRing = p.biome === BIOME.LAVA;
+      const room = lavaRing ? LAVA_RING : FLATTEN;
+      if (tx < b.x0 - room || tx > b.x1 + room || ty < b.y0 - room || ty > b.y1 + room) continue;
       cleared = true;
       if (ground === GROUND.WATER || ground === GROUND.MOUNTAIN || ground === GROUND.LAVA_POOL || ground === GROUND.SHALLOW) {
         ground = GROUND.LAND;
       }
+      if (lavaRing) ground = GROUND.LAVA_POOL;
       deco = DECO.NONE;
       biome = p.biome;
       elevation = this.flatElevation.get(p.id)!;

@@ -53,7 +53,7 @@ function groundMaterial(t: TileInfo): string {
     case GROUND.ROAD:
     case GROUND.PASS:
     case GROUND.BRIDGE:
-      return "road";
+      return "cobble";
     case GROUND.MOUNTAIN:
       return t.biome === BIOME.SNOW ? "snow" : t.biome === BIOME.LAVA ? "lava_ground" : t.biome === BIOME.DESERT ? "desert" : "rock";
     default:
@@ -190,7 +190,8 @@ const GROUND_TILES: Partial<Record<string, PropSpec>> = {
   snow: { model: "gnd_snow", scale: GROUND_FILL * 1.7, scaleXYZ: [GROUND_FILL * 1.7, 1, GROUND_FILL * 1.7] },
   swamp: { model: "gnd_swamp", scale: GROUND_FILL * 1.7, scaleXYZ: [GROUND_FILL * 1.7, 1, GROUND_FILL * 1.7] },
   desert: { model: "gnd_desert", scale: GROUND_FILL * 1.65, scaleXYZ: [GROUND_FILL * 1.65, 1, GROUND_FILL * 1.65] },
-  road: { model: "gnd_dirt", scale: 1.54, scaleXYZ: [1.54, 1, 1.54] },
+  // the ways are cobblestone (`Cobblestone.obj`, as the old game's block 9), not the dirt of block 12; its slab is as thin as a plate, so the old game's height factor 2
+  cobble: { model: "gnd_cobble", scale: 1.54, scaleXYZ: [1.54, 2, 1.54] },
 };
 
 let flatTiles: FlatTileSet | null = null;
@@ -309,7 +310,7 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
     const slow = water ? 1 : 0.88 + (valueNoise2(0x1234, tx, ty, 9) / 65535) * 0.24;
     let shade = jitter * slow;
     if (tile.ground === GROUND.MOUNTAIN) shade *= 0.8 + Math.min(0.5, (th(lx, ly) - 2.4) / 14);
-    if (tileModels && !flatTiles && material !== "road" && GROUND_TILES[material]) shade *= BASE_BOOST;
+    if (tileModels && !flatTiles && material !== "cobble" && GROUND_TILES[material]) shade *= BASE_BOOST;
     const uvScale = water ? WATER_UV_SCALE : UV_SCALE;
     const color: [number, number, number] = [shade, shade, shade];
 

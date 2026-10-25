@@ -89,5 +89,6 @@
  * 25 = twenty-eighth playtest: the lava islands (the island of level 5 is always one; a large or huge world has a second; no other island has the climate) are rock
  * and lava all over, their ways are streams of lava one or two tiles wide that run through the mountains (`RoadSeg.lava`), walkable at the price of 25 points of fire damage
  * a step (`sim/lava.ts`); meadows and forests have patches of bare earth (`TileInfo.dirt`); the places of a lava island are fewer.
+ * 26 = the ground cleared round a place on a lava island is one tile wide (was two) and lava (was plain ground).
  */
-export const GEN_VERSION = 25;
+export const GEN_VERSION = 26;
