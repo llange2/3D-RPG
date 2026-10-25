@@ -30,7 +30,7 @@ export const GROUND = {
   PASS: 6, // road through mountains
   // 8 and 9 were the walkable yard and the gate tile of the walled POIs of generator version 1
   POI_BLOCK: 7, // footprint of a town, castle, dungeon entrance or cave: blocks movement, walking into it asks to enter
-  LAVA_POOL: 10, // blocks movement
+  LAVA_POOL: 10, // walkable, but every step burns the party (`World` lays it as the ways of a lava island)
 } as const;
 export type Ground = (typeof GROUND)[keyof typeof GROUND];
 
@@ -107,6 +107,8 @@ export interface TileInfo {
   elevation: number;
   /** Index into `World.poisNear` result is not stable; use the POI id instead. */
   poiId: string | null;
+  /** Bare earth in the grass of a meadow or forest island: the ground is painted dirt, whatever the biome says. */
+  dirt?: boolean;
 }
 
 /** The tiles a place stands on, both ends inclusive. */
@@ -134,7 +136,8 @@ export function isGroundWalkable(g: Ground): boolean {
     g === GROUND.SHALLOW ||
     g === GROUND.ROAD ||
     g === GROUND.BRIDGE ||
-    g === GROUND.PASS
+    g === GROUND.PASS ||
+    g === GROUND.LAVA_POOL
   );
 }
 

@@ -9,7 +9,7 @@ import { BIOME, GROUND, WORLD_SIZES, isTileWalkable, poiEntrances, wrapDelta, ty
 import { fieldAt, type Island } from "../../src/world/islands";
 import { World } from "../../src/world/world";
 
-const SEEDS = ["alpha", "beta", "gamma", "delta", "eps", "seed-3", "seed-7", "dune-keep-451"];
+const SEEDS = ["alpha", "beta", "gamma", "delta", "zeta", "seed-3", "seed-7", "dune-keep-451"];
 const SIZES: WorldSize[] = ["small", "default", "large", "huge"];
 /** The share of the world that is land, in percent (the user's wish, 22nd playtest, follow-up). */
 const LAND_SHARE: Record<WorldSize, number> = { small: 50, default: 46, large: 43, huge: 40 };
@@ -129,73 +129,7 @@ describe("22nd playtest, point 2: never more small islands than big ones", () =>
   });
 });
 
-describe("22nd playtest, point 1d and e: lava rings and rivers", () => {
-  it("rings a lava island with mountains and leaves a way in", () => {
-    let lava = 0;
-    for (const seed of SEEDS) {
-      const world = new World(seed, "large");
-      for (const isl of world.islands.filter((i) => i.biome === BIOME.LAVA && i.area > 150)) {
-        lava++;
-        // the coast: land tiles with sea within two tiles
-        let coast = 0;
-        let mountain = 0;
-        let open = 0;
-        for (const t of landOf(world, isl)) {
-          const nearSea = [[2, 0], [-2, 0], [0, 2], [0, -2], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([ax, ay]) => fieldAt(isl, t.dx + ax!, t.dy + ay!) <= 0);
-          if (!nearSea) continue;
-          coast++;
-          const g = world.tile(t.x, t.y).ground;
-          if (g === GROUND.MOUNTAIN) mountain++;
-          // the way in: the strip through the middle of the island in the direction of `entry` is open
-          const along = t.dx * isl.entry.x + t.dy * isl.entry.y;
-          const across = Math.abs(t.dx * isl.entry.y - t.dy * isl.entry.x);
-          if (along > 0 && across <= 3 * 1024) {
-            open++;
-            expect(g === GROUND.MOUNTAIN || g === GROUND.LAVA_POOL, `${seed} island ${isl.index} way in at ${t.x},${t.y}`).toBe(false);
-          }
-        }
-        expect(mountain / coast, `${seed} island ${isl.index} ring`).toBeGreaterThan(0.4);
-        expect(mountain, `${seed} island ${isl.index}: not all of the coast`).toBeLessThan(coast);
-        expect(open, `${seed} island ${isl.index} has a way in`).toBeGreaterThan(2);
-      }
-    }
-    expect(lava).toBeGreaterThan(2);
-  });
-
-  it("lets the party walk from the way in to the places of a lava island", () => {
-    let checked = 0;
-    for (const seed of SEEDS) {
-      const world = new World(seed, "large");
-      const { width, height } = WORLD_SIZES.large;
-      for (const isl of world.islands.filter((i) => i.biome === BIOME.LAVA && i.area > 150)) {
-        // the outermost land tile of the strip
-        let k = 0;
-        while (fieldAt(isl, Math.round((isl.entry.x * (k + 1)) / 1024), Math.round((isl.entry.y * (k + 1)) / 1024)) > 0 || k < 2) k++;
-        const sx = world.wrapX(isl.x + Math.round((isl.entry.x * k) / 1024));
-        const sy = world.wrapY(isl.y + Math.round((isl.entry.y * k) / 1024));
-        const seen = new Set<number>([sy * width + sx]);
-        const stack: [number, number][] = [[sx, sy]];
-        while (stack.length > 0) {
-          const [x, y] = stack.pop()!;
-          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-            const nx = world.wrapX(x + dx);
-            const ny = world.wrapY(y + dy);
-            const key = ny * width + nx;
-            if (seen.has(key) || !isTileWalkable(world.tile(nx, ny))) continue;
-            seen.add(key);
-            stack.push([nx, ny]);
-          }
-        }
-        void height;
-        const pois = world.region(isl.index, 0).pois;
-        const reached = pois.filter((p) => seen.has(world.wrapY(poiEntrances(p)[0]!.y) * width + world.wrapX(poiEntrances(p)[0]!.x)));
-        expect(reached.length, `${seed} island ${isl.index}: places reached from the way in`).toBe(pois.length);
-        checked++;
-      }
-    }
-    expect(checked).toBeGreaterThan(2);
-  });
-
+describe("22nd playtest, point 1e: rivers (the lava rings of point 1d went in the 28th playtest, see playtest28.test.ts)", () => {
   it("has no river on a lava or desert island, rivers on the meadow and the swamp, and more of them in the swamp", () => {
     const share: Record<number, { area: number; water: number }> = {};
     for (const seed of SEEDS) {

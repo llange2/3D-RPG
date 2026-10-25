@@ -144,7 +144,8 @@ describe("nineteenth playtest: roads end at the entrance (points 6 and 11)", () 
             // the road the place hangs on arrives at the middle of the door
             const front = entrances[0]!;
             // (a place alone on its island has no road to walk)
-            if (world.region(rx, ry).pois.length > 1) expect(isRoad(world.tile(front.x, front.y).ground), `${p.id} has no road at its door`).toBe(true);
+            // (nor has a place of a lava island: its ways are streams of lava that end at the cleared ground round the place)
+            if (world.region(rx, ry).pois.length > 1 && world.islands[rx]!.biome !== BIOME.LAVA) expect(isRoad(world.tile(front.x, front.y).ground), `${p.id} has no road at its door`).toBe(true);
             // a road that stops at a wall of the place (not at its door) is a fault, a rare one when a road has to pass another place
             const { dx, dy } = { N: { dx: 0, dy: -1 }, E: { dx: 1, dy: 0 }, S: { dx: 0, dy: 1 }, W: { dx: -1, dy: 0 } }[p.side];
             for (let y = bb.y0 - 1; y <= bb.y1 + 1; y++) {
@@ -181,7 +182,9 @@ describe("nineteenth playtest: roads end at the entrance (points 6 and 11)", () 
       for (const ry of [0]) {
         for (const rx of world.islands.map((i) => i.index)) {
           for (const seg of world.region(rx, ry).roads) {
-            expect(seg.x0 === seg.x1 || seg.y0 === seg.y1, "straight").toBe(true);
+            // (a stream of lava is one or two tiles wide)
+            expect(seg.horizontal ? seg.y1 - seg.y0 === seg.width - 1 : seg.x1 - seg.x0 === seg.width - 1, "straight").toBe(true);
+            expect(seg.width === 1 || seg.lava, "only lava is wider than one tile").toBe(true);
             pieces++;
             if (seg.to - seg.from < 2) short++;
           }

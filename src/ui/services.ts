@@ -78,6 +78,18 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
     };
     const row = (left: Node | string, right: Node | string, onclick?: () => void, disabled = false) =>
       h("div", { class: `opt${disabled ? " off" : ""}`, style: "color:var(--text);background:#00000033;border:1px solid var(--gold-dim);padding:5px 10px;border-radius:5px;margin-top:4px;display:flex;justify-content:space-between;gap:12px;align-items:center;cursor:" + (disabled || !onclick ? "default" : "pointer") + (disabled ? ";opacity:0.5" : ""), onclick: disabled ? undefined : onclick }, left as string, right as string);
+    /**
+     * An item of the smithy: its picture, its name and its values on one line (cut off with dots where the row is too narrow: the rings of the highest level
+     * carry many); the mouseover text lists all of them.
+     */
+    const itemLabel = (item: Item, size: number) => {
+      const stats = bonusDescription(item);
+      const name = item.name.trim();
+      return h("span", { title: stats ? `${name}\n${stats}` : name, style: "display:flex;gap:10px;align-items:center;min-width:0" }, itemIcon(item, size),
+        h("span", { style: "min-width:0" },
+          h("div", { text: name }),
+          stats ? h("div", { class: "small", style: "opacity:0.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis", text: stats.replace(/\n/g, ", ") }) : null));
+    };
     const refresh = () => {
       ctx.changed();
       render();
@@ -156,8 +168,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
         stock.forEach((s, n) => {
           if (ctx.soldOut?.has(soldKey(n)) || s.shelf !== smithShelf) return;
           left++;
-          const bonus = bonusDescription(s.item).replace(/\n/g, ", ");
-          root.append(row(h("span", { style: "display:flex;gap:10px;align-items:center" }, itemIcon(s.item, 44), h("span", {}, h("div", { text: s.item.name.trim() }), h("div", { class: "small", style: "opacity:0.75", text: bonus }))), `${thousands(s.price)} gold`, () => {
+          root.append(row(itemLabel(s.item, 44), `${thousands(s.price)} gold`, () => {
             const r = buyItem(party, s);
             if (r.ok) {
               ctx.soldOut?.add(soldKey(n));
@@ -177,7 +188,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           const item = c.inventory[slot];
           if (!item || item.quest) continue;
           any = true;
-          root.append(row(h("span", { style: "display:flex;gap:10px;align-items:center" }, itemIcon(item, 40), h("span", { text: item.name.trim() })), `sell for ${thousands(sellPrice(item, party))}`, () => {
+          root.append(row(itemLabel(item, 40), `sell for ${thousands(sellPrice(item, party))}`, () => {
             if (sellItem(party, sellWho, slot)) {
               ctx.sound?.(9000);
               note(`Sold ${item.name.trim()}.`, "good");

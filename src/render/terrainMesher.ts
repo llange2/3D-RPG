@@ -57,7 +57,8 @@ function groundMaterial(t: TileInfo): string {
     case GROUND.MOUNTAIN:
       return t.biome === BIOME.SNOW ? "snow" : t.biome === BIOME.LAVA ? "lava_ground" : t.biome === BIOME.DESERT ? "desert" : "rock";
     default:
-      return landMaterial(t.biome);
+      // bare earth in the grass: the ground of the lava land, which is earth as well
+      return t.dirt ? "lava_ground" : landMaterial(t.biome);
   }
 }
 

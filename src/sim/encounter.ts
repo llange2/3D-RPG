@@ -10,6 +10,11 @@ import type { Condition, Item, Party, TimedEffect } from "./types";
 
 /** Radius (in tiles) within which monsters notice and attack the party (MONSTER_ACTION_RADIUS of the old game). */
 export const MONSTER_ACTION_RADIUS = 7;
+/**
+ * How far the party shoots, in tiles along the longer axis (the old game: one less than the action radius, 28th playtest: one more). It must never exceed the
+ * action radius, which is measured the same way: a monster that can be shot at is awake, and the party can shoot back at every monster that shoots at it.
+ */
+export const SHOT_RANGE = MONSTER_ACTION_RADIUS;
 /** Share of a Clumsy monster's attacks that do not take place. */
 const CLUMSY_MISS = 0.1;
 const PATH_STEP_LIMIT = 30;
@@ -113,8 +118,10 @@ class MinHeap {
     return this.items.length;
   }
   private less(a: HeapItem, b: HeapItem): boolean {
-    // same tie-break as Python's tuple comparison (priority, distance, position)
-    return a.priority !== b.priority ? a.priority < b.priority : a.dist !== b.dist ? a.dist < b.dist : a.x !== b.x ? a.x < b.x : a.y < b.y;
+    // Of two nodes with the same priority the one that has come farther goes first (the old game's tuple order took the nearer one, so that on an open
+    // field every node of the rectangle to the goal was searched before the goal itself: a monster seven tiles off on the diagonal found no way
+    // within the step limit and stood still while the party shot at it); then by position, so that the order stays fixed
+    return a.priority !== b.priority ? a.priority < b.priority : a.dist !== b.dist ? a.dist > b.dist : a.x !== b.x ? a.x < b.x : a.y < b.y;
   }
   push(item: HeapItem): void {
     const a = this.items;
@@ -291,13 +298,13 @@ export function isPhased(m: MonsterInstance): boolean {
 }
 
 function scan(view: GridView, enc: Encounter, px: number, py: number, radius: number): Scanned[] {
-  const r2 = radius * radius;
   const found: Scanned[] = [];
   for (const monster of enc.monsters) {
     if (monster.hp <= 0 || isPhased(monster)) continue;
-    const d2 = (monster.x - px) ** 2 + (monster.y - py) ** 2;
-    if (d2 > r2) continue;
-    const path = wayToPlayer(view, monsterById(monster.defId), monster.x, monster.y, px, py, radius);
+    // the square the party shoots into and the search box of `wayToPlayer` (a circle left monsters asleep in the corners that the party could already hit)
+    if (Math.max(Math.abs(monster.x - px), Math.abs(monster.y - py)) > radius) continue;
+    // the search that moves the monster: whoever has a way to go is awake (the shorter search of the old game missed ways that were there)
+    const path = wayToPlayer(view, monsterById(monster.defId), monster.x, monster.y, px, py, radius, undefined, MOVE_STEP_LIMIT);
     found.push({ monster, path, steps: path ? path.length : 9999 });
   }
   return found.sort((a, b) => a.steps - b.steps);
@@ -596,7 +603,7 @@ export function partyAttack(party: Party, view: GridView, enc: Encounter, px: nu
   let damage = 0;
   let shots = 1;
   if (attack.kind === "ranged") {
-    if (distance > MONSTER_ACTION_RADIUS - 1) return [{ type: "denied", reason: "out_of_range" }];
+    if (distance > SHOT_RANGE) return [{ type: "denied", reason: "out_of_range" }];
     if (!enc.battleMode) {
       let arrows = 0;
       for (const c of party.characters) {
@@ -832,7 +839,7 @@ export interface MonsterReport {
 /** Identify Monster: what the party learns about every monster within the action radius. */
 export function identifyMonsters(enc: Encounter, px: number, py: number): MonsterReport[] {
   return enc.monsters
-    .filter((m) => m.hp > 0 && (m.x - px) ** 2 + (m.y - py) ** 2 <= MONSTER_ACTION_RADIUS ** 2)
+    .filter((m) => m.hp > 0 && Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= MONSTER_ACTION_RADIUS)
     .sort((a, b) => (a.x - px) ** 2 + (a.y - py) ** 2 - ((b.x - px) ** 2 + (b.y - py) ** 2))
     .map((m) => {
       const def = monsterById(m.defId);

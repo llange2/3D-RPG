@@ -14,7 +14,7 @@ const BIOME_COLOR: Record<number, string> = {
   [BIOME.DESERT]: "#d3b564",
   [BIOME.SNOW]: "#e6eef5",
   [BIOME.SWAMP]: "#566b3a",
-  [BIOME.LAVA]: "#8a3a22",
+  [BIOME.LAVA]: "#9a7a52",
   [BIOME.OCEAN]: "#2c5fa0",
 };
 
@@ -25,7 +25,7 @@ function tileColor(t: TileInfo): string {
     case GROUND.SHALLOW:
       return "#5a95d0";
     case GROUND.MOUNTAIN:
-      return "#6c6860";
+      return t.biome === BIOME.LAVA ? "#a04030" : "#6c6860";
     case GROUND.ROAD:
     case GROUND.PASS:
       return "#b98b52";
@@ -36,7 +36,7 @@ function tileColor(t: TileInfo): string {
     case GROUND.LAVA_POOL:
       return "#ff6a1a";
     default:
-      return t.deco === 1 ? "#1f4a1c" : t.deco === 5 ? "#a07a4a" : (BIOME_COLOR[t.biome] ?? "#4f9a3a");
+      return t.deco === 1 ? "#1f4a1c" : t.deco === 5 ? "#a07a4a" : t.dirt ? "#9a7a52" : (BIOME_COLOR[t.biome] ?? "#4f9a3a");
   }
 }
 
@@ -97,12 +97,14 @@ export interface MapView {
 
 /** The ground a tile of the overworld stands on, for the sheet's tinted tiles. */
 function groundName(t: TileInfo): GroundName {
+  // bare earth in the grass, and the cleared ground on a lava island, is dirt; only the rock of a lava island is the red ground of the volcano
+  if (t.dirt) return "dirt";
   switch (t.biome) {
     case BIOME.FOREST: return "forest";
     case BIOME.DESERT: return "desert";
     case BIOME.SNOW: return "snow";
     case BIOME.SWAMP: return "swamp";
-    case BIOME.LAVA: return "volcanic";
+    case BIOME.LAVA: return t.ground === GROUND.MOUNTAIN ? "volcanic" : "dirt";
     case BIOME.OCEAN: return "shore";
     default: return "grass";
   }
@@ -119,8 +121,11 @@ export interface MapEvent {
 const POI_SYMBOL: Record<string, PlaceName> = { town: "town", castle: "castle", dungeon: "dungeon", cave: "dungeon", pyramid: "pyramid" };
 const poiSymbolOf = (p: { kind: string; size: number }): PlaceName => POI_SYMBOL[p.kind === "dungeon" && p.size === 3 ? "pyramid" : p.kind] ?? "dungeon";
 
-/** The painted ground a place or an event stands on: the ground of its tile, so that the symbol says which region it lies in. */
-const placeGroundAt = (world: World, x: number, y: number): PlaceGround => placeGroundOf(groundName(world.tile(x, y)));
+/** The painted ground a place or an event stands on: the ground of its tile, so that the symbol says which region it lies in (a lava island's is the painted lava ground). */
+const placeGroundAt = (world: World, x: number, y: number): PlaceGround => {
+  const t = world.tile(x, y);
+  return placeGroundOf(t.biome === BIOME.LAVA ? "volcanic" : groundName(t));
+};
 
 /** One tile of the overworld as a picture of the sheet: ground (tinted), a drawing on it, or a symbol. Null for a tile of a place, which is drawn as a whole. */
 function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t: TileInfo, x: number, y: number, w: number): void {
@@ -448,7 +453,8 @@ export const OVERWORLD_LEGEND: LegendEntry[] = [
   { color: BIOME_COLOR[BIOME.DESERT]!, label: "Desert (palms)", icon: { ground: "desert", drawing: "palms" } },
   { color: BIOME_COLOR[BIOME.SNOW]!, label: "Snow", icon: { ground: "snow" } },
   { color: BIOME_COLOR[BIOME.SWAMP]!, label: "Swamp", icon: { ground: "swamp" } },
-  { color: BIOME_COLOR[BIOME.LAVA]!, label: "Volcanic ground", icon: { ground: "volcanic" } },
+  { color: "#9a7a52", label: "Dirt", icon: { ground: "dirt" } },
+  { color: "#a04030", label: "Lava mountains", icon: { ground: "volcanic", drawing: "mountain" } },
   { color: "#6c6860", label: "Mountains", icon: { ground: "grass", drawing: "mountain" } },
   { color: "#2c5fa0", label: "Deep water", icon: { symbol: "water" } },
   { color: "#5a95d0", label: "Shallow water", icon: { symbol: "water", veil: true } },
@@ -550,7 +556,7 @@ export function describeOverworldTile(world: World, explored: Explored, x: numbe
   switch (t.ground) {
     case GROUND.WATER: return "Deep water";
     case GROUND.SHALLOW: return "Shallow water";
-    case GROUND.MOUNTAIN: return "Mountains";
+    case GROUND.MOUNTAIN: return t.biome === BIOME.LAVA ? "Lava mountains" : "Mountains";
     case GROUND.ROAD: return "Road";
     case GROUND.PASS: return "Mountain pass";
     case GROUND.BRIDGE: return "Bridge";
@@ -558,7 +564,8 @@ export function describeOverworldTile(world: World, explored: Explored, x: numbe
   }
   if (t.deco === 1) return "Trees";
   if (t.deco === 5) return "Well, hut or other landmark";
-  return ["Meadow", "Forest floor", "Desert", "Snow", "Swamp", "Volcanic ground", "Shore"][t.biome] ?? "Open ground";
+  if (t.dirt) return "Dirt";
+  return ["Meadow", "Forest floor", "Desert", "Snow", "Swamp", "Dirt", "Shore"][t.biome] ?? "Open ground";
 }
 
 /** What is in a cell of an interior map (only for cells the party has seen). */

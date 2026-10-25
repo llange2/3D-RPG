@@ -8,6 +8,8 @@
  *  - a bridge always joins that island with the level-3 island (index 1), which lies beyond the level-2 half;
  *  - level 4 and level 5 each have an island of their own (indices 2 and 3) and never share one;
  *  - more big islands of level 4 or 5 the bigger the world, and **never more small islands than big ones** (the old outside map has seven of each);
+ *  - the lava islands (the user's rules, 28th playtest): the island of level 5 is always one, and a large or huge world has a second one (index 4); no other island has
+ *    the lava climate, and a small or default world has exactly one lava island;
  *  - no island is a circle: each one is a different shape (an organic continent, an oval with bulges, a triangle, a long strip, a ring of land round a
  *    bay with a small island in it), made of a few ellipses, warped and roughened by noise.
  *
@@ -55,8 +57,6 @@ export interface Island {
   box: { x0: number; x1: number; y0: number; y1: number };
   /** The bay of an island that has one (relative to the centre): a small island may lie in it. */
   bay: { x: number; y: number; r: number } | null;
-  /** The way into a mountain-ringed island (a lava island closes its coast with mountains, but never all of it): a direction in 1/1024, or (0, 0). */
-  entry: { x: number; y: number };
 }
 
 export interface Layout {
@@ -107,15 +107,22 @@ const BRIDGE_GAP = 6;
 const START_CLEARANCE = 12;
 /** Land keeps this far from the seam: two rows of sea on each side of it (the user's minimum), the shallows included. */
 export const ISLAND_EDGE = 2;
-/** Climates by weight; the start island is always a meadow. */
+/** Climates by weight; the start island is always a meadow. The lava climate is not drawn here: the lava islands are fixed (`LAVA_ISLANDS`). */
 const BIOME_WEIGHTS: readonly (readonly [Biome, number])[] = [
   [BIOME.MEADOW, 24],
   [BIOME.FOREST, 20],
   [BIOME.DESERT, 14],
   [BIOME.SNOW, 14],
   [BIOME.SWAMP, 14],
-  [BIOME.LAVA, 14],
 ];
+/** How many lava islands a world has: the island of level 5 (index 3) always, and on a large or huge world the first of the other big islands (index 4) too. */
+const LAVA_ISLANDS: Record<WorldSize, number> = { small: 1, default: 1, large: 2, huge: 2 };
+/** Index of the second lava island. */
+const SECOND_LAVA = 4;
+/** Is island `index` of this world one of the lava islands? */
+function isLava(index: number, size: WorldSize): boolean {
+  return index === 3 || (index === SECOND_LAVA && LAVA_ISLANDS[size] > 1);
+}
 /** The look of a coast by climate (weights): lava lies in ovals, snow in strips, desert in triangles, as on the old outside map; any climate may have a bay. */
 const KIND_WEIGHTS: Record<number, readonly (readonly [ShapeKind, number])[]> = {
   [BIOME.MEADOW]: [["blob", 40], ["bay", 25], ["triangle", 20], ["oval", 15]],
@@ -613,8 +620,9 @@ function growIslands(placed: Placed[], width: number, height: number, goal: numb
 }
 
 /** The climate of island `index`: a pure function of the seed and the index (the shape depends on it, the placing does not). */
-function biomeOf(seed: SeedState, index: number): Biome {
+function biomeOf(seed: SeedState, index: number, size: WorldSize): Biome {
   if (index === 0) return BIOME.MEADOW;
+  if (isLava(index, size)) return BIOME.LAVA;
   const rng = rngFor(seed, LAYER.TERRAIN, "island", index);
   return BIOME_WEIGHTS[rng.weightedIndex(BIOME_WEIGHTS.map((b) => b[1]))]![0];
 }
@@ -677,7 +685,9 @@ function makeLayout(seed: SeedState, size: WorldSize): Layout {
     placed = [];
 
     const make = (index: number, r: number, big: boolean): Placed => {
-      const biome = biomeOf(seed, index);
+      // the two main islands of level 4 and 5 may swap their indices once the distances are known (below): both are shaped as lava islands, so that the one
+      // that ends up with the lava climate has a shape that suits it
+      const biome = index === 2 || isLava(index, size) ? BIOME.LAVA : biomeOf(seed, index, size);
       const table = index === 0 ? null : big ? KIND_WEIGHTS[biome]! : SMALL_KINDS;
       const kindRng = rngFor(seed, LAYER.TERRAIN, "kind", index, attempt);
       const kind: ShapeKind = index === 0 ? "continent" : table![kindRng.weightedIndex(table!.map((k) => k[1]))]![0];
@@ -802,7 +812,9 @@ function makeLayout(seed: SeedState, size: WorldSize): Layout {
     const goal = (cellCount * LAND_TARGET[size] * 9) / 10000;
     for (let n = 4, misses = 0; land < goal && n < BIG_MAX[size] && misses < 4; ) {
       let done = false;
-      for (let r = shrink(bigs.lo + rng.int(bigs.hi - bigs.lo + 1)); r >= BIG_RADIUS && !done; r -= 2) {
+      // the second lava island is as big as the main islands of levels 4 and 5 (a medium island: a lava island is neither a speck nor a continent)
+      const first = placed.length === SECOND_LAVA && isLava(SECOND_LAVA, size) ? shrink(MAIN_RADIUS[size][3]) : shrink(bigs.lo + rng.int(bigs.hi - bigs.lo + 1));
+      for (let r = first; r >= BIG_RADIUS && !done; r -= 2) {
         const p = make(placed.length, r, true);
         // the free spot that sits closest against the islands that are there already: they pack together and leave the open sea in one piece
         const found = spots(p, 16, 400);
@@ -815,6 +827,8 @@ function makeLayout(seed: SeedState, size: WorldSize): Layout {
       if (done) n++;
       else misses++;
     }
+    // a lava island that found no room is no world: try again with smaller islands
+    if (isLava(SECOND_LAVA, size) && placed.length <= SECOND_LAVA) continue;
     const bigCount = placed.length;
 
     // 4. the small islands: the bays first (one island in each), then anywhere; never more than there are big ones
@@ -873,8 +887,6 @@ function makeLayout(seed: SeedState, size: WorldSize): Layout {
   const islands: Island[] = placed.map((p, index) => {
     const tiers = levels[index]!;
     const towns = index < 4 ? townTiers(tiers) : [];
-    const entryRng = rngFor(seed, LAYER.TERRAIN, "entry", index);
-    const e = DIR[entryRng.int(8) * 2]!;
     return {
       index,
       x: p.x,
@@ -882,7 +894,7 @@ function makeLayout(seed: SeedState, size: WorldSize): Layout {
       r: p.r,
       reach: p.built.reach,
       tiers,
-      biome: biomeOf(seed, index),
+      biome: biomeOf(seed, index, size),
       townTiers: towns,
       towns: towns.length,
       axis: index === 0 ? { x: axis[0], y: axis[1] } : { x: 0, y: 0 },
@@ -894,7 +906,6 @@ function makeLayout(seed: SeedState, size: WorldSize): Layout {
       stride: p.built.stride,
       box: p.built.box,
       bay: p.built.bay,
-      entry: { x: e[0], y: e[1] },
     };
   });
   return { size, width, height, islands };

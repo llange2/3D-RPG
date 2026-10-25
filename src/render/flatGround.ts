@@ -14,7 +14,7 @@ import { BIOME, GROUND, type Biome, type Ground } from "../world/types";
 export const FLAT_PRIORITY: readonly FlatTerrain[] = ["cobblestone", "lava", "water", "snow", "swamp", "desert", "dirt", "grass"];
 
 /** The painted terrain of an overworld tile: water and shallows are water, a road, pass or bridge is cobblestone, the land is by biome (the lava biome's land is dirt). */
-export function flatTerrainOf(t: { ground: Ground; biome: Biome }): FlatTerrain {
+export function flatTerrainOf(t: { ground: Ground; biome: Biome; dirt?: boolean }): FlatTerrain {
   switch (t.ground) {
     case GROUND.WATER:
     case GROUND.SHALLOW:
@@ -27,6 +27,8 @@ export function flatTerrainOf(t: { ground: Ground; biome: Biome }): FlatTerrain 
       return "cobblestone";
     default:
   }
+  // a patch of bare earth in a meadow or a forest
+  if (t.dirt) return "dirt";
   switch (t.biome) {
     case BIOME.DESERT:
       return "desert";
