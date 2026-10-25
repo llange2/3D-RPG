@@ -190,6 +190,8 @@ const GROUND_TILES: Partial<Record<string, PropSpec>> = {
   snow: { model: "gnd_snow", scale: GROUND_FILL * 1.7, scaleXYZ: [GROUND_FILL * 1.7, 1, GROUND_FILL * 1.7] },
   swamp: { model: "gnd_swamp", scale: GROUND_FILL * 1.7, scaleXYZ: [GROUND_FILL * 1.7, 1, GROUND_FILL * 1.7] },
   desert: { model: "gnd_desert", scale: GROUND_FILL * 1.65, scaleXYZ: [GROUND_FILL * 1.65, 1, GROUND_FILL * 1.65] },
+  // bare earth (the patches in meadows and forests, the land and rock of a lava island): the old game's dirt tile (`Dirt.obj`, block 12)
+  lava_ground: { model: "gnd_dirt", scale: 1.54, scaleXYZ: [1.54, 1, 1.54] },
   // the ways are cobblestone (`Cobblestone.obj`, as the old game's block 9), not the dirt of block 12; its slab is as thin as a plate, so the old game's height factor 2
   cobble: { model: "gnd_cobble", scale: 1.54, scaleXYZ: [1.54, 2, 1.54] },
 };
