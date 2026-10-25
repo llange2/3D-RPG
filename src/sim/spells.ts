@@ -1,5 +1,6 @@
 import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, SPELLS, walksOnLand, type SpellDef } from "../data/tables";
+import { orbSpellBonus } from "./balance";
 import { addCondition, canAct, canBeHealed, healHp, isAlive, recalcValues, removeCondition } from "./character";
 import { restartCondition } from "./conditions";
 import { generateItem } from "./items";
@@ -148,12 +149,14 @@ export function needsBeaconChoice(id: number): boolean {
   return id === 32;
 }
 
-function attackDamage(spell: SpellDef, caster: Character, rng: Rng): number {
+function attackDamage(spell: SpellDef, caster: Character, rng: Rng, mascot = ""): number {
   const lo = spell.dam_min ?? 0;
   const hi = Math.max(lo, spell.dam_max ?? lo);
   let damage = rng.range(lo, hi);
   if (spell.scales_with_level) damage *= caster.level;
   if (caster.defensiveStance) damage = Math.trunc(damage * (1 - CONSTANTS.STANCE_MODIFIER));
+  // BALANCE v4: the Orb adds 20 % to the damage of attack spells (`orbSpellBonus()` is 0 in the legacy mode)
+  if (mascot === "Orb" && orbSpellBonus() > 0) damage = Math.trunc(damage * (1 + orbSpellBonus()));
   return damage;
 }
 
@@ -209,7 +212,7 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
     const result: SpellResult = {
       kind: "attack",
       spellId,
-      damage: attackDamage(spell, caster, rng),
+      damage: attackDamage(spell, caster, rng, party.mascot),
       type: types[rng.int(types.length)]!,
       penetrate: !SINGLE_TARGET.has(spellId) && !special,
       // Pain hits the living and the dead alike since the spell sheet dropped "Doesn't affect undead"; Turn Undead only the undead

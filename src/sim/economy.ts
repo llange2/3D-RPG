@@ -2,6 +2,7 @@ import { LAYER, rngFor, type SeedState } from "../core/rng";
 import { CONSTANTS, SPELLS, TALENTS, type SpellDef } from "../data/tables";
 import type { Poi } from "../world/types";
 import type { World } from "../world/world";
+import { isV4, RULES } from "./balance";
 import { isAlive, levelUp, recalcValues, removeCondition, xpToNextLevel } from "./character";
 import { generateItem, spellScroll } from "./items";
 import { MINUTES_PER_DAY, giveItem } from "./party";
@@ -261,7 +262,9 @@ export function withdraw(party: Party, amount: number): number {
 // ------------------------------------------------------------------ training, guild
 
 export function trainingCost(c: Character, party: Party): number {
-  return Math.round(c.level * 250 * bargainFactor(party));
+  // BALANCE v4: 10 × level² per hero (the formula of the user's source list); LEGACY (balance v4): 250 × level
+  const base = isV4() ? c.level * c.level * RULES.v4.trainingPerLevelSquared : c.level * RULES.legacy.trainingPerLevel;
+  return Math.round(base * bargainFactor(party));
 }
 
 export type TrainResult = { ok: true; cost: number } | { ok: false; reason: "xp" | "gold" | "dead"; needXp?: number; cost?: number };

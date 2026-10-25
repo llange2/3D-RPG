@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONSTANTS } from "../../src/data/tables";
+import { xpStepV4 } from "../../src/sim/balance";
 import { CURRENT, type Formulas, pyRound } from "./formulas";
 import { DEFAULT_PARAMS, type Params, makeFormulas } from "./parametric";
 
@@ -112,7 +113,8 @@ export function makeV4(id: string, melee: keyof typeof V4_MELEE): Formulas {
       const raw = Math.ceil(roll + ((h.acc + h.gear.acc) / 10 + 0.8 * h.classRanged) * h.level);
       return Math.max(0, Math.trunc(raw - Math.trunc(mon.armor / 2)));
     },
-    xpStep: xpSmooth(25, 1.25, 18, 1.08),
+    // the game's table (rounded per level, `xpStepV4` in src/sim/balance.ts); `xpSmooth(25, 1.25, 18, 1.08)` is the same without rounding
+    xpStep: (cls, level) => xpStepV4(CONSTANTS.CHARACTER_XP[cls] ?? 2000, level),
     trainingCost: trainingSquare,
     wolfBelow: 0.1,
     orbMana: 0,

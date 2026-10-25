@@ -1,6 +1,6 @@
 # Kampfformeln, XP und Aufstiege – Befund und Vorschlag
 
-Stand 23.10.2026. **Am Spiel wurden nur die vier Fehler aus Abschnitt 3.5 behoben**; die Formeln des Vorschlags (Abschnitt 4) sind nicht umgesetzt. Alles, was hier steht, kommt aus dem neuen Werkzeug `tools/balance/` (Bedienung: `tools/balance/README.md`)
+Stand 23.10.2026. **Nachtrag 25.10.2026: Der überarbeitete Vorschlag (Tabelle in Abschnitt 1, „Vorschlag v4“) ist im Spiel umgesetzt, Stellen und Rückweg in `docs/BALANCE_V4_UMSETZUNG.md`, Messungen in `docs/KAMPF_BALANCE_V4.md`.** Die Zahlen unten beschreiben den Stand vor v4 („heute“ = nach den Korrekturen aus 3.5). Ursprünglich wurden am Spiel nur die vier Fehler aus Abschnitt 3.5 behoben; die Formeln des Vorschlags (Abschnitt 4) waren nicht umgesetzt. Alles, was hier steht, kommt aus dem neuen Werkzeug `tools/balance/` (Bedienung: `tools/balance/README.md`)
 und seinen Zwischenständen in `tools/balance/out/` (die Tabellen dieses Dokuments liegen als Rohausgabe in `tools/balance/out/report/`).
 **„Heute“ heißt in diesem Dokument: das Spiel nach den Korrekturen aus 3.5.** Alle Zahlen sind damit neu gerechnet; die ursprüngliche Rechnung vor den Korrekturen (Zielwert 0,76) liegt unverändert in `tools/balance/out/report-vor-korrektur/`.
 

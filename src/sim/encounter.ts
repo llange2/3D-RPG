@@ -1,5 +1,6 @@
 import type { Rng } from "../core/rng";
 import { isUndead, type MonsterDef } from "../data/tables";
+import { RULES, wolfBelow } from "./balance";
 import { applyHit, meleeDamage, monsterById, monsterDamage, rangedDamage, spellDamageToMonster, type DamageType } from "./combat";
 import { anyoneLeft, canAct, isRifted, itemBonus } from "./character";
 import type { ConditionEvent } from "./conditions";
@@ -452,12 +453,16 @@ function rollLoot(rng: Rng, def: MonsterDef): { gold: number; item: Item | null 
   return { gold: def.gold, item };
 }
 
-/** The Wolf in the party kills every monster that drops below this share of its health. */
-export const WOLF_EXECUTE_BELOW = 0.9;
+/**
+ * The Wolf in the party kills every monster that drops below this share of its health.
+ * BALANCE v4: 10 % (it was 90 %, which made every fight a walk-over); the value comes from `wolfBelow()` in balance.ts, this constant is
+ * the v4 value for texts and tests. LEGACY (balance v4): 0.9.
+ */
+export const WOLF_EXECUTE_BELOW = RULES.v4.wolfBelow;
 
 function killIfDead(party: Party, enc: Encounter, m: MonsterInstance, rng: Rng, events: CombatEvent[]): void {
   const def = monsterById(m.defId);
-  if (m.hp > 0 && party.mascot === "Wolf" && m.hp < def.health * WOLF_EXECUTE_BELOW) {
+  if (m.hp > 0 && party.mascot === "Wolf" && m.hp < def.health * wolfBelow()) {
     m.hp = 0;
     events.push({ type: "wolf_kill", uid: m.uid, defId: m.defId });
   }

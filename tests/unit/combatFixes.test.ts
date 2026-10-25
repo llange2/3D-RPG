@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { MONSTERS, type MonsterDef } from "../../src/data/tables";
+import { setBalanceMode } from "../../src/sim/balance";
 import { createCharacter } from "../../src/sim/character";
 import { applyHit, elementalDamage, meleeDamage, monsterDamage, rangedDamage, specialCondition } from "../../src/sim/combat";
 import { makeItem } from "../../src/sim/items";
@@ -51,8 +52,16 @@ describe("fixes of docs/KAMPF_BALANCE.md section 3.5", () => {
     const strong = wizard(10);
     strong.str = 20;
     strong.inventory.left_ring = makeItem({ name: "Ring", type: "ring", bonus: { str: 20 } });
-    // +20 Strength = +2 per level
-    expect(meleeDamage(strong, m, rng("a")) - meleeDamage(base, m, rng("a"))).toBe(20);
+    // +20 Strength = +2 per level (BALANCE v4: a third of it, 2 × 10 / 3 = 6.7 rounds to 6 or 7 depending on where the sum falls)
+    const gain = meleeDamage(strong, m, rng("a")) - meleeDamage(base, m, rng("a"));
+    expect(gain).toBeGreaterThanOrEqual(6);
+    expect(gain).toBeLessThanOrEqual(7);
+    setBalanceMode("legacy");
+    try {
+      expect(meleeDamage(strong, m, rng("a")) - meleeDamage(base, m, rng("a"))).toBe(20);
+    } finally {
+      setBalanceMode("v4");
+    }
 
     const party = createDefaultParty();
     const target = party.characters[0]!;

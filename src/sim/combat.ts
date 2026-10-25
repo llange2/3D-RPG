@@ -1,5 +1,6 @@
 import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, type MonsterDef } from "../data/tables";
+import { fairyReduction, isV4, RULES } from "./balance";
 import { addCondition, anyoneLeft, armor, attr, canAct, equippedItems, fightSpeed, getBaseValue, isRifted, itemBonus, pyRound, removeCondition, resistance } from "./character";
 import { cheats } from "./cheats";
 import { sumBonus } from "./items";
@@ -28,9 +29,12 @@ export function meleeDamage(c: Character, monster: MonsterDef | null, rng: Rng):
   const max = itemBonus(c, "dam_max");
   let weapon = rng.range(Math.min(min, max), Math.max(min, max));
   if (weapon === 0) weapon = 1;
-  let total = Math.ceil(base * c.level + weapon) + (c.mods?.rage ?? 0);
+  // BALANCE v4: the level term counts a third (`weapon + base × level / 3`); LEGACY (balance v4): `base × level + weapon`
+  let total = Math.ceil(isV4() ? weapon + (base * c.level) / RULES.v4.meleeLevelDivisor : base * c.level + weapon) + (c.mods?.rage ?? 0);
   if (c.defensiveStance) total = Math.trunc(total * STANCE());
   if (monster && monster.armor > 0) total -= monster.armor;
+  // BALANCE v4: what the monster's physical resistance (sheet column, 0 to 1) holds back is taken off after the armor
+  if (isV4() && monster) total *= 1 - monster.res_physical;
   // a weak hero (Wizard with Strength 7) must never heal the monster, whatever its armor
   return Math.max(0, Math.trunc(total));
 }
@@ -45,12 +49,16 @@ export function rangedDamage(c: Character, monster: MonsterDef | null, distance:
   if (!canAct(c)) return 0;
   let hitChance = 1;
   const acc = attr(c, "acc");
-  if (monster && monster.speed > 0 && distance > 0) hitChance = Math.min(1, Math.max(0, acc / (monster.speed * distance * 0.5)));
+  // BALANCE v4: no factor 0.5 any more (`ACC / (speed × distance)`); LEGACY (balance v4): factor 0.5, i.e. twice the chance
+  const hitFactor = isV4() ? RULES.v4.rangedHitFactor : RULES.legacy.rangedHitFactor;
+  if (monster && monster.speed > 0 && distance > 0) hitChance = Math.min(1, Math.max(0, acc / (monster.speed * distance * hitFactor)));
   if (!(rng.float() <= hitChance)) return 0;
   const min = itemBonus(c, "ranged_dam_min") + ringDamage(c, "dam_min");
   const max = itemBonus(c, "ranged_dam_max") + ringDamage(c, "dam_max");
   const weapon = rng.range(Math.min(min, max), Math.max(min, max));
-  const base = acc / 10 + getBaseValue(c.raceType, c.classType, "base_ranged");
+  // BALANCE v4: only 0.8 of the class value counts for the bow (the Archer's 5 was higher than any melee class)
+  const classShare = isV4() ? RULES.v4.rangedClassShare : RULES.legacy.rangedClassShare;
+  const base = acc / 10 + getBaseValue(c.raceType, c.classType, "base_ranged") * classShare;
   let total = Math.ceil(base * c.level + weapon) + (c.mods?.rage ?? 0);
   if (c.defensiveStance) total = Math.trunc(total * STANCE());
   if (monster && monster.armor > 0) total -= Math.trunc(monster.armor / 2);
@@ -76,7 +84,8 @@ const ELEMENTS = new Set(["fire", "ice", "acid", "magic"]);
 export function elementalDamage(party: Party, target: Character, element: "acid" | "fire" | "ice" | "magic", damage: number): number {
   let total = pyRound(damage * (1 - resistance(target, element) / 100));
   total -= protectionLevel(party, element);
-  if (party.mascot === "Fairy") total -= CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION;
+  // BALANCE v4: the Fairy takes 30 off (the old game's constant is 20; the generated constants.json stays untouched)
+  if (party.mascot === "Fairy") total -= fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION);
   return Math.max(0, total);
 }
 
