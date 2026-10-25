@@ -38,6 +38,7 @@ export function envFrom(a: Record<string, string>): FightEnv {
   if (a["no-volley"]) e.openingVolley = false;
   if (a["no-bow-melee"]) e.rangedInMelee = false;
   if (a["no-spells"]) e.spells = false;
+  if (a.rshots) e.rangedShots = a.rshots as FightEnv["rangedShots"];
   return e;
 }
 

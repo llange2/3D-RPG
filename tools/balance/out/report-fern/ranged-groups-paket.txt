@@ -1,0 +1,15 @@
+Parties: Standard, Nahkampf, Fernkampf, Klassisch, Zauberer; 150 runs per cell and party; ranged monsters fire two shot(s); only groups of ranged monsters
+
+=== v5:bowRes=1,bowDiv=1.5,bowAdj=0.5,eArmor=0.5,eFloor=0.25
+tier/lvl |  bow loss  dead | sword loss  dead | bow/sword | bow share | enemy shots (loss from afar)
+  T1/L 1 |    44%   0.63 |     46%   0.70 |   0.96    |    46%    |    19%
+  T1/L 4 |    12%   0.01 |     15%   0.01 |   0.78    |    47%    |     6%
+  T2/L 8 |    54%   0.81 |     54%   0.76 |   0.99    |    16%    |    37%
+  T2/L12 |    20%   0.07 |     20%   0.07 |   1.00    |     9%    |    17%
+  T3/L15 |     9%   0.00 |     10%   0.00 |   0.98    |     6%    |     8%
+  T3/L20 |     3%   0.00 |      3%   0.00 |   1.00    |     5%    |     3%
+  T4/L25 |    17%   0.07 |     17%   0.07 |   1.00    |     3%    |    11%
+  T4/L30 |    11%   0.03 |     11%   0.03 |   0.97    |     4%    |     7%
+  T5/L38 |    25%   0.03 |     25%   0.03 |   1.02    |     0%    |    16%
+  T5/L45 |    16%   0.00 |     16%   0.00 |   1.00    |     0%    |    11%
+  mean    |    21%   0.16 |     22%   0.17 |   0.97    |    14%    |    14%

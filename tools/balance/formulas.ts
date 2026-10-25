@@ -69,6 +69,8 @@ export interface Formulas {
   meleeDamage(h: HeroStats, mon: MonsterDef, roll: number): number;
   rangedHitChance(h: HeroStats, mon: MonsterDef, distance: number): number;
   rangedDamage(h: HeroStats, mon: MonsterDef, roll: number): number;
+  /** Shots a monster with a ranged attack fires in one turn from afar, given its number of attacks (melee: all of them). */
+  rangedShots(attacks: number): number;
   /** Damage one attack of a monster does to a hero. */
   monsterDamage(mon: MonsterDef, h: HeroStats, a: MonsterAttackRoll): number;
   /** Chance that a hit with a special attack ("Causes Poisoned") sticks. */
@@ -192,6 +194,7 @@ export const CURRENT: Formulas = {
     return Math.max(0, Math.trunc(total));
   },
   monsterDamage: currentMonsterDamage,
+  rangedShots: () => 1,
   specialChance: (h, lethal) => (lethal ? 5 : 10) / (withGear(h, "lck") ** 2 * 0.05),
   xpStep(cls, level) {
     const base = CONSTANTS.CHARACTER_XP[cls] ?? 2000;

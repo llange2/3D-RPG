@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONSTANTS } from "../../src/data/tables";
 import { xpStepV4 } from "../../src/sim/balance";
-import { CURRENT, type Formulas, pyRound } from "./formulas";
+import { CURRENT, currentMonsterDamage, type Formulas, pyRound } from "./formulas";
 import { DEFAULT_PARAMS, type Params, makeFormulas } from "./parametric";
 
 /** XP step with a constant growth `g` per level from `fromLevel` on (the doubling before it stays as it is). */
@@ -123,15 +123,95 @@ export function makeV4(id: string, melee: keyof typeof V4_MELEE): Formulas {
   };
 }
 // v4 is the reading the user confirmed on 25.10.2026: weapon + (STR*0.1 + class) / 3 * level (Knight, level 35, STR 30, weapon 10: 68.3)
-PROPOSALS.v4 = makeV4("v4", "add3");
+PROPOSALS.v4pre = makeV4("v4pre", "add3");
 PROPOSALS.v4mul = makeV4("v4mul", "mul");
 PROPOSALS.v4b = makeV4("v4b", "add1");
+
+
+/**
+ * Levers for the bow and for the ranged attacks of monsters, on top of v4 (docs/KAMPF_BALANCE.md, section "Fernkampf"). Everything defaults to
+ * what the game does with v4, so `v5:` with no option is v4. Use as a formula name: `v5:bowRes=1,bowDiv=3,eShots=...` (see `formulasByName`).
+ *   bowRes     1 = the monster's physical resistance (sheet column) also holds back the bow, as it does for the sword
+ *   bowDiv     the bow's level term `(ACC × 0.1 + 0.8 × class) × level` is divided by this (the sword's is divided by 3)
+ *   bowArmor   share of the monster's armor that counts against the bow (game 0.5; the sword 1)
+ *   bowAdj     factor on the bow's hit chance when the monster stands next to the hero (point blank; game 1)
+ *   minSpeed   the monster's speed counts at least this much in the bow's hit chance (slow monsters can still dodge a little; game 0)
+ *   eHit       factor in the hit chance of a monster's shot, `speed / (hero speed × distance × eHit)` (game 0.5, Ninja 1.5 × that)
+ *   eArmor     share of the hero's armor taken off a monster's physical shot (game 1.5: armor and half of it again)
+ *   eFloor     a monster's physical shot does at least this share of its roll, whatever the armor (game 0)
+ *   eDmg       factor on the damage of every ranged shot of a monster (game 1)
+ * (The number of shots per turn is a rule of the fight, `--rshots=one|half|all`.)
+ */
+export interface V5Options {
+  bowRes: number;
+  bowDiv: number;
+  bowArmor: number;
+  bowAdj: number;
+  minSpeed: number;
+  eHit: number;
+  eArmor: number;
+  eFloor: number;
+  eDmg: number;
+  eShots: number;
+}
+export const V5_DEFAULT: V5Options = { bowRes: 0, bowDiv: 1, bowArmor: 0.5, bowAdj: 1, minSpeed: 0, eHit: 0.5, eArmor: 1.5, eFloor: 0, eDmg: 1, eShots: 1 };
+
+export function makeV5(id: string, given: Partial<V5Options>): Formulas {
+  const o = { ...V5_DEFAULT, ...given };
+  const base = PROPOSALS.v4pre!;
+  return {
+    ...base,
+    id,
+    title: `v4 mit Fern-Hebeln ${JSON.stringify(given)}`,
+    rangedHitChance(h, mon, distance) {
+      const speed = Math.max(mon.speed, o.minSpeed);
+      let chance = 1;
+      if (speed > 0 && distance > 0) chance = Math.min(1, Math.max(0, (h.acc + h.gear.acc) / (speed * distance)));
+      return distance === 1 ? chance * o.bowAdj : chance;
+    },
+    rangedDamage(h, mon, roll) {
+      const raw = Math.ceil(roll + (((h.acc + h.gear.acc) / 10 + 0.8 * h.classRanged) * h.level) / o.bowDiv);
+      const total = (raw - Math.trunc(mon.armor * o.bowArmor)) * (o.bowRes ? 1 - mon.res_physical : 1);
+      return Math.max(0, Math.trunc(total));
+    },
+    rangedShots: (attacks) => Math.max(1, Math.min(o.eShots, Math.ceil(attacks / 2))),
+    monsterDamage(mon, h, a) {
+      if (!a.ranged) return currentMonsterDamage(mon, h, a);
+      const ninja = h.cls === "Ninja";
+      const factor = ninja ? o.eHit * 1.5 : o.eHit;
+      const chance = a.distance > 0 ? Math.min(1, Math.max(0, mon.speed / (h.spd * a.distance * factor))) : 1;
+      if (!(a.hit <= chance)) return 0;
+      const type = mon.attack_type.toLowerCase();
+      let total = a.damage;
+      if (type === "fire" || type === "ice" || type === "acid" || type === "magic") {
+        total = Math.max(0, pyRound(total * (1 - h.res[type] / 100)) - a.fairy);
+      } else if (type === "physical") {
+        total = Math.max(Math.trunc(o.eFloor * total), total - Math.trunc(h.armor * o.eArmor));
+      }
+      return Math.trunc(total * o.eDmg);
+    },
+  };
+}
+
+/** The ranged package of docs/KAMPF_BALANCE.md section 8, in the game since then: the formulas of `v4` (this name is what `verify.ts` compares with the game). */
+export const V4_RANGED: Partial<V5Options> = { bowRes: 1, bowDiv: 1.5, bowAdj: 0.5, eArmor: 0.5, eFloor: 0.25, eShots: 2 };
+PROPOSALS.v4 = makeV5("v4", V4_RANGED);
+PROPOSALS.v4.title = "Spiel: Vorschlag v4 mit dem Fernkampf-Paket (Bogen: Resistenz, Stufenanteil / 1,5, Nahschuss halb; Gegnerschuesse: halbe Ruestung, Mindestschaden 25 %, bis 2 Schuesse)";
 
 const outDir = join(dirname(fileURLToPath(import.meta.url)), "out");
 
 /** `current`, a named proposal, or the result of a parameter search (`out/search-<name>.json`). */
 export function formulasByName(name: string | undefined): Formulas {
   if (!name || name === "current") return CURRENT;
+  if (name === "v5" || name.startsWith("v5:")) {
+    const given: Partial<V5Options> = {};
+    for (const part of name.slice(3).split(",").filter(Boolean)) {
+      const [k, v] = part.split("=");
+      if (!k || v === undefined || !(k in V5_DEFAULT)) throw new Error(`unknown v5 option "${part}" (known: ${Object.keys(V5_DEFAULT).join(", ")})`);
+      given[k as keyof V5Options] = Number(v);
+    }
+    return makeV5(name, given);
+  }
   const proposal = PROPOSALS[name];
   if (proposal) return proposal;
   const file = join(outDir, `search-${name}.json`);

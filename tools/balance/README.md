@@ -29,6 +29,12 @@ eingetragen (das Spiel bleibt unberührt).
 `CURRENT` bildet das Spiel **nach den Korrekturen aus `docs/KAMPF_BALANCE.md` 3.5** ab (Attribute und Resistenzen mit Ausrüstung, kein negativer Schlag, Fehlschuss ohne Schaden, Ringschaden auch im Fernkampf, halbe Chance für „Dead“/„Eradication“).
 Die Berichte vor den Korrekturen liegen unverändert in `out/report-vor-korrektur/`; `out/report/` ist der neue Stand.
 
+## Fernkampf (Nachtrag nach v4, `docs/KAMPF_BALANCE.md` Abschnitt 8)
+
+* `save.ts`: die Gruppe eines Saves (`.ignore/quicksave.json`, aus `localStorage` exportiert; `SAVE_FILE=` ändert die Datei) gegen Monster, in der **echten** Engine (`save.ts Zombie 2 400 5`), als Tabelle Bogen gegen Schwert (`save.ts damage`), im Simulator mit Formelvarianten (`save.ts sim "v4;v5:bowRes=1" Zombie 2 800 5`, `SPELLS=1` mit Zaubern) und für alle Monster eines Tiers (`save.ts battery`, `BRIEF=1` nur die Mittelzeile).
+* `bowgrid.ts`: Bogen gegen Schwert über Tiers und Stufen und fünf Gruppen (Verlust, Bogen-Anteil am Schaden, Verlust durch Fernschüsse der Gegner); `--only-ranged`/`--only-melee`/`--type=physical` für Gruppen aus Schützen. `shots.ts`: Schaden eines Fernschusses gegen den Nahkampf je Schütze.
+* Formelsatz `v5:<Option>=<Zahl>,…` (`makeV5` in `proposals.ts`, ohne Option = v4): `bowRes`, `bowDiv`, `bowArmor`, `bowAdj`, `minSpeed`, `eHit`, `eArmor`, `eFloor`, `eDmg`. Schüsse der Gegner auf Abstand: `--rshots=one|half|two|all` (Spiel: `one`; bis 26.10.2026 rechnete der Simulator wie `all`).
+
 ## Prüfung gegen das Spiel
 
 * `verify.ts` vergleicht `CURRENT` mit den echten Funktionen (`recalcValues`, `meleeDamage`, `rangedDamage`, `monsterDamage`, `xpToNextLevel`) auf Tausenden

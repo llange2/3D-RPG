@@ -50,8 +50,11 @@ export function rangedDamage(c: Character, monster: MonsterDef | null, distance:
   let hitChance = 1;
   const acc = attr(c, "acc");
   // BALANCE v4: no factor 0.5 any more (`ACC / (speed × distance)`); LEGACY (balance v4): factor 0.5, i.e. twice the chance
-  const hitFactor = isV4() ? RULES.v4.rangedHitFactor : RULES.legacy.rangedHitFactor;
+  const rules = isV4() ? RULES.v4 : RULES.legacy;
+  const hitFactor = rules.rangedHitFactor;
   if (monster && monster.speed > 0 && distance > 0) hitChance = Math.min(1, Math.max(0, acc / (monster.speed * distance * hitFactor)));
+  // BALANCE v4 (ranged): next to the monster the bow hits only half as often (the sword is the better weapon there)
+  if (distance === 1) hitChance *= rules.rangedPointBlank;
   if (!(rng.float() <= hitChance)) return 0;
   const min = itemBonus(c, "ranged_dam_min") + ringDamage(c, "dam_min");
   const max = itemBonus(c, "ranged_dam_max") + ringDamage(c, "dam_max");
@@ -59,9 +62,12 @@ export function rangedDamage(c: Character, monster: MonsterDef | null, distance:
   // BALANCE v4: only 0.8 of the class value counts for the bow (the Archer's 5 was higher than any melee class)
   const classShare = isV4() ? RULES.v4.rangedClassShare : RULES.legacy.rangedClassShare;
   const base = acc / 10 + getBaseValue(c.raceType, c.classType, "base_ranged") * classShare;
-  let total = Math.ceil(base * c.level + weapon) + (c.mods?.rage ?? 0);
+  // BALANCE v4 (ranged): the level term counts 1 / 1.5 (the sword's counts a third); LEGACY (balance v4): divisor 1
+  let total = Math.ceil((base * c.level) / rules.rangedLevelDivisor + weapon) + (c.mods?.rage ?? 0);
   if (c.defensiveStance) total = Math.trunc(total * STANCE());
   if (monster && monster.armor > 0) total -= Math.trunc(monster.armor / 2);
+  // BALANCE v4 (ranged): the physical resistance holds the arrow back as it holds the sword back (after the armor, like in `meleeDamage`)
+  if (rules.rangedResPhysical && monster) total *= 1 - monster.res_physical;
   return Math.max(0, Math.trunc(total));
 }
 
@@ -111,8 +117,14 @@ export function monsterDamage(party: Party, monster: MonsterDef, target: Charact
     total = elementalDamage(party, target, type as "acid" | "fire" | "ice" | "magic", total);
   } else if (type === "physical") {
     const arm = armor(target);
-    if (arm > 0) total = Math.max(0, total - arm);
-    if (ranged) total = Math.max(0, total - Math.trunc(arm / 2));
+    if (ranged && isV4()) {
+      // BALANCE v4 (ranged): the armor counts half against a shot, like the monster's armor against the heroes' bows, and a quarter of the
+      // roll always gets through; LEGACY (balance v4): the armor and half of it again, down to 0
+      total = Math.max(Math.trunc(RULES.v4.monsterShotFloor * total), total - Math.trunc(arm * RULES.v4.monsterShotArmor));
+    } else {
+      if (arm > 0) total = Math.max(0, total - arm);
+      if (ranged) total = Math.max(0, total - Math.trunc(arm / 2));
+    }
   }
 
   if (!ranged && target.classType === "Ninja" && rng.float() < 0.1) total = 0;

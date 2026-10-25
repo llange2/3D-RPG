@@ -41,8 +41,17 @@ describe("fixes of docs/KAMPF_BALANCE.md section 3.5", () => {
     const shooter: MonsterDef = { ...monsters.find((m) => m.attack_type === "Physical")!, speed: 5, damage_min: 40, damage_max: 40 };
     const results = new Set<number>();
     for (let i = 0; i < 400; i++) results.add(monsterDamage(party, shooter, hero, true, 6, rng(`s${i}`)));
-    // a hit costs armor 10 and half of it (5): 25; a miss nothing (the old code let 40 through)
-    expect([...results].sort((a, b) => a - b)).toEqual([0, 25]);
+    // BALANCE v4: a hit costs half of the armor (5): 35; a miss nothing (the old code let 40 through)
+    expect([...results].sort((a, b) => a - b)).toEqual([0, 35]);
+    // LEGACY (balance v4): a hit costs armor 10 and half of it (5): 25
+    setBalanceMode("legacy");
+    try {
+      const old = new Set<number>();
+      for (let i = 0; i < 400; i++) old.add(monsterDamage(party, shooter, hero, true, 6, rng(`s${i}`)));
+      expect([...old].sort((a, b) => a - b)).toEqual([0, 25]);
+    } finally {
+      setBalanceMode("v4");
+    }
   });
 
   it("3. equipment counts in the fight: Strength, Accuracy, Luck and the resistances", () => {

@@ -33,7 +33,21 @@ grep -rn "LEGACY (balance v4)" src             # alle alten Formeln, die beim Cl
 | 13 | `tools/balance/` | `CURRENT` = altes Spiel | `verify.ts` prüft je nach Modus `PROPOSALS.v4` oder `CURRENT`; `xpStep` von `v4` ruft `xpStepV4` des Spiels | Werkzeug und Spiel müssen übereinstimmen |
 | 14 | `tests/unit/` | – | `balanceV4.test.ts` (neu) prüft alles oben in beiden Modi; `sim.test.ts`, `combatFixes.test.ts`, `playtest13.test.ts`, `playtest14.test.ts` angepasst (alte Zahlen im Legacy-Modus, Trainingskosten ohne feste Summen) | |
 
-**Nicht geändert:** Monsterschläge gegen Rüstung, Fehlschuss der Monster, Todesregel, Sonderangriffs-Chance, Mana, Zauber und Zaubertabelle, Monster-XP, `GEN_VERSION` (die Regeln ändern den Generator nicht).
+### Nachtrag: Fernkampf-Paket (`docs/KAMPF_BALANCE.md` Abschnitt 8)
+
+| # | Datei und Funktion | Alt | Neu (v4) | Grund |
+|---|---|---|---|---|
+| 15 | `src/sim/combat.ts`, `rangedDamage` | Bogen ohne Resistenz | Bogenschaden `× (1 − res_physical)` des Monsters (nach der Rüstung, wie `meleeDamage`); `RULES.v4.rangedResPhysical` | Zombie (80 %): die Salve war 8-mal so stark wie die Nahkampfrunde |
+| 16 | `src/sim/combat.ts`, `rangedDamage` | Stufenanteil `(GEN×0,1 + 0,8×Klasse) × Stufe` | `… / 1,5` (`rangedLevelDivisor`) | der Stufenanteil des Bogens war 3-mal so groß wie der des Schwerts |
+| 17 | `src/sim/combat.ts`, `rangedDamage` | Trefferchance auf Abstand 1 wie auf jedem Abstand | auf Abstand 1 mal 0,5 (`rangedPointBlank`) | Bogenschütze und Ninja schossen neben dem Monster stärker als ihr Schwert |
+| 18 | `src/sim/combat.ts`, `monsterDamage` (physisch, Fernschuss) | `Schaden − Rüstung − Rüstung/2`, bis 0 | `max(abrunden(0,25 × Schaden), Schaden − abrunden(0,5 × Rüstung))` (`monsterShotArmor`, `monsterShotFloor`) | die physischen Fernschützen richteten gegen die Ausrüstung ihres Tiers 0 an |
+| 19 | `src/sim/encounter.ts`, `monsterTurn`; `src/sim/balance.ts`, `monsterShots` | ein Schuss je Zug | `aufrunden(Angriffe / 2)`, höchstens 2 (`monsterShotsMax`) | ein Black Knight mit 7 Angriffen schoss einmal |
+| 20 | `tools/balance/` | `v4` = Formeln vor dem Paket | `PROPOSALS.v4 = makeV5("v4", V4_RANGED)`; die alten Formeln heißen `v4pre`; `Formulas.rangedShots` | `verify.ts` muss weiter „OK“ melden (beide Modi geprüft) |
+| 21 | `tests/unit/` | – | `balanceV4.test.ts` (Bogen, Resistenz, Nahschuss, Schüsse, Rüstung gegen Schüsse; beide Modi), `combatFixes.test.ts` und `monsterSheet.test.ts` angepasst | |
+
+`legacy` stellt das alte Verhalten her (`RULES.legacy`: Divisor 1, Nahschuss 1, keine Resistenz, Rüstung 1,5, Minimum 0, ein Schuss). Zahlen zum Nachändern: `RULES.v4` in `src/sim/balance.ts`.
+
+**Nicht geändert:** Monsterschläge im Nahkampf gegen Rüstung, Fehlschuss der Monster, Todesregel, Sonderangriffs-Chance, Mana, Zauber und Zaubertabelle, Monster-XP, `GEN_VERSION` (die Regeln ändern den Generator nicht).
 
 ## Erwartetes Verhalten (aus der Simulation, `docs/KAMPF_BALANCE_V4.md`)
 
@@ -45,6 +59,7 @@ Geprüft mit `npx tsx tools/balance/goblin.ts`. **Kein Fehler in v4, sondern die
 * Der Goblin (physisch, Schaden 3–9, Tempo 15) trifft mit seinem Schuss ganz normal: Trefferchance `Tempo / (Tempo des Helden × Entfernung × 0,5)`, also 100 % auf ein Feld, 94 % auf zwei, 63 % auf drei, 38 % auf fünf beim Ritter.
 * Der Schaden ist danach `Schaden − Rüstung − Rüstung/2` (Fernkampf), nie unter 0. Die Startrüstung der Helden: Ritter 11, Ninja 5, Bogenschütze 4, Druide 3. Der **Ritter nimmt 0 Schaden** (11 + 5 = 16 > 9), Ninja, Bogenschütze und Druide werden auf zwei Felder nur in 13 / 41 / 72 % der Schüsse verletzt (Mittel 0,2 / 0,8 / 2,2 Punkte), auf fünf Felder in 6 / 19 / 29 %.
 * Früher (vor der Korrektur 3.5) richtete ein **Fehlschuss** vollen Schaden an; das ist weg, deshalb wirkt der Goblin seitdem viel harmloser. v4 hat daran nichts geändert (der Vorschlag mit „Mindestdurchschlag 50 %“ ist in der Tabelle des Nutzers als „wie heute“ gestrichen).
+* **Nachtrag:** Das Fernkampf-Paket (Tabelle oben, 15 bis 21) setzt davon die Rüstung im Fernkampf um (halb statt anderthalbfach, mindestens ein Viertel des Wurfs). Der Goblin richtet damit 0,7 % der LP eines Helden je Schuss an statt 0; er stirbt weiter vor dem ersten Schuss, wenn die Gruppe schießt.
 * Wenn Goblins (und alle anderen schwachen Schützen) wieder spürbar treffen sollen: Mindestschaden `max(½ × Schaden, Schaden − Rüstung)` für Monsterschläge (der Parameter `floorVsMonsters` 0,5 der Simulation, `v3x`), oder die Rüstung im Fernkampf nur einmal abziehen. Das ist eine Regeländerung und nicht gemacht.
 
 ## Offene Frage für das Clean-up

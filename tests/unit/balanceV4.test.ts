@@ -5,9 +5,9 @@
 import { describe, expect, it } from "vitest";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { MONSTERS, type MonsterDef } from "../../src/data/tables";
-import { BALANCE, RULES, setBalanceMode, xpStepV4, type BalanceMode } from "../../src/sim/balance";
+import { BALANCE, monsterShots, RULES, setBalanceMode, xpStepV4, type BalanceMode } from "../../src/sim/balance";
 import { createCharacter, getBaseValue, xpToNextLevel } from "../../src/sim/character";
-import { elementalDamage, meleeDamage, rangedDamage } from "../../src/sim/combat";
+import { elementalDamage, meleeDamage, monsterDamage, rangedDamage } from "../../src/sim/combat";
 import { trainingCost } from "../../src/sim/economy";
 import { WOLF_EXECUTE_BELOW } from "../../src/sim/encounter";
 import { makeItem } from "../../src/sim/items";
@@ -100,13 +100,62 @@ describe("BALANCE v4: bow", () => {
     expect(old / 3000).toBeLessThan(0.55);
   });
 
-  it("counts 0.8 of the class value, and half of the monster's armor", () => {
+  it("counts 0.8 of the class value (the level term divided by 1.5), and half of the monster's armor", () => {
     const c = archer(10);
-    const m = plain({ speed: 0, armor: 10 }); // speed 0: always hits
+    const m = plain({ speed: 0, armor: 10 }); // speed 0: always hits (distance 2: not point blank)
     const cls = getBaseValue("Human", "Archer", "base_ranged");
-    expect(rangedDamage(c, plain({ speed: 0 }), 1, rng("c"))).toBe(Math.ceil((30 / 10 + cls * 0.8) * 10 + 10));
-    expect(rangedDamage(c, m, 1, rng("c"))).toBe(rangedDamage(c, plain({ speed: 0 }), 1, rng("c")) - 5);
-    expect(inMode("legacy", () => rangedDamage(c, plain({ speed: 0 }), 1, rng("c")))).toBe(Math.ceil((30 / 10 + cls) * 10 + 10));
+    expect(rangedDamage(c, plain({ speed: 0 }), 2, rng("c"))).toBe(Math.ceil(((30 / 10 + cls * 0.8) * 10) / 1.5 + 10));
+    expect(rangedDamage(c, m, 2, rng("c"))).toBe(rangedDamage(c, plain({ speed: 0 }), 2, rng("c")) - 5);
+    expect(inMode("legacy", () => rangedDamage(c, plain({ speed: 0 }), 2, rng("c")))).toBe(Math.ceil((30 / 10 + cls) * 10 + 10));
+  });
+
+  it("is held back by the monster's physical resistance, as the sword is (after the armor)", () => {
+    const c = archer(10);
+    const full = rangedDamage(c, plain({ speed: 0, armor: 10 }), 2, rng("r"));
+    expect(rangedDamage(c, plain({ speed: 0, armor: 10, res_physical: 0.5 }), 2, rng("r"))).toBe(Math.trunc(full * 0.5));
+    expect(rangedDamage(c, plain({ speed: 0, res_physical: 1 }), 2, rng("r"))).toBe(0); // the Terminator: immune to arrows too
+    // the Zombie: 80 % resistant
+    const zombie = Object.values(MONSTERS).find((m) => m.name === "Zombie")!;
+    expect(rangedDamage(c, zombie, 3, rng("z"))).toBeLessThan(rangedDamage(c, { ...zombie, res_physical: 0 }, 3, rng("z")) * 0.3);
+    expect(inMode("legacy", () => rangedDamage(c, plain({ speed: 0, res_physical: 1 }), 2, rng("r")))).toBeGreaterThan(0);
+  });
+
+  it("hits half as often next to the monster (distance 1) and as before from distance 2 on", () => {
+    const m = plain({ speed: 15 }); // ACC 30: 30 / (15 × d) is 1 at distance 2 and above 1 at distance 1
+    const count = (c: Character, distance: number): number => {
+      let n = 0;
+      for (let i = 0; i < 2000; i++) if (rangedDamage(c, m, distance, rng(`p${i}`)) > 0) n++;
+      return n / 2000;
+    };
+    expect(count(archer(10), 1)).toBeGreaterThan(0.45);
+    expect(count(archer(10), 1)).toBeLessThan(0.55);
+    expect(count(archer(10), 2)).toBe(1);
+    expect(inMode("legacy", () => count(archer(10), 1))).toBe(1);
+  });
+});
+
+describe("BALANCE v4: the shots of a monster from afar", () => {
+  const armored = (arm: number): Character => {
+    const hero = createCharacter({ name: "T", classType: "Knight", raceType: "Human", avatar: "character05", attrs: { str: 10, int: 10, per: 10, end: 10, spd: 20, acc: 10, lck: 10 } });
+    hero.inventory.body_armor = makeItem({ name: "Mail", type: "chain_mail", bonus: { arm } });
+    return hero;
+  };
+  const shooter = (min: number, max: number): MonsterDef => ({ ...Object.values(MONSTERS).find((m) => m.attack_type === "Physical")!, speed: 1000, damage_min: min, damage_max: max });
+  const party = createDefaultParty();
+
+  it("fires half of its attacks, at most two; one in the legacy mode", () => {
+    expect([1, 2, 3, 4, 7].map(monsterShots)).toEqual([1, 1, 2, 2, 2]);
+    expect(inMode("legacy", () => [1, 4, 7].map(monsterShots))).toEqual([1, 1, 1]);
+  });
+
+  it("loses only half of the armor and always lets a quarter of the roll through", () => {
+    // armor 10: 40 - 5; armor 100: the floor of a quarter of 40
+    expect(monsterDamage(party, shooter(40, 40), armored(10), true, 3, rng("a"))).toBe(35);
+    expect(monsterDamage(party, shooter(40, 40), armored(100), true, 3, rng("a"))).toBe(10);
+    // melee keeps the full armor and has no floor
+    expect(monsterDamage(party, shooter(40, 40), armored(100), false, 1, rng("a"))).toBe(0);
+    expect(inMode("legacy", () => monsterDamage(party, shooter(40, 40), armored(10), true, 3, rng("a")))).toBe(25);
+    expect(inMode("legacy", () => monsterDamage(party, shooter(40, 40), armored(100), true, 3, rng("a")))).toBe(0);
   });
 });
 
