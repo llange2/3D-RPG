@@ -56,7 +56,7 @@ export function questIssues(map: InteriorMap, content: MapContent): string[] {
 
     case "quest_2": {
       const row = of("head").filter((a) => a.params.mode === "rotate").sort((a, b) => Number(a.params.order) - Number(b.params.order));
-      const chalices = of("chalice");
+      const chalices = of("chalice").filter((c) => c.params.bonus === undefined);
       if (row.length !== 5 || chalices.length !== 5) {
         issues.push(`${key}: ${row.length} heads and ${chalices.length} chalices`);
         break;

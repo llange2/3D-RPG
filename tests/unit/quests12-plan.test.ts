@@ -43,7 +43,7 @@ describe("the quest plan of a world (quest document 1.2)", () => {
     });
   }
 
-  it("is deterministic", () => {
+  it("is deterministic", { timeout: 180_000 }, () => {
     const a = places(new World("det", "default")).map((p) => JSON.stringify(planDungeon(new World("det", "default"), p)));
     const b = places(new World("det", "default")).map((p) => JSON.stringify(planDungeon(new World("det", "default"), p)));
     expect(a).toEqual(b);

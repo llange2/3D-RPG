@@ -54,7 +54,7 @@ describe("quest 2: the faces", () => {
     const { content } = questInterior("quest_2", "dungeon_4", 3, 1);
     const { party, opened, use } = play(content);
     const heads = of(content, "head").filter((a) => a.params.mode === "rotate").sort((a, b) => Number(a.params.order) - Number(b.params.order));
-    const chalices = of(content, "chalice");
+    const chalices = of(content, "chalice").filter((c) => c.params.bonus === undefined);
     expect(heads.length).toBe(5);
     // a chalice asks who drinks, makes the hero ill and tells number and direction
     const drink = use(chalices[0]!, undefined, 1);
@@ -147,15 +147,25 @@ describe("the end room", () => {
       const { content, ref } = questInterior("quest_5", "dungeon_4", tier, variant);
       const { party, use } = play(content);
       const end = ref.endRoom!;
-      for (const c of of(content, "treasure").filter((a) => a.x >= end.x && a.y >= end.y && a.x < end.x + end.w && a.y < end.y + end.h)) {
+      const inEnd = (a: ActionInstance) => a.x >= end.x && a.y >= end.y && a.x < end.x + end.w && a.y < end.y + end.h;
+      for (const c of of(content, "treasure").filter(inEnd)) {
         const gold = party.gold;
-        const levels = party.characters.map((h) => h.level);
         const out = use(c);
         expect(out.consumed).toBe(true);
         if (party.gold > gold) seen.add("gold");
-        if (out.effects.some((e) => e.type === "attribute")) seen.add("attributes");
-        if (party.characters.some((h, i) => h.level > levels[i]!)) seen.add("levels");
         if (out.effects.some((e) => e.type === "item")) seen.add("items");
+      }
+      // a level or points of an attribute lie in a chalice: the party chooses who drinks, and only that hero gets the bonus
+      for (const c of of(content, "chalice").filter(inEnd)) {
+        expect(c.params.item).toBe(86);
+        const before = party.characters.map((h) => ({ level: h.level, sum: h.str + h.int + h.per + h.end + h.spd + h.acc + h.lck }));
+        const out = use(c, undefined, 2);
+        expect(out.consumed).toBe(true);
+        party.characters.forEach((h, i) => {
+          const changed = h.level > before[i]!.level || h.str + h.int + h.per + h.end + h.spd + h.acc + h.lck > before[i]!.sum;
+          expect(changed, `hero ${i} after ${String(c.params.bonus)}`).toBe(i === 2);
+        });
+        seen.add(c.params.bonus === "level" ? "levels" : "attributes");
       }
     }
     expect([...seen].sort()).toEqual(["attributes", "gold", "items", "levels"]);

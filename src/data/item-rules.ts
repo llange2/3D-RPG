@@ -99,7 +99,7 @@ export const ITEM_RULES: Readonly<Record<number, ItemRule>> = {
   83: { name: "Fractured vessels", functional: false, places: ["castle", "cave", "dungeon", "town"] },
   84: { name: "Cyber wall (round inner corner)", functional: false, places: ["spaceship"] },
   85: { name: "Cyber wall (round outer corner)", functional: false, places: ["spaceship"] },
-  86: { name: "Chalice", functional: true, places: ["castle", "dungeon", "spaceship"] },
+  86: { name: "Chalice", functional: true, places: ["castle", "dungeon", "spaceship", "cave"] },
   87: { name: "Guillotine trap", functional: false, places: ["dungeon"] },
   88: { name: "Magic well (yellow)", functional: true, places: ["castle", "cave", "dungeon"] },
   89: { name: "Mermaid fountain", functional: false, places: ["castle", "dungeon", "town", "outside"] },

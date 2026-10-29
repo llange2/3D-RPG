@@ -53,7 +53,7 @@ Die fünf Pyramiden führen in **dieselbe** Karte (`spaceship:0`), die Gruppe er
 
 ## 6a. Gelesen/entschieden, weil das Dokument es offen ließ
 
-* Wer wann „Attributspunkte/Levelaufstieg“ bekommt (Endraum-Loot): Attributspunkte in Paketen an einen Helden, der das Attribut braucht (Schrein-Regel), Levelaufstieg **für alle** Helden.
+* **Levelaufstieg und Attributspunkte** (Endraum-Loot, Antwort des Nutzers): jedes Paket liegt in einem **Kelch** (Objekt 86, `Chalice.obj`, Aktion `chalice` mit `bonus: level|attr|xp`, `handlers.ts` `chaliceGift`). Der Spieler wird gefragt, wer trinkt; **nur dieser Held** bekommt den Bonus (1 Level, 5/10/20 Punkte einer zufälligen Art, die Farbe der Flüssigkeit nennt die Art, oder 1–2 Mio XP). Dasselbe gilt für die Kelche des Kontrolldecks im Raumschiff. Objekt 86 ist dafür auch in Höhlen erlaubt (`ADD_PLACES` in `export_item_rules.py`).
 * Welche Gesinnung auf welche Burgstufe kommt: zufällig je Welt.
 * Raumschiff-Kontrolldeck ist Sektion 0 (ab Pyramide 1 erreichbar); quest_6 dort als Computerrätsel (siehe 5).
 * Eine Welt hat 31 Orbs, aber drei Könige brauchen je 11: der Sieger zerstört die anderen, es reicht also für genau einen.
@@ -61,7 +61,7 @@ Die fünf Pyramiden führen in **dieselbe** Karte (`spaceship:0`), die Gruppe er
 
 ## 7. Bekannte Lücken und Abweichungen (bitte prüfen)
 
-1. **Raumschiff:** keine abgerundeten Wände (CI/CO), die Schleuse ist ein Gitter als Platzhalter, die Sektionen sind Raum-und-Gang-Karten, nicht die Beispielkarte. Das **Outro-Video** (88 MB) ist nicht im Projekt: `old_code/resources/movies/Game Outro.mp4` nach `public/assets/ui/outro.mp4` kopieren; ohne Datei erscheint nur der Abschlusstext.
+1. **Raumschiff:** die Schleuse ist ein Gitter als Platzhalter, die Sektionen sind Raum-und-Gang-Karten, nicht die Beispielkarte. **Runde Wände:** `interiors/roundCorners.ts` setzt die Modelle `Round inner corner.obj` (Objekt 84, Boden-Zelle in einer Raumecke oder Gangbiegung) und `Round outer corner.obj` (85, Wandzelle an der Ecke eines Wandblocks), aber nur, wo die Wände auf beiden Seiten gerade weiterlaufen; andere Ecken bleiben eckig. Der Mesher lässt die verdeckten Wandflächen weg (`roundWalls`), die Ansicht stellt die Modelle im Umkreis von 14 Zellen (`interiorView.pushRoundCorners`). Beide Modelle tragen im Bau `tex_cyber_wall` (ihre `.mtl` zeigt auf einen Pfad der Festplatte des Autors, `build-models.ts`). Die Drehung (`cornerYaw`) wurde im Browser ermittelt. Die Kollision bleibt zellweise: in einer Ecke kann man ein Stück in die Rundung hineinlaufen. Das **Outro-Video** (88 MB, vom Nutzer nach `public/assets/ui/outro.mp4` kopiert) steht in `.gitignore` und wird nicht eingecheckt.
 2. **Layouts** sind Stilvorlagen, keine Kopien der Beispielkarten; die Kartenfehler aus Abschnitt 4 der Offene-Punkte-Liste betreffen sie nicht. Versteckte Zugänge in `cave_1`/`cave_2` gibt es nur über die zufälligen brüchigen Wände der Regeln.
 3. **Wachen der Burg** werden beim Alarm gesetzt und nicht gespeichert (nach Laden stehen sie nicht mehr); das Flag des Alarms bleibt.
 4. **Fallenfeld der Mini-Quests:** die Strafe „Fallenfeld“ ist eine einzelne Falle des Ortes (oder Grube/Feuerpfütze), kein Feld aus mehreren.
@@ -71,4 +71,4 @@ Die fünf Pyramiden führen in **dieselbe** Karte (`spaceship:0`), die Gruppe er
 
 ## 8. Prüfung
 
-`npm run typecheck`, `npm test` (747), `npm run check:chrome` (Node und Chrome erzeugen identische Welten), Sichtprüfung im Browser: Burg (Gang mit Löwenstatue, Minikarte) und Raumschiff (Gang mit Schleuse, Cyber-Optik). Neue Tests: `tests/unit/quests12-*.test.ts` (Rätsel, Plan, Orte und Layouts, Spielfluss der Quests, Burgen, ue-Quests, Raumschiff, Mini-Quests).
+`npm run typecheck`, `npm test` (754), `npm run check:chrome` (Node und Chrome erzeugen identische Welten), Sichtprüfung im Browser: Burg (Gang mit Löwenstatue, Minikarte) und Raumschiff (Gang mit Schleuse, Cyber-Optik). Neue Tests: `tests/unit/quests12-*.test.ts` (Rätsel, Plan, Orte und Layouts, Spielfluss der Quests, Burgen, ue-Quests, Raumschiff, Mini-Quests).

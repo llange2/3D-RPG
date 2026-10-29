@@ -1,4 +1,5 @@
 import { hash2 } from "../core/noise";
+import { coveredFaces, roundCorners } from "../interiors/roundCorners";
 import { CELL, FACING_DELTA, type Facing, type InteriorKind, type InteriorMap } from "../interiors/types";
 import { campaignGroundOf, resolveCorner, type CampaignGround, type FlatTileSet } from "./flatGround";
 
@@ -84,8 +85,11 @@ class Bucket {
  * thousand quads. `cracked` lists wall cells (as `x,y`) that hide a breakable wall and get the cracked texture. `holes` are
  * grid indices of floor cells without a floor: the open pits of a generated map, which the pit model fills.
  */
-export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(), options: { modelFloor?: boolean; holes?: ReadonlySet<number>; modelWalls?: boolean; flatTiles?: FlatTileSet } = {}): InteriorGeometry {
+export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(), options: { modelFloor?: boolean; holes?: ReadonlySet<number>; modelWalls?: boolean; roundWalls?: boolean; flatTiles?: FlatTileSet } = {}): InteriorGeometry {
   const H = wallHeightOf(map);
+  // the rounded corners of the spaceship are models that stand where the wall faces would be (`interiors/roundCorners.ts`)
+  const corners = options.roundWalls ? roundCorners(map) : [];
+  const covered = coveredFaces(corners);
   const w = map.width;
   const buckets = new Map<string, Bucket>(); // key = `${material}|${section}`
   const bucket = (material: string, cx: number, cy: number) => {
@@ -162,6 +166,7 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
         const ny = cy + FACING_DELTA[dir].dy;
         const kind = cellAt(nx, ny);
         if (kind === CELL.FLOOR) continue;
+        if (covered.has(`${cx},${cy},${dir}`)) continue;
         if (styles && kind === CELL.LOW) continue; // open ground next door
         // the walls of a cave are models (the rock pieces of the old game) where the model is loaded: they stand on the wall cells and
         // cover what a wall face would show; the campaign's wall blocks with a model of their own do the same
@@ -186,6 +191,30 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
         // front face toward the cell (checked in the browser: the order bottom-left, bottom-right, top-right faces the other way)
         b.indices.push(a, t2, t1, a, d, t2);
       }
+    }
+  }
+
+  // the corner that an outer model cuts off leaves a gap in the floor and the ceiling of its wall cell: a quad each, the model covers the rest
+  for (const c of corners) {
+    if (c.kind !== "outer") continue;
+    const x0 = cellX(c.x);
+    const x1 = x0 + CELL_SIZE;
+    const z1 = cellZ(c.y);
+    const z0 = z1 - CELL_SIZE;
+    const shade = 0.94 + (((hash2(0x77, c.x, c.y) >>> 6) % 100) / 100) * 0.1;
+    const f = bucket("floor", c.x, c.y);
+    const fa = f.vertex([x0, 0, z1], [0, 1, 0], [0, 0], shade);
+    const fb = f.vertex([x1, 0, z1], [0, 1, 0], [1, 0], shade);
+    const fc = f.vertex([x1, 0, z0], [0, 1, 0], [1, 1], shade);
+    const fd = f.vertex([x0, 0, z0], [0, 1, 0], [0, 1], shade);
+    f.indices.push(fa, fc, fb, fa, fd, fc);
+    if (map.theme.ceiling) {
+      const k = bucket("ceiling", c.x, c.y);
+      const ca = k.vertex([x0, H, z1], [0, -1, 0], [0, 0], shade);
+      const cb = k.vertex([x1, H, z1], [0, -1, 0], [1, 0], shade);
+      const cc = k.vertex([x1, H, z0], [0, -1, 0], [1, 1], shade);
+      const cd = k.vertex([x0, H, z0], [0, -1, 0], [0, 1], shade);
+      k.indices.push(ca, cb, cc, ca, cc, cd);
     }
   }
 

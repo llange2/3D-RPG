@@ -93,7 +93,7 @@ export const WORK_DAYS = 10;
 const ELEMENTS = ["fire", "ice", "acid", "magic"] as const;
 /** The old texts of an elemental trap ("Fire trap!"). */
 const TRAP_TEXT = { acid: 432, fire: 433, ice: 434, magic: 435 } as const;
-const ATTRS: Attribute[] = ["str", "int", "per", "end", "spd", "acc", "lck"];
+export const ATTRS: Attribute[] = ["str", "int", "per", "end", "spd", "acc", "lck"];
 
 /** The random stream of one action: a pure function of the world seed, the action uid and the attempt number. */
 export function actionRng(ctx: Pick<ActionContext, "rootSeed" | "attempt">, uid: string): Rng {
@@ -131,21 +131,7 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
       effects.push({ type: "item", item, stored: giveItem(party, item) });
     }
   }
-  // end room rewards (quest document 1.2): packages of attribute points of a random kind, a level for everyone, scrolls of spells of the level
-  const packages = Number(p.attr ?? 0);
-  for (let i = 0; i < packages; i++) {
-    const attribute = ATTRS[rng.int(ATTRS.length)]!;
-    const who = attributeRecipient(party, attribute, rng);
-    if (who === null) continue;
-    const points = Number(p.pts ?? 5);
-    party.characters[who]![attribute] += points;
-    effects.push({ type: "text", text: `${party.characters[who]!.name} is filled with strength: ${attribute.toUpperCase()} +${points}.` }, { type: "attribute", character: who, attribute, amount: points });
-  }
-  const levels = Number(p.levels ?? 0);
-  if (levels > 0) {
-    for (const i of activeCharacters(party)) levelUp(party.characters[i]!, party.talents, levels, party.mascot);
-    effects.push({ type: "text", text: levels === 1 ? "A surge of experience runs through the party: everybody rises a level." : `A surge of experience runs through the party: everybody rises ${levels} levels.` });
-  }
+  // end room rewards (quest document 1.2): scrolls of spells of the level (attribute points and levels lie in chalices: only one hero gets them)
   const scrolls = Number(p.spells ?? 0);
   if (scrolls > 0) {
     const wanted = Number(p.spellLevel ?? level);
@@ -155,7 +141,7 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
       effects.push({ type: "item", item, stored: giveItem(party, item) });
     }
   }
-  const nothing = gold === 0 && items === 0 && packages === 0 && levels === 0 && scrolls === 0 && !(typeof p.extra === "string" && p.extra !== "");
+  const nothing = gold === 0 && items === 0 && scrolls === 0 && !(typeof p.extra === "string" && p.extra !== "");
   if (nothing && !barrel) effects.push({ type: "text", text: "The chest is empty." });
 }
 
@@ -199,6 +185,19 @@ export function resistanceRecipient(party: Party, element: (typeof ELEMENTS)[num
   const least = Math.min(...active.map(has));
   const tied = active.filter((i) => has(i) === least);
   return tied[rng.int(tied.length)]!;
+}
+
+/** What a chalice with a `bonus` holds: a level, points of one attribute or experience. `hint` is what the party sees before it chooses who drinks. */
+export type ChaliceGift = { kind: "level"; amount: number; hint: string } | { kind: "attr"; attribute: Attribute; amount: number; hint: string } | { kind: "xp"; amount: number; hint: string };
+
+export function chaliceGift(p: ActionInstance["params"]): ChaliceGift {
+  const amount = Math.max(1, Number(p.amount ?? 1));
+  if (p.bonus === "attr") {
+    const attribute = p.attr as Attribute;
+    return { kind: "attr", attribute, amount, hint: `The liquid in the chalice glows in the colour of ${attribute.toUpperCase()}. Whoever drinks it gains ${amount} points.` };
+  }
+  if (p.bonus === "xp") return { kind: "xp", amount, hint: "The liquid in the chalice shimmers with old wisdom. Only one of you can drink it." };
+  return { kind: "level", amount, hint: "The liquid in the chalice gleams like liquid gold. Only one of you can drink it." };
 }
 
 /** The tries a mini-quest statue has used: every wrong answer leaves `<uid>@try<n>` in the set. */
@@ -361,6 +360,26 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "chalice": {
+      // a chalice of an end room or of the control deck: one hero drinks it and is the only one who gets the bonus
+      if (typeof p.bonus === "string") {
+        if (p.lock === "code" && !(ctx.opened ?? NONE).has(String(p.requires))) return { effects: [{ type: "text", text: "The chalice is sealed. A message on the nearest terminal says it opens for whoever knows the word." }], consumed: false };
+        const gift = chaliceGift(p);
+        if (ctx.hero === undefined) return { effects: [{ type: "text", text: gift.hint }, { type: "pick", question: "Which character shall drink from the chalice?" }], consumed: false };
+        if (ctx.hero === null) return { effects, consumed: false };
+        const drinker = party.characters[ctx.hero];
+        if (!drinker || !canAct(drinker)) return { effects, consumed: false };
+        if (gift.kind === "level") {
+          levelUp(drinker, party.talents, gift.amount, party.mascot);
+          effects.push({ type: "text", text: `${drinker.name} drinks. A surge of experience runs through ${drinker.name}: ${gift.amount === 1 ? "a level" : `${gift.amount} levels`} gained.` });
+        } else if (gift.kind === "attr") {
+          drinker[gift.attribute] += gift.amount;
+          effects.push({ type: "text", text: `${drinker.name} drinks and is filled with strength: ${gift.attribute.toUpperCase()} +${gift.amount}.` }, { type: "attribute", character: ctx.hero, attribute: gift.attribute, amount: gift.amount });
+        } else {
+          drinker.xp += gift.amount;
+          effects.push({ type: "text", text: `${drinker.name} drinks. A great wisdom flows through ${drinker.name}: ${thousands(gift.amount)} experience points.` });
+        }
+        return { effects, consumed: true };
+      }
       // quest 2: the liquid in the cup is strange; whoever drinks hears a number and a direction, and falls ill
       if (ctx.hero === undefined) return { effects: [{ type: "pick", question: "A strange liquid fills the chalice. Which character shall drink it?" }], consumed: false };
       if (ctx.hero === null) return { effects, consumed: false };

@@ -108,7 +108,7 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
   place(layout.deck, (x, y) => ({ uid: answerUid, kind: "riddle", x, y, params: { item: COMPUTER, question: ask, answer: word.word, aliases: word.aliases.join(","), opens: "chalices", riddle: word.id } }));
   // the chalices of the control deck, 1 to 2 million experience each, freed by the word
   for (let i = 0; i < 2; i++) {
-    place(layout.deck, (x, y) => ({ uid: uid("chalice"), kind: "shrine", x, y, params: { item: CHALICE, effect: "xp", amount: rng.range(1, 2) * 1_000_000, lock: "code", requires: answerUid } }));
+    place(layout.deck, (x, y) => ({ uid: uid("chalice"), kind: "chalice", x, y, params: { item: CHALICE, bonus: "xp", amount: rng.range(1, 2) * 1_000_000, lock: "code", requires: answerUid } }));
   }
 
   // every section: robots, two orbs of ultimate power in a chest, crystals and computers

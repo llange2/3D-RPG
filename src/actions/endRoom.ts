@@ -2,6 +2,7 @@ import { Rng } from "../core/rng";
 import { allowedIn } from "../data/item-rules";
 import { END_LOOT, QUEST_PROP, ORB } from "../data/quest-table";
 import { placeOf } from "../interiors/place";
+import { ATTRS } from "./handlers";
 import type { QuestEnv } from "./questGen";
 import type { ActionInstance, ParamValue } from "./types";
 
@@ -11,17 +12,32 @@ import type { ActionInstance, ParamValue } from "./types";
  * the party is teleported into also holds the portal back to the entrance.
  */
 
-type Reward = { name: string; params: Record<string, ParamValue> };
+type Params = Record<string, ParamValue>;
 
-/** The rewards a level offers, as chests. */
+/**
+ * A reward is a chest, or a few chalices (object 86): a level or points of one attribute lie in a chalice, the party is asked who drinks it, and only
+ * that hero gets the bonus.
+ */
+type Reward = { name: string; kind: "treasure" | "chalice"; parts: Params[] };
+
+/** The rewards a level offers. */
 function rewardsOf(level: number, rng: Rng): Reward[] {
   const t = END_LOOT[Math.min(5, Math.max(1, level))]!;
-  const out: Reward[] = [{ name: "gold", params: { level: Math.min(8, level), gold: rng.range(t.gold[0], t.gold[1]), items: 0 } }];
-  if (t.attributes) out.push({ name: "attributes", params: { level: Math.min(8, level), gold: 0, items: 0, attr: rng.range(t.attributes.packages[0], t.attributes.packages[1]), pts: t.attributes.package } });
-  if (t.levelUps) out.push({ name: "levels", params: { level: Math.min(8, level), gold: 0, items: 0, levels: rng.range(t.levelUps[0], t.levelUps[1]) } });
-  out.push({ name: "treasure", params: { level: Math.min(8, level), gold: 0, items: rng.range(t.treasure[0], t.treasure[1]) } });
+  const lv = Math.min(8, level);
+  const out: Reward[] = [{ name: "gold", kind: "treasure", parts: [{ level: lv, gold: rng.range(t.gold[0], t.gold[1]), items: 0 }] }];
+  if (t.attributes) {
+    const packages = rng.range(t.attributes.packages[0], t.attributes.packages[1]);
+    const parts: Params[] = [];
+    for (let i = 0; i < packages; i++) parts.push({ item: 86, bonus: "attr", attr: ATTRS[rng.int(ATTRS.length)]!, amount: t.attributes.package });
+    out.push({ name: "attributes", kind: "chalice", parts });
+  }
+  if (t.levelUps) {
+    const ups = rng.range(t.levelUps[0], t.levelUps[1]);
+    out.push({ name: "levels", kind: "chalice", parts: Array.from({ length: ups }, () => ({ item: 86, bonus: "level", amount: 1 })) });
+  }
+  out.push({ name: "treasure", kind: "treasure", parts: [{ level: lv, gold: 0, items: rng.range(t.treasure[0], t.treasure[1]) }] });
   const spells = rng.range(t.spells[0], t.spells[1]);
-  if (spells > 0) out.push({ name: "spells", params: { level: Math.min(8, level), gold: 0, items: 0, spells, spellLevel: level } });
+  if (spells > 0) out.push({ name: "spells", kind: "treasure", parts: [{ level: lv, gold: 0, items: 0, spells, spellLevel: level }] });
   return out;
 }
 
@@ -79,12 +95,12 @@ export function fillEndRoom(env: QuestEnv): void {
       return ([[0, 1], [1, 0], [0, -1], [-1, 0]] as const).some(([dx, dy]) => seen.has(key(bx + dx, by + dy)));
     });
   };
-  const put = (name: string, params: Record<string, ParamValue>): void => {
+  const put = (name: string, params: Params, kind: "treasure" | "chalice" = "treasure"): void => {
     const at = cells.findIndex(keeps);
     if (at < 0) return;
     const cell = cells.splice(at, 1)[0]!;
     taken.add(`${cell.x},${cell.y}`);
-    env.placeEnd({ uid: env.uid(`end-${name}`), kind: "treasure", x: cell.x, y: cell.y, params });
+    env.placeEnd({ uid: env.uid(`end-${name}`), kind, x: cell.x, y: cell.y, params });
   };
 
   // a pocket in the rock has a portal that leads back to the way in: A > B > A
@@ -106,5 +122,10 @@ export function fillEndRoom(env: QuestEnv): void {
   // and 2 to 4 more rewards of its level
   const pool = rng.shuffle(rewardsOf(env.tier, rng));
   const wanted = Math.min(pool.length, rng.range(2, 4));
-  for (const reward of pool.slice(0, wanted)) put(reward.name, { ...reward.params, chest: env.theme.chest });
+  for (const reward of pool.slice(0, wanted)) {
+    for (const part of reward.parts) {
+      if (reward.kind === "chalice") put(reward.name, part, "chalice");
+      else put(reward.name, { ...part, chest: env.theme.chest });
+    }
+  }
 }

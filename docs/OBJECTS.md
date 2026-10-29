@@ -98,7 +98,7 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 | 83 | Fractured vessels |  | x | x | x | x |  |  |  |
 | 84 | Cyber wall (round inner corner) |  |  |  |  |  | x |  | Falls du die abgerundeten Wände auch ohne dieses Objekt darstellen kannst, benötigst du es nicht |
 | 85 | Cyber wall (round outer corner) |  |  |  |  |  | x |  | Falls du die abgerundeten Wände auch ohne dieses Objekt darstellen kannst, benötigst du es nicht |
-| 86 | Chalice | **ja** | x |  | x |  | x |  |  |
+| 86 | Chalice | **ja** | x | x | x |  | x |  |  |
 | 87 | Guillotine trap |  |  |  | x |  |  |  |  |
 | 88 | Magic well (yellow) | **ja** | x | x | x |  |  |  |  |
 | 89 | Mermaid fountain |  | x |  | x | x |  | x |  |

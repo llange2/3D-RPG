@@ -24,7 +24,7 @@ import { ChunkManager } from "../render/chunkManager";
 import { VIEW_DISTANCES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
 import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
-import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, caveModelKeys, pillarModelKeys } from "../render/interiorView";
+import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
 import { cellCenterX, cellCenterZ } from "../render/interiorMesher";
@@ -731,7 +731,7 @@ export class Game {
       }
       this.ui.loading.set(LOAD_DATA);
       await this.monsters.preload(content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])));
-      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
+      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
       // the end room of a quest solved earlier is open
@@ -1898,6 +1898,8 @@ export class Game {
     const pick = outcome.effects.find((e) => e.type === "pick");
     if (pick?.type === "pick") {
       this.player.locked = true;
+      // what the object says before it asks (the colour of the liquid, the plaque of a machine)
+      for (const e of outcome.effects) if (e.type === "text") this.ui.log(e.text, "info");
       const options = this.state.party.characters.map((c, i) => ({ label: c.name, value: i, note: `${c.hp}/${c.health} HP`, disabled: !canAct(c) }));
       const hero = await this.ui.choose("", pick.question, options);
       this.player.locked = false;
@@ -2140,7 +2142,7 @@ export class Game {
 
   /**
    * The end of the game: the party steps into the transport tube of the control deck with the black key card. The outro of the old game plays if the file
-   * `assets/ui/outro.mp4` is there (it is 88 MB and not shipped: copy `old_code/resources/movies/Game Outro.mp4` to `public/assets/ui/outro.mp4`), then a last message.
+   * `assets/ui/outro.mp4` is there (it is 88 MB and kept out of git: `public/assets/ui/outro.mp4` is copied in by hand from `old_code/resources/movies/Game Outro.mp4`), then a last message.
    */
   private async playEnding(): Promise<void> {
     this.player.locked = true;
