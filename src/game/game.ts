@@ -13,7 +13,7 @@ import { AudioManager } from "../audio/audio";
 import { LAYER, Rng, rngFor, seedFromString } from "../core/rng";
 import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
-import { endFlag, ringBlocked } from "../actions/quests";
+import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
 import { CELL, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
@@ -2383,7 +2383,7 @@ export class Game {
           this.state.killed.add(e.uid);
           this.noteHutDeath(e.uid);
           // quest 5: the end boss stands before the end room, and its death opens it
-          if (e.uid.includes("#endboss")) this.openEndRoom();
+          if (isEndBoss(e.uid)) this.openEndRoom();
           this.state.kills++;
           this.dropLoot(e.x, e.y, e.loot.gold, e.loot.item ? [e.loot.item] : [], true);
           const epoch = this.fxEpoch;

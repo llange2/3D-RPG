@@ -1,5 +1,5 @@
 import { LAYER, Rng, rngFor, type SeedState } from "../core/rng";
-import { buildLook, monstersOfGroups, type DungeonClass } from "../data/dungeon-themes";
+import { buildLook, type DungeonClass } from "../data/dungeon-themes";
 import {
   BOSS_PAIRS,
   CARD_COLORS,
@@ -16,7 +16,7 @@ import {
   type MonsterGroup,
   type QuestId,
 } from "../data/quest-table";
-import { MONSTERS, monsterGroup } from "../data/tables";
+import { MONSTERS } from "../data/tables";
 import type { Poi, WorldSize } from "../world/types";
 import type { World } from "../world/world";
 import type { DungeonRef } from "./types";
@@ -109,8 +109,8 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     else gives.set(holder.id, [type]);
   };
   // each key goes to the holder that has the fewest, by chance among equals
-  const leastLoaded = (holders: readonly Poi[]): Poi => {
-    const open = holders.filter((h) => (gives.get(h.id)?.length ?? 0) < perRoom);
+  const leastLoaded = (holders: readonly Poi[], cap = perRoom): Poi => {
+    const open = holders.filter((h) => (gives.get(h.id)?.length ?? 0) < cap);
     const least = Math.min(...open.map((h) => gives.get(h.id)?.length ?? 0));
     const tied = open.filter((h) => (gives.get(h.id)?.length ?? 0) === least);
     return tied[rng.int(tied.length)]!;
@@ -121,14 +121,16 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
   }
 
   // 3. the key cards: one for each pyramid, in the end room of a level 4 or 5 dungeon
-  const cardHolders = dungeons.filter((p) => p.tier >= 4);
-  const cardCount = Math.min(CARD_COLORS.length, pyramids.length, cardHolders.length * perRoom);
+  // a small world may have fewer such dungeons than pyramids: then a room holds more cards than keys (three at most), so that every pyramid has its card
+  const cardHolders = dungeons.filter((p) => p.tier >= 4).length > 0 ? dungeons.filter((p) => p.tier >= 4) : dungeons;
+  const cardsPerRoom = Math.min(3, Math.max(perRoom, Math.ceil(pyramids.length / Math.max(1, cardHolders.length))));
+  const cardCount = Math.min(CARD_COLORS.length, pyramids.length, cardHolders.length * cardsPerRoom);
   const sectionOf = new Map<string, number>();
   pyramids.forEach((p, i) => {
     sectionOf.set(p.id, i);
     if (i < cardCount) {
       requires.set(p.id, cardType(CARD_COLORS[i]!));
-      give(leastLoaded(cardHolders), cardType(CARD_COLORS[i]!));
+      give(leastLoaded(cardHolders, cardsPerRoom), cardType(CARD_COLORS[i]!));
     }
   });
 
@@ -155,15 +157,7 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     const def = QUESTS[quest];
     const klass: DungeonClass = need ? "B" : "A";
     const name = `${def.name} (${layout})`;
-    const theme = buildLook(look, kind, poi.tier, quest, name, def.groups as MonsterGroup[], klass, `${quest}/${layout}`);
-    if (quest === "quest_5") {
-      const pair = bossPair(look, poi.tier);
-      const others = theme.monsters.filter((m) => m !== pair.population).slice(0, 2);
-      const fill = others.length > 0 ? others : monstersOfGroups(def.groups as MonsterGroup[]).filter((m) => m !== pair.population).slice(0, 2);
-      theme.monsters = [pair.population, pair.population, pair.population, ...fill];
-      theme.boss = pair.boss;
-      theme.inhabitants = inhabitantsOf(pair.population);
-    }
+    const theme = buildLook(look, kind, poi.tier, quest, name, def.groups as MonsterGroup[], klass, `${quest}/${layout}`, quest === "quest_5" ? bossPair(look, poi.tier) : undefined);
     out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: 0, scale: SIZE_SCALE[size] ?? 1 });
   }
   return out;
@@ -173,11 +167,6 @@ function rngPick<T>(rng: Rng, list: readonly T[]): T {
   return list[rng.int(list.length)]!;
 }
 
-function inhabitantsOf(monster: number) {
-  const g = monsterGroup(monster);
-  return g === "undead" ? "undead" : g === "humanoid" ? "human" : g === "monster_humanoid" ? "goblinoid" : g === "magical_construct" ? "construct" : "vermin";
-}
-
 /** A place that is not part of the plan of a world (a hand-made one in a test): a free place with a quest of its own, holding nothing for the chain. */
 function standalone(world: World, poi: Poi): DungeonRef {
   const kind = poi.kind as "dungeon" | "cave";
@@ -185,12 +174,7 @@ function standalone(world: World, poi: Poi): DungeonRef {
   const quests = (Object.keys(QUESTS) as QuestId[]).filter((q) => layoutsFor(q, kind).length > 0);
   const quest = quests[rng.int(quests.length)]!;
   const layout = rngPick(rng, layoutsFor(quest, kind));
-  const theme = buildLook(rng, kind, poi.tier, quest, `${QUESTS[quest].name} (${layout})`, QUESTS[quest].groups as MonsterGroup[], "A", `${quest}/${layout}`);
-  if (quest === "quest_5") {
-    const pair = bossPair(rng, poi.tier);
-    theme.monsters = [pair.population, pair.population, pair.population, ...theme.monsters.filter((m) => m !== pair.population).slice(0, 2)];
-    theme.boss = pair.boss;
-  }
+  const theme = buildLook(rng, kind, poi.tier, quest, `${QUESTS[quest].name} (${layout})`, QUESTS[quest].groups as MonsterGroup[], "A", `${quest}/${layout}`, quest === "quest_5" ? bossPair(rng, poi.tier) : undefined);
   return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: 0, scale: 1 };
 }
 

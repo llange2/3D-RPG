@@ -19,8 +19,17 @@ function countSolid8(b: Builder, x: number, y: number): number {
   return n;
 }
 
-/** Cellular-automaton cave. Keeps the largest connected area; chambers are Voronoi cells of far-apart seed points. */
+/**
+ * Cellular-automaton cave. Keeps the largest connected area; chambers are Voronoi cells of far-apart seed points. A cave of a quest also needs rock
+ * for its end room: one that has none is drawn again (the cave is a pure function of the stream, so the next try is as deterministic as the first).
+ */
 export function generateCave(rng: Rng, ctx: BuildContext): InteriorMap {
+  let map = generateCaveOnce(rng, ctx);
+  for (let again = 0; again < 8 && ctx.dungeon && !map.dungeon?.endRoom; again++) map = generateCaveOnce(rng, ctx);
+  return map;
+}
+
+function generateCaveOnce(rng: Rng, ctx: BuildContext): InteriorMap {
   let b = new Builder(SIZE, SIZE);
   let bestCount = -1;
   let best: Builder | null = null;

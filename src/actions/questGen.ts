@@ -78,17 +78,17 @@ function approach(env: QuestEnv): { x: number; y: number } | null {
 }
 
 /**
- * A free cell near the end room, for the statue that wants the answer, the end boss: close to the cell in front of the seal, but not on it (that
- * cell stays open, it is the way to the wall). A place whose end room is a pocket has no such cell: the deepest free cell then.
+ * Puts an object on the free cell nearest to the end room, for the statue that wants the answer: close to the cell in front of the seal, but not on
+ * it (that cell stays open, it is the way to the wall). A place whose end room is a pocket has no such cell: the deepest free cell then. Every
+ * candidate is tried in turn, so the statue is placed wherever the place has room for it at all.
  */
-function nearEnd(env: QuestEnv, rng: Rng, minDistance = 2): Anchor | null {
+function placeNearEnd(env: QuestEnv, make: (x: number, y: number) => ActionInstance, minDistance = 2): Anchor | null {
   const front = approach(env);
-  const pool = [...env.anchors.byKind.roomEdge, ...env.anchors.byKind.deadEnd, ...env.anchors.byKind.corridor].filter((a) => env.free(a.x, a.y));
-  if (!front) return [...pool].sort((p, q) => q.depth - p.depth || p.y - q.y || p.x - q.x)[0] ?? null;
-  const dist = (a: Anchor) => Math.abs(a.x - front.x) + Math.abs(a.y - front.y);
-  const sorted = pool.filter((a) => dist(a) >= minDistance).sort((p, q) => dist(p) - dist(q) || p.y - q.y || p.x - q.x);
-  void rng;
-  return sorted[0] ?? null;
+  const pool = [...env.anchors.byKind.roomEdge, ...env.anchors.byKind.deadEnd, ...env.anchors.byKind.corridor, ...env.anchors.byKind.roomCenter].filter((a) => env.free(a.x, a.y));
+  const dist = (a: Anchor) => (front ? Math.abs(a.x - front.x) + Math.abs(a.y - front.y) : -a.depth);
+  const sorted = pool.filter((a) => !front || dist(a) >= minDistance).sort((p, q) => dist(p) - dist(q) || p.y - q.y || p.x - q.x);
+  for (const a of sorted) if (env.place(make(a.x, a.y))) return a;
+  return null;
 }
 
 export function placeQuest(env: QuestEnv): QuestResult {
@@ -195,11 +195,16 @@ function facesAndChalices(env: QuestEnv, rng: Rng): QuestResult {
 
   // five heads in a row along a long wall of the hall that no passage leaves through, number 1 on the left of whoever faces the wall
   const solid = (x: number, y: number) => env.map.cells[y * env.map.width + x] !== 1;
-  const walls = rng.shuffle([
-    { y: hall.y, wall: hall.y - 1, away: 2, ascending: true },
-    { y: hall.y + hall.h - 1, wall: hall.y + hall.h, away: 0, ascending: false },
-  ]);
-  const row = walls.find((w) => [0, 1, 2, 3, 4].every((i) => solid(hall.x + 1 + i * 2, w.wall) && env.free(hall.x + 1 + i * 2, w.y)));
+  // (a hall whose long walls both have a passage in them gets the row one cell in from a wall)
+  const walls = [
+    ...rng.shuffle([
+      { y: hall.y, wall: hall.y - 1, away: 2, ascending: true },
+      { y: hall.y + hall.h - 1, wall: hall.y + hall.h, away: 0, ascending: false },
+    ]),
+    { y: hall.y + 1, wall: -1, away: 2, ascending: true },
+    { y: hall.y + hall.h - 2, wall: -1, away: 0, ascending: false },
+  ];
+  const row = walls.find((w) => [0, 1, 2, 3, 4].every((i) => (w.wall < 0 || solid(hall.x + 1 + i * 2, w.wall)) && env.free(hall.x + 1 + i * 2, w.y)));
   if (!row) return {};
   let code = [0, 1, 2, 3, 4].map(() => rng.int(4));
   while (code.filter((d) => d !== row.away).length < 3) code = [0, 1, 2, 3, 4].map(() => rng.int(4));
@@ -297,12 +302,11 @@ function calculations(env: QuestEnv, rng: Rng): QuestResult {
   const spots = edgeSpots(env, rng);
   for (let i = 0; i < count; i++) {
     const p = plaque(rng);
-    if (!placeOnFirst(env, spots, (s) => ({ uid: env.uid("statue"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statue, text: `The plaque on the statue reads: ${p.text}` } }))) continue;
+    if (!placeOnFirst(env, spots, (s) => ({ uid: env.uid("statue"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statue, text: `The plaque on the statue reads: ${p.text}`, fallen: p.fallen } }))) continue;
     sum += p.fallen;
   }
-  const end = nearEnd(env, rng);
   const endStatue = statueOf(rng, place, [27, 61]);
-  if (end) env.place({ uid: env.uid("riddle"), kind: "riddle", x: end.x, y: end.y, params: { item: endStatue, question: "A dull voice speaks: 'How many warriors have fallen with honour?'", answer: String(sum), opens: "end" } });
+  placeNearEnd(env, (x, y) => ({ uid: env.uid("riddle"), kind: "riddle", x, y, params: { item: endStatue, question: "A dull voice speaks: 'How many warriors have fallen with honour?'", answer: String(sum), opens: "end" } }));
   return {};
 }
 
@@ -310,11 +314,17 @@ function calculations(env: QuestEnv, rng: Rng): QuestResult {
 
 function endBoss(env: QuestEnv, rng: Rng): QuestResult {
   const front = approach(env);
-  const spot = front && env.free(front.x, front.y) ? front : nearEnd(env, rng, 0);
+  let spot: { x: number; y: number } | null = front && env.free(front.x, front.y) ? front : null;
+  if (!spot) {
+    const pool = [...env.anchors.byKind.roomEdge, ...env.anchors.byKind.deadEnd, ...env.anchors.byKind.corridor].filter((a) => env.free(a.x, a.y));
+    const dist = (a: Anchor) => (front ? Math.abs(a.x - front.x) + Math.abs(a.y - front.y) : -a.depth);
+    spot = pool.sort((p, q) => dist(p) - dist(q) || p.y - q.y || p.x - q.x)[0] ?? null;
+  }
   if (spot) {
     env.reserve(spot.x, spot.y);
     env.spawns.push({ uid: env.uid("endboss"), x: spot.x, y: spot.y, monsterIds: [env.theme.boss], boss: true });
   }
+  void rng;
   return {};
 }
 
@@ -337,17 +347,14 @@ function riddleWord(env: QuestEnv, rng: Rng): QuestResult {
   const pick = pickWord(rng);
   const chosen = pick.word.length <= longest ? pick : pickWord(rng, 3);
   const { hints, ask } = letterHints(rng, chosen.word);
-  for (const text of hints) placeOnFirst(env, spots, (s) => ({ uid: env.uid("statue"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statue, text } }));
-  const end = nearEnd(env, rng);
-  if (end) {
-    env.place({
-      uid: env.uid("riddle"),
-      kind: "riddle",
-      x: end.x,
-      y: end.y,
-      params: { item: statue, question: ask, answer: chosen.word, aliases: chosen.aliases.join(","), opens: "end", riddle: chosen.id },
-    });
-  }
+  hints.forEach((text, i) => placeOnFirst(env, spots, (s) => ({ uid: env.uid("statue"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statue, text, letter: chosen.word[i]!.toUpperCase(), order: i + 1 } })));
+  placeNearEnd(env, (x, y) => ({
+    uid: env.uid("riddle"),
+    kind: "riddle",
+    x,
+    y,
+    params: { item: statue, question: ask, answer: chosen.word, aliases: chosen.aliases.join(","), opens: "end", riddle: chosen.id },
+  }));
   return {};
 }
 

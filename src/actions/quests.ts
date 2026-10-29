@@ -76,3 +76,6 @@ export function sameAnswer(given: string, expected: string): boolean {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/^(a|an|the) /, "").replace(/\s+/g, " ").trim();
   return norm(given) === norm(expected);
 }
+
+/** Is this spawn the end boss of quest 5? Its death opens the end room. */
+export const isEndBoss = (uid: string): boolean => uid.includes("#q-endboss");

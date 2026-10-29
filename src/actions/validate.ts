@@ -50,16 +50,16 @@ export function themeIssues(map: InteriorMap, content: MapContent): string[] {
     if (a.kind === "trap" && a.params.trap !== theme.trap) issues.push(`${a.uid}: ${String(a.params.trap)} trap in ${theme.id}, which has ${theme.trap}`);
     if (a.kind === "decor" && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
     for (const item of [a.params.item, a.params.chest]) if (typeof item === "number" && forbidden.has(item) && a.params.quest === undefined) issues.push(`${a.uid}: prop ${item} does not suit ${theme.inhabitants}`);
-    if (typeof a.params.quest === "string") found.push(a.params.quest);
+    if (typeof a.params.quest === "string") for (let i = 0; i < Number(a.params.count ?? 1); i++) found.push(a.params.quest);
     if (a.kind === "ambush" && typeof a.params.monsters === "string") {
       for (const id of a.params.monsters.split(",").map(Number)) if (!own.has(id)) issues.push(`${a.uid}: ambush monster ${id} does not belong to ${theme.id}`);
     }
   }
-  if (found.slice().sort().join() !== ref.gives.slice().sort().join()) issues.push(`${map.key}: holds [${found.join(", ")}], the plan says [${ref.gives.join(", ")}]`);
-  // rules 1 to 3: a free place has no key card, a key place no key, a pyramid neither
-  if (ref.klass === "A" && found.some((q) => q.endsWith("_keycard"))) issues.push(`${map.key}: a free place holds a key card`);
-  if (ref.klass !== "A" && found.some((q) => q.startsWith("quest_key_"))) issues.push(`${map.key}: a key place or pyramid holds a key`);
-  if (ref.klass === "C" && found.length > 0) issues.push(`${map.key}: a pyramid holds ${found.join(", ")}`);
+  const promised = [...ref.gives, ...Array.from({ length: ref.orbs }, () => "quest_orb")];
+  if (found.slice().sort().join() !== promised.slice().sort().join()) issues.push(`${map.key}: holds [${found.join(", ")}], the plan says [${promised.join(", ")}]`);
+  // keys lie in level 1 and 2 places, key cards in level 4 and 5 dungeons, orbs in dungeons of level 4 and 5
+  if (found.some((q) => q.startsWith("quest_key_")) && map.tier > 2) issues.push(`${map.key}: a key in a place of level ${map.tier}`);
+  if (found.some((q) => q.endsWith("_keycard") || q === "quest_orb") && (map.kind === "cave" || map.tier < 4)) issues.push(`${map.key}: a key card or orb in a cave or a place of level ${map.tier}`);
   return issues;
 }
 

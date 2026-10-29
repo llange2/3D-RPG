@@ -127,9 +127,13 @@ export function buildLook(
   groups: readonly MonsterGroup[],
   klass: DungeonClass,
   id: string,
+  led?: { population: number; boss: number },
 ): DungeonTheme {
   const place = placeOf(kind);
-  const { monsters, boss } = pickMonsters(rng, groups, tier);
+  const picked = pickMonsters(rng, groups, tier);
+  // a place led by a boss (quest 5): the population is 60 % of the monsters (three of five), the rest are two others of the groups
+  const monsters = led ? [led.population, led.population, led.population, ...picked.monsters.filter((m) => m !== led.population).slice(0, 2)] : picked.monsters;
+  const boss = led ? led.boss : picked.boss;
   const inhabitants = INHABITANTS[(monsterGroup(monsters[0]!) as MonsterGroup) || groups[0]!];
   const fits = (i: number) => allowedIn(i, place) && !FORBIDDEN_PROPS[inhabitants].includes(i);
   const chest = rng.shuffle(CHESTS.filter(fits))[0] ?? 1;
