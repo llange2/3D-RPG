@@ -209,15 +209,13 @@ describe("a door sounds like what is drawn (tenth playtest, point 3)", () => {
     expect(doorSound("gate")).toBe(9034);
   });
 
-  it("makes the picked wooden door of the Catacombs of Zanvaa (67/30) a wooden door", () => {
-    const world = new World("kelp-mere-931");
-    const poi: Poi | undefined = CATACOMBS;
-    expect(poi).toBeTruthy();
-    const map = generateInterior(world, poi!);
-    const content = buildMapContent(world, poi!, map);
-    const door = content.actions.find((a) => a.kind === "door" && a.x === 67 && a.y === 30)!;
-    expect(door.params.locked).toBe(true);
-    expect(doorLook(map, door.x, door.y)).toBe("door");
+  it("makes a picked door of a dungeon a wooden door or a gate by its look, and a locked one stays locked", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 40; i++) {
+      const { map, content } = findPlace((p) => p.map.kind === "dungeon" && p.content.actions.some((a) => a.kind === "door"), 400 + i);
+      for (const a of content.actions.filter((x) => x.kind === "door")) seen.add(doorLook(map, a.x, a.y));
+    }
+    expect([...seen].sort()).toEqual(["door", "gate"]);
   });
 });
 

@@ -207,7 +207,9 @@ function facesAndChalices(env: QuestEnv, rng: Rng): QuestResult {
     { y: hall.y + 1, wall: -1, away: 2, ascending: true },
     { y: hall.y + hall.h - 2, wall: -1, away: 0, ascending: false },
   ];
-  const row = walls.find((w) => [0, 1, 2, 3, 4].every((i) => (w.wall < 0 || solid(hall.x + 1 + i * 2, w.wall)) && env.free(hall.x + 1 + i * 2, w.y)));
+  // (and the seal of the end room may be in the same wall: the way to it must stay clear)
+  const front = approach(env);
+  const row = walls.find((w) => [0, 1, 2, 3, 4].every((i) => (w.wall < 0 || solid(hall.x + 1 + i * 2, w.wall)) && env.free(hall.x + 1 + i * 2, w.y) && !(front && front.x === hall.x + 1 + i * 2 && front.y === w.y)));
   if (!row) return {};
   let code = [0, 1, 2, 3, 4].map(() => rng.int(4));
   while (code.filter((d) => d !== row.away).length < 3) code = [0, 1, 2, 3, 4].map(() => rng.int(4));

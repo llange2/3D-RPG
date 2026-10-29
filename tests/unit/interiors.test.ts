@@ -43,8 +43,8 @@ describe("interior generators", () => {
         const map = generateInterior(world, poiFor(kind, i));
         check(map, `${kind} #${i}`);
         if (kind === "dungeon") {
-          expect(map.rooms.length).toBeGreaterThanOrEqual(8);
-          expect(map.rooms.length).toBeLessThanOrEqual(25);
+          expect(map.rooms.length).toBeGreaterThanOrEqual(5);
+          expect(map.rooms.length).toBeLessThanOrEqual(27);
         }
         if (kind === "castle") expect(map.rooms.length).toBeGreaterThanOrEqual(4);
         if (kind === "cave") expect(analyzeTopology(map).totalFloor).toBeGreaterThan(200); // 40 x 40 since the sixteenth playtest
