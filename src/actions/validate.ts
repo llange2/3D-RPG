@@ -1,5 +1,5 @@
 import { BANNER, CASTLE_MONSTERS } from "../data/castles";
-import { FORBIDDEN_PROPS, THEMES_BY_ID } from "../data/dungeon-themes";
+import { FORBIDDEN_PROPS } from "../data/dungeon-themes";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { questIssues } from "./questChecks";
@@ -40,9 +40,8 @@ export function itemIssues(map: InteriorMap, content: MapContent): string[] {
 export function themeIssues(map: InteriorMap, content: MapContent): string[] {
   const issues: string[] = [];
   const ref = map.dungeon;
-  const theme = ref ? THEMES_BY_ID[ref.id] : undefined;
   if (!ref) return issues;
-  if (!theme) return [`${map.key}: unknown dungeon theme ${ref.id}`];
+  const theme = ref.look;
   const own = new Set([...theme.monsters, theme.boss]);
   const forbidden = new Set(FORBIDDEN_PROPS[theme.inhabitants]);
   for (const s of content.spawns) for (const id of s.monsterIds) if (!own.has(id)) issues.push(`${s.uid}: monster ${id} does not belong to ${theme.id}`);
@@ -142,9 +141,16 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
   for (const a of content.actions) if (blocksCell(a) && map.cells[idx(a.x, a.y)] === CELL.FLOOR) blocked.add(idx(a.x, a.y));
   // a wall that gives way is a way through (the chamber of a castle's vault lies behind one); it is one more cell to reach
   const hidden = new Set<number>(content.actions.filter((a) => a.uid.includes("#vault_wall:")).map((a) => idx(a.x, a.y)));
+  const end = map.dungeon?.endRoom;
+  if (end?.seal) hidden.add(idx(end.seal.x, end.seal.y));
   const seen = new Uint8Array(map.width * map.height);
   const queue: number[] = [idx(map.spawn.x, map.spawn.y)];
   seen[queue[0]!] = 1;
+  // a pocket in the rock that only a teleport reaches is a second place to start from
+  if (end?.isolated) {
+    queue.push(idx(end.cx, end.cy));
+    seen[idx(end.cx, end.cy)] = 1;
+  }
   let reached = 0;
   for (let head = 0; head < queue.length; head++) {
     const i = queue[head]!;

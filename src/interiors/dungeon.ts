@@ -1,7 +1,6 @@
 import type { Rng } from "../core/rng";
-import { HALL_QUESTS, HALL_SIZE, THEMES_BY_ID } from "../data/dungeon-themes";
 import { Builder, extraEdges, primEdges, rectsOverlap, type BuildContext, type Rect } from "./builder";
-import { GLYPH_DIGITS, glyphCells, glyphWidth } from "./glyphs";
+import { carveEndRoomFor } from "./endRoom";
 import { CELL, type DungeonRef, type InteriorMap } from "./types";
 
 const SIZE = 96;
@@ -13,15 +12,17 @@ const SIZE = 96;
  */
 export function generateDungeon(rng: Rng, ctx: BuildContext): InteriorMap {
   const b = new Builder(SIZE, SIZE);
+  const quest0 = ctx.dungeon?.quest;
   const target = rng.range(15, 20 + Math.min(ctx.tier, 5));
   const placed: Rect[][] = [];
 
-  const first: Rect = { x: SIZE / 2 - 3, y: SIZE / 2 - 3, w: rng.range(5, 7), h: rng.range(5, 7) };
+  const first: Rect = quest0 === "quest_1" ? { x: SIZE / 2 - 4, y: SIZE / 2 - 4, w: 9, h: 9 } : { x: SIZE / 2 - 3, y: SIZE / 2 - 3, w: rng.range(5, 7), h: rng.range(5, 7) };
   placed.push([first]);
 
-  // a quest that needs a hall (the picture, the field of runes, the ring of heads) gets it before any other room, next to the first
-  const quest = ctx.dungeon ? THEMES_BY_ID[ctx.dungeon.id]?.quest : undefined;
-  const hall: Rect | undefined = quest && HALL_QUESTS.includes(quest) ? { x: SIZE / 2 + 14, y: SIZE / 2 - 7, ...HALL_SIZE } : undefined;
+  // a quest that needs a hall of its own gets it before any other room, next to the first: the entrance room of quest 1 holds the field of
+  // statues (a 3 x 3 field and a free ring round it), quest 2 needs a wall long enough for five heads and room to walk before them
+  const quest = ctx.dungeon?.quest;
+  const hall: Rect | undefined = quest === "quest_2" ? { x: SIZE / 2 + 14, y: SIZE / 2 - 7, w: 11, h: 7 } : undefined;
   if (hall) placed.push([hall]);
 
   for (let attempt = 0; attempt < 900 && placed.length < target; attempt++) {
@@ -82,21 +83,12 @@ export function generateDungeon(rng: Rng, ctx: BuildContext): InteriorMap {
     }
   });
 
-  // the picture riddle: two digits drawn as islands of wall inside the hall, with a free ring of floor around them and a free gap between them
-  let glyph: string | undefined;
-  if (hall && quest === "map_picture") {
-    glyph = GLYPH_DIGITS[rng.int(GLYPH_DIGITS.length)]! + GLYPH_DIGITS[rng.int(GLYPH_DIGITS.length)]!;
-    const x0 = hall.x + Math.floor((hall.w - glyphWidth(glyph)) / 2);
-    const y0 = hall.y + Math.floor((hall.h - 5) / 2);
-    for (const [dx, dy] of glyphCells(glyph)) {
-      b.set(x0 + dx, y0 + dy, CELL.SOLID);
-      b.roomOf[b.idx(x0 + dx, y0 + dy)] = -1;
-    }
-  }
-
   const r0 = placed[0]![0]!;
   const { exit, spawn } = b.pickExit(r0.x + Math.floor(r0.w / 2), r0.y + r0.h - 1, (x, y) => b.roomOf[b.idx(x, y)] === 0 && b.isFloor(x - 1, y) && b.isFloor(x + 1, y));
-  const dungeon: DungeonRef | undefined = ctx.dungeon && hall ? { ...ctx.dungeon, hall: { ...hall }, ...(glyph ? { glyph } : {}) } : ctx.dungeon;
+  // the end room: the quests that teleport the party into it (quest 1 and 3) leave it in the rock on its own, the others seal it
+  const wantsRoom = !!ctx.dungeon && quest0 !== "spaceship";
+  const endRoom = wantsRoom ? carveEndRoomFor(b, rng, spawn, quest0 === "quest_1" || quest0 === "quest_3", quest0 === "quest_2" ? hall : undefined) : null;
+  const dungeon: DungeonRef | undefined = ctx.dungeon ? { ...ctx.dungeon, ...(hall ? { hall: { ...hall } } : quest0 === "quest_1" ? { hall: { ...r0 } } : {}), ...(endRoom ? { endRoom } : {}) } : undefined;
   return b.finish("dungeon", { ...ctx, dungeon }, exit, spawn);
 }
 

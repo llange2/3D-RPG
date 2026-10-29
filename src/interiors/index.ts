@@ -1,6 +1,5 @@
 import { LAYER, rngFor } from "../core/rng";
 import { pickAlignment } from "../data/castles";
-import { THEMES_BY_ID } from "../data/dungeon-themes";
 import { pickInteriorTheme, withDungeonTheme } from "../data/interior-themes";
 import { BIOME, type Poi } from "../world/types";
 import type { World } from "../world/world";
@@ -14,7 +13,7 @@ import type { InteriorMap } from "./types";
 
 export * from "./types";
 export { analyzeTopology, type Topology, type Mouth } from "./topology";
-export { checkKeyChain, planDungeon, planRegion } from "./dungeonPlan";
+export { checkKeyChain, planDungeon } from "./dungeonPlan";
 
 /**
  * Generates the interior of a POI. A pure function of (world seed, POI position, floor): visiting the same
@@ -24,11 +23,10 @@ export function generateInterior(world: World, poi: Poi, floor = 0): InteriorMap
   const rng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor);
   const themeRng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "theme");
   const dungeon = planDungeon(world, poi) ?? undefined;
-  const look = pickInteriorTheme(poi.kind, poi.biome, poi.tier, themeRng, dungeon?.klass === "C");
-  const ctx: BuildContext = {
+  const look = pickInteriorTheme(poi.kind, poi.biome, poi.tier, themeRng, dungeon?.klass === "C");  const ctx: BuildContext = {
     key: `${poi.id}:${floor}`,
     tier: poi.tier,
-    theme: dungeon ? withDungeonTheme(look, THEMES_BY_ID[dungeon.id]!) : look,
+    theme: dungeon ? withDungeonTheme(look, dungeon.look) : look,
     dungeon,
   };
   switch (poi.kind) {

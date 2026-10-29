@@ -1,142 +1,203 @@
-import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
-import { CARD_COLORS, DUNGEON_THEMES, THEMES_BY_ID, cardType, keyType, type DungeonTheme } from "../data/dungeon-themes";
-import type { Poi } from "../world/types";
+import { LAYER, Rng, rngFor, type SeedState } from "../core/rng";
+import { buildLook, monstersOfGroups, type DungeonClass } from "../data/dungeon-themes";
+import {
+  BOSS_PAIRS,
+  CARD_COLORS,
+  KEY_COLORS,
+  MAX_ITEMS_PER_ROOM,
+  ORBS_IN_WORLD,
+  ORBS_PER_SECTION,
+  QUESTS,
+  SIZE_SCALE,
+  SECTIONS,
+  cardType,
+  keyType,
+  type LayoutId,
+  type MonsterGroup,
+  type QuestId,
+} from "../data/quest-table";
+import { MONSTERS, monsterGroup } from "../data/tables";
+import type { Poi, WorldSize } from "../world/types";
 import type { World } from "../world/world";
 import type { DungeonRef } from "./types";
 
 /**
- * Which theme every cave and dungeon of the generated world has, and how the places hang together by keys (chapter 1.2 of
- * docs/DUNGEON_THEMES.md). The unit is the region: its caves and dungeons are planned together, so that every key a Class B
- * dungeon asks for lies in a free Class A place of the same region and every key card a pyramid asks for in a Class B dungeon of it.
- * Without that a region could contain a door and no key. A pure function of the world seed and the region.
+ * Which quest, layout and look every cave and dungeon of the generated world has, and how the places hang together by keys, key cards and
+ * orbs (quest document 1.2, "End-Räume"). The unit is the whole world, not an island: the keys lie in the end rooms of level 1 and 2, the key cards
+ * in the end rooms of level 4 and 5 dungeons, the orbs in the level 5 dungeons, and a key opens one dungeon wherever it stands. The five pyramids
+ * (the entrances of the spaceship's five sections) are spread over the islands. A pure function of the world seed and the places.
  */
 
-/** Chance (permille) that a dungeon asks for a key, and that a high dungeon is a pyramid. */
-const KEYED = 330;
-const PYRAMID = 150;
-/** A theme a region already has is this much less likely to come twice (percent). */
-const REPEAT_PERCENT = 20;
+/** The orbs that lie in the dungeons: the rest of the 31 are in the spaceship. */
+const DUNGEON_ORBS = ORBS_IN_WORLD - ORBS_PER_SECTION * SECTIONS;
 
-const isClass = (t: DungeonTheme, ...k: DungeonTheme["klass"][]) => k.includes(t.klass);
+const isDungeon = (p: Poi) => p.kind === "dungeon";
 
-/** Themes that can stand in a place of this kind and tier, or, if there are none, the ones closest in tier. */
-function fitting(candidates: readonly DungeonTheme[], poi: Poi): DungeonTheme[] {
-  const ofKind = candidates.filter((t) => t.kinds.includes(poi.kind));
-  const exact = ofKind.filter((t) => poi.tier >= t.tier[0] && poi.tier <= t.tier[1]);
-  if (exact.length > 0) return exact;
-  const gap = (t: DungeonTheme) => (poi.tier < t.tier[0] ? t.tier[0] - poi.tier : poi.tier - t.tier[1]);
-  const nearest = Math.min(...ofKind.map(gap));
-  return ofKind.filter((t) => gap(t) === nearest);
-}
-
-function pickTheme(rng: Rng, options: readonly DungeonTheme[], used: ReadonlyMap<string, number>): DungeonTheme {
-  const weights = options.map((t) => Math.max(1, Math.floor((t.weight * (used.has(t.id) ? REPEAT_PERCENT : 100)) / 100)));
-  return options[rng.weightedIndex(weights)]!;
-}
-
-export const refOf = (t: DungeonTheme, requires: string | null): DungeonRef => ({
-  id: t.id,
-  klass: t.klass,
-  requires,
-  gives: [...t.givesKeys.map(keyType), ...(t.givesCard ? [cardType(t.givesCard)] : [])],
-});
-
-/**
- * The plan of every cave and dungeon of one region, by POI id, from the world seed and the region's places alone (the world needs it while it
- * builds the region: a dungeon that asks for a key card is a pyramid, and a pyramid stands on more tiles).
- */
-export function planPlaces(rootSeed: SeedState, rx: number, ry: number, pois: readonly Poi[]): Map<string, DungeonRef> {
-  const out = new Map<string, DungeonRef>();
-  const places = pois.filter((p) => p.kind === "dungeon" || p.kind === "cave");
-  if (places.length === 0) return out;
-  const rng = rngFor(rootSeed, LAYER.INTERIOR, "plan", rx, ry);
-  const used = new Map<string, number>();
-  const take = (poi: Poi, t: DungeonTheme, requires: string | null) => {
-    out.set(poi.id, refOf(t, requires));
-    used.set(t.id, (used.get(t.id) ?? 0) + 1);
-  };
-
-  // what each place wants to be; one roll per place so the number of places does not shift the others' streams
-  const wish = new Map<string, "A" | "B" | "C">();
-  for (const poi of places) {
-    const roll = rng.int(1000);
-    wish.set(poi.id, poi.kind === "dungeon" && roll < KEYED ? "B" : poi.kind === "dungeon" && poi.tier >= 4 && roll < KEYED + PYRAMID ? "C" : "A");
+/** The pyramids: one dungeon on each island in turn, in an order the seed decides, until there are five. */
+function pickPyramids(rng: Rng, dungeons: readonly Poi[]): Poi[] {
+  const byIsland = new Map<number, Poi[]>();
+  for (const p of dungeons) {
+    const list = byIsland.get(p.region.rx);
+    if (list) list.push(p);
+    else byIsland.set(p.region.rx, [p]);
   }
-
-  // 1. free places: they hold the keys
-  const free = DUNGEON_THEMES.filter((t) => isClass(t, "A"));
-  const keys = new Set<string>();
-  const freeOf = (poi: Poi) => {
-    const t = pickTheme(rng, fitting(free, poi), used);
-    take(poi, t, null);
-    for (const k of t.givesKeys) keys.add(k);
-  };
-  for (const poi of places) if (wish.get(poi.id) === "A") freeOf(poi);
-
-  // 2. key dungeons: only for a key some free place of the region holds, and each key opens one dungeon
-  const cards = new Set<string>();
-  const keyed = DUNGEON_THEMES.filter((t) => isClass(t, "B"));
-  const openKeys = new Set(keys);
-  for (const poi of places) {
-    if (wish.get(poi.id) !== "B") continue;
-    const options = fitting(
-      keyed.filter((t) => t.needsKey !== undefined && openKeys.has(t.needsKey)),
-      poi,
-    ).filter((t) => poi.tier >= t.tier[0] && poi.tier <= t.tier[1]);
-    if (options.length === 0) {
-      freeOf(poi);
-      continue;
+  const islands = rng.shuffle([...byIsland.keys()].sort((a, b) => a - b));
+  for (const i of islands) byIsland.set(i, rng.shuffle(byIsland.get(i)!));
+  const out: Poi[] = [];
+  for (let round = 0; out.length < SECTIONS; round++) {
+    let any = false;
+    for (const i of islands) {
+      const list = byIsland.get(i)!;
+      if (round < list.length && out.length < SECTIONS) {
+        out.push(list[round]!);
+        any = true;
+      }
     }
-    const t = pickTheme(rng, options, used);
-    openKeys.delete(t.needsKey!);
-    take(poi, t, keyType(t.needsKey!));
-    if (t.givesCard) cards.add(t.givesCard);
-  }
-
-  // 3. pyramids: only for a card a key dungeon of the region holds, and each card opens one pyramid
-  const pyramid = DUNGEON_THEMES.find((t) => t.klass === "C")!;
-  const openCards = [...CARD_COLORS].filter((c) => cards.has(c));
-  for (const poi of places) {
-    if (wish.get(poi.id) !== "C") continue;
-    if (openCards.length === 0 || poi.tier < pyramid.tier[0]) {
-      freeOf(poi);
-      continue;
-    }
-    const card = openCards.splice(rng.int(openCards.length), 1)[0]!;
-    take(poi, pyramid, cardType(card));
+    if (!any) break;
   }
   return out;
 }
 
-/** The plan of every cave and dungeon of one region, by POI id. */
-export function planRegion(world: World, rx: number, ry: number): Map<string, DungeonRef> {
-  return planPlaces(world.rootSeed, rx, ry, world.region(rx, ry).pois);
+/** The deck of quests a kind of place draws from; a deck is shuffled again every time it is used up, so a world shows every quest. */
+class Deck {
+  private left: QuestId[] = [];
+  constructor(
+    private readonly rng: Rng,
+    private readonly quests: readonly QuestId[],
+  ) {}
+  draw(): QuestId {
+    if (this.left.length === 0) this.left = this.rng.shuffle([...this.quests]);
+    return this.left.pop()!;
+  }
 }
 
-const cache = new WeakMap<World, Map<string, Map<string, DungeonRef>>>();
+const layoutsFor = (quest: QuestId, kind: "dungeon" | "cave"): LayoutId[] => QUESTS[quest].layouts.filter((l) => l.startsWith(kind));
 
-/** A place that is not part of a region plan (a hand-made one in a test): a free place of its own. */
+/**
+ * Quest 5: the population of the place's level, the boss that leads it. The population counts 60 % of the groups, so it is listed three times
+ * against two of the others.
+ */
+function bossPair(rng: Rng, tier: number): { population: number; boss: number } {
+  const fitting = BOSS_PAIRS.filter((p) => MONSTERS[p.population]!.treasure_level === tier);
+  const pool = fitting.length > 0 ? fitting : BOSS_PAIRS.filter((p) => MONSTERS[p.population]!.treasure_level <= tier);
+  return pool[rng.int(pool.length)]!;
+}
+
+export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly Poi[]): Map<string, DungeonRef> {
+  const out = new Map<string, DungeonRef>();
+  const places = pois.filter((p) => p.kind === "dungeon" || p.kind === "cave");
+  if (places.length === 0) return out;
+  const rng = rngFor(rootSeed, LAYER.INTERIOR, "quest-plan");
+  const perRoom = MAX_ITEMS_PER_ROOM[size] ?? 1;
+
+  // 1. the pyramids and their cards
+  const pyramids = pickPyramids(rng, places.filter(isDungeon));
+  const pyramidIds = new Set(pyramids.map((p) => p.id));
+  const ordinary = places.filter((p) => !pyramidIds.has(p.id));
+  const dungeons = ordinary.filter(isDungeon);
+
+  // 2. the keys: the dungeons of level 3 to 5 are locked as far as the nine keys go, each key lies in the end room of a level 1 or 2 place
+  const keyHolders = ordinary.filter((p) => p.tier <= 2);
+  const lockable = rng.shuffle(dungeons.filter((p) => p.tier >= 3));
+  const keyCount = Math.min(KEY_COLORS.length, lockable.length, keyHolders.length * perRoom);
+  const colours = rng.shuffle([...KEY_COLORS]);
+  const requires = new Map<string, string>();
+  const gives = new Map<string, string[]>();
+  const give = (holder: Poi, type: string) => {
+    const list = gives.get(holder.id);
+    if (list) list.push(type);
+    else gives.set(holder.id, [type]);
+  };
+  // each key goes to the holder that has the fewest, by chance among equals
+  const leastLoaded = (holders: readonly Poi[]): Poi => {
+    const open = holders.filter((h) => (gives.get(h.id)?.length ?? 0) < perRoom);
+    const least = Math.min(...open.map((h) => gives.get(h.id)?.length ?? 0));
+    const tied = open.filter((h) => (gives.get(h.id)?.length ?? 0) === least);
+    return tied[rng.int(tied.length)]!;
+  };
+  for (let i = 0; i < keyCount; i++) {
+    requires.set(lockable[i]!.id, keyType(colours[i]!));
+    give(leastLoaded(keyHolders), keyType(colours[i]!));
+  }
+
+  // 3. the key cards: one for each pyramid, in the end room of a level 4 or 5 dungeon
+  const cardHolders = dungeons.filter((p) => p.tier >= 4);
+  const cardCount = Math.min(CARD_COLORS.length, pyramids.length, cardHolders.length * perRoom);
+  const sectionOf = new Map<string, number>();
+  pyramids.forEach((p, i) => {
+    sectionOf.set(p.id, i);
+    if (i < cardCount) {
+      requires.set(p.id, cardType(CARD_COLORS[i]!));
+      give(leastLoaded(cardHolders), cardType(CARD_COLORS[i]!));
+    }
+  });
+
+  // 4. the orbs: 21 on the level 5 dungeons (the level 4 ones if the world has no level 5), as evenly as the number allows
+  const orbHolders = dungeons.filter((p) => p.tier >= 5).length > 0 ? dungeons.filter((p) => p.tier >= 5) : dungeons.filter((p) => p.tier >= 4);
+  const orbs = new Map<string, number>();
+  const orbOrder = rng.shuffle([...orbHolders]);
+  orbOrder.forEach((p, i) => orbs.set(p.id, Math.floor(DUNGEON_ORBS / orbOrder.length) + (i < DUNGEON_ORBS % orbOrder.length ? 1 : 0)));
+
+  // 5. quest, layout and look of every place
+  const decks = { dungeon: new Deck(rng, Object.keys(QUESTS) as QuestId[]), cave: new Deck(rng, (Object.keys(QUESTS) as QuestId[]).filter((q) => layoutsFor(q, "cave").length > 0)) };
+  for (const poi of places) {
+    const kind = poi.kind as "dungeon" | "cave";
+    const look = rngFor(rootSeed, LAYER.INTERIOR, "quest-look", poi.id);
+    const need = requires.get(poi.id) ?? null;
+    const holds = gives.get(poi.id) ?? [];
+    if (pyramidIds.has(poi.id)) {
+      const theme = buildLook(look, "dungeon", 5, "quest_6", "Spaceship", ["robot"], "C", "spaceship");
+      out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: 0, scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
+      continue;
+    }
+    const quest = decks[kind].draw();
+    const layout = rngPick(look, layoutsFor(quest, kind));
+    const def = QUESTS[quest];
+    const klass: DungeonClass = need ? "B" : "A";
+    const name = `${def.name} (${layout})`;
+    const theme = buildLook(look, kind, poi.tier, quest, name, def.groups as MonsterGroup[], klass, `${quest}/${layout}`);
+    if (quest === "quest_5") {
+      const pair = bossPair(look, poi.tier);
+      const others = theme.monsters.filter((m) => m !== pair.population).slice(0, 2);
+      const fill = others.length > 0 ? others : monstersOfGroups(def.groups as MonsterGroup[]).filter((m) => m !== pair.population).slice(0, 2);
+      theme.monsters = [pair.population, pair.population, pair.population, ...fill];
+      theme.boss = pair.boss;
+      theme.inhabitants = inhabitantsOf(pair.population);
+    }
+    out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: 0, scale: SIZE_SCALE[size] ?? 1 });
+  }
+  return out;
+}
+
+function rngPick<T>(rng: Rng, list: readonly T[]): T {
+  return list[rng.int(list.length)]!;
+}
+
+function inhabitantsOf(monster: number) {
+  const g = monsterGroup(monster);
+  return g === "undead" ? "undead" : g === "humanoid" ? "human" : g === "monster_humanoid" ? "goblinoid" : g === "magical_construct" ? "construct" : "vermin";
+}
+
+/** A place that is not part of the plan of a world (a hand-made one in a test): a free place with a quest of its own, holding nothing for the chain. */
 function standalone(world: World, poi: Poi): DungeonRef {
+  const kind = poi.kind as "dungeon" | "cave";
   const rng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, 0, "dungeon");
-  const free = DUNGEON_THEMES.filter((t) => isClass(t, "A"));
-  return refOf(pickTheme(rng, fitting(free, poi), new Map()), null);
+  const quests = (Object.keys(QUESTS) as QuestId[]).filter((q) => layoutsFor(q, kind).length > 0);
+  const quest = quests[rng.int(quests.length)]!;
+  const layout = rngPick(rng, layoutsFor(quest, kind));
+  const theme = buildLook(rng, kind, poi.tier, quest, `${QUESTS[quest].name} (${layout})`, QUESTS[quest].groups as MonsterGroup[], "A", `${quest}/${layout}`);
+  if (quest === "quest_5") {
+    const pair = bossPair(rng, poi.tier);
+    theme.monsters = [pair.population, pair.population, pair.population, ...theme.monsters.filter((m) => m !== pair.population).slice(0, 2)];
+    theme.boss = pair.boss;
+  }
+  return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: 0, scale: 1 };
 }
 
-/** The dungeon theme and key chain role of a cave or dungeon; null for towns and castles. */
+/** The plan of a cave or dungeon, from the plan of the world; null for towns and castles. */
 export function planDungeon(world: World, poi: Poi): DungeonRef | null {
   if (poi.kind !== "dungeon" && poi.kind !== "cave") return null;
-  let regions = cache.get(world);
-  if (!regions) cache.set(world, (regions = new Map()));
-  const key = `${poi.region.rx},${poi.region.ry}`;
-  let plan = regions.get(key);
-  if (!plan) regions.set(key, (plan = planRegion(world, poi.region.rx, poi.region.ry)));
-  return plan.get(poi.id) ?? standalone(world, poi);
-}
-
-function add(map: Map<string, string[]>, key: string, value: string): void {
-  const list = map.get(key);
-  if (list) list.push(value);
-  else map.set(key, [value]);
+  return world.dungeonRef(poi.id) ?? standalone(world, poi);
 }
 
 export interface ChainPlace {
@@ -145,40 +206,33 @@ export interface ChainPlace {
 }
 
 /**
- * Checks the rules of chapter 1.2 for the places of one world region. Returns the problems found; empty means the chain holds:
- * every key or key card a place asks for is held by some place of the same list and opens only one place, and no place holds what its
- * class forbids.
+ * Checks the rules of the chain for the places of a world. Returns the problems found; empty means it holds: every key or key card a place asks
+ * for lies in exactly one place and opens only one, keys lie in level 1 or 2 places, key cards in level 4 or 5 dungeons, and a free place asks for nothing.
  */
-export function checkKeyChain(places: readonly ChainPlace[]): string[] {
+export function checkKeyChain(places: readonly ChainPlace[], tierOf: (id: string) => number): string[] {
   const issues: string[] = [];
   const holders = new Map<string, string[]>();
   const openers = new Map<string, string[]>();
+  const add = (map: Map<string, string[]>, key: string, value: string) => map.set(key, [...(map.get(key) ?? []), value]);
+  const isKey = (s: string) => s.startsWith("quest_key_");
+  const isCard = (s: string) => s.endsWith("_keycard");
   for (const p of places) {
-    const t = THEMES_BY_ID[p.ref.id];
-    if (!t) {
-      issues.push(`${p.id}: unknown theme ${p.ref.id}`);
-      continue;
+    for (const g of p.ref.gives) {
+      add(holders, g, p.id);
+      if (isKey(g) && tierOf(p.id) > 2) issues.push(`${p.id}: holds the key ${g} but is level ${tierOf(p.id)}`);
+      if (isCard(g) && (tierOf(p.id) < 4 || p.ref.layout.startsWith("cave"))) issues.push(`${p.id}: holds the key card ${g} but is no level 4 or 5 dungeon`);
     }
-    for (const g of p.ref.gives) add(holders, g, p.id);
     if (p.ref.requires) add(openers, p.ref.requires, p.id);
-    const gives = p.ref.gives;
-    const isKey = (s: string) => s.startsWith("quest_key_");
-    const isCard = (s: string) => s.endsWith("_keycard");
-    if (t.klass === "A") {
-      if (p.ref.requires) issues.push(`${p.id}: a free place asks for ${p.ref.requires}`);
-      if (gives.some(isCard)) issues.push(`${p.id}: a free place holds a key card`);
-    } else if (t.klass === "B") {
-      if (!p.ref.requires || !isKey(p.ref.requires)) issues.push(`${p.id}: a key place must ask for a key`);
-      if (gives.some(isKey)) issues.push(`${p.id}: a key place holds a key`);
-      if (gives.filter(isCard).length > 1) issues.push(`${p.id}: a key place holds more than one key card`);
-    } else {
-      if (!p.ref.requires || !isCard(p.ref.requires)) issues.push(`${p.id}: a pyramid must ask for a key card`);
-      if (gives.length > 0) issues.push(`${p.id}: a pyramid holds ${gives.join(", ")}`);
-    }
+    if (p.ref.klass === "A" && p.ref.requires) issues.push(`${p.id}: a free place asks for ${p.ref.requires}`);
+    if (p.ref.klass === "B" && (!p.ref.requires || !isKey(p.ref.requires))) issues.push(`${p.id}: a key place must ask for a key`);
+    if (p.ref.klass === "C" && (!p.ref.requires || !isCard(p.ref.requires))) issues.push(`${p.id}: a pyramid must ask for a key card`);
+    if (p.ref.klass === "B" && p.ref.layout.startsWith("cave")) issues.push(`${p.id}: a cave is never locked`);
+    if (p.ref.klass === "B" && tierOf(p.id) < 3) issues.push(`${p.id}: a level 1 or 2 place is never locked`);
   }
   for (const [need, ids] of openers) {
-    if (!holders.has(need)) issues.push(`${ids.join(", ")} ask for ${need}, which no place of the region holds`);
+    if (!holders.has(need)) issues.push(`${ids.join(", ")} ask for ${need}, which no place holds`);
     if (ids.length > 1) issues.push(`${need} opens ${ids.length} places: ${ids.join(", ")}`);
   }
+  for (const [item, ids] of holders) if (ids.length > 1) issues.push(`${item} lies in ${ids.length} places`);
   return issues;
 }

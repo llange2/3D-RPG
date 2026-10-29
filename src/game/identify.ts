@@ -1,9 +1,8 @@
-import { QUEST_BUILT, THEMES_BY_ID } from "../data/dungeon-themes";
-import { MONSTERS, talentInfo } from "../data/tables";
+import { MONSTERS } from "../data/tables";
 import type { DungeonRef } from "../interiors/types";
 import type { Poi } from "../world/types";
 
-const CLASS_TEXT = { A: "A (free to enter, may hold keys)", B: "B (needs a key, may hold a key card)", C: "C (pyramid, needs a key card)" } as const;
+const CLASS_TEXT = { A: "A (free to enter)", B: "B (needs a key)", C: "C (pyramid, needs a key card)" } as const;
 
 const monsterName = (id: number): string => MONSTERS[id]?.name ?? `#${id}`;
 
@@ -14,24 +13,22 @@ const monsterName = (id: number): string => MONSTERS[id]?.name ?? `#${id}`;
  */
 export function identifyLines(poi: Poi, dungeon: DungeonRef | null): string[] {
   const lines = [`${poi.name}`, `${poi.kind}, tier ${poi.tier}, id ${poi.id}`];
-  const theme = dungeon ? THEMES_BY_ID[dungeon.id] : undefined;
-  if (!dungeon || !theme) {
-    lines.push("", "No dungeon theme: a town or castle holds no quest of the old maps.");
+  if (!dungeon) {
+    lines.push("", "No quest: a town or castle is not a cave or dungeon.");
     return lines;
   }
+  const theme = dungeon.look;
   lines.push(
     "",
-    `Built after: ${theme.name} (${theme.id})`,
+    `Quest: ${dungeon.quest}, layout ${dungeon.layout}`,
     `Class: ${CLASS_TEXT[dungeon.klass]}`,
     `Inhabitants: ${theme.inhabitants}`,
     `Monsters: ${theme.monsters.map(monsterName).join(", ")}; boss ${monsterName(theme.boss)}`,
     `Trap: ${theme.trap}${theme.trapElement ? ` (${theme.trapElement})` : ""}`,
-    `Quest: ${theme.quest}${theme.quest === "none" ? "" : QUEST_BUILT.includes(theme.quest) ? "" : " (not built by the generator)"}`,
     `Entrance asks for: ${dungeon.requires ?? "nothing"}`,
-    `Holds: ${dungeon.gives.length > 0 ? dungeon.gives.join(", ") : "no key or key card"}`,
+    `End room holds: ${dungeon.gives.length > 0 ? dungeon.gives.join(", ") : "no key or key card"}${dungeon.orbs > 0 ? `, ${dungeon.orbs} orbs of ultimate power` : ""}`,
   );
-  if (theme.talents?.length) lines.push(`Sells talents: ${theme.talents.map((t) => talentInfo(t).name).join(", ")}`);
-  if (dungeon.hall) lines.push(`Hall for the quest: ${dungeon.hall.w} x ${dungeon.hall.h} cells at ${dungeon.hall.x}/${dungeon.hall.y}`);
-  if (dungeon.glyph) lines.push(`Picture riddle: the walls draw ${dungeon.glyph}`);
+  if (dungeon.section !== undefined) lines.push(`Opens section ${dungeon.section + 1} of the spaceship`);
+  if (dungeon.endRoom) lines.push(`End room: ${dungeon.endRoom.w} x ${dungeon.endRoom.h} cells at ${dungeon.endRoom.x}/${dungeon.endRoom.y}${dungeon.endRoom.isolated ? ", reached by teleport" : ""}`);
   return lines;
 }

@@ -3,6 +3,7 @@ import { derive, LAYER, rngFor, seedFromString, type SeedState } from "../core/r
 import { placeName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { planPlaces } from "../interiors/dungeonPlan";
+import type { DungeonRef } from "../interiors/types";
 import { FIELD_UNIT, ISLAND_EDGE, buildLayout, fieldAt, isqrt, tierOn, wrapDist2, type Island, type Layout } from "./islands";
 import { roadThrough, type Pt, type RoadSeg } from "./roads";
 import {
@@ -230,6 +231,7 @@ export class World {
   readonly chunksDown: number;
   private planned = false;
   private plans: RegionPlan[] = [];
+  private dungeonRefs = new Map<string, DungeonRef>();
   private poiList: Poi[] = [];
   private readonly poiMap = new Map<string, Poi>();
   private readonly flatElevation = new Map<string, number>();
@@ -757,11 +759,7 @@ export class World {
   }
 
   /** The places of an island with their sizes and entrance sides, and the roads between them. */
-  private planIsland(isl: Island): RegionPlan {
-    const pois = this.placesOf(isl);
-    // the plan of the island's dungeons says which of them are pyramids (they ask for a key card), and those are three tiles wide
-    const klass = planPlaces(this.seed, isl.index, 0, pois);
-    for (const p of pois) if (klass.get(p.id)?.klass === "C") p.size = PYRAMID_SIZE;
+  private planIsland(isl: Island, pois: Poi[]): RegionPlan {
     if (pois.length < 2) return { pois, connectors: [] };
     const { edges, parent } = this.connections(isl.index, pois);
     // a place faces the place its road hangs on (the anchor keeps its random side): every road of it ends at the door
@@ -818,7 +816,11 @@ export class World {
   private plan(): void {
     if (this.planned) return;
     this.planned = true;
-    this.plans = this.layout.islands.map((isl) => this.planIsland(isl));
+    // the quests, keys and orbs are planned for the whole world; the plan says which dungeons are pyramids (they ask for a key card), and those are three tiles wide
+    const placed = this.layout.islands.map((isl) => this.placesOf(isl));
+    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat());
+    for (const p of placed.flat()) if (this.dungeonRefs.get(p.id)?.klass === "C") p.size = PYRAMID_SIZE;
+    this.plans = this.layout.islands.map((isl, i) => this.planIsland(isl, placed[i]!));
     // the bridge between the start island and the level-3 island: a road from a place on the level-2 half to the place of the other island nearest to it
     for (const isl of this.layout.islands) {
       if (isl.bridge < isl.index) continue;
@@ -863,6 +865,12 @@ export class World {
     this.plan();
     const plan = ry === 0 ? this.plans[rx] : undefined;
     return { rx, ry, pois: plan?.pois ?? [], roads: plan?.connectors ?? [] };
+  }
+
+  /** What a cave or dungeon was planned for (quest, layout, keys); undefined for any other place. */
+  dungeonRef(poiId: string): DungeonRef | undefined {
+    this.plan();
+    return this.dungeonRefs.get(poiId);
   }
 
   /** Every place of the world. */

@@ -1,5 +1,6 @@
 import type { Rng } from "../core/rng";
 import { Builder, neighbours4, type BuildContext } from "./builder";
+import { carveEndRoomFor } from "./endRoom";
 import { CELL, type InteriorMap, type Room } from "./types";
 
 // Halved in both directions on the user's request (fifteenth playtest: the caves were 80 x 80 and took too long to cross); the walkable area and the chamber count follow
@@ -54,7 +55,11 @@ export function generateCave(rng: Rng, ctx: BuildContext): InteriorMap {
   const { exit, spawn } = b.pickExit(SIZE / 2, SIZE - 4);
   const chambers = assignChambers(b, floors, spawn, rng);
   const rooms: Room[] = chambers;
-  return { ...b.finish("cave", ctx, exit, spawn), rooms, roomOf: b.roomOf };
+  // the end room: quest 3 teleports the party into it, the others seal it (a cave without room for a sealed one gets a pocket that a teleport reaches)
+  const quest = ctx.dungeon?.quest;
+  const endRoom = ctx.dungeon ? carveEndRoomFor(b, rng, spawn, quest === "quest_3") : null;
+  const dungeon = ctx.dungeon ? { ...ctx.dungeon, ...(endRoom ? { endRoom } : {}) } : undefined;
+  return { ...b.finish("cave", { ...ctx, dungeon }, exit, spawn), rooms, roomOf: b.roomOf };
 }
 
 /** Keeps only the largest 4-connected floor component. Returns its size. */

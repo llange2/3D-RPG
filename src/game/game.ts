@@ -13,8 +13,7 @@ import { AudioManager } from "../audio/audio";
 import { LAYER, Rng, rngFor, seedFromString } from "../core/rng";
 import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
-import { ringBlocked } from "../actions/quests";
-import { THEMES_BY_ID } from "../data/dungeon-themes";
+import { endFlag, ringBlocked } from "../actions/quests";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
 import { CELL, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
@@ -733,6 +732,9 @@ export class Game {
       await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
+      // the end room of a quest solved earlier is open
+      const seal = map.dungeon?.endRoom?.seal;
+      if (seal && this.state.opened.has(endFlag(map.key))) map.cells[seal.y * map.width + seal.x] = CELL.FLOOR;
       const blocked = new Set<number>();
       const actionAt = new Map<number, ActionInstance>();
       for (const a of content.actions) {
@@ -1820,7 +1822,7 @@ export class Game {
       this.player.locked = false;
       return;
     }
-    const blurb = plan && !this.state.visited.has(poi.id) ? `\n${THEMES_BY_ID[plan.id]?.blurb ?? ""}` : "";
+    const blurb = plan && !this.state.visited.has(poi.id) ? `\n${plan.look.blurb}` : "";
     const first = this.state.visited.has(poi.id) ? "" : `\nLevel ${poi.tier} ${kind === "town" ? "settlement" : "danger"}.`;
     const yes = await this.ui.confirm(poi.name, `Enter the ${kind} of ${poi.name}?${first}${blurb}`, "Enter", "Stay outside");
     this.player.locked = false;
@@ -1880,6 +1882,15 @@ export class Game {
       this.player.locked = false;
       outcome = resolveAction(a, { ...ctx, answer });
     }
+    // a chalice asks who is to drink from it
+    const pick = outcome.effects.find((e) => e.type === "pick");
+    if (pick?.type === "pick") {
+      this.player.locked = true;
+      const options = this.state.party.characters.map((c, i) => ({ label: c.name, value: i, note: `${c.hp}/${c.health} HP`, disabled: !canAct(c) }));
+      const hero = await this.ui.choose("", pick.question, options);
+      this.player.locked = false;
+      outcome = resolveAction(a, { ...ctx, hero });
+    }
     // a brittle wall (only a party with the Perceptive talent gets this far) asks whether to break it
     const confirm = outcome.effects.find((e) => e.type === "confirm");
     if (confirm?.type === "confirm") {
@@ -1904,8 +1915,8 @@ export class Game {
       this.audio.play(9007);
       this.interiorView.openPit(a.uid);
     }
-    // the key or key card in its chest is gone from the map once it is taken
-    if (a.kind === "treasure" && outcome.consumed && typeof a.params.quest === "string") this.interiorView.refreshObjects();
+    // the key or key card in its chest is gone from the map once it is taken; the runes of the gongs appear with the last gong
+    if ((a.kind === "treasure" && outcome.consumed && typeof a.params.quest === "string") || (a.kind === "gong" && outcome.consumed)) this.interiorView.refreshObjects();
     await this.applyEffects(a, outcome.effects);
     this.busy = false;
     this.refresh();
@@ -1992,12 +2003,39 @@ export class Game {
         case "jump":
           this.jumpTo(e.x, e.y);
           break;
+        case "endroom":
+          this.openEndRoom();
+          break;
+        case "condition":
+          ui.log(`${this.state.party.characters[e.character]!.name} is ${e.condition.toLowerCase()}!`, "bad");
+          break;
+        case "pick":
+          break;
         case "defeat":
           await this.gameOver();
           break;
       }
     }
     this.minimapDirty = true;
+  }
+
+  /**
+   * The quest of the place is done: its end room opens. A sealed one loses the wall cell in front of it, one in a pocket of the rock (quest 1 and 3
+   * and any place without room for a sealed one) takes the party in by teleport. The flag stays in the save, so the room is open when the party
+   * comes back.
+   */
+  private openEndRoom(): void {
+    const rt = this.interior;
+    const end = rt?.map.dungeon?.endRoom;
+    if (!rt || !end) return;
+    this.state.opened.add(endFlag(rt.map.key));
+    if (end.seal && rt.map.cells[end.seal.y * rt.map.width + end.seal.x] !== CELL.FLOOR) {
+      rt.map.cells[end.seal.y * rt.map.width + end.seal.x] = CELL.FLOOR;
+      this.interiorView.refresh(rt.map);
+      this.audio.play(9050);
+      this.ui.log("A wall slides aside with a grinding of stone.", "good");
+    }
+    if (end.isolated) this.jumpTo(end.cx, end.cy);
   }
 
   /**
@@ -2088,7 +2126,7 @@ export class Game {
     if (!rt) return;
     const standing = new Set(ringBlocked(rt.content, rt.map.width, this.state.opened));
     for (const a of rt.content.actions) {
-      if (a.kind !== "head" || a.params.mode !== "ring") continue;
+      if (a.kind !== "head" || (a.params.mode !== "ring" && a.params.mode !== "moan")) continue;
       const i = a.y * rt.map.width + a.x;
       if (standing.has(i)) rt.blocked.add(i);
       else rt.blocked.delete(i);
@@ -2344,6 +2382,8 @@ export class Game {
           const def = monsterById(e.defId);
           this.state.killed.add(e.uid);
           this.noteHutDeath(e.uid);
+          // quest 5: the end boss stands before the end room, and its death opens it
+          if (e.uid.includes("#endboss")) this.openEndRoom();
           this.state.kills++;
           this.dropLoot(e.x, e.y, e.loot.gold, e.loot.item ? [e.loot.item] : [], true);
           const epoch = this.fxEpoch;

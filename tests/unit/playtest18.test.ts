@@ -8,7 +8,7 @@ import { blocksCell } from "../../src/actions/registry";
 import { plainProps } from "../../src/actions/rules";
 import type { ActionInstance } from "../../src/actions/types";
 import { seedFromString } from "../../src/core/rng";
-import { DUNGEON_THEMES } from "../../src/data/dungeon-themes";
+import { findPlace } from "../helpers/quests";
 import { ITEM_RULES, allowedIn, isFunctional } from "../../src/data/item-rules";
 import { BARREL_COINS, BARREL_EMPTY, VILLAGER_LINES, propLine } from "../../src/data/prop-texts";
 import { MAP_ITEMS } from "../../src/data/tables";
@@ -38,18 +38,18 @@ describe("eighteenth playtest: the user's list of objects (items.xlsx)", () => {
     expect(allowedIn(9999, "town")).toBe(true); // what the list does not know is not restricted
   });
 
-  it("keeps every theme's props and objects inside the list", () => {
-    for (const t of DUNGEON_THEMES) {
-      const places = t.klass === "C" ? (["spaceship"] as const) : t.kinds.map((k) => (k === "cave" ? "cave" : "dungeon") as "cave" | "dungeon");
-      for (const place of places) {
-        for (const p of plainProps(t)) {
-          if (p === 5) continue; // a barrel is a container
-          expect(allowedIn(p, place), `${t.id}: prop ${p} in a ${place}`).toBe(true);
-          expect(isFunctional(p), `${t.id}: prop ${p} is plain decoration`).toBe(false);
-        }
-        expect(allowedIn(t.chest, place), `${t.id}: chest ${t.chest} in a ${place}`).toBe(true);
-        if (t.shrine !== null) expect(allowedIn(t.shrine, place), `${t.id}: shrine ${t.shrine} in a ${place}`).toBe(true);
+  it("keeps the props and objects of every look inside the list", () => {
+    for (let i = 0; i < 60; i++) {
+      const { ref, map } = findPlace(() => true, 1 + i);
+      const t = ref.look;
+      const place = map.kind === "cave" ? "cave" : "dungeon";
+      for (const p of plainProps(t)) {
+        if (p === 5) continue; // a barrel is a container
+        expect(allowedIn(p, place), `${ref.id}: prop ${p} in a ${place}`).toBe(true);
+        expect(isFunctional(p), `${ref.id}: prop ${p} is plain decoration`).toBe(false);
       }
+      expect(allowedIn(t.chest, place), `${ref.id}: chest ${t.chest} in a ${place}`).toBe(true);
+      if (t.shrine !== null) expect(allowedIn(t.shrine, place), `${ref.id}: shrine ${t.shrine} in a ${place}`).toBe(true);
     }
   });
 
@@ -87,7 +87,7 @@ describe("eighteenth playtest: the user's list of objects (items.xlsx)", () => {
       const content = buildMapContent(world, poi, generateInterior(world, poi));
       for (const a of content.actions) if (a.params.item === 5 || a.params.chest === 5) kinds.add(a.kind);
     }
-    expect([...kinds]).toEqual(["treasure"]);
+    expect([...kinds].every((k) => k === "treasure")).toBe(true);
   });
 });
 

@@ -138,6 +138,12 @@ export function giveItem(party: Party, item: Item): boolean {
   return false;
 }
 
+/** How many more items the backpacks (and the Donkey's bag) take. */
+export function freeSlots(party: Party): number {
+  const bags = [...party.characters.map((c) => c.inventory), ...(party.mascot === "Donkey" ? [party.mascotBag] : [])];
+  return bags.reduce((n, bag) => n + BAG_SLOTS.filter((slot) => bag[slot] === null).length, 0);
+}
+
 /** Every item the party carries, the Donkey's bag included while the Donkey is the mascot (quests count what the Donkey holds too). */
 export function carriedItems(party: Party): Item[] {
   const out: Item[] = [];

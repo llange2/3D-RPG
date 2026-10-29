@@ -15,7 +15,7 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | Chest | **ja** | x | x | x | x |  |  |  |
 | 2 | Fountain |  | x |  |  | x |  | x |  |
-| 3 | Portal | **ja** |  |  |  | x |  |  |  |
+| 3 | Portal | **ja** |  |  | x | x |  |  |  |
 | 4 | Treasure | **ja** |  | x | x |  |  |  |  |
 | 5 | Barrel | **ja** | x | x | x | x |  | x |  |
 | 6 | Throne for an evil king |  | x |  | x |  |  |  |  |
@@ -29,15 +29,15 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 | 14 | Table with food |  | x |  | x |  |  |  |  |
 | 15 | Alchemy table |  | x |  | x |  |  |  |  |
 | 16 | Wheelbarrow |  | x | x | x | x |  | x |  |
-| 17 | Quest key blue | **ja** |  |  | x |  |  |  |  |
-| 18 | Quest key black | **ja** |  |  | x |  |  |  |  |
-| 19 | Quest key bronze | **ja** |  |  | x |  |  |  |  |
-| 20 | Quest key golden | **ja** |  |  | x |  |  |  |  |
-| 21 | Quest key green | **ja** |  |  | x |  |  |  |  |
-| 22 | Quest key orange | **ja** |  |  | x |  |  |  |  |
-| 23 | Quest key red | **ja** |  |  | x |  |  |  |  |
-| 24 | Quest key silver | **ja** |  |  | x |  |  |  |  |
-| 25 | Quest key rainbow | **ja** |  |  | x |  |  |  |  |
+| 17 | Quest key blue | **ja** |  | x | x |  |  |  |  |
+| 18 | Quest key black | **ja** |  | x | x |  |  |  |  |
+| 19 | Quest key bronze | **ja** |  | x | x |  |  |  |  |
+| 20 | Quest key golden | **ja** |  | x | x |  |  |  |  |
+| 21 | Quest key green | **ja** |  | x | x |  |  |  |  |
+| 22 | Quest key orange | **ja** |  | x | x |  |  |  |  |
+| 23 | Quest key red | **ja** |  | x | x |  |  |  |  |
+| 24 | Quest key silver | **ja** |  | x | x |  |  |  |  |
+| 25 | Quest key rainbow | **ja** |  | x | x |  |  |  |  |
 | 26 | Rustic caravan |  |  |  |  |  |  | x |  |
 | 27 | Lion statue |  | x |  | x | x | x |  |  |
 | 28 | Pegasus statue |  | x |  | x | x |  |  |  |
@@ -85,7 +85,7 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 | 70 | Bone pile |  |  | x | x |  |  |  |  |
 | 71 | Abandoned fireplace |  |  | x | x |  |  | x |  |
 | 72 | Noble chest | **ja** | x |  | x | x |  |  |  |
-| 73 | Magic runes |  |  | x | x |  |  | x |  |
+| 73 | Magic runes | **ja** |  | x | x |  |  | x |  |
 | 74 | Iron chest | **ja** | x | x | x |  |  |  |  |
 | 75 | Book shelf |  | x |  | x | x |  |  |  |
 | 76 | Rustic lantern |  |  |  | x |  |  |  |  |

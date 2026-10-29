@@ -20,7 +20,11 @@ ENVIRONMENTS = {"Castle": "castle", "Cave": "cave", "Dungeon": "dungeon", "Town"
 # Corrections the user made to the list after the sheet was written (the sheet itself stays as it is): item -> environments to add.
 # 118 Gong: "you can put gongs in caves - my mistake" (2026-10-20).
 # 3 Portal: "every town must have a portal" (2026-10-20, nineteenth playtest, point 8).
-ADD_PLACES = {118: ["cave"], 3: ["town"]}
+# 3 Portal also in dungeons (quest document 1.2, answer to open point 1: "kann auch in Dungeons eingesetzt werden", it links two cells A>B>A and is
+# separate from the town portals). 17..25 the keys also in caves: the end rooms of level 1 and 2 caves hold keys (document 1.2, "End-Raeume").
+ADD_PLACES = {118: ["cave"], 3: ["town", "dungeon"], **{k: ["cave"] for k in range(17, 26)}}
+# 73 Magic runes: a quest object (the way into the end room of quest_3, the barriers of dungeon_3), never plain decoration (open point 4).
+ADD_FUNCTIONAL = {73}
 
 DOC = os.path.join(ROOT, "docs", "OBJECTS.md")
 
@@ -37,7 +41,7 @@ for row in ws.iter_rows(min_row=2, values_only=True):
         continue
     item = int(m.group(1))
     name = m.group(2).strip()
-    functional = bool(row[1])
+    functional = bool(row[1]) or item in ADD_FUNCTIONAL
     envs = [ENVIRONMENTS[header[i]] for i in range(2, 8) if row[i]]
     for extra in ADD_PLACES.get(item, []):
         if extra not in envs:

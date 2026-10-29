@@ -30,7 +30,7 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     trigger: "interact",
     persistence: "once",
     minimap: "tex_mm_event",
-    params: loose({ level: z.number().int().min(1).max(8), gold: z.number().int().min(0), items: z.number().int().min(0).max(4) }),
+    params: loose({ level: z.number().int().min(1).max(8), gold: z.number().int().min(0), items: z.number().int().min(0).max(10) }),
   },
   door: {
     kind: "door",
@@ -137,11 +137,11 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
   head: {
     kind: "head",
     legacyIds: [],
-    // `ring`: a stone head on the ring that a lever sets or removes. `rotate`: a head that turns a quarter at every bump
+    // `ring` and `moan`: a statue that a lever sets or removes (the ring of heads, the field of quest 1). `rotate`: a head that turns a quarter when asked to
     trigger: "interact",
     persistence: "repeat",
     minimap: "tex_mm_event",
-    params: loose({ item: z.number().int().min(1), mode: z.enum(["ring", "rotate"]) }),
+    params: loose({ item: z.number().int().min(1), mode: z.enum(["ring", "rotate", "moan"]) }),
   },
   teleporter: {
     kind: "teleporter",
@@ -186,6 +186,30 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     // decided per cell by the campaign: walkable cells fire on entering, blocked ones when bumped into
     trigger: "enter",
     persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({}),
+  },
+  qportal: {
+    kind: "qportal",
+    legacyIds: [],
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({}),
+  },
+  rune: {
+    kind: "rune",
+    legacyIds: [],
+    trigger: "enter",
+    persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({}),
+  },
+  chalice: {
+    kind: "chalice",
+    legacyIds: [],
+    trigger: "interact",
+    persistence: "once",
     minimap: "tex_mm_event",
     params: loose({}),
   },
@@ -257,7 +281,7 @@ export function actionTrigger(a: { kind: ActionKind; params: Record<string, unkn
 export function blocksCell(a: { kind: ActionKind; params: Record<string, unknown> }): boolean {
   // a ring head blocks only while it stands on its cell (a lever sets and removes it): the game decides that (`ringBlocked` in quests.ts)
   if (a.kind === "head") return a.params.mode === "rotate";
-  return a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
+  return a.kind === "qportal" || a.kind === "chalice" || a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
 }
 
 export function kindForLegacyId(id: number): ActionKind | null {

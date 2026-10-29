@@ -1,5 +1,7 @@
 /** Interior maps: grid of cells inside a POI. Pure data, no DOM, no Babylon. */
 import type { Alignment } from "../data/castles";
+import type { DungeonTheme } from "../data/dungeon-themes";
+import type { LayoutId, QuestId } from "../data/quest-table";
 
 export const CELL = {
   SOLID: 0,
@@ -118,21 +120,36 @@ export interface InteriorTheme {
 }
 
 /**
- * The dungeon theme a cave or dungeon was generated for (`data/dungeon-themes.ts`) and how it takes part in the key chain: the quest
- * item types its entrance asks for and the ones hidden inside.
+ * What a cave or dungeon of the generated world was built for (`interiors/dungeonPlan.ts`): its quest, its layout, the look its quest and level
+ * draw (monsters, boss, trap, props) and how it takes part in the chain of keys, key cards and orbs.
  */
 export interface DungeonRef {
-  /** `DungeonTheme.id`. */
+  /** `<quest>/<layout>`, or `spaceship` for the inside of a pyramid. */
   id: string;
+  /** Free, needs a key, or a pyramid (needs a key card). */
   klass: "A" | "B" | "C";
+  quest: QuestId | "spaceship";
+  layout: LayoutId;
+  look: DungeonTheme;
   /** Quest item type the entrance asks for (a key or a key card), or null for a free place. */
   requires: string | null;
-  /** Quest item types hidden inside: keys in a Class A place, at most one key card in a Class B place. */
+  /** Quest item types hidden in the end room: keys in a level 1 or 2 place, key cards in a level 4 or 5 dungeon. */
   gives: string[];
-  /** Themes whose quest needs a big hall (the picture, the field, the ring, the row of heads): the room the generator set aside for it. */
+  /** Orbs of ultimate power in the end room (level 5 dungeons). */
+  orbs: number;
+  /** The size of the world as a factor on monster counts: 2/3 for a small world, 1 for a default one, 4/3 and 5/3 (the XP per monster scale the other way). */
+  scale: number;
+  /** Mini quests (statues with an extra riddle) the place carries, 0 to 4 before the size of the map is counted. */
+  minis: number;
+  /** A pyramid: the section of the spaceship it opens (0 is the control deck). */
+  section?: number;
+  /**
+   * The end room, set by the layout generator. It is floor but out of reach until the quest is solved: either behind a wall cell (`seal`) that
+   * gives way, or `isolated` (a pocket of its own that only a teleport reaches). `cx`/`cy` is its middle.
+   */
+  endRoom?: { x: number; y: number; w: number; h: number; cx: number; cy: number; seal?: { x: number; y: number }; isolated: boolean };
+  /** The room the layout set aside for the quest: the entrance room of quest 1 (the field of statues) or the hall of quest 2 (the row of heads). */
   hall?: { x: number; y: number; w: number; h: number };
-  /** The picture riddle: the number the walls of the hall draw (what the statue wants to be told). */
-  glyph?: string;
 }
 
 export interface InteriorMap {

@@ -43,9 +43,17 @@ export function analyzeTopology(map: InteriorMap): Topology {
   let tail = 0;
   // the chamber of a castle vault behind a wall that gives way is part of the level: the wall counts as a way through
   const hidden = new Set<number>((map.sites ?? []).filter((s) => s.kind === "vault_way" && s.how === "wall").map((s) => s.y * w + s.x));
+  // so is the end room of a quest: behind its seal, or (a pocket in the rock that a teleport reaches) a second place the search starts from
+  const end = map.dungeon?.endRoom;
+  if (end?.seal) hidden.add(end.seal.y * w + end.seal.x);
   const start = map.spawn.y * w + map.spawn.x;
   depth[start] = 0;
   queue[tail++] = start;
+  if (end?.isolated) {
+    const pocket = end.cy * w + end.cx;
+    depth[pocket] = 0;
+    queue[tail++] = pocket;
+  }
   let maxDepth = 0;
   let reachable = 0;
   while (head < tail) {
@@ -91,10 +99,11 @@ export function analyzeTopology(map: InteriorMap): Topology {
 
   let bossRoom = 0;
   let best = -1;
+  const endRoom = map.dungeon?.endRoom;
   const hall = map.dungeon?.hall;
   map.rooms.forEach((room, idx) => {
-    // the hall belongs to a puzzle, which needs its middle; the boss lives elsewhere
-    if (hall && room.x === hall.x && room.y === hall.y) return;
+    // the hall belongs to the quest (the field of statues, the row of heads), which needs its middle; the end room is out of reach until the quest is solved; the boss lives elsewhere
+    if ((hall && room.x === hall.x && room.y === hall.y) || (endRoom && room.x === endRoom.x && room.y === endRoom.y)) return;
     const d = depth[room.cy * w + room.cx]!;
     const score = d * 100 + Math.min(room.size, 99);
     if (d >= 0 && score > best) {

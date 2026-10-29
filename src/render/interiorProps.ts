@@ -1,4 +1,4 @@
-import { headFacing, ringHeadPresent } from "../actions/quests";
+import { gongsStruck, headFacing, ringHeadPresent } from "../actions/quests";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
 import { isGlbItem, itemModelKey, itemProp } from "./itemProps";
@@ -29,7 +29,7 @@ export const WALL_HUNG: ReadonlySet<number> = new Set([103, 104, 105]);
 const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180 };
 
 /** The kinds of action whose `item` param is an old item they stand on their cell as (a statue, a gong, a lever, a head, a rune on the floor). */
-const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal"]);
+const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal", "rune", "qportal", "chalice"]);
 
 /** The old item an action shows on its cell, or null (plain chests and shrines of a place without a theme, and every other kind of action). */
 export function shownItem(a: Pick<ActionInstance, "kind" | "params">): number | null {
@@ -50,12 +50,18 @@ export function themeModelKeys(content: MapContent): string[] {
 }
 
 /** The prop for a themed object, or null when the action shows nothing of the theme (then the view picks a chest or well by chance). `bearing` is degrees, 0 = north. */
-export function themedProp(a: ActionInstance, x: number, z: number, bearing: number, staticInfo: Record<string, StaticModelInfo>, opened: ReadonlySet<string> = new Set()): PropInstance | null {
+export function themedProp(a: ActionInstance, x: number, z: number, bearing: number, staticInfo: Record<string, StaticModelInfo>, opened: ReadonlySet<string> = new Set(), content?: MapContent): PropInstance | null {
   const item = shownItem(a);
   if (item === null) return null;
   // a head of the ring is there while its lever says so; a head of the row looks the way it was turned
+  // the runes of quest 3 appear with the last gong; the middle of the field of quest 1 stays bare
+  if (a.kind === "rune") {
+    if (a.params.need !== "gongs" || !content) return null;
+    const gongs = gongsStruck(content, opened);
+    if (gongs.total === 0 || gongs.done < gongs.total) return null;
+  }
   if (a.kind === "head") {
-    if (a.params.mode === "ring") {
+    if (a.params.mode === "ring" || a.params.mode === "moan") {
       if (!ringHeadPresent(a, opened)) return null;
     } else bearing = headFacing(a, opened) * 90;
   }

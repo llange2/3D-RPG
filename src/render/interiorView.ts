@@ -383,7 +383,7 @@ export class InteriorView {
       // a key or key card that has been taken is gone from its chest
       if (a.kind === "treasure" && typeof a.params.quest === "string" && this.opened.has(a.uid)) continue;
       // a themed place shows the old items of its style (a barrel, a bone pile, a banner) instead of a chest or well picked by chance
-      const themed = themedProp(a, x, z, (this.faceOpen(map, a, h >>> 8) * 180) / Math.PI, this.staticInfo, this.opened);
+      const themed = themedProp(a, x, z, (this.faceOpen(map, a, h >>> 8) * 180) / Math.PI, this.staticInfo, this.opened, this.content ?? undefined);
       // a head of the ring that is not there leaves its cell empty
       if (!themed && a.kind === "head") continue;
       if (themed) {

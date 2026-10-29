@@ -39,6 +39,12 @@ export function computeAnchors(map: InteriorMap, topo: Topology): AnchorSet {
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) protectedCells.add(idx(s.x + dx, s.y + dy));
   }
 
+  // the end room of a quest is the business of the quest: nothing else is put in it
+  const end = map.dungeon?.endRoom;
+  if (end) {
+    for (let y = end.y - 1; y <= end.y + end.h; y++) for (let x = end.x - 1; x <= end.x + end.w; x++) protectedCells.add(idx(x, y));
+  }
+
   const entranceRoom = roomAt(map.spawn.x, map.spawn.y);
   const bossRoom = map.rooms.length > 0 ? topo.bossRoom : -1;
 
