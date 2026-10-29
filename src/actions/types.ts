@@ -100,6 +100,8 @@ export interface RuleWhen {
   minTier?: number;
   maxTier?: number;
   minRoomSize?: number;
+  /** Only in rooms of at most this many floor cells (the closets). */
+  maxRoomSize?: number;
   excludeEntranceRoom?: boolean;
   /** Only in places of this dungeon class (`data/dungeon-themes.ts`). A rule with `theme` runs only in a themed cave or dungeon. */
   klass?: "A" | "B" | "C";

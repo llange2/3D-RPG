@@ -173,6 +173,10 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       if (a.roomId < 0) return false;
       if ((map.rooms[a.roomId]?.size ?? 0) < w.minRoomSize) return false;
     }
+    if (w.maxRoomSize !== undefined) {
+      if (a.roomId < 0) return false;
+      if ((map.rooms[a.roomId]?.size ?? 0) > w.maxRoomSize) return false;
+    }
     return true;
   };
 
@@ -261,7 +265,25 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     blockedCells.add(idx(site.x, site.y));
   }
 
-  for (const rule of rules.rules) {
+  // the layouts bring their own say about doors: dungeon_2 shuts every way at its beginning and its end, dungeon_3 (the maze) has no doors at all
+  const layout = map.dungeon?.layout;
+  const ruleList = rules.rules.flatMap((r): Rule[] => (r.id !== "door" ? [r] : layout === "dungeon_3" ? [] : layout === "dungeon_2" ? [{ ...r, count: { chance: 1000 }, when: undefined }] : [r]));
+
+  // the runes of the maze bar some of its loops: they throw the party to another place of the dungeon
+  const farCells = (x: number, y: number): { x: number; y: number }[] => {
+    const out: { x: number; y: number }[] = [];
+    for (const a of anchors.byKind.roomCenter) if (Math.abs(a.x - x) + Math.abs(a.y - y) > 14 && a.depth >= 0) out.push(a);
+    return out;
+  };
+  (map.dungeon?.barriers ?? []).forEach((c, i) => {
+    const rng = new Rng(derive(mapSeed, "barrier", i));
+    const far = farCells(c.x, c.y);
+    const to = far.length > 0 ? far[rng.int(far.length)]! : { x: map.spawn.x, y: map.spawn.y };
+    actions.push({ uid: `${map.key}#barrier:${i}`, kind: "teleporter", x: c.x, y: c.y, params: { item: 73, tx: to.x, ty: to.y } });
+    occupied.add(idx(c.x, c.y));
+  });
+
+  for (const rule of ruleList) {
     if (rule.when?.theme && !dt) continue;
     if (rule.when?.klass && dt?.klass !== rule.when.klass) continue;
     if (rule.when?.alignment && !(map.castle && rule.when.alignment.includes(map.castle.alignment))) continue;
@@ -311,7 +333,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       const raw: Record<string, ParamValue> = { ...(rule.params ?? {}), ...(a.params ?? {}), ...pickVariant(rule, local) };
       const params: Record<string, ParamValue> = {};
       for (const [k, v] of Object.entries(raw)) params[k] = resolveParam(v, vars, local);
-      if (dt) themeParams(rule.kind, params, dt, vars, local);
+      if (dt && rule.id !== "lantern") themeParams(rule.kind, params, dt, vars, local);
       else if (map.castle) {
         // the banner shows the kind of castle, an ambush draws from its monsters
         if (rule.id === "banner") params.item = BANNER[map.castle.alignment];

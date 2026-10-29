@@ -84,6 +84,8 @@
     { "id": "spaceship_xp", "kind": "shrine", "anchor": "roomEdge", "when": { "klass": "C", "excludeEntranceRoom": true, "minRoomSize": 12 }, "count": { "perMap": [2, 3] }, "params": { "effect": "xp", "amount": 1000000 } },
     { "id": "decor_room", "kind": "decor", "anchor": "roomEdge", "when": { "minRoomSize": 9 }, "count": { "perMap": [8, 16] } },
     { "id": "decor_hall", "kind": "decor", "anchor": "roomCenter", "when": { "excludeEntranceRoom": true, "minRoomSize": 20 }, "count": { "chance": 140 } },
+    { "id": "lantern", "kind": "decor", "anchor": "roomEdge", "when": { "minRoomSize": 9 }, "count": { "perMap": [4, 8] }, "params": { "item": 76 } },
+    { "id": "closet_chest", "kind": "treasure", "anchor": "roomCenter", "when": { "maxRoomSize": 8 }, "count": { "perMap": [1, 3] }, "params": { "level": "=min(8,tier+1)", "gold": "=tier*180+rand(0,200)", "items": "=1+rand(0,2)" } },
     { "id": "lore", "kind": "lore", "anchor": "deadEnd", "count": { "perMap": [1, 3] }, "params": { "pool": "dungeon", "line": "=rand(0,19)" } },
     {
       "id": "lore_room",

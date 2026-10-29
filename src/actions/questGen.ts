@@ -60,7 +60,10 @@ function statueOf(rng: Rng, place: Place, choices: readonly number[]): number {
 
 function edgeSpots(env: QuestEnv, rng: Rng, outside?: { x: number; y: number; w: number; h: number }): Anchor[] {
   const inside = (a: Anchor) => !!outside && a.x >= outside.x && a.y >= outside.y && a.x < outside.x + outside.w && a.y < outside.y + outside.h;
-  return rng.shuffle(env.anchors.byKind.roomEdge.filter((a) => env.free(a.x, a.y) && !inside(a)));
+  // the walls of the rooms first, then the ends of side passages (a maze has few rooms but many of those)
+  const walls = rng.shuffle(env.anchors.byKind.roomEdge.filter((a) => env.free(a.x, a.y) && !inside(a)));
+  const ends = rng.shuffle(env.anchors.byKind.deadEnd.filter((a) => env.free(a.x, a.y) && !inside(a)));
+  return [...walls, ...ends];
 }
 
 /** Puts `make(spot)` on the first spot that takes it. */

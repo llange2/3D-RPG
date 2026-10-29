@@ -286,7 +286,8 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "portal": return "teleporter_city";
     case "lore": return typeof a.params.persona === "number" ? "persona" : null;
     case "shrine": case "fountain": return "event";
-    case "riddle": case "gong": case "lever": case "head": return "info";
+    case "riddle": case "gong": case "lever": case "head": case "chalice": return "info";
+    case "qportal": return "teleporter_city";
     default: return null;
   }
 }
@@ -595,6 +596,9 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "gong": return `Gong${used}`;
         case "lever": return "Lever";
         case "head": return "Stone head";
+        case "chalice": return `Chalice${used}`;
+        case "rune": return "Magic runes";
+        case "qportal": return "Portal back to the entrance";
         case "portal": return "Portal";
         case "work": return "Job master: work a week for gold";
         default: break;

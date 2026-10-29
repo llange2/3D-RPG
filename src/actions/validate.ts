@@ -48,8 +48,9 @@ export function themeIssues(map: InteriorMap, content: MapContent): string[] {
   const found: string[] = [];
   for (const a of content.actions) {
     if (a.kind === "trap" && a.params.trap !== theme.trap) issues.push(`${a.uid}: ${String(a.params.trap)} trap in ${theme.id}, which has ${theme.trap}`);
-    if (a.kind === "decor" && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
-    for (const item of [a.params.item, a.params.chest]) if (typeof item === "number" && forbidden.has(item) && a.params.quest === undefined) issues.push(`${a.uid}: prop ${item} does not suit ${theme.inhabitants}`);
+    if (a.kind === "decor" && Number(a.params.item) !== 76 && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
+    // the objects of a quest (runes, gongs, statues, levers) belong to the quest, whoever lives here
+    for (const item of [a.params.item, a.params.chest]) if (["decor", "treasure", "shrine"].includes(a.kind) && typeof item === "number" && forbidden.has(item) && a.params.quest === undefined) issues.push(`${a.uid}: prop ${item} does not suit ${theme.inhabitants}`);
     if (typeof a.params.quest === "string") for (let i = 0; i < Number(a.params.count ?? 1); i++) found.push(a.params.quest);
     if (a.kind === "ambush" && typeof a.params.monsters === "string") {
       for (const id of a.params.monsters.split(",").map(Number)) if (!own.has(id)) issues.push(`${a.uid}: ambush monster ${id} does not belong to ${theme.id}`);
