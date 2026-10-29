@@ -235,6 +235,7 @@ export class World {
   private plans: RegionPlan[] = [];
   private dungeonRefs = new Map<string, DungeonRef>();
   private castleKinds = new Map<string, Alignment>();
+  private readonly castleWords = new Map<string, number>();
   private poiList: Poi[] = [];
   private readonly poiMap = new Map<string, Poi>();
   private readonly flatElevation = new Map<string, number>();
@@ -823,7 +824,7 @@ export class World {
     // the quests, keys and orbs are planned for the whole world; the plan says which dungeons are pyramids (they ask for a key card), and those are three tiles wide
     const placed = this.layout.islands.map((isl) => this.placesOf(isl));
     this.planCastles(placed.flat());
-    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat());
+    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords);
     for (const p of placed.flat()) if (this.dungeonRefs.get(p.id)?.klass === "C") p.size = PYRAMID_SIZE;
     this.plans = this.layout.islands.map((isl, i) => this.planIsland(isl, placed[i]!));
     // the bridge between the start island and the level-3 island: a road from a place on the level-2 half to the place of the other island nearest to it
@@ -897,6 +898,28 @@ export class World {
   castleAlignment(poiId: string): Alignment | undefined {
     this.plan();
     return this.castleKinds.get(poiId);
+  }
+
+  /** The riddles the world hides (the word of a quest 6, the mini quests, the words of the castles), each with the level of the place that holds it. */
+  riddlesOfWorld(): { riddle: number; tier: number }[] {
+    this.plan();
+    const out: { riddle: number; tier: number }[] = [];
+    for (const p of this.poiList) {
+      const ref = this.dungeonRefs.get(p.id);
+      if (ref) {
+        if (ref.word !== undefined) out.push({ riddle: ref.word, tier: p.tier });
+        for (const id of ref.minis) out.push({ riddle: id, tier: p.tier });
+      }
+      const castle = this.castleWords.get(p.id);
+      if (castle !== undefined) out.push({ riddle: castle, tier: p.tier });
+    }
+    return out;
+  }
+
+  /** The riddle whose four-letter answer the statues of a castle spell (a number in the riddle list of the world). */
+  castleWord(poiId: string): number | undefined {
+    this.plan();
+    return this.castleWords.get(poiId);
   }
 
   /** What a cave or dungeon was planned for (quest, layout, keys); undefined for any other place. */

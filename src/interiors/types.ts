@@ -139,8 +139,10 @@ export interface DungeonRef {
   orbs: number;
   /** The size of the world as a factor on monster counts: 2/3 for a small world, 1 for a default one, 4/3 and 5/3 (the XP per monster scale the other way). */
   scale: number;
-  /** Mini quests (statues with an extra riddle) the place carries, 0 to 4 before the size of the map is counted. */
-  minis: number;
+  /** Mini quests (statues with an extra riddle) the place carries: the numbers of the riddles in the list of the world (each riddle occurs once in a world). */
+  minis: number[];
+  /** Quest 6: the number of the riddle whose answer the statues spell. */
+  word?: number;
   /** Quatloo coins (ue_quest_1) and silver skulls (ue_quest_2) hidden in the ordinary chests of the place. */
   coins: number;
   skulls: number;
@@ -168,6 +170,8 @@ export interface CastleLayout {
   scale: number;
   /** Quatloo coins hidden in the chests of the yard. */
   coins: number;
+  /** The riddle (number in the list of the world) whose four-letter answer the statues of the keep spell. */
+  word: number;
   /** The throne, the king before it, the four statues (with the bearing they face, degrees, 0 north) and the cell of the statue that wants the code word. */
   throne: { x: number; y: number };
   king: { x: number; y: number };

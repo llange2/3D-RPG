@@ -287,6 +287,16 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       if (ctx.answer === null) return { effects, consumed: false };
       if (!answerIsRight(ctx.answer, p)) {
         effects.push({ type: "text", text: "The statue's eyes dim. That is not the answer." });
+        // a mini quest punishes a wrong answer: the floor throws the party away, or onto a field of traps where it is hurt too
+        if (p.fail === "away" || p.fail === "trap") {
+          effects.push({ type: "text", text: p.fail === "away" ? "The floor gives way beneath you, and you are thrown far from here!" : "The statue's eyes flare red. The floor opens, and you are thrown onto a field of traps!" }, { type: "jump", x: Number(p.tx), y: Number(p.ty) });
+          const victim = p.fail === "trap" ? randomActive(party, rng) : null;
+          if (victim !== null && Number(p.damage ?? 0) > 0) {
+            const hit = applyHit(party, victim, Number(p.damage), null, rng);
+            effects.push({ type: "damage", character: victim, amount: Number(p.damage), damageType: "physical", conditions: hit.conditions });
+            if (hit.defeated) effects.push({ type: "defeat" });
+          }
+        }
         if (p.tries === undefined) return { effects, consumed: false };
         return { effects, consumed: false, state: { add: [`${action.uid}@try${countedTries(ctx.opened ?? NONE, action.uid)}`], remove: [] } };
       }

@@ -48,7 +48,8 @@ export function themeIssues(map: InteriorMap, content: MapContent): string[] {
   for (const s of content.spawns) for (const id of s.monsterIds) if (!own.has(id)) issues.push(`${s.uid}: monster ${id} does not belong to ${theme.id}`);
   const found: string[] = [];
   for (const a of content.actions) {
-    if (a.kind === "trap" && a.params.trap !== theme.trap) issues.push(`${a.uid}: ${String(a.params.trap)} trap in ${theme.id}, which has ${theme.trap}`);
+    // (the field of traps that a wrong answer of a mini quest throws the party on may have a trap in a place that has none)
+    if (a.kind === "trap" && !a.uid.includes("trapfield") && a.params.trap !== theme.trap) issues.push(`${a.uid}: ${String(a.params.trap)} trap in ${theme.id}, which has ${theme.trap}`);
     if (a.kind === "decor" && Number(a.params.item) !== 76 && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
     // the objects of a quest (runes, gongs, statues, levers) belong to the quest, whoever lives here
     for (const item of [a.params.item, a.params.chest]) if (["decor", "treasure", "shrine"].includes(a.kind) && typeof item === "number" && forbidden.has(item) && a.params.quest === undefined) issues.push(`${a.uid}: prop ${item} does not suit ${theme.inhabitants}`);

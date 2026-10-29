@@ -3,7 +3,7 @@ import { BANNER, CASTLE_STATUES, KING, THRONE } from "../data/castles";
 import { letterHints } from "../data/letter-hints";
 import { CELL, FACING_DELTA, type InteriorMap } from "../interiors/types";
 import { hideInChests } from "./machines";
-import { pickWord } from "./questGen";
+import { pickWord, wordById } from "./questGen";
 import type { ActionInstance, Anchor, MapContent } from "./types";
 
 /**
@@ -76,7 +76,7 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
   actions.push({ uid: uid("king"), kind: "king", x: castle.king.x, y: castle.king.y, params: { persona: KING[castle.alignment], alignment: castle.alignment } });
 
   // the code word: four letters, one for each statue of the keep; the statue near the king wants it
-  const pick = pickWord(rng, 4);
+  const pick = castle.word > 0 ? wordById(castle.word) : pickWord(rng, 4);
   const { hints, ask } = letterHints(rng, pick.word);
   const order = rng.shuffle([0, 1, 2, 3]);
   castle.statues.forEach((s, i) => {

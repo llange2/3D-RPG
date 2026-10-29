@@ -121,7 +121,74 @@ export function placeQuest(env: QuestEnv): QuestResult {
       result = riddleWord(env, rng);
       break;
   }
+  placeMinis(env, new Rng(derive(env.mapSeed, "minis")));
   return result;
+}
+
+// ---------------------------------------------------------------- mini quests
+
+const FAILS = ["none", "away", "trap"] as const;
+
+/**
+ * The mini quests of a place (quest document 1.2, "Miniquest - Extra Loot"): statues or crystals with a riddle of the world's list, independent of the
+ * main quest. Easy statues take any number of answers, hard ones three; a wrong answer does nothing, throws the party away or onto a field of traps. The
+ * reward is twice the ordinary loot of the level times the difficulty: 1 or 2 for the answers and 1, 2 or 3 for the penalty (12 at the most).
+ */
+function placeMinis(env: QuestEnv, rng: Rng): void {
+  const ids = env.map.dungeon?.minis ?? [];
+  if (ids.length === 0) return;
+  const place = placeOf(env.map);
+  for (const id of ids) {
+    const r = RIDDLES_WORLD[String(id)];
+    if (!r) continue;
+    const hard = rng.chance(500);
+    const fail = rng.int(3);
+    const mult = (hard ? 2 : 1) * (fail + 1);
+    const item = allowedIn(117, place) && rng.chance(300) ? 117 : statueOf(rng, place, [95, 61, 29, 28, 27]);
+    const normalGold = env.tier * 150 + rng.range(0, 200);
+    const gold = 2 * mult * normalGold;
+    const items = Math.min(10, 2 * mult);
+    const spot = placeOnFirst(env, edgeSpots(env, rng), (s) => ({
+      uid: env.uid("mini"),
+      kind: "riddle",
+      x: s.x,
+      y: s.y,
+      params: { item, question: r.question, answer: r.answer, aliases: r.aliases.join(","), riddle: id, level: Math.min(8, env.tier), gold, items, mult, fail: FAILS[fail]!, tx: 0, ty: 0, damage: 0, ...(hard ? { tries: 3 } : {}) },
+    }));
+    if (!spot) continue;
+    const statue = env.actions[env.actions.length - 1]!;
+    if (fail === 0) continue;
+    // where a wrong answer throws the party: away to a far place, or onto a trap of its own (a pit, in a cave a puddle of fire)
+    const far = rng.shuffle(env.anchors.byKind.roomEdge.filter((a) => a.depth >= 0 && Math.abs(a.x - spot.x) + Math.abs(a.y - spot.y) > 10 && env.free(a.x, a.y)));
+    const target = far[0];
+    let kind = fail;
+    if (!target) kind = 0;
+    else if (fail === 2) {
+      // the trap of the place if it has one; else a pit, in a cave a puddle of fire
+      const cave = env.map.kind === "cave";
+      const theme = env.theme.trap !== "none" ? env.theme.trap : cave ? "generic" : "pit";
+      const damage = env.trapDamage(theme, env.tier, rng);
+      const params: Record<string, ParamValue> = theme === "generic" ? { trap: "generic", damage, element: env.theme.trapElement ?? "fire" } : { trap: theme, damage };
+      const field = far.find((a) => env.place({ uid: env.uid("trapfield"), kind: "trap", x: a.x, y: a.y, params }));
+      if (field) {
+        statue.params.tx = field.x;
+        statue.params.ty = field.y;
+        statue.params.damage = damage;
+      } else kind = 1;
+    }
+    if (kind === 1) {
+      statue.params.tx = target!.x;
+      statue.params.ty = target!.y;
+    }
+    // a penalty that could not be built is a milder one, and the reward follows
+    if (kind !== fail) {
+      const m = (hard ? 2 : 1) * (kind + 1);
+      statue.params.fail = FAILS[kind]!;
+      statue.params.mult = m;
+      statue.params.gold = 2 * m * normalGold;
+      statue.params.items = Math.min(10, 2 * m);
+    }
+  }
 }
 
 // ---------------------------------------------------------------- quest 1: the moaning statues
@@ -345,13 +412,20 @@ export function pickWord(rng: Rng, length?: number): { id: number; word: string;
   return { id, word: r.answer, aliases: r.aliases };
 }
 
+/** The word, answer and aliases of a riddle of the list of the world. */
+export function wordById(id: number): { id: number; word: string; aliases: string[] } {
+  const r = RIDDLES_WORLD[String(id)]!;
+  return { id, word: r.answer, aliases: r.aliases };
+}
+
 function riddleWord(env: QuestEnv, rng: Rng): QuestResult {
   const place = placeOf(env.map);
   const statue = statueOf(rng, place, [95, 61, 34, 29, 28, 27]);
   // as many hint statues as the word has letters, in the rooms; a word longer than the place has spots for is not chosen
   const spots = edgeSpots(env, rng);
   const longest = Math.min(8, Math.max(3, spots.length - 2));
-  const pick = pickWord(rng);
+  // the plan chose the riddle (so that a tavern can let the word slip); a place short of room takes a three-letter word instead
+  const pick = env.map.dungeon?.word !== undefined ? wordById(env.map.dungeon.word) : pickWord(rng);
   const chosen = pick.word.length <= longest ? pick : pickWord(rng, 3);
   const { hints, ask } = letterHints(rng, chosen.word);
   hints.forEach((text, i) => placeOnFirst(env, spots, (s) => ({ uid: env.uid("statue"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statue, text, letter: chosen.word[i]!.toUpperCase(), order: i + 1 } })));

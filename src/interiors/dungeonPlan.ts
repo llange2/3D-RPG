@@ -16,6 +16,7 @@ import {
   type MonsterGroup,
   type QuestId,
 } from "../data/quest-table";
+import { RIDDLES_WORLD, RIDDLE_NUMBERS, WORD_RIDDLES } from "../data/riddles";
 import { MONSTERS } from "../data/tables";
 import type { Poi, WorldSize } from "../world/types";
 import type { World } from "../world/world";
@@ -32,6 +33,9 @@ import type { DungeonRef } from "./types";
 const DUNGEON_ORBS = ORBS_IN_WORLD - ORBS_PER_SECTION * SECTIONS;
 
 const isDungeon = (p: Poi) => p.kind === "dungeon";
+
+/** The most mini quests a place may carry, by the size of the world. */
+const MAX_MINIS: Readonly<Record<string, number>> = { small: 2, default: 3, large: 4, huge: 4 };
 
 /** The pyramids: one dungeon on each island in turn, in an order the seed decides, until there are five. */
 function pickPyramids(rng: Rng, dungeons: readonly Poi[]): Poi[] {
@@ -83,7 +87,7 @@ function bossPair(rng: Rng, tier: number): { population: number; boss: number } 
   return pool[rng.int(pool.length)]!;
 }
 
-export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly Poi[]): Map<string, DungeonRef> {
+export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly Poi[], castleWords: Map<string, number> = new Map()): Map<string, DungeonRef> {
   const out = new Map<string, DungeonRef>();
   const places = pois.filter((p) => p.kind === "dungeon" || p.kind === "cave");
   if (places.length === 0) return out;
@@ -140,6 +144,33 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
   const orbOrder = rng.shuffle([...orbHolders]);
   orbOrder.forEach((p, i) => orbs.set(p.id, Math.floor(DUNGEON_ORBS / orbOrder.length) + (i < DUNGEON_ORBS % orbOrder.length ? 1 : 0)));
 
+  // the riddles of the world: each is used once (the word of a quest 6, a mini quest), as far as the list of 258 goes
+  const riddleRng = rngFor(rootSeed, LAYER.INTERIOR, "riddles");
+  const usedRiddles = new Set<number>();
+  const takeRiddle = (pool: readonly number[]): number => {
+    const fresh = pool.filter((n) => !usedRiddles.has(n));
+    const from = fresh.length > 0 ? fresh : pool;
+    const n = from[riddleRng.int(from.length)]!;
+    usedRiddles.add(n);
+    return n;
+  };
+
+  // how many mini quests each place gets: 0 to the most the size allows, taken back at random places until the list of riddles (258) is enough for the whole world
+  const miniCounts = new Map<string, number>();
+  for (const poi of ordinary) miniCounts.set(poi.id, riddleRng.int((MAX_MINIS[size] ?? 3) + 1));
+  const castlesInWorld = pois.filter((p) => p.kind === "castle").length;
+  // (about one place in six asks for a word of quest 6, which takes a riddle too)
+  const budget = RIDDLE_NUMBERS.length - Math.ceil(ordinary.length / 4) - castlesInWorld - 12;
+  let total = [...miniCounts.values()].reduce((a, b) => a + b, 0);
+  const order = riddleRng.shuffle([...miniCounts.keys()]);
+  for (let guard = 0; total > Math.max(0, budget) && guard < 100000; guard++) {
+    const id = order[guard % order.length]!;
+    if ((miniCounts.get(id) ?? 0) > 0) {
+      miniCounts.set(id, miniCounts.get(id)! - 1);
+      total--;
+    }
+  }
+
   // 5. quest, layout and look of every place
   const decks = { dungeon: new Deck(rng, Object.keys(QUESTS) as QuestId[]), cave: new Deck(rng, (Object.keys(QUESTS) as QuestId[]).filter((q) => layoutsFor(q, "cave").length > 0)) };
   for (const poi of places) {
@@ -150,18 +181,22 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     if (pyramidIds.has(poi.id)) {
       // (the same look for all five pyramids: behind each of them is the same level)
       const theme = buildLook(rngFor(rootSeed, LAYER.INTERIOR, "spaceship-look"), "dungeon", 5, "quest_6", "Spaceship", ["robot"], "C", "spaceship");
-      out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: 0, coins: 0, skulls: 0, scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
+      out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: [], coins: 0, skulls: 0, scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
       continue;
     }
     const quest = decks[kind].draw();
     const layout = rngPick(look, layoutsFor(quest, kind));
+    // 0 to 4 mini quests by the size of the world (fewer where the list of riddles would run out); every riddle occurs once in a world
+    const miniIds = Array.from({ length: miniCounts.get(poi.id) ?? 0 }, () => takeRiddle(RIDDLE_NUMBERS));
     const def = QUESTS[quest];
     const klass: DungeonClass = need ? "B" : "A";
     const name = `${def.name} (${layout})`;
     const theme = buildLook(look, kind, poi.tier, quest, name, def.groups as MonsterGroup[], klass, `${quest}/${layout}`, quest === "quest_5" ? bossPair(look, poi.tier) : undefined);
-    out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: 0, coins: 0, skulls: 0, scale: SIZE_SCALE[size] ?? 1 });
+    out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: miniIds, coins: 0, skulls: 0, scale: SIZE_SCALE[size] ?? 1, ...(quest === "quest_6" ? { word: takeRiddle(WORD_RIDDLES) } : {}) });
   }
   distributeItems(rng, out, places, pois);
+  // the castles each have a four-letter word, from the same list
+  for (const poi of pois) if (poi.kind === "castle") castleWords.set(poi.id, takeRiddle(WORD_RIDDLES.filter((n) => RIDDLES_WORLD[String(n)]!.answer.length === 4)));
   return out;
 }
 
@@ -208,7 +243,7 @@ function standalone(world: World, poi: Poi): DungeonRef {
   const quest = quests[rng.int(quests.length)]!;
   const layout = rngPick(rng, layoutsFor(quest, kind));
   const theme = buildLook(rng, kind, poi.tier, quest, `${QUESTS[quest].name} (${layout})`, QUESTS[quest].groups as MonsterGroup[], "A", `${quest}/${layout}`, quest === "quest_5" ? bossPair(rng, poi.tier) : undefined);
-  return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: 0, coins: 0, skulls: 0, scale: 1 };
+  return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: [], coins: 0, skulls: 0, scale: 1, ...(quest === "quest_6" ? { word: WORD_RIDDLES[rng.int(WORD_RIDDLES.length)]! } : {}) };
 }
 
 /** The plan of a cave or dungeon, from the plan of the world; null for towns and castles. */
