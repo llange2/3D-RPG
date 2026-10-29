@@ -59,6 +59,8 @@ describe("doors of generated interiors", () => {
           expect(["E", "W"].includes(f), `${kind} #${i} door ${a.uid}`).toBe(a.params.axis === "x");
           const dx = f === "E" ? 1 : f === "W" ? -1 : 0;
           const dy = f === "S" ? 1 : f === "N" ? -1 : 0;
+          // (the gate of a castle's keep stands between the yard and the keep, which are no rooms of the map)
+          if (kind === "castle") continue;
           const ahead = map.roomOf[(a.y + dy) * map.width + a.x + dx]!;
           const behind = map.roomOf[(a.y - dy) * map.width + a.x - dx]!;
           // a door is a corridor cell next to a room; when both neighbours are rooms either one may be the front

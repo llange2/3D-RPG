@@ -190,25 +190,7 @@ describe("sixteenth playtest: the caves that sell talents (point 3), changed by 
     expect(ITEM_RULES[52]!.places).not.toContain("cave");
   });
 
-  it("stands the lords in castles, one in about every second castle, in a dead end", () => {
-    const world = new World("playtest16-lords");
-    let castles = 0;
-    let lords = 0;
-    for (let i = 0; i < 80; i++) {
-      const poi = poiFor("castle", i);
-      const map = generateInterior(world, poi);
-      const content = buildMapContent(world, poi, map);
-      castles++;
-      for (const a of content.actions.filter((x) => x.kind === "talent")) {
-        lords++;
-        expect(["talent_prayer_master", "talent_prestidigitator"]).toContain(a.params.talent);
-        expect(a.params.persona).toBe(52);
-      }
-      expect(validateContent(map, content), `castle ${i}`).toEqual([]);
-    }
-    expect(lords).toBeGreaterThan(castles / 4);
-    expect(lords).toBeLessThan(castles);
-  });
+  // (the lords of the castles were dropped with the vaults: quest document 1.2 has the king, four statues and chests)
 });
 
 describe("sixteenth playtest: monsters under the torch (point 5)", () => {

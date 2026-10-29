@@ -138,6 +138,21 @@ export function giveItem(party: Party, item: Item): boolean {
   return false;
 }
 
+/** Takes every item of a type out of the backpacks (and the Donkey's bag); returns how many there were. */
+export function takeItems(party: Party, type: string): number {
+  const bags = [...party.characters.map((c) => c.inventory), ...(party.mascot === "Donkey" ? [party.mascotBag] : [])];
+  let n = 0;
+  for (const bag of bags) {
+    for (const slot of BAG_SLOTS) {
+      if (bag[slot]?.type === type) {
+        bag[slot] = null;
+        n++;
+      }
+    }
+  }
+  return n;
+}
+
 /** How many more items the backpacks (and the Donkey's bag) take. */
 export function freeSlots(party: Party): number {
   const bags = [...party.characters.map((c) => c.inventory), ...(party.mascot === "Donkey" ? [party.mascotBag] : [])];

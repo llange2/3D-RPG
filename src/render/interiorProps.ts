@@ -54,6 +54,8 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   const item = shownItem(a);
   if (item === null) return null;
   // a head of the ring is there while its lever says so; a head of the row looks the way it was turned
+  // the statues of a castle stand in a corner of the keep and face the inside at an angle of 45 degrees
+  if (typeof a.params.bearing === "number") bearing = a.params.bearing;
   // the runes of quest 3 appear with the last gong; the middle of the field of quest 1 stays bare
   if (a.kind === "rune") {
     if (a.params.need !== "gongs" || !content) return null;

@@ -44,6 +44,10 @@ export type Effect =
   | { type: "pick"; question: string }
   /** The quest of the place is done: its end room opens (the seal gives way, or the party is teleported into the pocket). */
   | { type: "endroom" }
+  /** An alarm: the guards of the castle come (`light` in the yard, `heavy` between the throne room and the gate). */
+  | { type: "guards"; kind: "light" | "heavy" }
+  /** The party stands before a king: the game takes the orbs, if there are any, and pays. */
+  | { type: "king"; alignment: "good" | "neutral" | "evil" }
   /** A hero got a condition from a chalice. */
   | { type: "condition"; character: number; condition: Condition }
   | { type: "defeat" };
@@ -215,6 +219,28 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       if ((p.lock === "ring" && !ringSolved(ctx.content ?? EMPTY, ctx.opened ?? NONE)) || (p.lock === "rotation" && !rotationSolved(ctx.content ?? EMPTY, ctx.opened ?? NONE))) {
         return { effects: [{ type: "text", text: "The chest will not open. Something in this hall is not as it should be." }], consumed: false };
       }
+      const mapKey = action.uid.slice(0, action.uid.indexOf("#"));
+      // a chest of the king: sealed until the word of the statues is said, then an alarm, then a lock to pick (castle_1)
+      if (p.lock === "code") {
+        if (!(ctx.opened ?? NONE).has(String(p.requires))) return { effects: [{ type: "text", text: "The chest is sealed by a spell. Perhaps the statues in this castle know the word that opens it." }], consumed: false };
+        const flag = `${mapKey}@heavy`;
+        if (!(ctx.opened ?? NONE).has(flag)) {
+          return { effects: [{ type: "text", text: "As the seal breaks, a horn sounds through the castle. Heavy guards come running between the throne room and the gate!" }, { type: "guards", kind: "heavy" }], consumed: false, state: { add: [flag], remove: [] } };
+        }
+        let best = 0;
+        for (const i of activeCharacters(party)) best = Math.max(best, thieveryRoll(party.characters[i]!, rng));
+        if (best < Number(p.difficulty ?? 2)) return { effects: [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }], consumed: false };
+      }
+      // a chest in the yard of a castle is wired to an alarm: the party is asked, and the first one tried calls the light guards
+      if (p.warn === "alarm") {
+        if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Chest", question: "A thin wire runs from the lid into the wall. This chest is guarded by an alarm. Do you really want to break it open?", yes: "Break it open", no: "Leave" }], consumed: false };
+        if (ctx.answer === null) return { effects, consumed: false };
+        const flag = `${mapKey}@light`;
+        const first = !(ctx.opened ?? NONE).has(flag);
+        if (first) effects.push({ type: "text", text: "An alarm bell rings out over the yard. The guards of the castle come!" }, { type: "guards", kind: "light" });
+        payOut(p, rng, party, effects);
+        return { effects, consumed: true, ...(first ? { state: { add: [flag], remove: [] } } : {}) };
+      }
       // the key or key card of a place (chapter 1.2 of docs/DUNGEON_THEMES.md): a chest that holds nothing else stays shut until it fits in a backpack
       if (typeof p.quest === "string") {
         const found = questItem(p.quest);
@@ -323,6 +349,9 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       effects.push({ type: "text", text: "The runes flare up. The floor falls away, and a strange light takes you." }, { type: "endroom" });
       return { effects, consumed: false };
     }
+
+    case "king":
+      return { effects: [{ type: "king", alignment: p.alignment as "good" | "neutral" | "evil" }], consumed: false };
 
     case "qportal":
       // the portal of an end room reached by teleport leads back to where the quest began (A > B > A, apart from the portals of the towns)

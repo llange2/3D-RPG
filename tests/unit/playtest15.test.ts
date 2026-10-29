@@ -56,7 +56,8 @@ describe("fifteenth playtest: size and content of the levels", () => {
       }
     }
     expect(dungeons).toBeGreaterThan(0);
-    expect(castles).toBeGreaterThan(0);
+    // the keeps of quest document 1.2 have no columns
+    expect(castles).toBe(0);
   });
 
   it("uses neither the cracked fortress wall nor the broken city wall (point 12)", () => {

@@ -154,6 +154,25 @@ export interface DungeonRef {
   hall?: { x: number; y: number; w: number; h: number };
 }
 
+/** A castle of the generated world (`interiors/castle.ts`): a keep inside a yard. */
+export interface CastleLayout {
+  alignment: Alignment;
+  /** The size of the world as a factor on the number of guards (2/3, 1, 4/3, 5/3). */
+  scale: number;
+  /** The throne, the king before it, the four statues (with the bearing they face, degrees, 0 north) and the cell of the statue that wants the code word. */
+  throne: { x: number; y: number };
+  king: { x: number; y: number };
+  statues: { x: number; y: number; bearing: number }[];
+  answer: { x: number; y: number };
+  /** The two chests of the king, the chests in the yard and the door of the keep. */
+  kingChests: { x: number; y: number }[];
+  yardChests: { x: number; y: number }[];
+  door: { x: number; y: number };
+  /** The cells inside the keep and those of the yard. */
+  keep: number[];
+  yard: number[];
+}
+
 export interface InteriorMap {
   kind: InteriorKind;
   /** Stable key, also used for save deltas: `<poi id>:<floor>`. */
@@ -180,8 +199,8 @@ export interface InteriorMap {
   pillars?: { x: number; y: number }[];
   /** Caves and dungeons of the generated world: the theme they were built for. Absent in towns, castles and the campaign. */
   dungeon?: DungeonRef;
-  /** Castles of the generated world: the kind of castle, which decides its banner and its monsters (`data/castles.ts`). */
-  castle?: { alignment: Alignment };
+  /** Castles of the generated world: the kind of castle, which decides its banner, statues and guards (`data/castles.ts`), and where everything stands. */
+  castle?: CastleLayout;
   /** Optional per-cell look. `cell` holds, per cell, an index into `list`; generated maps do not use it. */
   styles?: { list: CellStyle[]; cell: Uint8Array };
 }

@@ -14,6 +14,8 @@ import { LAYER, Rng, rngFor, seedFromString } from "../core/rng";
 import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
+import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
+import { BLACK_CARD, ORB, ORBS_FOR_KING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
 import { CELL, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
@@ -46,7 +48,7 @@ import {
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS,
   type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
-import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, giveItem, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
+import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
 import { RIFT_TURNS, SPELL_AGING, castSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, quickCast, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
 import { canCombine, combine, combineGroups, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
 import { pickGateSpot, safeCells, type Spot } from "./spellSites";
@@ -66,7 +68,7 @@ import { sellerParams } from "../data/talent-sellers";
 import { CARAVAN_ITEM, caravansIn, caravansOf, type CaravanSpot } from "../world/caravans";
 import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, hutXpPercent, slotDistance, slotKey, type HutSpot } from "../world/huts";
 import { hutScene } from "../data/hut-texts";
-import { generateItem } from "../sim/items";
+import { generateItem, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { readSettings, writeSettings, type Settings } from "./settings";
 import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
@@ -728,7 +730,7 @@ export class Game {
         if (issues.length) console.warn(`interior ${poi.id} has content issues`, issues);
       }
       this.ui.loading.set(LOAD_DATA);
-      await this.monsters.preload(content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work") ? [personaModelId(a.params.persona)] : [])));
+      await this.monsters.preload(content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king") ? [personaModelId(a.params.persona)] : [])));
       await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
@@ -844,7 +846,7 @@ export class Game {
     const rt = this.interior;
     if (!rt) return;
     for (const a of rt.content.actions) {
-      const persona = a.kind === "talent" || a.kind === "lore" || a.kind === "work" ? a.params.persona : undefined;
+      const persona = a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" ? a.params.persona : undefined;
       if (typeof persona !== "number" || !PERSONAS[persona] || !this.monsters.knows(personaModelId(persona))) continue;
       // they face the longest stretch of open ground next to them, the way a person in a street looks along it
       let bearing = 0;
@@ -1811,6 +1813,16 @@ export class Game {
     }
     this.player.locked = true;
     const kind = poi.kind === "town" ? "town" : poi.kind === "castle" ? "castle" : poi.kind === "cave" ? "cave" : "dungeon";
+    // when one king holds the eleventh orb, the other two castles are rubble
+    if (poi.kind === "castle") {
+      const winner = [...this.state.opened].find((k) => k.startsWith("king:winner="))?.split("=")[1];
+      if (winner && this.world.castleAlignment(poi.id) !== winner) {
+        this.audio.play(9014, 0.5);
+        await this.ui.message("Of this castle only a heap of rubble is left. Its walls were crushed when the king of another realm took the power of the orbs.", poi.name);
+        this.player.locked = false;
+        return;
+      }
+    }
     // a key dungeon asks for its key, a pyramid for its key card; neither is used up (the old maps keep the item)
     const plan = planDungeon(this.world, poi);
     const need = plan?.requires ?? null;
@@ -2006,6 +2018,12 @@ export class Game {
         case "endroom":
           this.openEndRoom();
           break;
+        case "guards":
+          this.spawnGuards(e.kind);
+          break;
+        case "king":
+          await this.meetKing(e.alignment);
+          break;
         case "condition":
           ui.log(`${this.state.party.characters[e.character]!.name} is ${e.condition.toLowerCase()}!`, "bad");
           break;
@@ -2015,6 +2033,98 @@ export class Game {
           await this.gameOver();
           break;
       }
+    }
+    this.minimapDirty = true;
+  }
+
+  /**
+   * The alarm of a castle: the guards of its kind come. Light guards fill the yard, heavy ones stand on the way from the king to the gate of the keep.
+   * There is one kind of each in a castle (`guardsOf`), their number follows the size of the world and their experience the other way round.
+   */
+  private spawnGuards(kind: "light" | "heavy"): void {
+    const rt = this.interior;
+    const castle = rt?.map.castle;
+    if (!rt || !castle) return;
+    const rng = rngFor(this.world.rootSeed, LAYER.SPAWN, rt.map.key, "guards", kind, this.state.steps);
+    const id = guardsOf(castle.alignment, rt.map.tier, rngFor(this.world.rootSeed, LAYER.SPAWN, rt.map.key, "guards"))[kind];
+    const count = Math.max(2, Math.round((kind === "light" ? rng.range(10, 20) : rng.range(6, 10)) * castle.scale));
+    const w = rt.map.width;
+    // the cells they come to: the yard, or the way from the king to the door of the keep
+    let cells: number[];
+    if (kind === "light") cells = castle.yard;
+    else {
+      const prev = new Map<number, number>([[castle.king.y * w + castle.king.x, -1]]);
+      const queue = [castle.king.y * w + castle.king.x];
+      const goal = castle.door.y * w + castle.door.x;
+      for (let head = 0; head < queue.length && !prev.has(goal); head++) {
+        const i = queue[head]!;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const n = (Math.floor(i / w) + dy) * w + (i % w) + dx;
+          if (rt.map.cells[n] !== CELL.FLOOR || prev.has(n)) continue;
+          prev.set(n, i);
+          queue.push(n);
+        }
+      }
+      cells = [];
+      for (let at = goal; at >= 0 && prev.has(at); at = prev.get(at)!) cells.push(at);
+    }
+    const view = this.gridView();
+    const free = rng.shuffle(cells.filter((i) => view.walkable(i % w, Math.floor(i / w)) && Math.abs((i % w) - this.player.tx) + Math.abs(Math.floor(i / w) - this.player.ty) > 2 && !this.monsterAt(i % w, Math.floor(i / w))));
+    const xpPercent = Math.round(100 / castle.scale);
+    let n = 0;
+    for (const i of free) {
+      if (n >= count) break;
+      const x = i % w;
+      const y = Math.floor(i / w);
+      const uid = `guard:${rt.map.key}:${kind}:${this.state.steps}:${n}`;
+      if (this.state.killed.has(uid)) continue;
+      const m: MonsterInstance = { ...createMonster(uid, id, x, y), xpPercent };
+      this.enc.monsters.push(m);
+      this.addMonsterView(m, APPEAR_SECONDS);
+      n++;
+    }
+    this.audio.play(9044);
+    updateBattleMode(this.enc, this.player.tx, this.player.ty, view);
+  }
+
+  /**
+   * The party before a king (quest document 1.2, ue_quest_3): all the orbs of ultimate power in the backpacks go to him, for each one the party gets a
+   * million gold and every hero a million experience. The first king to hold eleven wins: the other two castles are destroyed and the king gives the black
+   * key card. Further orbs can still be brought to the winner. What each king holds is `king:<kind>=<n>` in the saved set, the winner `king:winner=<kind>`.
+   */
+  private async meetKing(alignment: Alignment): Promise<void> {
+    const party = this.state.party;
+    const opened = this.state.opened;
+    const held = Number([...opened].find((k) => k.startsWith(`king:${alignment}=`))?.split("=")[1] ?? 0);
+    const orbs = carriedItems(party).filter((i) => i.type === ORB).length;
+    if (orbs === 0) {
+      this.player.locked = true;
+      await this.ui.message(`${KING_GREETING[alignment]}${held > 0 ? ` He holds ${held} of the ${ORBS_FOR_KING} orbs he wants.` : ""}`, this.interior?.poi.name ?? "");
+      this.player.locked = false;
+      return;
+    }
+    this.player.locked = true;
+    const yes = await this.ui.confirm("The king", `Give all ${orbs} Orb${orbs === 1 ? "" : "s"} of ultimate power to the king? The party gets ${thousands(orbs * 1_000_000)} gold and every hero ${thousands(orbs * 1_000_000)} experience. All the orbs you carry go to this king.`, "Give them", "Keep them");
+    this.player.locked = false;
+    if (!yes) return;
+    takeItems(party, ORB);
+    party.gold += orbs * 1_000_000;
+    addXp(party, orbs * 1_000_000);
+    const total = held + orbs;
+    for (const k of [...opened]) if (k.startsWith(`king:${alignment}=`)) opened.delete(k);
+    opened.add(`king:${alignment}=${total}`);
+    this.audio.play(9000);
+    this.ui.log(`You give the king ${orbs} Orb${orbs === 1 ? "" : "s"} of ultimate power: ${thousands(orbs * 1_000_000)} gold and ${thousands(orbs * 1_000_000)} experience for everyone.`, "loot");
+    const winner = [...opened].find((k) => k.startsWith("king:winner="));
+    if (!winner && total >= ORBS_FOR_KING) {
+      opened.add(`king:winner=${alignment}`);
+      const card = questItem(BLACK_CARD);
+      if (card && !giveItem(party, card) && this.interior) this.dropLoot(this.player.tx, this.player.ty, 0, [card]);
+      this.player.locked = true;
+      await this.ui.message(`The king holds ${total} orbs. Power surges through his hall, and far away the walls of the other two castles crumble to dust. He hands you the black key card: "Take it. The transport tube of the mothership control deck obeys no other."`, this.interior?.poi.name ?? "");
+      this.player.locked = false;
+    } else if (!winner) {
+      this.ui.log(`The king holds ${total} of the ${ORBS_FOR_KING} orbs he wants.`, "info");
     }
     this.minimapDirty = true;
   }
@@ -2528,6 +2638,10 @@ export class Game {
   /** The party's wild-card spells that move it are checked before the spell points are paid. */
   private spellRefusal(spellId: number, beacon?: "set" | "return"): string | null {
     if (this.enc.battleMode && movesParty(spellId, beacon)) return IN_MELEE_SPELL;
+    // the castles and the spaceship are magically closed to every spell that carries the party away (quest document 1.2)
+    const here = this.interior?.map;
+    if (movesParty(spellId, beacon) && here?.castle) return "The castle seems to be magically protected against movement spells.";
+    if (movesParty(spellId, beacon) && here?.dungeon?.quest === "spaceship") return `Something in this strange construct is preventing you from casting ${SPELLS[spellId]?.title ?? "that spell"}.`;
     const { tx, ty } = this.player;
     const view = this.gridView();
     const near = (radius: number) => this.enc.monsters.filter((m) => m.hp > 0 && !isPhased(m) && (m.x - tx) ** 2 + (m.y - ty) ** 2 <= radius * radius);

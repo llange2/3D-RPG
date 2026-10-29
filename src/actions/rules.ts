@@ -1,6 +1,6 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { QUEST_PROP, SHRINE_EFFECT, type DungeonTheme } from "../data/dungeon-themes";
-import { BANNER, castleBosses, castleMonsters } from "../data/castles";
+import { buildCastleContent } from "./castle";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
 import { sellerParams } from "../data/talent-sellers";
 import { allowedIn, isFunctional } from "../data/item-rules";
@@ -79,6 +79,8 @@ const FITTED_ANCHOR = /Site$|^vault|^deadEnd$|^exit$/;
  * Each rule has its own random stream, so adding a rule at the end never changes what earlier rules did.
  */
 export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentContext, topology?: Topology): MapContent {
+  // a castle is made of its own parts (`actions/castle.ts`), not of the rules
+  if (map.castle) return buildCastleContent(map, ctx.rootSeed);
   const topo = topology ?? analyzeTopology(map);
   const anchors = computeAnchors(map, topo);
   const mapSeed = derive(ctx.rootSeed, LAYER.ACTION, map.key);
@@ -212,6 +214,20 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     return variants[rng.weightedIndex(variants.map((v) => v.weight))]!.params;
   };
 
+  // the runes of the maze bar some of its loops: they throw the party to another place of the dungeon
+  const farCells = (x: number, y: number): { x: number; y: number }[] => {
+    const out: { x: number; y: number }[] = [];
+    for (const a of anchors.byKind.roomCenter) if (Math.abs(a.x - x) + Math.abs(a.y - y) > 14 && a.depth >= 0) out.push(a);
+    return out;
+  };
+  (map.dungeon?.barriers ?? []).forEach((c, i) => {
+    const rng = new Rng(derive(mapSeed, "barrier", i));
+    const far = farCells(c.x, c.y);
+    const to = far.length > 0 ? far[rng.int(far.length)]! : { x: map.spawn.x, y: map.spawn.y };
+    actions.push({ uid: `${map.key}#barrier:${i}`, kind: "teleporter", x: c.x, y: c.y, params: { item: 73, tx: to.x, ty: to.y } });
+    occupied.add(idx(c.x, c.y));
+  });
+
   // The puzzle of the theme comes first: it reserves its hall and its cells before the ordinary rules fill the place.
   const questUids = new Map<string, number>();
   const roomCentres = new Set(anchors.byKind.roomCenter.map((a) => idx(a.x, a.y)));
@@ -269,24 +285,9 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   const layout = map.dungeon?.layout;
   const ruleList = rules.rules.flatMap((r): Rule[] => (r.id !== "door" ? [r] : layout === "dungeon_3" ? [] : layout === "dungeon_2" ? [{ ...r, count: { chance: 1000 }, when: undefined }] : [r]));
 
-  // the runes of the maze bar some of its loops: they throw the party to another place of the dungeon
-  const farCells = (x: number, y: number): { x: number; y: number }[] => {
-    const out: { x: number; y: number }[] = [];
-    for (const a of anchors.byKind.roomCenter) if (Math.abs(a.x - x) + Math.abs(a.y - y) > 14 && a.depth >= 0) out.push(a);
-    return out;
-  };
-  (map.dungeon?.barriers ?? []).forEach((c, i) => {
-    const rng = new Rng(derive(mapSeed, "barrier", i));
-    const far = farCells(c.x, c.y);
-    const to = far.length > 0 ? far[rng.int(far.length)]! : { x: map.spawn.x, y: map.spawn.y };
-    actions.push({ uid: `${map.key}#barrier:${i}`, kind: "teleporter", x: c.x, y: c.y, params: { item: 73, tx: to.x, ty: to.y } });
-    occupied.add(idx(c.x, c.y));
-  });
-
   for (const rule of ruleList) {
     if (rule.when?.theme && !dt) continue;
     if (rule.when?.klass && dt?.klass !== rule.when.klass) continue;
-    if (rule.when?.alignment && !(map.castle && rule.when.alignment.includes(map.castle.alignment))) continue;
     if (rule.kind === "decor" && !dt && map.kind !== "town" && rule.id !== "banner") continue;
     // quest 5 has exactly one end boss, the one that stands before the end room
     if (rule.id === "boss_guard" && map.dungeon?.quest === "quest_5" && spawns.some((s) => s.boss)) continue;
@@ -301,14 +302,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
 
     // ----- choose anchors
     let chosen: Anchor[];
-    if (rule.id === "banner" && map.castle) {
-      // the banners of the old castles hang along the walls of the halls at an even distance; a castle with no straight wall long enough keeps the plain pick
-      const floorAt = (x: number, y: number): boolean => map.cells[idx(x, y)] === CELL.FLOOR;
-      chosen = spacedAlongWalls(pool, floorAt, BANNER_SPACING);
-      // a castle of small halls: hang them closer rather than leave it bare
-      if (chosen.length < BANNER_MIN_TOTAL) chosen = spacedAlongWalls(pool, floorAt, BANNER_SPACING - 1, 2);
-      if (chosen.length === 0) chosen = rng.shuffle([...pool]).slice(0, rng.range(2, 4));
-    } else if (rule.count.perMap) {
+    if (rule.count.perMap) {
       const n = rng.range(rule.count.perMap[0], rule.count.perMap[1]);
       chosen = rng.shuffle([...pool]).slice(0, n);
     } else {
@@ -334,11 +328,6 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       const params: Record<string, ParamValue> = {};
       for (const [k, v] of Object.entries(raw)) params[k] = resolveParam(v, vars, local);
       if (dt && rule.id !== "lantern") themeParams(rule.kind, params, dt, vars, local);
-      else if (map.castle) {
-        // the banner shows the kind of castle, an ambush draws from its monsters
-        if (rule.id === "banner") params.item = BANNER[map.castle.alignment];
-        if (rule.kind === "ambush") params.monsters = castleMonsters(map.castle.alignment, tier).join(",");
-      }
       // a barrel must be of use: wherever a theme stands one as a prop it is a container with a few coins or a joke in it
       let kind: ActionKind = rule.kind === "spawn" ? "legacy" : rule.kind;
       if (kind === "decor" && Number(params.item) === BARREL) {
@@ -368,16 +357,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
           const pool = themeMonsters(dt, tier);
           for (let m = 0; m < group; m++) monsterIds.push(pool[local.int(pool.length)]!);
           if (boss) monsterIds[0] = themeBoss(dt, Math.min(5, tier));
-        } else if (map.castle) {
-          // a castle keeps the monsters of its kind; the boss and the guard of the main vault are the strongest it has at this tier
-          const pool = castleMonsters(map.castle.alignment, tier);
-          for (let m = 0; m < group; m++) monsterIds.push(pool[local.int(pool.length)]!);
-          if (boss) {
-            const strong = castleBosses(map.castle.alignment, tier);
-            monsterIds[0] = strong[local.int(strong.length)]!;
-          }
         } else for (let m = 0; m < group; m++) monsterIds.push(pickMonsterWeighted(local, map.theme.monsterThemes, tier).id);
-        if (boss && !dt && !map.castle) {
+        if (boss && !dt) {
           // the boss is one step above the rest of the place (but not above tier 2 on the first tier, so a new party can win)
           const themeNames = Object.keys(map.theme.monsterThemes).filter(hasLandMonster);
           monsterIds[0] = pickMonster(local, themeNames[local.int(themeNames.length)] ?? "humanoid", Math.min(5, tier + (tier >= 2 ? 1 : 0))).id;

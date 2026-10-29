@@ -1,5 +1,6 @@
 import { LAYER, rngFor } from "../core/rng";
 import { pickAlignment } from "../data/castles";
+import { SIZE_SCALE } from "../data/quest-table";
 import { pickInteriorTheme, withDungeonTheme } from "../data/interior-themes";
 import { BIOME, type Poi } from "../world/types";
 import type { World } from "../world/world";
@@ -7,7 +8,7 @@ import type { BuildContext } from "./builder";
 import { generateCave } from "./cave";
 import { generateDungeon } from "./dungeon";
 import { planDungeon } from "./dungeonPlan";
-import { generateFortress } from "./fortress";
+import { generateCastle } from "./castle";
 import { generateTown } from "./town";
 import type { InteriorMap } from "./types";
 
@@ -34,9 +35,11 @@ export function generateInterior(world: World, poi: Poi, floor = 0): InteriorMap
       return generateDungeon(rng, ctx);
     case "cave":
       return generateCave(rng, ctx);
-    case "castle":
-      // good, neutral or evil: its own stream, so that adding a kind of castle never moves the layout
-      return { ...generateFortress(rng, ctx), castle: { alignment: pickAlignment(rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "alignment"), poi.biome === BIOME.LAVA) } };
+    case "castle": {
+      // good, neutral or evil: the plan of the world says (a castle that is no part of it, a hand-made one in a test, draws from its own stream)
+      const alignment = world.castleAlignment(poi.id) ?? pickAlignment(rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "alignment"), poi.biome === BIOME.LAVA);
+      return generateCastle(rng, ctx, alignment, SIZE_SCALE[world.size] ?? 1);
+    }
     case "town":
       return generateTown(rng, ctx);
   }
@@ -66,7 +69,13 @@ export function interiorHash(map: InteriorMap): number {
     for (let i = 0; i < what.length; i++) feed(what.charCodeAt(i));
   }
   for (let i = 0; i < map.theme.id.length; i++) feed(map.theme.id.charCodeAt(i));
-  if (map.castle) for (let i = 0; i < map.castle.alignment.length; i++) feed(map.castle.alignment.charCodeAt(i));
+  if (map.castle) {
+    for (let i = 0; i < map.castle.alignment.length; i++) feed(map.castle.alignment.charCodeAt(i));
+    for (const c of [map.castle.throne, map.castle.king, map.castle.door, map.castle.answer, ...map.castle.statues, ...map.castle.kingChests, ...map.castle.yardChests]) {
+      feed(c.x);
+      feed(c.y);
+    }
+  }
   if (map.dungeon) for (const text of [map.dungeon.id, map.dungeon.requires ?? "", ...map.dungeon.gives]) for (let i = 0; i < text.length; i++) feed(text.charCodeAt(i));
   return h >>> 0;
 }

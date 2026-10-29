@@ -1,4 +1,4 @@
-import { BANNER, CASTLE_MONSTERS } from "../data/castles";
+import { BANNER, CASTLE_STATUES, KING, THRONE } from "../data/castles";
 import { FORBIDDEN_PROPS } from "../data/dungeon-themes";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
@@ -65,23 +65,41 @@ export function themeIssues(map: InteriorMap, content: MapContent): string[] {
 }
 
 /**
- * What a castle demands: its banner (old items 103 to 105, the one of its kind), only monsters of its kind, and in a good castle no monster
- * that is not the guard of a vault (every monster stands in a chamber that a gate, a locked door or a wall shuts).
+ * What a castle demands (quest document 1.2, castle_1): the banner of its kind along the walls, its throne and its king before it, four statues of its
+ * kind whose letters spell the word that the statue near the king wants, the king's two chests of 5 million gold behind that word, chests in the
+ * yard that raise an alarm, and no roaming monster: the guards come with the alarm.
  */
 export function castleIssues(map: InteriorMap, content: MapContent): string[] {
   const issues: string[] = [];
-  const kind = map.castle?.alignment;
-  if (!kind) return issues;
-  const banners = content.actions.filter((a) => a.kind === "decor" && [103, 104, 105].includes(Number(a.params.item)));
+  const castle = map.castle;
+  if (!castle) return issues;
+  const kind = castle.alignment;
+  const of = (k: string) => content.actions.filter((a) => a.kind === k);
+  const banners = of("decor").filter((a) => [103, 104, 105].includes(Number(a.params.item)));
   if (banners.length === 0) issues.push(`${map.key}: a castle without a banner`);
   for (const b of banners) if (b.params.item !== BANNER[kind]) issues.push(`${b.uid}: banner ${String(b.params.item)} in a ${kind} castle`);
-  const own = new Set(CASTLE_MONSTERS[kind]);
-  for (const s of content.spawns) for (const id of s.monsterIds) if (!own.has(id)) issues.push(`${s.uid}: monster ${id} does not belong to a ${kind} castle`);
-  const vaultGuards = content.spawns.filter((s) => s.uid.includes("#vault_guard:"));
-  if (content.actions.filter((a) => a.uid.includes("#vault_chest:")).length === 0) issues.push(`${map.key}: no treasure vault`);
-  if (vaultGuards.length === 0) issues.push(`${map.key}: the vaults have no guard`);
-  if (kind === "good") for (const s of content.spawns) if (!s.uid.includes("#vault_guard:")) issues.push(`${s.uid}: a roaming monster in a good castle`);
-  if (kind === "good" && content.actions.some((a) => a.kind === "ambush")) issues.push(`${map.key}: an ambush in a good castle`);
+  if (content.spawns.length > 0) issues.push(`${map.key}: a castle has no roaming monsters, its guards come with the alarm`);
+  const kings = of("king");
+  if (kings.length !== 1 || kings[0]!.params.persona !== KING[kind]) issues.push(`${map.key}: the king of a ${kind} castle is persona ${KING[kind]}`);
+  const thrones = of("decor").filter((a) => a.params.item === THRONE[kind]);
+  if (thrones.length !== 1) issues.push(`${map.key}: ${thrones.length} thrones`);
+  const statues = of("lore").filter((a) => typeof a.params.letter === "string");
+  if (statues.length !== 4) issues.push(`${map.key}: ${statues.length} statues in the keep`);
+  if (new Set(statues.map((s) => s.params.item)).size > 1) issues.push(`${map.key}: more than one kind of statue in a castle`);
+  for (const s of statues) if (!CASTLE_STATUES[kind].includes(Number(s.params.item))) issues.push(`${s.uid}: statue ${String(s.params.item)} in a ${kind} castle`);
+  const answer = of("riddle")[0];
+  if (!answer) issues.push(`${map.key}: no statue that wants the word`);
+  else {
+    const spelled = statues.slice().sort((p, q) => Number(p.params.order) - Number(q.params.order)).map((s) => String(s.params.letter)).join("").toLowerCase();
+    if (spelled !== answer.params.answer || spelled.length !== 4) issues.push(`${map.key}: the statues spell ${spelled}, the answer is ${String(answer.params.answer)}`);
+  }
+  const chests = of("treasure").filter((a) => a.params.lock === "code");
+  if (chests.length !== 2) issues.push(`${map.key}: ${chests.length} chests of the king`);
+  for (const c of chests) {
+    if (c.params.gold !== 5_000_000) issues.push(`${c.uid}: holds ${String(c.params.gold)} gold, not 5 million`);
+    if (c.params.requires !== answer?.uid) issues.push(`${c.uid}: not sealed by the statue's word`);
+  }
+  if (of("treasure").filter((a) => a.params.warn === "alarm").length < 3) issues.push(`${map.key}: too few chests in the yard`);
   return issues;
 }
 
@@ -170,7 +188,10 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
   }
   const expected = topo.totalFloor + hidden.size - blocked.size;
   if (reached !== expected) issues.push(`placed objects cut the map: ${reached} reachable cells, expected ${expected}`);
+  // a throne is decoration that nobody uses: the king stands before it, so it needs no free cell beside it
+  const thrones = new Set<number>(content.actions.filter((a) => a.kind === "decor" && (a.params.item === 30 || a.params.item === 6) && !!map.castle).map((a) => idx(a.x, a.y)));
   for (const b of blocked) {
+    if (thrones.has(b)) continue;
     const x = b % map.width;
     const y = (b - x) / map.width;
     if (!DIRS.some((d) => seen[idx(x + FACING_DELTA[d].dx, y + FACING_DELTA[d].dy)])) issues.push(`blocking object at ${x},${y} cannot be reached`);
@@ -204,11 +225,11 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
       }
       for (const sp of content.spawns) if (reach[idx(sp.x, sp.y)]) issues.push(`${sp.uid}: a monster stands in the open streets of a town`);
     }
+  } else if (map.castle) {
+    issues.push(...castleIssues(map, content));
   } else {
-    if (map.castle) issues.push(...castleIssues(map, content));
     if (count("treasure") < 2) issues.push(`only ${count("treasure")} treasure(s)`);
-    // a good castle's only monsters are the guards of its vaults, and a castle of small halls has room for one
-    if (content.spawns.length < (map.castle ? 1 : 2)) issues.push(`only ${content.spawns.length} monster group(s)`);
+    if (content.spawns.length < 2) issues.push(`only ${content.spawns.length} monster group(s)`);
     if (!content.spawns.some((s) => s.boss)) issues.push("no boss");
   }
   return issues;

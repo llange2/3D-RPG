@@ -4,7 +4,6 @@ import { castleIssues } from "../../src/actions/validate";
 import { resolveAction } from "../../src/actions/handlers";
 import { blocksCell } from "../../src/actions/registry";
 import { seedFromString } from "../../src/core/rng";
-import { ALIGNMENTS, BANNER, CASTLE_MONSTERS, castleBosses, castleMonsters } from "../../src/data/castles";
 import { equipmentModel } from "../../src/data/equipment";
 import { HEIGHT_FACTOR, tunedItemModels } from "../../src/data/item-tuning";
 import { MONSTER_THEME_NAMES, monstersOfTheme, pickMonster } from "../../src/data/monsters";
@@ -42,99 +41,7 @@ describe("twentieth playtest, point 8: no monster stronger than the level of its
   });
 });
 
-describe("twentieth playtest, point 4: castles are good, neutral or evil", () => {
-  const world = new World("castles-20", "huge");
-  const castles = castlesOf(world).slice(0, 90);
-
-  it("has all three kinds, each with the banner of its kind and only its own monsters", () => {
-    const seen = new Set<string>();
-    for (const poi of castles) {
-      const map = generateInterior(world, poi);
-      const kind = map.castle!.alignment;
-      seen.add(kind);
-      const content = buildMapContent(world, poi, map);
-      expect(castleIssues(map, content), poi.id).toEqual([]);
-      expect(validateContent(map, content), poi.id).toEqual([]);
-      const banners = content.actions.filter((a) => a.kind === "decor" && [103, 104, 105].includes(Number(a.params.item)));
-      expect(banners.length, `${poi.id} has a banner`).toBeGreaterThan(0);
-      for (const b of banners) expect(b.params.item).toBe(BANNER[kind]);
-      for (const s of content.spawns) for (const id of s.monsterIds) expect(CASTLE_MONSTERS[kind], `${poi.id} ${kind}: ${MONSTERS[id]!.name}`).toContain(id);
-    }
-    expect([...seen].sort()).toEqual([...ALIGNMENTS].sort());
-  });
-
-  it("gives a good castle no roaming monster: its guards stand in vaults that a gate, a locked door or a hidden wall shuts", () => {
-    let good = 0;
-    for (const poi of castles) {
-      const map = generateInterior(world, poi);
-      if (map.castle!.alignment !== "good") continue;
-      good++;
-      const content = buildMapContent(world, poi, map);
-      expect(content.actions.some((a) => a.kind === "ambush")).toBe(false);
-      expect(content.spawns.length).toBeGreaterThan(0);
-      const shut = new Set<number>();
-      for (const a of content.actions) if (a.kind === "door" && (a.uid.includes("#vault_gate:") || a.uid.includes("#vault_door:"))) shut.add(a.y * map.width + a.x);
-      for (const a of content.actions) if (a.uid.includes("#vault_wall:")) shut.add(a.y * map.width + a.x);
-      // the way in from the spawn, with every way into a vault closed: no monster can be reached
-      const seen = new Uint8Array(map.width * map.height);
-      const stack = [map.spawn.y * map.width + map.spawn.x];
-      seen[stack[0]!] = 1;
-      while (stack.length > 0) {
-        const i = stack.pop()!;
-        const x = i % map.width;
-        const y = (i - x) / map.width;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-          const ni = (y + dy) * map.width + x + dx;
-          if (seen[ni] || map.cells[ni] !== CELL.FLOOR || shut.has(ni)) continue;
-          seen[ni] = 1;
-          stack.push(ni);
-        }
-      }
-      for (const s of content.spawns) expect(seen[s.y * map.width + s.x], `${poi.id} ${s.uid} stands in the open`).toBe(0);
-    }
-    expect(good).toBeGreaterThan(10);
-  });
-
-  it("builds every vault as a 2 x 2 chamber with a chest and guards, behind one of the three kinds of way in", () => {
-    const hows = new Set<string>();
-    for (const poi of castles.slice(0, 40)) {
-      const map = generateInterior(world, poi);
-      const sites = map.sites ?? [];
-      const ways = sites.filter((s) => s.kind === "vault_way");
-      expect(ways.length, poi.id).toBeGreaterThanOrEqual(1);
-      expect(sites.filter((s) => s.kind === "vault_chest").length, poi.id).toBe(ways.length);
-      expect(sites.filter((s) => s.kind === "vault_guard").length, poi.id).toBeGreaterThanOrEqual(ways.length);
-      for (const w of ways) if (w.kind === "vault_way") hows.add(w.how);
-      // the map is still one piece: everything is reachable (a hidden wall counts as a way through)
-      const topo = analyzeTopology(map);
-      expect(topo.reachableFloor, poi.id).toBe(topo.totalFloor);
-      for (const room of map.rooms) expect(map.cells[room.cy * map.width + room.cx], `${poi.id} room ${room.id}`).toBe(CELL.FLOOR);
-    }
-    expect([...hows].sort()).toEqual(["door", "gate", "wall"]);
-  });
-
-  it("asks before it opens a locked vault door: the door is locked, do you want to try to break it?", () => {
-    const party = createDefaultParty();
-    const door = { uid: "t#vault_door:0", kind: "door" as const, x: 1, y: 1, params: { locked: true, ask: true, difficulty: 3, axis: "x" } };
-    const ctx = { party, rootSeed: seedFromString("door"), monsterThemes: { beast: 1 }, tier: 1 };
-    const asked = resolveAction(door, ctx);
-    expect(asked.effects[0]).toMatchObject({ type: "confirm", question: expect.stringContaining("locked") });
-    expect(asked.consumed).toBe(false);
-    // a "No" leaves it shut and does not roll
-    expect(resolveAction(door, { ...ctx, answer: null }).effects).toEqual([]);
-    // a "Yes" tries it: the thief rolls against the difficulty
-    const tried = resolveAction(door, { ...ctx, answer: "yes" });
-    expect(tried.effects.some((e) => e.type === "door")).toBe(true);
-  });
-
-  it("uses the monsters the user named, by level, for a good, neutral and evil castle", () => {
-    expect(castleMonsters("good", 1).sort((a, b) => a - b)).toEqual([8, 20, 66]); // nothing below level 2: Castle Guard, Draconi, Sorcerer
-    expect(castleMonsters("good", 3).sort((a, b) => a - b)).toEqual([1, 8, 20, 66]);
-    expect(castleMonsters("evil", 2).sort((a, b) => a - b)).toEqual([8, 12, 51, 61, 63]);
-    expect(castleMonsters("neutral", 5)).toHaveLength(12);
-    for (const kind of ALIGNMENTS) for (let tier = 1; tier <= 5; tier++) for (const id of castleBosses(kind, tier)) expect(CASTLE_MONSTERS[kind]).toContain(id);
-  });
-});
+// (the castles of the twentieth playtest - vaults, gates, monsters by kind - were replaced by quest document 1.2: see quests12-castles.test.ts)
 
 describe("twentieth playtest, point 5: monsters hold the weapons and shields of the old game", () => {
   it("knows the equipment of the ten monsters that have some", () => {
