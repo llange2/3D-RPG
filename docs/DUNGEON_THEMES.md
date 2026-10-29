@@ -1,5 +1,8 @@
 # Dungeon-Themes für generierte Level
 
+> **Überholt seit 2026-10-29.** Die Themes der Altkarten sind durch Quests in Layouts ersetzt (Quest-Dokument 1.2). Was gilt: `docs/QUESTS_UMSETZUNG.md`. Dieses Dokument bleibt als Beschreibung der Altkarten (Monster, Props, Stilregeln) und der Schlüssel-Logik des alten Stands.
+
+
 Stand: 2026-10-18. Katalog der Dungeon-Themes des Altspiels als Vorlage für den Generator (`src/interiors`, `src/data/rules/*.json`).
 Dieses Dokument beschreibt **Inhalt und Logik**, nicht Code. Umgesetzt ist es seit `GEN_VERSION` 9: Abschnitt 9 sagt, was im Generator steht, was nicht und wo es liegt.
 
