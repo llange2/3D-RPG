@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { Builder, extraEdges, primEdges, rectsOverlap, type BuildContext, type Rect } from "./builder";
-import { carveEndRoomFor } from "./endRoom";
+import { carveEndRoomFor, carveMachineRoom } from "./endRoom";
 import { CELL, type DungeonRef, type InteriorMap } from "./types";
 
 const SIZE = 96;
@@ -68,8 +68,10 @@ function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): InteriorMap {
   // the end room: the quests that teleport the party into it (quest 1 and 3) leave it in the rock on its own, the others seal it
   const wantsRoom = !!ctx.dungeon && quest !== "spaceship";
   const endRoom = wantsRoom ? carveEndRoomFor(b, rng, spawn, quest === "quest_1" || quest === "quest_3", plan.endNear) : null;
+  // Seth Squirm and the machines of the Quatloo coins: a room behind a door
+  const machines = ctx.dungeon?.seth ? carveMachineRoom(b, rng, spawn) : null;
   const entrance = quest === "quest_1" ? { hall: { ...r0 } } : hall ? { hall: { ...hall } } : {};
-  const dungeon: DungeonRef | undefined = ctx.dungeon ? { ...ctx.dungeon, ...entrance, ...(endRoom ? { endRoom } : {}), ...(plan.barriers ? { barriers: plan.barriers } : {}) } : undefined;
+  const dungeon: DungeonRef | undefined = ctx.dungeon ? { ...ctx.dungeon, ...entrance, ...(endRoom ? { endRoom } : {}), ...(machines ? { machines } : {}), ...(plan.barriers ? { barriers: plan.barriers } : {}) } : undefined;
   return b.finish("dungeon", { ...ctx, dungeon }, exit, spawn);
 }
 

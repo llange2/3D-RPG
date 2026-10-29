@@ -23,6 +23,8 @@ export interface QuestEnv {
   tier: number;
   anchors: AnchorSet;
   mapSeed: SeedState;
+  /** The seed of the world, for what is the same in the whole world (the statue of the machines). */
+  rootSeed: SeedState;
   actions: ActionInstance[];
   spawns: SpawnPoint[];
   /** Counts of monsters scale with the size of the world: 2/3, 1, 4/3 and 5/3 (document, "Goldene Regeln"). */

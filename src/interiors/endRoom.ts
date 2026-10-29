@@ -99,6 +99,20 @@ export function carveEndRoom(b: Builder, rng: Rng, spawn: { x: number; y: number
   return found.room;
 }
 
+/**
+ * The room of the machines of the Quatloo coins (ue_quest_1): a sealed room whose wall cell is a doorway with a door in it, where Seth Squirm stands
+ * beside the way in. Carved after the end room, anywhere in the rock; null if the place has no room for it.
+ */
+export function carveMachineRoom(b: Builder, rng: Rng, spawn: { x: number; y: number }): NonNullable<DungeonRef["machines"]> | null {
+  const room = carveEndRoom(b, rng, spawn, false, 5, 4);
+  if (!room?.seal) return null;
+  // the cell of the room next to the doorway, and the cell in front of the doorway outside it
+  const inside = { x: Math.min(room.x + room.w - 1, Math.max(room.x, room.seal.x)), y: Math.min(room.y + room.h - 1, Math.max(room.y, room.seal.y)) };
+  const front = { x: room.seal.x + (room.seal.x - inside.x), y: room.seal.y + (room.seal.y - inside.y) };
+  b.set(room.seal.x, room.seal.y, CELL.FLOOR);
+  return { x: room.x, y: room.y, w: room.w, h: room.h, cx: room.cx, cy: room.cy, door: room.seal, front };
+}
+
 const SIZES: readonly (readonly [number, number])[] = [[5, 4], [4, 4], [4, 3], [3, 3]];
 
 /**

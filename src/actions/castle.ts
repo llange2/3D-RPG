@@ -2,6 +2,7 @@ import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { BANNER, CASTLE_STATUES, KING, THRONE } from "../data/castles";
 import { letterHints } from "../data/letter-hints";
 import { CELL, FACING_DELTA, type InteriorMap } from "../interiors/types";
+import { hideInChests } from "./machines";
 import { pickWord } from "./questGen";
 import type { ActionInstance, Anchor, MapContent } from "./types";
 
@@ -96,5 +97,6 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
   // the banners of its kind along the walls of the keep
   const taken = new Set<number>(actions.map((a) => a.y * map.width + a.x));
   for (const c of bannerCells(map, taken, BANNER_SPACING)) actions.push({ uid: uid("banner"), kind: "decor", x: c.x, y: c.y, params: { item: BANNER[castle.alignment] } });
+  hideInChests(map, actions, castle.coins, 0, seed, true);
   return { mapKey: map.key, tier, actions, spawns: [] };
 }

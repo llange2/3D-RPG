@@ -198,6 +198,24 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     minimap: "tex_mm_info",
     params: loose({ persona: z.number().int(), alignment: z.enum(["good", "neutral", "evil"]) }),
   },
+  skullmiser: {
+    kind: "skullmiser",
+    legacyIds: [],
+    // the Skull Miser of the start town buys the silver skulls (ue_quest_2)
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_info",
+    params: loose({ persona: z.number().int() }),
+  },
+  machine: {
+    kind: "machine",
+    legacyIds: [],
+    // a statue that trades a Quatloo coin for three points of one attribute (ue_quest_1)
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_info",
+    params: loose({ item: z.number().int(), attr: z.enum(["str", "int", "per", "end", "spd", "acc", "lck"]), text: z.string() }),
+  },
   qportal: {
     kind: "qportal",
     legacyIds: [],
@@ -290,7 +308,7 @@ export function actionTrigger(a: { kind: ActionKind; params: Record<string, unkn
 export function blocksCell(a: { kind: ActionKind; params: Record<string, unknown> }): boolean {
   // a ring head blocks only while it stands on its cell (a lever sets and removes it): the game decides that (`ringBlocked` in quests.ts)
   if (a.kind === "head") return a.params.mode === "rotate";
-  return a.kind === "qportal" || a.kind === "king" || a.kind === "chalice" || a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
+  return a.kind === "qportal" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "machine" || a.kind === "chalice" || a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
 }
 
 export function kindForLegacyId(id: number): ActionKind | null {

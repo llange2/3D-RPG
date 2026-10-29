@@ -149,7 +149,7 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     const holds = gives.get(poi.id) ?? [];
     if (pyramidIds.has(poi.id)) {
       const theme = buildLook(look, "dungeon", 5, "quest_6", "Spaceship", ["robot"], "C", "spaceship");
-      out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: 0, scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
+      out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: 0, coins: 0, skulls: 0, scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
       continue;
     }
     const quest = decks[kind].draw();
@@ -158,9 +158,41 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     const klass: DungeonClass = need ? "B" : "A";
     const name = `${def.name} (${layout})`;
     const theme = buildLook(look, kind, poi.tier, quest, name, def.groups as MonsterGroup[], klass, `${quest}/${layout}`, quest === "quest_5" ? bossPair(look, poi.tier) : undefined);
-    out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: 0, scale: SIZE_SCALE[size] ?? 1 });
+    out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: 0, coins: 0, skulls: 0, scale: SIZE_SCALE[size] ?? 1 });
   }
+  distributeItems(rng, out, places, pois);
   return out;
+}
+
+/** The Quatloo coins (25), the silver skulls (15) and Seth Squirm are spread over the places that may hold them (ue_quest_1 and ue_quest_2). */
+export const COINS_IN_WORLD = 25;
+export const SKULLS_IN_WORLD = 15;
+/** Coins in the chests of a castle's yard, for each castle of level 2 and 3. */
+export const COINS_PER_CASTLE = 2;
+
+function distributeItems(rng: Rng, refs: Map<string, DungeonRef>, places: readonly Poi[], all: readonly Poi[]): void {
+  const spread = (holders: Poi[], total: number, cap: number, add: (p: Poi) => void): void => {
+    const order = rng.shuffle([...holders]);
+    const given = new Map<string, number>();
+    for (let n = 0; n < total && order.length > 0; n++) {
+      const open = order.filter((p) => (given.get(p.id) ?? 0) < cap);
+      if (open.length === 0) break;
+      const least = Math.min(...open.map((p) => given.get(p.id) ?? 0));
+      const poi = open.find((p) => (given.get(p.id) ?? 0) === least)!;
+      given.set(poi.id, (given.get(poi.id) ?? 0) + 1);
+      add(poi);
+    }
+  };
+  const ordinary = places.filter((p) => refs.get(p.id)?.klass !== "C");
+  const castles = all.filter((p) => p.kind === "castle" && (p.tier === 2 || p.tier === 3));
+  const coinHolders = ordinary.filter((p) => p.tier <= 3);
+  spread(coinHolders, COINS_IN_WORLD - COINS_PER_CASTLE * castles.length, 4, (p) => void (refs.get(p.id)!.coins += 1));
+  const low = ordinary.filter((p) => p.tier === 1);
+  spread(low, SKULLS_IN_WORLD, Math.max(3, Math.ceil(SKULLS_IN_WORLD / Math.max(1, low.length))), (p) => void (refs.get(p.id)!.skulls += 1));
+  // Seth Squirm and the machines: a dungeon of level 2
+  const seth = rng.shuffle(ordinary.filter((p) => p.kind === "dungeon" && p.tier === 2));
+  const home = seth[0] ?? rng.shuffle(ordinary.filter((p) => p.kind === "dungeon" && p.tier <= 3))[0];
+  if (home) refs.get(home.id)!.seth = true;
 }
 
 function rngPick<T>(rng: Rng, list: readonly T[]): T {
@@ -175,7 +207,7 @@ function standalone(world: World, poi: Poi): DungeonRef {
   const quest = quests[rng.int(quests.length)]!;
   const layout = rngPick(rng, layoutsFor(quest, kind));
   const theme = buildLook(rng, kind, poi.tier, quest, `${QUESTS[quest].name} (${layout})`, QUESTS[quest].groups as MonsterGroup[], "A", `${quest}/${layout}`, quest === "quest_5" ? bossPair(rng, poi.tier) : undefined);
-  return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: 0, scale: 1 };
+  return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: 0, coins: 0, skulls: 0, scale: 1 };
 }
 
 /** The plan of a cave or dungeon, from the plan of the world; null for towns and castles. */

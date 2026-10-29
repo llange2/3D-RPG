@@ -8,7 +8,7 @@ import { attr, canAct, canBeHealed, healHp, itemBonus, levelUp, thieveryRoll } f
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
 import { addCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
-import { activeCharacters, addXp, freeSlots, giveItem, grantTalent, hasEffect } from "../sim/party";
+import { activeCharacters, addXp, carriedItems, freeSlots, giveItem, grantTalent, hasEffect, takeOne } from "../sim/party";
 import type { Attribute, Character, Condition, Item, Party } from "../sim/types";
 import type { ActionInstance, MapContent } from "./types";
 import { FACING_NAMES, gongsStruck, headFacing, moanSolved, ringSolved, rotationSolved, sameAnswer, turnHead } from "./quests";
@@ -48,6 +48,8 @@ export type Effect =
   | { type: "guards"; kind: "light" | "heavy" }
   /** The party stands before a king: the game takes the orbs, if there are any, and pays. */
   | { type: "king"; alignment: "good" | "neutral" | "evil" }
+  /** The party stands before the Skull Miser: the game takes the silver skulls, if there are any, and pays. */
+  | { type: "skulls" }
   /** A hero got a condition from a chalice. */
   | { type: "condition"; character: number; condition: Condition }
   | { type: "defeat" };
@@ -118,6 +120,14 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
     const stored = giveItem(party, item);
     effects.push({ type: "item", item, stored });
   }
+  // quest items hidden in an ordinary chest: Quatloo coins and silver skulls (ue_quest_1 and ue_quest_2)
+  if (typeof p.extra === "string" && p.extra !== "") {
+    for (const type of p.extra.split(",")) {
+      const item = questItem(type);
+      if (!item) continue;
+      effects.push({ type: "item", item, stored: giveItem(party, item) });
+    }
+  }
   // end room rewards (quest document 1.2): packages of attribute points of a random kind, a level for everyone, scrolls of spells of the level
   const packages = Number(p.attr ?? 0);
   for (let i = 0; i < packages; i++) {
@@ -142,7 +152,7 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
       effects.push({ type: "item", item, stored: giveItem(party, item) });
     }
   }
-  const nothing = gold === 0 && items === 0 && packages === 0 && levels === 0 && scrolls === 0;
+  const nothing = gold === 0 && items === 0 && packages === 0 && levels === 0 && scrolls === 0 && !(typeof p.extra === "string" && p.extra !== "");
   if (nothing && !barrel) effects.push({ type: "text", text: "The chest is empty." });
 }
 
@@ -352,6 +362,24 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
 
     case "king":
       return { effects: [{ type: "king", alignment: p.alignment as "good" | "neutral" | "evil" }], consumed: false };
+
+    case "skullmiser":
+      return { effects: [{ type: "skulls" }], consumed: false };
+
+    case "machine": {
+      // ue_quest_1: a statue is a machine; one Quatloo coin buys three points of its attribute for the hero who puts it in
+      const text = String(p.text);
+      const hasCoin = carriedItems(party).some((i) => i.type === "quest_quatloo_coin");
+      if (!hasCoin) return { effects: [{ type: "text", text: `${text} There is a small slot, but you don't have any items which fit inside.` }], consumed: false };
+      if (ctx.hero === undefined) return { effects: [{ type: "text", text }, { type: "pick", question: "The Quatloo coin you found fits exactly into the slot. Which character shall put it in?" }], consumed: false };
+      if (ctx.hero === null) return { effects, consumed: false };
+      const hero = party.characters[ctx.hero];
+      if (!hero || !takeOne(party, "quest_quatloo_coin")) return { effects, consumed: false };
+      const attribute = p.attr as Attribute;
+      hero[attribute] += 3;
+      effects.push({ type: "text", text: `${hero.name} puts the coin into the slot. The statue hums, and ${attribute.toUpperCase()} rises by 3.` }, { type: "attribute", character: ctx.hero, attribute, amount: 3 });
+      return { effects, consumed: false };
+    }
 
     case "qportal":
       // the portal of an end room reached by teleport leads back to where the quest began (A > B > A, apart from the portals of the towns)

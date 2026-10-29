@@ -15,7 +15,7 @@ import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
-import { BLACK_CARD, ORB, ORBS_FOR_KING } from "../data/quest-table";
+import { BLACK_CARD, ORB, ORBS_FOR_KING, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
 import { CELL, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
@@ -68,7 +68,7 @@ import { sellerParams } from "../data/talent-sellers";
 import { CARAVAN_ITEM, caravansIn, caravansOf, type CaravanSpot } from "../world/caravans";
 import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, hutXpPercent, slotDistance, slotKey, type HutSpot } from "../world/huts";
 import { hutScene } from "../data/hut-texts";
-import { generateItem, questItem } from "../sim/items";
+import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { readSettings, writeSettings, type Settings } from "./settings";
 import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
@@ -730,7 +730,7 @@ export class Game {
         if (issues.length) console.warn(`interior ${poi.id} has content issues`, issues);
       }
       this.ui.loading.set(LOAD_DATA);
-      await this.monsters.preload(content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king") ? [personaModelId(a.params.persona)] : [])));
+      await this.monsters.preload(content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])));
       await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
@@ -846,7 +846,7 @@ export class Game {
     const rt = this.interior;
     if (!rt) return;
     for (const a of rt.content.actions) {
-      const persona = a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" ? a.params.persona : undefined;
+      const persona = a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser" ? a.params.persona : undefined;
       if (typeof persona !== "number" || !PERSONAS[persona] || !this.monsters.knows(personaModelId(persona))) continue;
       // they face the longest stretch of open ground next to them, the way a person in a street looks along it
       let bearing = 0;
@@ -2024,6 +2024,9 @@ export class Game {
         case "king":
           await this.meetKing(e.alignment);
           break;
+        case "skulls":
+          await this.meetSkullMiser();
+          break;
         case "condition":
           ui.log(`${this.state.party.characters[e.character]!.name} is ${e.condition.toLowerCase()}!`, "bad");
           break;
@@ -2125,6 +2128,44 @@ export class Game {
       this.player.locked = false;
     } else if (!winner) {
       this.ui.log(`The king holds ${total} of the ${ORBS_FOR_KING} orbs he wants.`, "info");
+    }
+    this.minimapDirty = true;
+  }
+
+  /**
+   * The Skull Miser of the start town (quest document 1.2, ue_quest_2): he pays 1000 gold for the party and 1000 experience for every hero for each silver
+   * skull, all that the party carries at once. The quest is done when the fifth skull is handed in (a random ring of level 2 as a bonus, once); more skulls
+   * are still paid for. What was handed in is `skulls=<n>` in the saved set.
+   */
+  private async meetSkullMiser(): Promise<void> {
+    const party = this.state.party;
+    const opened = this.state.opened;
+    const handed = Number([...opened].find((k) => k.startsWith("skulls="))?.split("=")[1] ?? 0);
+    const skulls = carriedItems(party).filter((i) => i.type === SKULL).length;
+    this.player.locked = true;
+    if (skulls === 0) {
+      await this.ui.message(handed >= SKULLS_FOR_RING ? "The Skull Miser rubs his hands. \"More silver skulls? Bring them, bring them. I pay well, though I have no more rings to give.\"" : `The Skull Miser rubs his hands. \"Silver skulls! I buy silver skulls, a thousand gold and a thousand experience for each. Bring me ${SKULLS_FOR_RING} of them and there is a ring in it for you.\"${handed > 0 ? ` You have brought ${handed} so far.` : ""}`, this.interior?.poi.name ?? "");
+      this.player.locked = false;
+      return;
+    }
+    const yes = await this.ui.confirm("The Skull Miser", `Sell ${skulls} silver skull${skulls === 1 ? "" : "s"}? The party gets ${thousands(skulls * 1000)} gold and every hero ${thousands(skulls * 1000)} experience.`, "Sell", "Keep");
+    this.player.locked = false;
+    if (!yes) return;
+    takeItems(party, SKULL);
+    party.gold += skulls * 1000;
+    addXp(party, skulls * 1000);
+    const total = handed + skulls;
+    for (const k of [...opened]) if (k.startsWith("skulls=")) opened.delete(k);
+    opened.add(`skulls=${total}`);
+    this.audio.play(9000);
+    this.ui.log(`You sell ${skulls} silver skull${skulls === 1 ? "" : "s"}: ${thousands(skulls * 1000)} gold and ${thousands(skulls * 1000)} experience for everyone.`, "loot");
+    if (handed < SKULLS_FOR_RING && total >= SKULLS_FOR_RING && !opened.has("skulls:ring")) {
+      opened.add("skulls:ring");
+      const ring = generateRing(rngFor(this.world.rootSeed, LAYER.LOOT, "skull-ring"), 2);
+      if (!giveItem(party, ring)) this.dropLoot(this.player.tx, this.player.ty, 0, [ring]);
+      this.player.locked = true;
+      await this.ui.message(`"The fifth skull! My collection is complete. Here, a ring for your trouble: ${ring.name.trim()}."`, this.interior?.poi.name ?? "");
+      this.player.locked = false;
     }
     this.minimapDirty = true;
   }

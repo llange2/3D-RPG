@@ -64,6 +64,10 @@ export const cardType = (c: CardColor): string => `quest_${c}_keycard`;
 /** The black key card: the king hands it over for the orbs, it works the transport tube of the control deck. */
 export const BLACK_CARD = "quest_black_keycard";
 export const ORB = "quest_orb";
+/** The silver skull the Skull Miser buys, and how many of them end his quest. */
+export const SKULL = "quest_silver_skull";
+export const SKULLS_FOR_RING = 5;
+export const COIN = "quest_quatloo_coin";
 
 /** The old items that show a quest item on the map (the key and key card models); the rest are drawn as the place's chest. */
 export const QUEST_PROP: Readonly<Record<string, number>> = {

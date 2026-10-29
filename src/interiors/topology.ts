@@ -105,7 +105,8 @@ export function analyzeTopology(map: InteriorMap): Topology {
     // the hall belongs to the quest (the field of statues, the row of heads), which needs its middle; the end room is out of reach until the quest is solved; the boss lives elsewhere
     if ((hall && room.x === hall.x && room.y === hall.y) || (endRoom && room.x === endRoom.x && room.y === endRoom.y)) return;
     const d = depth[room.cy * w + room.cx]!;
-    const score = d * 100 + Math.min(room.size, 99);
+    // a closet (a 2 x 2 room or a cross) holds a treasure, not the boss
+    const score = d * 100 + Math.min(room.size, 99) - (room.size < 9 && map.dungeon ? 5000 : 0);
     if (d >= 0 && score > best) {
       best = score;
       bossRoom = idx;

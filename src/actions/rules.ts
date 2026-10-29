@@ -1,6 +1,7 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { QUEST_PROP, SHRINE_EFFECT, type DungeonTheme } from "../data/dungeon-themes";
 import { buildCastleContent } from "./castle";
+import { hideInChests, placeMachines } from "./machines";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
 import { sellerParams } from "../data/talent-sellers";
 import { allowedIn, isFunctional } from "../data/item-rules";
@@ -239,6 +240,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
           tier: baseTier,
           anchors,
           mapSeed,
+          rootSeed: ctx.rootSeed,
           actions,
           spawns,
           scale: map.dungeon?.scale ?? 1,
@@ -248,7 +250,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
             if (map.cells[i] !== CELL.FLOOR || occupied.has(i)) return false;
             actions.push(a);
             occupied.add(i);
-            blockedCells.add(i);
+            if (blocksCell(a)) blockedCells.add(i);
             return true;
           },
           uid: (name) => {
@@ -279,6 +281,17 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     if (site.kind !== "perch") continue;
     occupied.add(idx(site.x, site.y));
     blockedCells.add(idx(site.x, site.y));
+  }
+
+  // the Skull Miser is always in the start town (ue_quest_2), in a dead end
+  if (map.kind === "town" && map.key.startsWith("p:0:0:0:")) {
+    const doors = new Set(map.lots.map((l) => idx(l.door.x, l.door.y)));
+    const spot = anchors.byKind.deadEnd.find((a) => isFree(a, false) && !doors.has(idx(a.x, a.y)) && !wouldDisconnect(idx(a.x, a.y)));
+    if (spot) {
+      actions.push({ uid: `${map.key}#skullmiser:0`, kind: "skullmiser", x: spot.x, y: spot.y, params: { persona: 82 } });
+      occupied.add(idx(spot.x, spot.y));
+      blockedCells.add(idx(spot.x, spot.y));
+    }
   }
 
   // the layouts bring their own say about doors: dungeon_2 shuts every way at its beginning and its end, dungeon_3 (the maze) has no doors at all
@@ -388,6 +401,9 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
 
   // the end room: what the plan put there (keys, key cards, orbs) and the rewards of its level
   if (questEnv && map.dungeon?.endRoom) finishQuest(questEnv);
+  // Seth Squirm and the machines, the Quatloo coins and silver skulls in the ordinary chests (ue_quest_1 and ue_quest_2)
+  if (questEnv) placeMachines(questEnv);
+  if (map.dungeon) hideInChests(map, actions, map.dungeon.coins, map.dungeon.skulls, mapSeed);
 
   quest.finish?.();
 

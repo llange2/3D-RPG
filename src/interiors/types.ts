@@ -141,6 +141,13 @@ export interface DungeonRef {
   scale: number;
   /** Mini quests (statues with an extra riddle) the place carries, 0 to 4 before the size of the map is counted. */
   minis: number;
+  /** Quatloo coins (ue_quest_1) and silver skulls (ue_quest_2) hidden in the ordinary chests of the place. */
+  coins: number;
+  skulls: number;
+  /** Seth Squirm and the machines of the Quatloo coins stand in this place (one dungeon of level 2 in the world). */
+  seth?: boolean;
+  /** The room of the machines, set by the layout: behind a door, with the cell in front of the door where Seth stands. */
+  machines?: { x: number; y: number; w: number; h: number; cx: number; cy: number; door: { x: number; y: number }; front: { x: number; y: number } };
   /** A pyramid: the section of the spaceship it opens (0 is the control deck). */
   section?: number;
   /**
@@ -159,6 +166,8 @@ export interface CastleLayout {
   alignment: Alignment;
   /** The size of the world as a factor on the number of guards (2/3, 1, 4/3, 5/3). */
   scale: number;
+  /** Quatloo coins hidden in the chests of the yard. */
+  coins: number;
   /** The throne, the king before it, the four statues (with the bearing they face, degrees, 0 north) and the cell of the statue that wants the code word. */
   throne: { x: number; y: number };
   king: { x: number; y: number };

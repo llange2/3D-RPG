@@ -60,7 +60,7 @@ function reachable(b: Builder, from: { x: number; y: number }, blocked: Readonly
   return seen;
 }
 
-export function generateCastle(rng: Rng, ctx: BuildContext, alignment: Alignment, scale: number): InteriorMap {
+export function generateCastle(rng: Rng, ctx: BuildContext, alignment: Alignment, scale: number, coins = 0): InteriorMap {
   let plan: Plan = [...CASTLE_PLANS[rng.int(CASTLE_PLANS.length)]!];
   if (rng.chance(500)) plan = mirror(plan);
   for (let k = rng.int(4); k > 0; k--) plan = rotate(plan);
@@ -165,6 +165,7 @@ export function generateCastle(rng: Rng, ctx: BuildContext, alignment: Alignment
   const castle: CastleLayout = {
     alignment,
     scale,
+    coins,
     throne,
     king,
     statues,
