@@ -95,6 +95,7 @@
  * of level 1 and 2 places and the key cards of the pyramids in those of level 4 and 5 dungeons, the 21 orbs on the level 5 dungeons; every place has an end room that opens when
  * its quest is solved (a sealed wall cell, or a pocket in the rock that a teleport reaches) and holds the quest items and 2 to 4 rewards of its level. The dungeons have four
  * layouts (tube, hub, maze, classic) and the caves three (ring, classic, big cave). There are exactly three castles (levels 2, 3 and 4; good, neutral, evil), each a keep of the
- * document in a yard (`interiors/castle.ts`), with a king, four statues that spell a word, two chests of 5 million gold and chests in the yard that raise an alarm.
+ * document in a yard (`interiors/castle.ts`), with a king, four statues that spell a word, two chests of 5 million gold and chests in the yard that raise an alarm. The pyramids
+ * lead into one spaceship of five sections with airlocks (`interiors/spaceship.ts`); 25 Quatloo coins and 15 silver skulls hide in the chests, Seth Squirm and his machines stand in a dungeon of level 2.
  */
 export const GEN_VERSION = 27;

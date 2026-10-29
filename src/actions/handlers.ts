@@ -25,7 +25,8 @@ export type Effect =
   | { type: "heal"; character: number; amount: number }
   | { type: "transfer"; mode: "poi_enter" | "poi_exit" | "stairs" | "teleport"; tier: number }
   | { type: "service"; service: ServiceKind; tier: number }
-  | { type: "door"; state: "opened" | "locked" | "unlocked" }
+  /** `uid`: the door that opens is not the object that was used (an airlock opened by its second lever). */
+  | { type: "door"; state: "opened" | "locked" | "unlocked"; uid?: string }
   | { type: "wall"; state: "broken" }
   /** The game asks a yes or no question and calls `resolveAction` again with `ctx.answer` set to "yes", or to null when declined. */
   | { type: "confirm"; title: string; question: string; yes?: string; no?: string }
@@ -50,6 +51,8 @@ export type Effect =
   | { type: "king"; alignment: "good" | "neutral" | "evil" }
   /** The party stands before the Skull Miser: the game takes the silver skulls, if there are any, and pays. */
   | { type: "skulls" }
+  /** The party steps into the tube of the control deck with the black key card: the game is won. */
+  | { type: "ending" }
   /** A hero got a condition from a chalice. */
   | { type: "condition"; character: number; condition: Condition }
   | { type: "defeat" };
@@ -304,6 +307,17 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "lever": {
+      // an airlock of the spaceship has a lever on each side: the lock opens when both have been pulled, and a lever can only be pulled once
+      if (typeof p.airlock === "string") {
+        const mine = `${p.airlock}@${String(p.side)}`;
+        const other = `${p.airlock}@${p.side === "a" ? "b" : "a"}`;
+        const opened = ctx.opened ?? NONE;
+        if (opened.has(mine)) return { effects: [{ type: "text", text: "You pull as hard as you can, but the lever is stuck in its place." }], consumed: false };
+        if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Lever", question: "A small sign next to the lever reads 'Manual lock override.' Would you like to switch the lever?", yes: "Switch it", no: "Leave" }], consumed: false };
+        if (ctx.answer === null) return { effects, consumed: false };
+        if (opened.has(other)) return { effects: [{ type: "text", text: "You hear a buzz and afterwards mechanical noises and you see how the heavy lock slowly opens." }, { type: "door", state: "opened", uid: p.airlock }], consumed: false, state: { add: [mine], remove: [] } };
+        return { effects: [{ type: "text", text: "You hear a buzz and afterwards mechanical noises. However the lock still stands in place." }], consumed: false, state: { add: [mine], remove: [] } };
+      }
       effects.push({ type: "text", text: "You pull the lever. Somewhere in the walls stone grinds on stone." });
       // a lever with a target flips it; the look-alikes without one do nothing but look the same
       const target = String(p.target ?? "");
@@ -360,6 +374,15 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       return { effects, consumed: false };
     }
 
+    case "tube": {
+      // the tube of the control deck needs the black key card; the others lead back to the pyramid
+      if (p.final === true) {
+        if (!carriedItems(party).some((i) => i.type === "quest_black_keycard")) return { effects: [{ type: "text", text: "The tube stays dark. A slot in its frame asks for a black key card." }], consumed: false };
+        return { effects: [{ type: "text", text: "The black key card slides into the slot. The tube lights up, and you step into it." }, { type: "ending" }], consumed: false };
+      }
+      return { effects: [{ type: "transfer", mode: "poi_exit", tier: ctx.tier }], consumed: false };
+    }
+
     case "king":
       return { effects: [{ type: "king", alignment: p.alignment as "good" | "neutral" | "evil" }], consumed: false };
 
@@ -391,6 +414,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       return { effects, consumed: false };
 
     case "door": {
+      // an airlock stays shut until both of its levers have been pulled (the lever opens it, `uid` of the effect)
+      if (p.airlock === true) return { effects: [{ type: "text", text: "The airlock is shut tight. On both sides of it a lever in the wall reads: Manual lock override." }], consumed: false };
       if (p.locked !== true) {
         // a gate of a town asks first, like the old action 16 ("Would you like to open the gate?")
         if (p.ask === true) {
@@ -472,8 +497,18 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
 
     case "shrine": {
       if (activeCharacters(party).length === 0) return { effects, consumed: false };
+      if (p.lock === "code" && !(ctx.opened ?? NONE).has(String(p.requires))) return { effects: [{ type: "text", text: "The chalice is sealed. A message on the nearest terminal says it opens for whoever knows the word." }], consumed: false };
       const amount = Number(p.amount ?? 1);
       switch (p.effect) {
+        case "hurt": {
+          // a power source crystal that bites: its energy hurts one hero
+          const target = randomActive(party, rng)!;
+          const damage = Math.max(1, Math.floor(elementalDamage(party, party.characters[target]!, ELEMENTS[rng.int(ELEMENTS.length)]!, 20 * amount)));
+          const hit = applyHit(party, target, damage, null, rng);
+          effects.push({ type: "text", text: "The crystal hums, then discharges into one of you." }, { type: "damage", character: target, amount: damage, damageType: "magic", conditions: hit.conditions });
+          if (hit.defeated) effects.push({ type: "defeat" });
+          break;
+        }
         case "resist": {
           const element = ELEMENTS[rng.int(ELEMENTS.length)]!;
           const who = resistanceRecipient(party, element, rng)!;

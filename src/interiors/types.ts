@@ -182,6 +182,22 @@ export interface CastleLayout {
   yard: number[];
 }
 
+/** The spaceship under the pyramids (`interiors/spaceship.ts`): five sections side by side, the front one (0) is the control deck. */
+export interface SpaceshipLayout {
+  sections: number;
+  /** The width of a section in cells. */
+  width: number;
+  /** The transporter tube of every section: the cell it stands on and the cell in front of it. The tube of section 0 is in the middle of the control deck. */
+  tubes: { x: number; y: number; front: { x: number; y: number } }[];
+  /** The tube in the middle of the control deck: with the black key card it ends the game. */
+  final: { x: number; y: number; front: { x: number; y: number } };
+  /** The airlock between a section and the next: the cell it shuts and the niches of its two levers. */
+  locks: { door: { x: number; y: number }; a: { x: number; y: number }; b: { x: number; y: number }; from: number }[];
+  /** The control deck and the rooms of every section. */
+  deck: { x: number; y: number; w: number; h: number };
+  rooms: { x: number; y: number; w: number; h: number }[][];
+}
+
 export interface InteriorMap {
   kind: InteriorKind;
   /** Stable key, also used for save deltas: `<poi id>:<floor>`. */
@@ -210,6 +226,8 @@ export interface InteriorMap {
   dungeon?: DungeonRef;
   /** Castles of the generated world: the kind of castle, which decides its banner, statues and guards (`data/castles.ts`), and where everything stands. */
   castle?: CastleLayout;
+  /** The spaceship under the pyramids: where its sections, tubes and airlocks are. */
+  spaceship?: SpaceshipLayout;
   /** Optional per-cell look. `cell` holds, per cell, an index into `list`; generated maps do not use it. */
   styles?: { list: CellStyle[]; cell: Uint8Array };
 }

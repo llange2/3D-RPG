@@ -3,7 +3,7 @@ import { FORBIDDEN_PROPS } from "../data/dungeon-themes";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { questIssues } from "./questChecks";
-import { MONSTERS } from "../data/tables";
+import { MONSTERS, monsterGroup } from "../data/tables";
 import { analyzeTopology, type Topology } from "../interiors/topology";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { ACTION_DEFS, blocksCell } from "./registry";
@@ -40,7 +40,8 @@ export function itemIssues(map: InteriorMap, content: MapContent): string[] {
 export function themeIssues(map: InteriorMap, content: MapContent): string[] {
   const issues: string[] = [];
   const ref = map.dungeon;
-  if (!ref) return issues;
+  // (the spaceship is checked by `spaceshipIssues`)
+  if (!ref || ref.quest === "spaceship") return issues;
   const theme = ref.look;
   const own = new Set([...theme.monsters, theme.boss]);
   const forbidden = new Set(FORBIDDEN_PROPS[theme.inhabitants]);
@@ -104,6 +105,32 @@ export function castleIssues(map: InteriorMap, content: MapContent): string[] {
 }
 
 /**
+ * What the spaceship demands: a transporter tube in every section and the final one in the control deck, an airlock with two levers between the sections,
+ * two orbs in every section, robots only, a word that the hints spell.
+ */
+export function spaceshipIssues(map: InteriorMap, content: MapContent): string[] {
+  const issues: string[] = [];
+  const layout = map.spaceship!;
+  const of = (k: string) => content.actions.filter((a) => a.kind === k);
+  const sectionOf = (x: number) => Math.min(layout.sections - 1, Math.max(0, Math.floor((x - 1) / layout.width)));
+  const tubes = of("tube");
+  if (tubes.length !== layout.sections + 1 || tubes.filter((t) => t.params.final === true).length !== 1) issues.push(`${map.key}: ${tubes.length} tubes`);
+  const locks = of("door").filter((d) => d.params.airlock === true);
+  if (locks.length !== layout.sections - 1) issues.push(`${map.key}: ${locks.length} airlocks`);
+  for (const lock of locks) if (of("lever").filter((l) => l.params.airlock === lock.uid).length !== 2) issues.push(`${lock.uid}: not two levers`);
+  for (let s = 0; s < layout.sections; s++) {
+    const orbs = of("treasure").filter((a) => a.params.quest === "quest_orb" && sectionOf(a.x) === s).reduce((n, a) => n + Number(a.params.count ?? 1), 0);
+    if (orbs !== 2) issues.push(`${map.key}: section ${s} holds ${orbs} orbs`);
+    if (!tubes.some((t) => t.params.final !== true && sectionOf(t.x) === s)) issues.push(`${map.key}: no tube in section ${s}`);
+  }
+  for (const sp of content.spawns) for (const id of sp.monsterIds) if (monsterGroup(id) !== "robot") issues.push(`${sp.uid}: ${MONSTERS[id]?.name ?? id} is no robot`);
+  const hints = of("lore").filter((a) => typeof a.params.letter === "string").sort((p, q) => Number(p.params.order) - Number(q.params.order));
+  const answer = of("riddle")[0];
+  if (!answer || hints.map((h) => String(h.params.letter)).join("").toLowerCase() !== answer.params.answer) issues.push(`${map.key}: the hints do not spell the word of the computer`);
+  return issues;
+}
+
+/**
  * Checks generated content. Returns a list of problems; an empty list means the map is playable:
  * - uids are unique, every object sits on a floor cell (breakable walls on a wall cell), nothing shares a cell
  * - nothing blocks the way: with chests, shrines, fountains and statues treated as blocked and doors as passable, every floor cell stays reachable
@@ -137,7 +164,7 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
     note(a.uid, a.x, a.y, a.kind === "breakable_wall");
     const parsed = ACTION_DEFS[a.kind].params.safeParse(a.params);
     if (!parsed.success) issues.push(`${a.uid} has invalid params: ${parsed.error.message}`);
-    const isExit = a.kind === "transfer" && a.params.mode === "poi_exit";
+    const isExit = (a.kind === "transfer" && a.params.mode === "poi_exit") || a.kind === "tube";
     if (!isExit && spawnZone(a.x, a.y)) issues.push(`${a.uid} (${a.kind}) is inside the spawn zone`);
   }
 
@@ -201,7 +228,8 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
 
   // composition by kind
   const count = (kind: string) => content.actions.filter((a) => a.kind === kind).length;
-  if (!content.actions.some((a) => a.kind === "transfer" && a.params.mode === "poi_exit")) issues.push("no exit transfer");
+  // (the spaceship has no exit transfer: its way out is a transporter tube)
+  if (!map.spaceship && !content.actions.some((a) => a.kind === "transfer" && a.params.mode === "poi_exit")) issues.push("no exit transfer");
   if (map.kind === "town") {
     const services = content.actions.filter((a) => a.kind === "service");
     if (services.length < 3) issues.push(`town has only ${services.length} services`);
@@ -227,6 +255,8 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
     }
   } else if (map.castle) {
     issues.push(...castleIssues(map, content));
+  } else if (map.spaceship) {
+    issues.push(...spaceshipIssues(map, content));
   } else {
     if (count("treasure") < 2) issues.push(`only ${count("treasure")} treasure(s)`);
     if (content.spawns.length < 2) issues.push(`only ${content.spawns.length} monster group(s)`);

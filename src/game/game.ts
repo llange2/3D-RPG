@@ -1979,7 +1979,10 @@ export class Game {
           break;
         case "door":
           if (e.state === "opened" || e.state === "unlocked") {
-            this.interiorView.setDoor(a.uid, true);
+            // an airlock is opened by its second lever: the door that opens is not the object that was used
+            const doorUid = e.uid ?? a.uid;
+            if (e.uid) this.state.opened.add(e.uid);
+            this.interiorView.setDoor(doorUid, true);
             // the sound follows what is drawn: a wooden door that was picked open must not clank like a gate
             this.audio.play(doorSound(rt ? doorLook(rt.map, a.x, a.y) : "door"));
             if (e.state === "unlocked") ui.log("The lock clicks open.", "good");
@@ -2026,6 +2029,9 @@ export class Game {
           break;
         case "skulls":
           await this.meetSkullMiser();
+          break;
+        case "ending":
+          await this.playEnding();
           break;
         case "condition":
           ui.log(`${this.state.party.characters[e.character]!.name} is ${e.condition.toLowerCase()}!`, "bad");
@@ -2130,6 +2136,33 @@ export class Game {
       this.ui.log(`The king holds ${total} of the ${ORBS_FOR_KING} orbs he wants.`, "info");
     }
     this.minimapDirty = true;
+  }
+
+  /**
+   * The end of the game: the party steps into the transport tube of the control deck with the black key card. The outro of the old game plays if the file
+   * `assets/ui/outro.mp4` is there (it is 88 MB and not shipped: copy `old_code/resources/movies/Game Outro.mp4` to `public/assets/ui/outro.mp4`), then a last message.
+   */
+  private async playEnding(): Promise<void> {
+    this.player.locked = true;
+    this.state.opened.add("game:won");
+    await new Promise<void>((resolve) => {
+      const video = document.createElement("video");
+      video.src = "assets/ui/outro.mp4";
+      video.autoplay = true;
+      video.controls = false;
+      video.style.cssText = "position:fixed;inset:0;width:100%;height:100%;background:#000;z-index:9999;object-fit:contain;cursor:pointer";
+      const done = (): void => {
+        video.remove();
+        resolve();
+      };
+      video.onended = done;
+      video.onerror = done;
+      video.onclick = done;
+      document.body.appendChild(video);
+      void video.play().catch(done);
+    });
+    await this.ui.message("The simulation ends. The world you walked through was a game, and you have won it. You may keep playing: the islands are still there.", this.interior?.poi.name ?? "");
+    this.player.locked = false;
   }
 
   /**

@@ -29,7 +29,7 @@ export const WALL_HUNG: ReadonlySet<number> = new Set([103, 104, 105]);
 const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180 };
 
 /** The kinds of action whose `item` param is an old item they stand on their cell as (a statue, a gong, a lever, a head, a rune on the floor). */
-const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal", "rune", "qportal", "chalice"]);
+const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal", "rune", "qportal", "chalice", "tube"]);
 
 /** The old item an action shows on its cell, or null (plain chests and shrines of a place without a theme, and every other kind of action). */
 export function shownItem(a: Pick<ActionInstance, "kind" | "params">): number | null {

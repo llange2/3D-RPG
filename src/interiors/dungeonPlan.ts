@@ -148,7 +148,8 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     const need = requires.get(poi.id) ?? null;
     const holds = gives.get(poi.id) ?? [];
     if (pyramidIds.has(poi.id)) {
-      const theme = buildLook(look, "dungeon", 5, "quest_6", "Spaceship", ["robot"], "C", "spaceship");
+      // (the same look for all five pyramids: behind each of them is the same level)
+      const theme = buildLook(rngFor(rootSeed, LAYER.INTERIOR, "spaceship-look"), "dungeon", 5, "quest_6", "Spaceship", ["robot"], "C", "spaceship");
       out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: 0, coins: 0, skulls: 0, scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
       continue;
     }

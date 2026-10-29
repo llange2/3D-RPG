@@ -1,6 +1,7 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { QUEST_PROP, SHRINE_EFFECT, type DungeonTheme } from "../data/dungeon-themes";
 import { buildCastleContent } from "./castle";
+import { buildSpaceshipContent } from "./spaceship";
 import { hideInChests, placeMachines } from "./machines";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
 import { sellerParams } from "../data/talent-sellers";
@@ -82,6 +83,7 @@ const FITTED_ANCHOR = /Site$|^vault|^deadEnd$|^exit$/;
 export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentContext, topology?: Topology): MapContent {
   // a castle is made of its own parts (`actions/castle.ts`), not of the rules
   if (map.castle) return buildCastleContent(map, ctx.rootSeed);
+  if (map.spaceship) return buildSpaceshipContent(map, ctx.rootSeed);
   const topo = topology ?? analyzeTopology(map);
   const anchors = computeAnchors(map, topo);
   const mapSeed = derive(ctx.rootSeed, LAYER.ACTION, map.key);
