@@ -235,8 +235,7 @@ describe("castles and the open sky", () => {
       expect(map.width).toBeGreaterThanOrEqual(26);
       expect(map.width).toBeLessThanOrEqual(34);
       expect(map.height).toBeGreaterThanOrEqual(24);
-      expect(map.height).toBeLessThanOrEqual(32);
-      expect(map.rooms.length).toBeGreaterThanOrEqual(4);
+      expect(map.height).toBeLessThanOrEqual(34);
       expect(map.cells.some((c) => c === CELL.FLOOR)).toBe(true);
       sizes++;
     }

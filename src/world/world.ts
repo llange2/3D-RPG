@@ -1,8 +1,11 @@
 import { fbm2, hash2, ONE, permille, valueNoise2 } from "../core/noise";
 import { derive, LAYER, rngFor, seedFromString, type SeedState } from "../core/rng";
+import { ALIGNMENTS, type Alignment } from "../data/castles";
+import { CASTLE_TIERS } from "../data/quest-table";
 import { placeName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { planPlaces } from "../interiors/dungeonPlan";
+import type { DungeonRef } from "../interiors/types";
 import { FIELD_UNIT, ISLAND_EDGE, buildLayout, fieldAt, isqrt, tierOn, wrapDist2, type Island, type Layout } from "./islands";
 import { roadThrough, type Pt, type RoadSeg } from "./roads";
 import {
@@ -230,6 +233,9 @@ export class World {
   readonly chunksDown: number;
   private planned = false;
   private plans: RegionPlan[] = [];
+  private dungeonRefs = new Map<string, DungeonRef>();
+  private castleKinds = new Map<string, Alignment>();
+  private readonly castleWords = new Map<string, number>();
   private poiList: Poi[] = [];
   private readonly poiMap = new Map<string, Poi>();
   private readonly flatElevation = new Map<string, number>();
@@ -438,7 +444,8 @@ export class World {
   private poiKind(rng: ReturnType<typeof rngFor>, biome: Biome): PoiKind {
     // the towns of a world are placed by level (`Island.towns`); what the dice add are the other places
     const table = OVERWORLD_THEMES[biome === BIOME.OCEAN ? BIOME.MEADOW : biome].poi.secondary;
-    const kinds = (Object.keys(table) as PoiKind[]).filter((k) => k !== "town");
+    // the castles are three, one on each of the islands of level 2, 3 and 4 (`planCastles`), not left to the dice
+    const kinds = (Object.keys(table) as PoiKind[]).filter((k) => k !== "town" && k !== "castle");
     return kinds[rng.weightedIndex(kinds.map((k) => table[k]))]!;
   }
 
@@ -757,11 +764,7 @@ export class World {
   }
 
   /** The places of an island with their sizes and entrance sides, and the roads between them. */
-  private planIsland(isl: Island): RegionPlan {
-    const pois = this.placesOf(isl);
-    // the plan of the island's dungeons says which of them are pyramids (they ask for a key card), and those are three tiles wide
-    const klass = planPlaces(this.seed, isl.index, 0, pois);
-    for (const p of pois) if (klass.get(p.id)?.klass === "C") p.size = PYRAMID_SIZE;
+  private planIsland(isl: Island, pois: Poi[]): RegionPlan {
     if (pois.length < 2) return { pois, connectors: [] };
     const { edges, parent } = this.connections(isl.index, pois);
     // a place faces the place its road hangs on (the anchor keeps its random side): every road of it ends at the door
@@ -818,7 +821,12 @@ export class World {
   private plan(): void {
     if (this.planned) return;
     this.planned = true;
-    this.plans = this.layout.islands.map((isl) => this.planIsland(isl));
+    // the quests, keys and orbs are planned for the whole world; the plan says which dungeons are pyramids (they ask for a key card), and those are three tiles wide
+    const placed = this.layout.islands.map((isl) => this.placesOf(isl));
+    this.planCastles(placed.flat());
+    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords);
+    for (const p of placed.flat()) if (this.dungeonRefs.get(p.id)?.klass === "C") p.size = PYRAMID_SIZE;
+    this.plans = this.layout.islands.map((isl, i) => this.planIsland(isl, placed[i]!));
     // the bridge between the start island and the level-3 island: a road from a place on the level-2 half to the place of the other island nearest to it
     for (const isl of this.layout.islands) {
       if (isl.bridge < isl.index) continue;
@@ -863,6 +871,61 @@ export class World {
     this.plan();
     const plan = ry === 0 ? this.plans[rx] : undefined;
     return { rx, ry, pois: plan?.pois ?? [], roads: plan?.connectors ?? [] };
+  }
+
+  /**
+   * The three castles of the world (quest document 1.2): a good, a neutral and an evil one, one on a place of level 2, 3 and 4. They are made of places
+   * that the dice made caves or dungeons, so that every island keeps the density of places it had; which of the three kinds a level gets is drawn.
+   */
+  private planCastles(places: readonly Poi[]): void {
+    const kinds = rngFor(this.seed, LAYER.POI, "castle-kinds").shuffle([...ALIGNMENTS]);
+    CASTLE_TIERS.forEach((tier, n) => {
+      const rng = rngFor(this.seed, LAYER.POI, "castle", tier);
+      const of = (t: number) => places.filter((p) => p.kind !== "town" && p.kind !== "castle" && p.tier === t);
+      // a level without a place takes the nearest level that has one
+      const pool = [0, 1, -1, 2, -2, 3].map((d) => of(tier + d)).find((list) => list.length > 0) ?? [];
+      const poi = pool[rng.int(pool.length)];
+      if (!poi) return;
+      const nameRng = rngFor(this.seed, LAYER.POI, poi.region.rx, 0, Number(poi.id.split(":")[3]), "name");
+      poi.kind = "castle";
+      poi.size = POI_SIZE.castle;
+      poi.name = placeName(nameRng, "castle");
+      this.castleKinds.set(poi.id, kinds[n]!);
+    });
+  }
+
+  /** The kind of a castle of this world (good, neutral, evil), or undefined for a place that is no castle of the plan. */
+  castleAlignment(poiId: string): Alignment | undefined {
+    this.plan();
+    return this.castleKinds.get(poiId);
+  }
+
+  /** The riddles the world hides (the word of a quest 6, the mini quests, the words of the castles), each with the level of the place that holds it. */
+  riddlesOfWorld(): { riddle: number; tier: number }[] {
+    this.plan();
+    const out: { riddle: number; tier: number }[] = [];
+    for (const p of this.poiList) {
+      const ref = this.dungeonRefs.get(p.id);
+      if (ref) {
+        if (ref.word !== undefined) out.push({ riddle: ref.word, tier: p.tier });
+        for (const id of ref.minis) out.push({ riddle: id, tier: p.tier });
+      }
+      const castle = this.castleWords.get(p.id);
+      if (castle !== undefined) out.push({ riddle: castle, tier: p.tier });
+    }
+    return out;
+  }
+
+  /** The riddle whose four-letter answer the statues of a castle spell (a number in the riddle list of the world). */
+  castleWord(poiId: string): number | undefined {
+    this.plan();
+    return this.castleWords.get(poiId);
+  }
+
+  /** What a cave or dungeon was planned for (quest, layout, keys); undefined for any other place. */
+  dungeonRef(poiId: string): DungeonRef | undefined {
+    this.plan();
+    return this.dungeonRefs.get(poiId);
   }
 
   /** Every place of the world. */

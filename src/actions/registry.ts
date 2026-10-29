@@ -30,7 +30,7 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     trigger: "interact",
     persistence: "once",
     minimap: "tex_mm_event",
-    params: loose({ level: z.number().int().min(1).max(8), gold: z.number().int().min(0), items: z.number().int().min(0).max(4) }),
+    params: loose({ level: z.number().int().min(1).max(8), gold: z.number().int().min(0), items: z.number().int().min(0).max(10) }),
   },
   door: {
     kind: "door",
@@ -87,7 +87,7 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     trigger: "interact",
     persistence: "once",
     minimap: "tex_mm_persona",
-    params: loose({ effect: z.enum(["resist", "attribute", "heal", "xp"]), amount: z.number().int() }),
+    params: loose({ effect: z.enum(["resist", "attribute", "heal", "xp", "hurt"]), amount: z.number().int() }),
   },
   fountain: {
     kind: "fountain",
@@ -137,11 +137,11 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
   head: {
     kind: "head",
     legacyIds: [],
-    // `ring`: a stone head on the ring that a lever sets or removes. `rotate`: a head that turns a quarter at every bump
+    // `ring` and `moan`: a statue that a lever sets or removes (the ring of heads, the field of quest 1). `rotate`: a head that turns a quarter when asked to
     trigger: "interact",
     persistence: "repeat",
     minimap: "tex_mm_event",
-    params: loose({ item: z.number().int().min(1), mode: z.enum(["ring", "rotate"]) }),
+    params: loose({ item: z.number().int().min(1), mode: z.enum(["ring", "rotate", "moan"]) }),
   },
   teleporter: {
     kind: "teleporter",
@@ -186,6 +186,66 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     // decided per cell by the campaign: walkable cells fire on entering, blocked ones when bumped into
     trigger: "enter",
     persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({}),
+  },
+  king: {
+    kind: "king",
+    legacyIds: [],
+    // the king of a castle: the party gives him the orbs of ultimate power
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_info",
+    params: loose({ persona: z.number().int(), alignment: z.enum(["good", "neutral", "evil"]) }),
+  },
+  skullmiser: {
+    kind: "skullmiser",
+    legacyIds: [],
+    // the Skull Miser of the start town buys the silver skulls (ue_quest_2)
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_info",
+    params: loose({ persona: z.number().int() }),
+  },
+  machine: {
+    kind: "machine",
+    legacyIds: [],
+    // a statue that trades a Quatloo coin for three points of one attribute (ue_quest_1)
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_info",
+    params: loose({ item: z.number().int(), attr: z.enum(["str", "int", "per", "end", "spd", "acc", "lck"]), text: z.string() }),
+  },
+  tube: {
+    kind: "tube",
+    legacyIds: [],
+    // a transporter tube of the spaceship (the way back to the pyramid), or the tube of the control deck that ends the game
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({ item: z.number().int() }),
+  },
+  qportal: {
+    kind: "qportal",
+    legacyIds: [],
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({}),
+  },
+  rune: {
+    kind: "rune",
+    legacyIds: [],
+    trigger: "enter",
+    persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({}),
+  },
+  chalice: {
+    kind: "chalice",
+    legacyIds: [],
+    trigger: "interact",
+    persistence: "once",
     minimap: "tex_mm_event",
     params: loose({}),
   },
@@ -257,7 +317,7 @@ export function actionTrigger(a: { kind: ActionKind; params: Record<string, unkn
 export function blocksCell(a: { kind: ActionKind; params: Record<string, unknown> }): boolean {
   // a ring head blocks only while it stands on its cell (a lever sets and removes it): the game decides that (`ringBlocked` in quests.ts)
   if (a.kind === "head") return a.params.mode === "rotate";
-  return a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
+  return a.kind === "qportal" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "machine" || a.kind === "tube" || a.kind === "chalice" || a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
 }
 
 export function kindForLegacyId(id: number): ActionKind | null {

@@ -570,7 +570,9 @@ function campaignItemModels(): ModelSpec[] {
     const big = [26, 41, 42, 43, 44, 45, 47, 101, 102].includes(n);
     const closeUp = [2, 6, 27, 28, 29, 30, 33, 34, 61, 95].includes(n);
     // the bone pile (70) keeps its 10 000 triangles: its texture is a baked atlas, any simplification (even to 3000) shatters it
-    specs.push(S(`ci_${n}`, item.source, n === 70 ? 10000 : closeUp ? 3000 : big ? 1800 : 800, big || closeUp ? 512 : 256));
+    const spec = S(`ci_${n}`, item.source, n === 70 ? 10000 : closeUp ? 3000 : big ? 1800 : 800, big || closeUp ? 512 : 256);
+    // the rounded corners of the spaceship: their .mtl points at a path on the author's disk (the outer one at the dungeon ceiling by mistake); both wear the cyber wall
+    specs.push(n === 84 || n === 85 ? { ...spec, texture: "textures/tex_cyber_wall.jpg" } : spec);
   }
   return specs;
 }

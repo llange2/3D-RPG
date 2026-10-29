@@ -1,6 +1,6 @@
 /** Action vocabulary. Pure data, no DOM, no Babylon. */
 
-export type ActionKind = "treasure" | "door" | "trap" | "lore" | "transfer" | "service" | "ambush" | "shrine" | "fountain" | "breakable_wall" | "decor" | "riddle" | "gong" | "lever" | "head" | "teleporter" | "talent" | "portal" | "work" | "legacy";
+export type ActionKind = "treasure" | "door" | "trap" | "lore" | "transfer" | "service" | "ambush" | "shrine" | "fountain" | "breakable_wall" | "decor" | "riddle" | "gong" | "lever" | "head" | "teleporter" | "talent" | "portal" | "work" | "king" | "skullmiser" | "machine" | "tube" | "qportal" | "rune" | "chalice" | "legacy";
 
 export type ParamValue = number | string | boolean;
 
@@ -100,6 +100,8 @@ export interface RuleWhen {
   minTier?: number;
   maxTier?: number;
   minRoomSize?: number;
+  /** Only in rooms of at most this many floor cells (the closets). */
+  maxRoomSize?: number;
   excludeEntranceRoom?: boolean;
   /** Only in places of this dungeon class (`data/dungeon-themes.ts`). A rule with `theme` runs only in a themed cave or dungeon. */
   klass?: "A" | "B" | "C";

@@ -20,6 +20,7 @@ const ruleSchema = z.object({
       minTier: z.number().optional(),
       maxTier: z.number().optional(),
       minRoomSize: z.number().optional(),
+      maxRoomSize: z.number().optional(),
       excludeEntranceRoom: z.boolean().optional(),
       klass: z.enum(["A", "B", "C"]).optional(),
       theme: z.boolean().optional(),

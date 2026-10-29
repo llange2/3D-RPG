@@ -3,14 +3,16 @@ import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
 import { loreLine } from "../data/lore";
 import { BARREL_COINS, BARREL_EMPTY, propLine } from "../data/prop-texts";
 import { pickMonsterWeighted } from "../data/monsters";
-import { BASE_CLASS, TALENTS, TEXTS, talentInfo } from "../data/tables";
-import { attr, canAct, canBeHealed, healHp, itemBonus, thieveryRoll } from "../sim/character";
+import { BASE_CLASS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
+import { attr, canAct, canBeHealed, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
-import { generateItem, questItem } from "../sim/items";
-import { activeCharacters, addXp, giveItem, grantTalent, hasEffect } from "../sim/party";
+import { addCondition } from "../sim/conditions";
+import { generateItem, questItem, spellScroll } from "../sim/items";
+import { activeCharacters, addXp, carriedItems, freeSlots, giveItem, grantTalent, hasEffect, takeOne } from "../sim/party";
 import type { Attribute, Character, Condition, Item, Party } from "../sim/types";
 import type { ActionInstance, MapContent } from "./types";
-import { FACING_NAMES, gongsStruck, headFacing, ringSolved, rotationSolved, sameAnswer, turnHead } from "./quests";
+import { FACING_NAMES, gongsStruck, headFacing, moanSolved, ringSolved, rotationSolved, sameAnswer, turnHead } from "./quests";
+import { answerMatches } from "../data/riddles";
 import { trapElementOf, type ServiceKind } from "./registry";
 
 export type Effect =
@@ -23,7 +25,8 @@ export type Effect =
   | { type: "heal"; character: number; amount: number }
   | { type: "transfer"; mode: "poi_enter" | "poi_exit" | "stairs" | "teleport"; tier: number }
   | { type: "service"; service: ServiceKind; tier: number }
-  | { type: "door"; state: "opened" | "locked" | "unlocked" }
+  /** `uid`: the door that opens is not the object that was used (an airlock opened by its second lever). */
+  | { type: "door"; state: "opened" | "locked" | "unlocked"; uid?: string }
   | { type: "wall"; state: "broken" }
   /** The game asks a yes or no question and calls `resolveAction` again with `ctx.answer` set to "yes", or to null when declined. */
   | { type: "confirm"; title: string; question: string; yes?: string; no?: string }
@@ -38,6 +41,20 @@ export type Effect =
   | { type: "ask"; question: string }
   /** The party is thrown to a cell (a rune of the field). */
   | { type: "jump"; x: number; y: number }
+  /** The game asks which hero (a chalice is to be drunk) and calls `resolveAction` again with `ctx.hero` set, or null when nobody was chosen. */
+  | { type: "pick"; question: string }
+  /** The quest of the place is done: its end room opens (the seal gives way, or the party is teleported into the pocket). */
+  | { type: "endroom" }
+  /** An alarm: the guards of the castle come (`light` in the yard, `heavy` between the throne room and the gate). */
+  | { type: "guards"; kind: "light" | "heavy" }
+  /** The party stands before a king: the game takes the orbs, if there are any, and pays. */
+  | { type: "king"; alignment: "good" | "neutral" | "evil" }
+  /** The party stands before the Skull Miser: the game takes the silver skulls, if there are any, and pays. */
+  | { type: "skulls" }
+  /** The party steps into the tube of the control deck with the black key card: the game is won. */
+  | { type: "ending" }
+  /** A hero got a condition from a chalice. */
+  | { type: "condition"; character: number; condition: Condition }
   | { type: "defeat" };
 
 export interface ActionContext {
@@ -48,6 +65,8 @@ export interface ActionContext {
   opened?: ReadonlySet<string>;
   /** The answer a player gave to the question of a riddle statue, or null if they gave none. Undefined until asked. */
   answer?: string | null;
+  /** The hero a `pick` effect asked for. Undefined until asked. */
+  hero?: number | null;
   /** Counts attempts at a repeatable check (door, wall), so every attempt rolls differently but reproducibly. */
   attempt?: number;
   /** Monster families of the current map, for ambushes. */
@@ -74,7 +93,7 @@ export const WORK_DAYS = 10;
 const ELEMENTS = ["fire", "ice", "acid", "magic"] as const;
 /** The old texts of an elemental trap ("Fire trap!"). */
 const TRAP_TEXT = { acid: 432, fire: 433, ice: 434, magic: 435 } as const;
-const ATTRS: Attribute[] = ["str", "int", "per", "end", "spd", "acc", "lck"];
+export const ATTRS: Attribute[] = ["str", "int", "per", "end", "spd", "acc", "lck"];
 
 /** The random stream of one action: a pure function of the world seed, the action uid and the attempt number. */
 export function actionRng(ctx: Pick<ActionContext, "rootSeed" | "attempt">, uid: string): Rng {
@@ -104,7 +123,26 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
     const stored = giveItem(party, item);
     effects.push({ type: "item", item, stored });
   }
-  if (gold === 0 && items === 0 && !barrel) effects.push({ type: "text", text: "The chest is empty." });
+  // quest items hidden in an ordinary chest: Quatloo coins and silver skulls (ue_quest_1 and ue_quest_2)
+  if (typeof p.extra === "string" && p.extra !== "") {
+    for (const type of p.extra.split(",")) {
+      const item = questItem(type);
+      if (!item) continue;
+      effects.push({ type: "item", item, stored: giveItem(party, item) });
+    }
+  }
+  // end room rewards (quest document 1.2): scrolls of spells of the level (attribute points and levels lie in chalices: only one hero gets them)
+  const scrolls = Number(p.spells ?? 0);
+  if (scrolls > 0) {
+    const wanted = Number(p.spellLevel ?? level);
+    const pool = Object.values(SPELLS).filter((sp) => sp.level === wanted);
+    for (let i = 0; i < scrolls && pool.length > 0; i++) {
+      const item = spellScroll(pool[rng.int(pool.length)]!.id);
+      effects.push({ type: "item", item, stored: giveItem(party, item) });
+    }
+  }
+  const nothing = gold === 0 && items === 0 && scrolls === 0 && !(typeof p.extra === "string" && p.extra !== "");
+  if (nothing && !barrel) effects.push({ type: "text", text: "The chest is empty." });
 }
 
 function randomActive(party: Party, rng: Rng): number | null {
@@ -149,6 +187,34 @@ export function resistanceRecipient(party: Party, element: (typeof ELEMENTS)[num
   return tied[rng.int(tied.length)]!;
 }
 
+/** What a chalice with a `bonus` holds: a level, points of one attribute or experience. `hint` is what the party sees before it chooses who drinks. */
+export type ChaliceGift = { kind: "level"; amount: number; hint: string } | { kind: "attr"; attribute: Attribute; amount: number; hint: string } | { kind: "xp"; amount: number; hint: string };
+
+export function chaliceGift(p: ActionInstance["params"]): ChaliceGift {
+  const amount = Math.max(1, Number(p.amount ?? 1));
+  if (p.bonus === "attr") {
+    const attribute = p.attr as Attribute;
+    return { kind: "attr", attribute, amount, hint: `The liquid in the chalice glows in the colour of ${attribute.toUpperCase()}. Whoever drinks it gains ${amount} points.` };
+  }
+  if (p.bonus === "xp") return { kind: "xp", amount, hint: "The liquid in the chalice shimmers with old wisdom. Only one of you can drink it." };
+  return { kind: "level", amount, hint: "The liquid in the chalice gleams like liquid gold. Only one of you can drink it." };
+}
+
+/** The tries a mini-quest statue has used: every wrong answer leaves `<uid>@try<n>` in the set. */
+function countedTries(opened: ReadonlySet<string>, uid: string): number {
+  let n = 0;
+  while (opened.has(`${uid}@try${n}`)) n++;
+  return n;
+}
+
+/** Is the typed text the answer? A number must be exactly it, a word may be an alias, differ in case or article, or have one slip of the finger. */
+function answerIsRight(given: string, p: ActionInstance["params"]): boolean {
+  const answer = String(p.answer);
+  if (/^-?\d+$/.test(answer)) return given.trim() === answer;
+  const aliases = typeof p.aliases === "string" && p.aliases !== "" ? p.aliases.split(",") : [];
+  return answerMatches(given, { answer, aliases }) || sameAnswer(given, answer);
+}
+
 /**
  * Resolves what happens when the party uses an action. The result is a list of effects for the UI layer;
  * this function changes the party (gold, items, damage) but never touches the DOM or the renderer.
@@ -165,13 +231,38 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       if ((p.lock === "ring" && !ringSolved(ctx.content ?? EMPTY, ctx.opened ?? NONE)) || (p.lock === "rotation" && !rotationSolved(ctx.content ?? EMPTY, ctx.opened ?? NONE))) {
         return { effects: [{ type: "text", text: "The chest will not open. Something in this hall is not as it should be." }], consumed: false };
       }
+      const mapKey = action.uid.slice(0, action.uid.indexOf("#"));
+      // a chest of the king: sealed until the word of the statues is said, then an alarm, then a lock to pick (castle_1)
+      if (p.lock === "code") {
+        if (!(ctx.opened ?? NONE).has(String(p.requires))) return { effects: [{ type: "text", text: "The chest is sealed by a spell. Perhaps the statues in this castle know the word that opens it." }], consumed: false };
+        const flag = `${mapKey}@heavy`;
+        if (!(ctx.opened ?? NONE).has(flag)) {
+          return { effects: [{ type: "text", text: "As the seal breaks, a horn sounds through the castle. Heavy guards come running between the throne room and the gate!" }, { type: "guards", kind: "heavy" }], consumed: false, state: { add: [flag], remove: [] } };
+        }
+        let best = 0;
+        for (const i of activeCharacters(party)) best = Math.max(best, thieveryRoll(party.characters[i]!, rng));
+        if (best < Number(p.difficulty ?? 2)) return { effects: [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }], consumed: false };
+      }
+      // a chest in the yard of a castle is wired to an alarm: the party is asked, and the first one tried calls the light guards
+      if (p.warn === "alarm") {
+        if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Chest", question: "A thin wire runs from the lid into the wall. This chest is guarded by an alarm. Do you really want to break it open?", yes: "Break it open", no: "Leave" }], consumed: false };
+        if (ctx.answer === null) return { effects, consumed: false };
+        const flag = `${mapKey}@light`;
+        const first = !(ctx.opened ?? NONE).has(flag);
+        if (first) effects.push({ type: "text", text: "An alarm bell rings out over the yard. The guards of the castle come!" }, { type: "guards", kind: "light" });
+        payOut(p, rng, party, effects);
+        return { effects, consumed: true, ...(first ? { state: { add: [flag], remove: [] } } : {}) };
+      }
       // the key or key card of a place (chapter 1.2 of docs/DUNGEON_THEMES.md): a chest that holds nothing else stays shut until it fits in a backpack
       if (typeof p.quest === "string") {
         const found = questItem(p.quest);
         if (!found) throw new Error(`unknown quest item ${p.quest} in ${action.uid}`);
-        const stored = giveItem(party, found);
-        if (!stored) return { effects: [{ type: "text", text: `You find the ${found.name}, but every backpack is full. Make room first.` }], consumed: false };
-        effects.push({ type: "item", item: found, stored });
+        const count = Math.max(1, Number(p.count ?? 1));
+        // all of them or none: a chest of orbs stays shut until the backpacks have room for every one
+        if (freeSlots(party) < count) return { effects: [{ type: "text", text: `You find the ${found.name}, but every backpack is full. Make room first.` }], consumed: false };
+        const items = Array.from({ length: count }, () => questItem(String(p.quest))!);
+        for (const item of items) giveItem(party, item);
+        items.forEach((item) => effects.push({ type: "item", item, stored: true }));
         return { effects, consumed: true };
       }
       payOut(p, rng, party, effects);
@@ -186,21 +277,38 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           return { effects, consumed: false };
         }
       }
-      if (ctx.answer === undefined) return { effects: [{ type: "ask", question: String(p.question) }], consumed: false };
-      if (ctx.answer === null) return { effects, consumed: false };
-      if (!sameAnswer(ctx.answer, String(p.answer))) {
-        effects.push({ type: "text", text: "The statue's eyes dim. That is not the answer." });
+      // a statue of a mini quest falls silent after its tries (every wrong answer leaves `<uid>@try<n>` in the set)
+      if (p.tries !== undefined && countedTries(ctx.opened ?? NONE, action.uid) >= Number(p.tries)) {
+        effects.push({ type: "text", text: "The statue stays silent." });
         return { effects, consumed: false };
       }
-      effects.push({ type: "text", text: "The statue's eyes light up. \"Right!\" A hidden compartment opens at its feet." });
-      payOut(p, rng, party, effects);
+      if (ctx.answer === undefined) return { effects: [{ type: "ask", question: String(p.question) }], consumed: false };
+      if (ctx.answer === null) return { effects, consumed: false };
+      if (!answerIsRight(ctx.answer, p)) {
+        effects.push({ type: "text", text: "The statue's eyes dim. That is not the answer." });
+        // a mini quest punishes a wrong answer: the floor throws the party away, or onto a field of traps where it is hurt too
+        if (p.fail === "away" || p.fail === "trap") {
+          effects.push({ type: "text", text: p.fail === "away" ? "The floor gives way beneath you, and you are thrown far from here!" : "The statue's eyes flare red. The floor opens, and you are thrown onto a field of traps!" }, { type: "jump", x: Number(p.tx), y: Number(p.ty) });
+          const victim = p.fail === "trap" ? randomActive(party, rng) : null;
+          if (victim !== null && Number(p.damage ?? 0) > 0) {
+            const hit = applyHit(party, victim, Number(p.damage), null, rng);
+            effects.push({ type: "damage", character: victim, amount: Number(p.damage), damageType: "physical", conditions: hit.conditions });
+            if (hit.defeated) effects.push({ type: "defeat" });
+          }
+        }
+        if (p.tries === undefined) return { effects, consumed: false };
+        return { effects, consumed: false, state: { add: [`${action.uid}@try${countedTries(ctx.opened ?? NONE, action.uid)}`], remove: [] } };
+      }
+      effects.push({ type: "text", text: p.opens === "end" ? "The statue's eyes light up. \"Right!\" Stone grinds on stone somewhere in the walls." : "The statue's eyes light up. \"Right!\" A hidden compartment opens at its feet." });
+      if (Number(p.gold ?? 0) > 0 || Number(p.items ?? 0) > 0) payOut(p, rng, party, effects);
+      if (p.opens === "end") effects.push({ type: "endroom" });
       return { effects, consumed: true };
     }
 
     case "gong": {
       const gongs = gongsStruck(ctx.content ?? EMPTY, ctx.opened ?? NONE);
       const last = gongs.done + 1 >= gongs.total;
-      effects.push({ type: "text", text: last ? "The last gong sounds. The air hums. Somewhere, a master reveals himself." : `The gong booms through the cavern (${gongs.done + 1} of ${gongs.total}). Something answers from the dark.` });
+      effects.push({ type: "text", text: last ? "The last gong sounds. The air hums. Magic runes flare up in the middle of this place." : `The gong booms (${gongs.done + 1} of ${gongs.total}). Something answers from the dark.` });
       const ids = String(p.monsters ?? "").split(",").filter((s) => s !== "").map(Number);
       const group = Number(p.group ?? 1);
       if (ids.length > 0) effects.push({ type: "ambush", monsterIds: Array.from({ length: group }, () => ids[rng.int(ids.length)]!) });
@@ -208,6 +316,17 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "lever": {
+      // an airlock of the spaceship has a lever on each side: the lock opens when both have been pulled, and a lever can only be pulled once
+      if (typeof p.airlock === "string") {
+        const mine = `${p.airlock}@${String(p.side)}`;
+        const other = `${p.airlock}@${p.side === "a" ? "b" : "a"}`;
+        const opened = ctx.opened ?? NONE;
+        if (opened.has(mine)) return { effects: [{ type: "text", text: "You pull as hard as you can, but the lever is stuck in its place." }], consumed: false };
+        if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Lever", question: "A small sign next to the lever reads 'Manual lock override.' Would you like to switch the lever?", yes: "Switch it", no: "Leave" }], consumed: false };
+        if (ctx.answer === null) return { effects, consumed: false };
+        if (opened.has(other)) return { effects: [{ type: "text", text: "You hear a buzz and afterwards mechanical noises and you see how the heavy lock slowly opens." }, { type: "door", state: "opened", uid: p.airlock }], consumed: false, state: { add: [mine], remove: [] } };
+        return { effects: [{ type: "text", text: "You hear a buzz and afterwards mechanical noises. However the lock still stands in place." }], consumed: false, state: { add: [mine], remove: [] } };
+      }
       effects.push({ type: "text", text: "You pull the lever. Somewhere in the walls stone grinds on stone." });
       // a lever with a target flips it; the look-alikes without one do nothing but look the same
       const target = String(p.target ?? "");
@@ -221,16 +340,111 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         effects.push({ type: "text", text: "A giant stone head. It seems to wait for something." });
         return { effects, consumed: false };
       }
-      const facing = (headFacing(action, ctx.opened ?? NONE) + 1) % 4;
+      if (p.mode === "moan") {
+        effects.push({ type: "text", text: "The statue moans. A hollow sound, as if from far below." });
+        return { effects, consumed: false };
+      }
+      // a head of the row says its piece, then asks whether to turn it to the next direction, clockwise
+      const now = headFacing(action, ctx.opened ?? NONE);
+      const facing = (now + 1) % 4;
+      const hint = typeof p.hint === "string" ? `${p.hint} ` : "";
+      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Stone head", question: `${hint}The head is facing ${FACING_NAMES[now]}. Would you like to turn it ${FACING_NAMES[facing]}?`, yes: "Turn it", no: "Leave" }], consumed: false };
+      if (ctx.answer === null) return { effects, consumed: false };
       effects.push({ type: "text", text: `The stone head turns with a grating sound and looks ${FACING_NAMES[facing]}.` });
-      return { effects, consumed: false, state: turnHead(action, ctx.opened ?? NONE, facing) };
+      const next = turnHead(action, ctx.opened ?? NONE, facing);
+      // the row is right when every head looks the way it should: the last turn opens the end room
+      const after = new Set([...(ctx.opened ?? NONE)].filter((k) => !next.remove.includes(k)));
+      for (const k of next.add) after.add(k);
+      if (ctx.content && rotationSolved(ctx.content, after)) effects.push({ type: "endroom" });
+      return { effects, consumed: false, state: next };
     }
+
+    case "chalice": {
+      // a chalice of an end room or of the control deck: one hero drinks it and is the only one who gets the bonus
+      if (typeof p.bonus === "string") {
+        if (p.lock === "code" && !(ctx.opened ?? NONE).has(String(p.requires))) return { effects: [{ type: "text", text: "The chalice is sealed. A message on the nearest terminal says it opens for whoever knows the word." }], consumed: false };
+        const gift = chaliceGift(p);
+        if (ctx.hero === undefined) return { effects: [{ type: "text", text: gift.hint }, { type: "pick", question: "Which character shall drink from the chalice?" }], consumed: false };
+        if (ctx.hero === null) return { effects, consumed: false };
+        const drinker = party.characters[ctx.hero];
+        if (!drinker || !canAct(drinker)) return { effects, consumed: false };
+        if (gift.kind === "level") {
+          levelUp(drinker, party.talents, gift.amount, party.mascot);
+          effects.push({ type: "text", text: `${drinker.name} drinks. A surge of experience runs through ${drinker.name}: ${gift.amount === 1 ? "a level" : `${gift.amount} levels`} gained.` });
+        } else if (gift.kind === "attr") {
+          drinker[gift.attribute] += gift.amount;
+          effects.push({ type: "text", text: `${drinker.name} drinks and is filled with strength: ${gift.attribute.toUpperCase()} +${gift.amount}.` }, { type: "attribute", character: ctx.hero, attribute: gift.attribute, amount: gift.amount });
+        } else {
+          drinker.xp += gift.amount;
+          effects.push({ type: "text", text: `${drinker.name} drinks. A great wisdom flows through ${drinker.name}: ${thousands(gift.amount)} experience points.` });
+        }
+        return { effects, consumed: true };
+      }
+      // quest 2: the liquid in the cup is strange; whoever drinks hears a number and a direction, and falls ill
+      if (ctx.hero === undefined) return { effects: [{ type: "pick", question: "A strange liquid fills the chalice. Which character shall drink it?" }], consumed: false };
+      if (ctx.hero === null) return { effects, consumed: false };
+      const hero = party.characters[ctx.hero];
+      if (!hero) return { effects, consumed: false };
+      const kinds = String(p.conditions ?? "Poisoned").split(",") as Condition[];
+      const condition = kinds[rng.int(kinds.length)]!;
+      addCondition(hero, condition, party.minutes);
+      effects.push({ type: "text", text: `You hear ${String(p.number)}-${String(p.dir)} in your mind, before everything gets dark in front of your eyes.` }, { type: "condition", character: ctx.hero, condition });
+      return { effects, consumed: true };
+    }
+
+    case "rune": {
+      // quest 1 (the middle of the field) and quest 3 (the runes the last gong calls up): only the solved quest takes the party to the end room
+      const content = ctx.content ?? EMPTY;
+      const opened = ctx.opened ?? NONE;
+      const gongs = gongsStruck(content, opened);
+      const ready = p.need === "moan" ? moanSolved(content, opened) : gongs.total > 0 && gongs.done >= gongs.total;
+      if (!ready) return { effects, consumed: false };
+      effects.push({ type: "text", text: "The runes flare up. The floor falls away, and a strange light takes you." }, { type: "endroom" });
+      return { effects, consumed: false };
+    }
+
+    case "tube": {
+      // the tube of the control deck needs the black key card; the others lead back to the pyramid
+      if (p.final === true) {
+        if (!carriedItems(party).some((i) => i.type === "quest_black_keycard")) return { effects: [{ type: "text", text: "The tube stays dark. A slot in its frame asks for a black key card." }], consumed: false };
+        return { effects: [{ type: "text", text: "The black key card slides into the slot. The tube lights up, and you step into it." }, { type: "ending" }], consumed: false };
+      }
+      return { effects: [{ type: "transfer", mode: "poi_exit", tier: ctx.tier }], consumed: false };
+    }
+
+    case "king":
+      return { effects: [{ type: "king", alignment: p.alignment as "good" | "neutral" | "evil" }], consumed: false };
+
+    case "skullmiser":
+      return { effects: [{ type: "skulls" }], consumed: false };
+
+    case "machine": {
+      // ue_quest_1: a statue is a machine; one Quatloo coin buys three points of its attribute for the hero who puts it in
+      const text = String(p.text);
+      const hasCoin = carriedItems(party).some((i) => i.type === "quest_quatloo_coin");
+      if (!hasCoin) return { effects: [{ type: "text", text: `${text} There is a small slot, but you don't have any items which fit inside.` }], consumed: false };
+      if (ctx.hero === undefined) return { effects: [{ type: "text", text }, { type: "pick", question: "The Quatloo coin you found fits exactly into the slot. Which character shall put it in?" }], consumed: false };
+      if (ctx.hero === null) return { effects, consumed: false };
+      const hero = party.characters[ctx.hero];
+      if (!hero || !takeOne(party, "quest_quatloo_coin")) return { effects, consumed: false };
+      const attribute = p.attr as Attribute;
+      hero[attribute] += 3;
+      effects.push({ type: "text", text: `${hero.name} puts the coin into the slot. The statue hums, and ${attribute.toUpperCase()} rises by 3.` }, { type: "attribute", character: ctx.hero, attribute, amount: 3 });
+      return { effects, consumed: false };
+    }
+
+    case "qportal":
+      // the portal of an end room reached by teleport leads back to where the quest began (A > B > A, apart from the portals of the towns)
+      effects.push({ type: "text", text: "The portal hums and carries you back to the entrance." }, { type: "jump", x: Number(p.tx), y: Number(p.ty) });
+      return { effects, consumed: false };
 
     case "teleporter":
       effects.push({ type: "text", text: "The floor flares under your feet. You are thrown back!" }, { type: "jump", x: Number(p.tx), y: Number(p.ty) });
       return { effects, consumed: false };
 
     case "door": {
+      // an airlock stays shut until both of its levers have been pulled (the lever opens it, `uid` of the effect)
+      if (p.airlock === true) return { effects: [{ type: "text", text: "The airlock is shut tight. On both sides of it a lever in the wall reads: Manual lock override." }], consumed: false };
       if (p.locked !== true) {
         // a gate of a town asks first, like the old action 16 ("Would you like to open the gate?")
         if (p.ask === true) {
@@ -312,8 +526,18 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
 
     case "shrine": {
       if (activeCharacters(party).length === 0) return { effects, consumed: false };
+      if (p.lock === "code" && !(ctx.opened ?? NONE).has(String(p.requires))) return { effects: [{ type: "text", text: "The chalice is sealed. A message on the nearest terminal says it opens for whoever knows the word." }], consumed: false };
       const amount = Number(p.amount ?? 1);
       switch (p.effect) {
+        case "hurt": {
+          // a power source crystal that bites: its energy hurts one hero
+          const target = randomActive(party, rng)!;
+          const damage = Math.max(1, Math.floor(elementalDamage(party, party.characters[target]!, ELEMENTS[rng.int(ELEMENTS.length)]!, 20 * amount)));
+          const hit = applyHit(party, target, damage, null, rng);
+          effects.push({ type: "text", text: "The crystal hums, then discharges into one of you." }, { type: "damage", character: target, amount: damage, damageType: "magic", conditions: hit.conditions });
+          if (hit.defeated) effects.push({ type: "defeat" });
+          break;
+        }
         case "resist": {
           const element = ELEMENTS[rng.int(ELEMENTS.length)]!;
           const who = resistanceRecipient(party, element, rng)!;

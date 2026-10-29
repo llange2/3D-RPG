@@ -31,12 +31,27 @@ export function ringHeadPresent(a: Pick<ActionInstance, "params">, opened: Reado
 
 const heads = (content: MapContent, mode: string): ActionInstance[] => content.actions.filter((a) => a.kind === "head" && a.params.mode === mode);
 
-/** Grid indices of the cells that a head of the ring blocks right now. */
+/** Heads that a lever sets or removes: the ring of the older quest and the field of moaning statues of quest 1. */
+const standing = (content: MapContent): ActionInstance[] => [...heads(content, "ring"), ...heads(content, "moan")];
+
+/** Grid indices of the cells that a head of the ring or a moaning statue blocks right now. */
 export function ringBlocked(content: MapContent, width: number, opened: ReadonlySet<string>): number[] {
-  return heads(content, "ring")
+  return standing(content)
     .filter((a) => ringHeadPresent(a, opened))
     .map((a) => a.y * width + a.x);
 }
+
+/**
+ * Quest 1: the statues of the field stand where `want` says (1 stands, 0 does not) in all eight outer cells; nothing else counts. The middle then
+ * teleports the party into the end room.
+ */
+export function moanSolved(content: MapContent, opened: ReadonlySet<string>): boolean {
+  const field = heads(content, "moan");
+  return field.length > 0 && field.every((a) => (Number(a.params.want) === 1) === ringHeadPresent(a, opened));
+}
+
+/** The flag in the save that says the end room of a place has been opened (`opened` is saved with the game). */
+export const endFlag = (mapKey: string): string => `${mapKey}@end`;
 
 /** The ring is right when a head stands in each of its four corners (the old prover looked at the corners only). */
 export function ringSolved(content: MapContent, opened: ReadonlySet<string>): boolean {
@@ -61,3 +76,6 @@ export function sameAnswer(given: string, expected: string): boolean {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/^(a|an|the) /, "").replace(/\s+/g, " ").trim();
   return norm(given) === norm(expected);
 }
+
+/** Is this spawn the end boss of quest 5? Its death opens the end room. */
+export const isEndBoss = (uid: string): boolean => uid.includes("#q-endboss");

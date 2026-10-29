@@ -4,5 +4,8 @@ dist/
 .ignore/
 *.log
 
+# the outro video of the old game (88 MB) is copied in by hand and not committed (see docs/QUESTS_UMSETZUNG.md)
+public/assets/ui/outro.mp4
+
 # Office lock files (a spreadsheet that is open in Excel)
 ~$*

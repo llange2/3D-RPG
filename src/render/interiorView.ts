@@ -6,12 +6,14 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import { hash2 } from "../core/noise";
 import type { ActionInstance, MapContent } from "../actions/types";
+import { hasRoundWalls, roundCorners, ROUND_ITEM, type RoundCorner } from "../interiors/roundCorners";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import type { StaticModelInfo, TextureCache } from "./assets";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { CELL_SIZE, cellCenterX, cellCenterZ, meshInterior, modelFloorCells, wallHeightOf } from "./interiorMesher";
 import { themedProp } from "./interiorProps";
+import { itemModelKey, itemProp } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
 import { FLAT_Z_OFFSET, flatTileMaterial } from "./materials";
 import type { PropRenderer } from "./props";
@@ -40,6 +42,14 @@ const CAVE_EXIT = "blk_cave_exit";
 const CAVE_WALL_RADIUS = 12;
 /** Yaw of the exit model so that it faces north, towards the party. The first reading of the old maps (opening towards the floor, glTF turned by half a circle) had it the wrong way round: the user saw it turned by 180 degrees. */
 const CAVE_EXIT_YAW = 0;
+
+/** How many cells round the party the rounded corners of the spaceship are drawn (two models per corner, a few hundred corners in all). */
+const ROUND_RADIUS = 14;
+
+/** The models of the rounded corners of the spaceship (`Round inner corner.obj`, `Round outer corner.obj`). */
+export function roundModelKeys(map: InteriorMap): string[] {
+  return hasRoundWalls(map) ? [itemModelKey(ROUND_ITEM.inner), itemModelKey(ROUND_ITEM.outer)].filter((k): k is string => k !== null) : [];
+}
 
 /** The models a map needs beyond `INTERIOR_MODELS`: the rock pieces of a generated cave. */
 export function caveModelKeys(map: InteriorMap): string[] {
@@ -126,6 +136,9 @@ export class InteriorView {
   private caveWalls: number[] = [];
   private caveShown: { x: number; y: number } | null = null;
   private caveModels = false;
+  private roundList: RoundCorner[] = [];
+  private roundShown: { x: number; y: number } | null = null;
+  private roundModels = false;
 
   constructor(
     private readonly r: Renderer,
@@ -201,6 +214,7 @@ export class InteriorView {
     this.owner = `interior:${map.key}`;
     this.floorFocus = null;
     this.caveShown = null;
+    this.roundShown = null;
     // the traps come first: an open pit has no floor, so the mesh needs to know about it
     this.traps.show(map, content, opened, this.owner);
     this.buildMesh();
@@ -213,8 +227,12 @@ export class InteriorView {
     this.viewShare = share;
     if (!this.map) return;
     this.caveShown = null;
+    this.roundShown = null;
     this.pushFloor(true);
-    if (this.floorFocus) this.pushCaveWalls(this.floorFocus.x, this.floorFocus.y);
+    if (this.floorFocus) {
+      this.pushCaveWalls(this.floorFocus.x, this.floorFocus.y);
+      this.pushRoundCorners(this.floorFocus.x, this.floorFocus.y);
+    }
   }
 
   private viewShare = 1;
@@ -248,6 +266,25 @@ export class InteriorView {
     this.floorFocus = { x: cx, y: cy };
     this.pushFloor(false);
     this.pushCaveWalls(cx, cy);
+    this.pushRoundCorners(cx, cy);
+  }
+
+  /** The rounded corners of the spaceship within `ROUND_RADIUS` cells of the party. */
+  private pushRoundCorners(cx: number, cy: number): void {
+    const map = this.map;
+    const owner = `${this.owner}:round`;
+    if (!map || !this.roundModels) return;
+    if (this.roundShown && this.roundShown.x === cx && this.roundShown.y === cy) return;
+    this.roundShown = { x: cx, y: cy };
+    const radius = Math.max(4, Math.round(ROUND_RADIUS * this.viewShare));
+    const list: PropInstance[] = [];
+    for (const c of this.roundList) {
+      if (Math.abs(c.x - cx) > radius || Math.abs(c.y - cy) > radius) continue;
+      const inst = itemProp(ROUND_ITEM[c.kind], c.yaw, cellCenterX(c.x), cellCenterZ(c.y), this.staticInfo);
+      if (inst) list.push(inst);
+    }
+    this.props.setInstances(owner, list);
+    this.props.flush();
   }
 
   /** The cave's rock pieces within `CAVE_WALL_RADIUS` cells of the party, and the way out. */
@@ -311,6 +348,11 @@ export class InteriorView {
     this.floorCells = modelFloor ? modelFloorCells(map, holes) : [];
     // a cave's walls are the old game's rock models when they are loaded; the cells next to the floor are the ones that show
     this.caveModels = caveModelKeys(map).length > 0 && caveModelKeys(map).every((k) => this.props.has(k));
+    // the spaceship's walls are round where the models of the corners are loaded
+    const roundKeys = roundModelKeys(map);
+    this.roundModels = roundKeys.length === 2 && roundKeys.every((k) => this.props.has(k));
+    this.roundList = this.roundModels ? roundCorners(map) : [];
+    this.props.removeOwner(`${this.owner}:round`);
     this.caveWalls = [];
     if (this.caveModels) {
       for (let y = 0; y < map.height; y++) {
@@ -322,7 +364,7 @@ export class InteriorView {
         }
       }
     }
-    const geo = meshInterior(map, new Set(), { modelFloor, holes, modelWalls: this.caveModels, flatTiles: this.flatTiles ?? undefined });
+    const geo = meshInterior(map, new Set(), { modelFloor, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined });
     const mesh = new Mesh(`interior:${map.key}`, this.r.scene);
     const vd = new VertexData();
     vd.positions = geo.positions;
@@ -383,7 +425,7 @@ export class InteriorView {
       // a key or key card that has been taken is gone from its chest
       if (a.kind === "treasure" && typeof a.params.quest === "string" && this.opened.has(a.uid)) continue;
       // a themed place shows the old items of its style (a barrel, a bone pile, a banner) instead of a chest or well picked by chance
-      const themed = themedProp(a, x, z, (this.faceOpen(map, a, h >>> 8) * 180) / Math.PI, this.staticInfo, this.opened);
+      const themed = themedProp(a, x, z, (this.faceOpen(map, a, h >>> 8) * 180) / Math.PI, this.staticInfo, this.opened, this.content ?? undefined);
       // a head of the ring that is not there leaves its cell empty
       if (!themed && a.kind === "head") continue;
       if (themed) {
@@ -563,10 +605,14 @@ export class InteriorView {
       this.props.removeOwner(this.owner);
       this.props.removeOwner(`${this.owner}:floor`);
       this.props.removeOwner(`${this.owner}:walls`);
+      this.props.removeOwner(`${this.owner}:round`);
     }
     this.caveWalls = [];
     this.caveShown = null;
     this.caveModels = false;
+    this.roundList = [];
+    this.roundShown = null;
+    this.roundModels = false;
     this.floorCells = [];
     this.floorShown = null;
     this.props.flush();
