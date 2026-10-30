@@ -1,3 +1,4 @@
+import { QUESTS } from "../data/quest-table";
 import { MONSTERS } from "../data/tables";
 import type { DungeonRef } from "../interiors/types";
 import type { Poi } from "../world/types";
@@ -20,7 +21,7 @@ export function identifyLines(poi: Poi, dungeon: DungeonRef | null): string[] {
   const theme = dungeon.look;
   lines.push(
     "",
-    `Quest: ${dungeon.quest}, layout ${dungeon.layout}`,
+    `Quest: ${dungeon.quest === "spaceship" ? dungeon.quest : `${dungeon.quest} (${QUESTS[dungeon.quest].name})`}, layout ${dungeon.layout}`,
     `Class: ${CLASS_TEXT[dungeon.klass]}`,
     `Inhabitants: ${theme.inhabitants}`,
     `Monsters: ${theme.monsters.map(monsterName).join(", ")}; boss ${monsterName(theme.boss)}`,

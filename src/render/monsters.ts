@@ -39,8 +39,10 @@ const HOVER: Record<number, number> = { 62: 1.6, 74: 1.7, 75: 1.7 };
 /**
  * Monsters whose model is drawn larger than the table's scale says. The Rat Overlord (91) reuses the Moose Rat's mesh at a smaller
  * footprint, so the boss looked smaller than the rats of its own pack (31st playtest, point 8); 1.4 makes it about a third taller.
+ * The Top Jouster (89) is `scale=1.7` in the old game, but its case lies past the 60000 characters of `entities.py` that `readStaticMonsterMap` reads,
+ * so the registry says 1 and he stood well below the Dark Pegasus (1.3), which the old game drew smaller than him (32nd playtest, point 6).
  */
-const SIZE_FACTOR: Record<number, number> = { 91: 1.4 };
+const SIZE_FACTOR: Record<number, number> = { 91: 1.4, 89: 1.7 };
 
 /** The height of the party's eyes above the floor (the camera in `engine.ts`). */
 const EYE_LEVEL = 1.7;
@@ -64,6 +66,7 @@ export const EYES_AT: Readonly<Record<number, number>> = {
   67: 0.58, // Spirit Shield
   69: 0.59, // Terminator
   77: 0.82, // Wicked Witch
+  79: 0.85, // Wizard (stood on the floor with his face below the party's eyes, 32nd playtest, point 9)
   84: 0.65, // Eye Master
 };
 
@@ -370,13 +373,13 @@ export class MonsterRenderer {
   }
 
   /** Where the light of every living monster of these models hangs now: the middle of its body, over the cell it stands on (the glowing monsters, `MONSTER_LAMPS`). */
-  glowing(models: ReadonlySet<number>): { defId: number; x: number; y: number; z: number }[] {
-    const out: { defId: number; x: number; y: number; z: number }[] = [];
+  glowing(models: ReadonlySet<number>): { uid: string; defId: number; x: number; y: number; z: number }[] {
+    const out: { uid: string; defId: number; x: number; y: number; z: number }[] = [];
     for (const v of this.views.values()) {
       if (!models.has(v.defId) || v.dying !== null) continue;
       const [, minY, , , maxY] = v.info.bounds;
       const mid = ((minY + maxY) / 2) * v.holder.scaling.y;
-      out.push({ defId: v.defId, x: v.holder.position.x, y: v.holder.position.y + (v.hovers ? mid : Math.min(2.2, Math.max(0.5, mid))), z: v.holder.position.z });
+      out.push({ uid: v.uid, defId: v.defId, x: v.holder.position.x, y: v.holder.position.y + (v.hovers ? mid : Math.min(2.2, Math.max(0.5, mid))), z: v.holder.position.z });
     }
     return out;
   }

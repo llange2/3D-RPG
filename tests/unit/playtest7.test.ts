@@ -81,7 +81,7 @@ describe("experience", () => {
 
   it("monster XP is the sheet's new XP (entity 23), the level thresholds are the old game's", () => {
     // spot checks against docs/RPG_0.1.xlsx, sheet Monster, column "entity 23: XP_new"; the old column (entity 15) is not used any more
-    expect([MONSTERS[4]!.xp, MONSTERS[46]!.xp, MONSTERS[1]!.xp, MONSTERS[32]!.xp]).toEqual([152.5, 4288, 33750, 6230300]);
+    expect([MONSTERS[4]!.xp, MONSTERS[46]!.xp, MONSTERS[1]!.xp, MONSTERS[32]!.xp]).toEqual([152.5, 2288, 18150, 3150300]);
   });
 });
 

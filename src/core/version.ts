@@ -105,5 +105,7 @@
  * 30 = 31st playtest: a castle is the keep alone (no yard; the gate is the way out and the party starts inside it), its alarm chests stand in the niches of the corridors with a
  * banner across from each, and the statue that wants the word stands out of every passage; Swamp Town (tier 4) has three brittle walls; the caves get islands of rock in their big
  * halls; every orb is a chest of its own.
+ * 31 = 32nd playtest: the monster sheet's new treasure levels (Dragon Worm 4, Black Knight 5) change who lives where; the throne room of a castle always has two banners
+ * beside the king.
  */
-export const GEN_VERSION = 30;
+export const GEN_VERSION = 31;

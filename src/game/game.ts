@@ -28,7 +28,7 @@ import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { ITEM_LAMPS, MONSTER_LAMPS, crystalLamps, lampSource, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
+import { ITEM_LAMPS, LOOT_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, readModelSet, registryFile, storeModelSet, takeResume, type ModelSet } from "../render/modelSet";
@@ -212,6 +212,8 @@ const MONSTER_GLOW: ReadonlyMap<number, MonsterLamp> = new Map(Object.values(MON
 /** Lamps farther from the party than this are ignored (units); the pool serves the nearest ones. */
 const LAMP_REACH = 18;
 const LAMP_INTENSITY = 1.7;
+/** Seconds a lamp takes to fade in or out of a light of the pool. */
+const LAMP_FADE = 0.4;
 /** The noise of a trap going off. The pit has none here: its stones fall once, when it opens (`useAction`); the magic trap sounds like its element's spell. */
 const TRAP_SOUND: Record<string, number> = { spring: 9036, guillotine: 9042, steal_gold: 9038 };
 
@@ -265,6 +267,10 @@ export class Game {
   private lootOwner = "loot";
   private lightLevel = 1;
   private lamps: LampSource[] = [];
+  /** The gold light of every pile of loot on the map (`renderLoot`). */
+  private lootLamps: LampSource[] = [];
+  /** The lights of the pool (`Renderer.lamps`) and the lamp each one holds now, with how bright it is (0 to 1). */
+  private lampSlots: { lamp: LampSource | null; level: number }[] = [];
   /** Whether the lamp pool also serves the monsters that glow (`MONSTER_GLOW`): in the interiors of generated places. */
   private glowMonsters = false;
   private readonly glowModels: ReadonlySet<number> = new Set(MONSTER_GLOW.keys());
@@ -329,7 +335,11 @@ export class Game {
 
     this.player = new PlayerRig({
       // in melee the party holds its field: a step is refused (the bump says why, `onBlocked`)
-      canEnter: (x, y) => !this.enc.battleMode && this.canEnter(x, y),
+      // the melee flag is looked at afresh before every step: whatever ended the fight (a spell, the Wolf, a trap), a party with no monster beside it walks on
+      canEnter: (x, y) => {
+        if (this.enc.battleMode) updateBattleMode(this.enc, this.player.tx, this.player.ty, this.gridView());
+        return !this.enc.battleMode && this.canEnter(x, y);
+      },
       heightAt: (x, y) => this.heightAt(x, y),
       stepStarted: (x, y) => this.onStepStarted(x, y),
       arrived: (x, y) => void this.onArrived(x, y),
@@ -987,14 +997,17 @@ export class Game {
 
   private renderLoot(): void {
     const piles = this.lootHere().filter((p) => !this.lootHeld.has(this.lootKey(p.x, p.y)));
+    const shown = piles.map((p) => {
+      const at = this.nearestTo(p.x, p.y);
+      return { key: this.lootKey(p.x, p.y), ...this.worldPos(at.x, at.y) };
+    });
     this.props.setInstances(
       this.lootOwner,
-      piles.map((p) => {
-        const at = this.nearestTo(p.x, p.y);
-        const w = this.worldPos(at.x, at.y);
-        return { model: "obj_loot", x: w.x, y: w.y, z: w.z, rotY: 0, scale: 0.8 };
-      }),
+      shown.map((w) => ({ model: "obj_loot", x: w.x, y: w.y, z: w.z, rotY: 0, scale: 0.8 })),
     );
+    // loot glows gold (32nd playtest, point 14); the lights of the pool come on with the first pile
+    this.lootLamps = shown.map((w) => lampSource(LOOT_LAMP, w.x, w.z, `l:${w.key}`));
+    this.enableLampLights();
     this.props.flush();
   }
 
@@ -3201,6 +3214,10 @@ export class Game {
       const { tx, ty } = this.player;
       this.handleEvents(spellRound(party, this.gridView(), this.enc, tx, ty, this.combatRng()));
       updateBattleMode(this.enc, tx, ty, this.gridView());
+    } else if (result.kind === "attack") {
+      // the spell may have killed the last monster beside the party: without this the party stayed in melee with nobody there and no step was allowed
+      // (32nd playtest, point 12: a Fire Stalker killed with Star Burst)
+      updateBattleMode(this.enc, this.player.tx, this.player.ty, this.gridView());
     }
     this.busy = false;
     this.refresh();
@@ -4015,7 +4032,7 @@ export class Game {
     this.r.camera.position.set(this.player.x, this.player.y, this.player.z);
     this.r.camera.rotation.set((window as unknown as { __pitch?: number }).__pitch ?? 0, this.player.yaw, 0); // __pitch: test hook to look up or down
     this.r.torch.position.set(this.player.x, this.player.y + 0.3, this.player.z);
-    this.updateLamps();
+    this.updateLamps(dt);
     this.r.scene.render();
 
     if (this.minimapDirty && !this.ui.modalOpen) {
@@ -4133,36 +4150,67 @@ export class Game {
     // the lights of the pool only exist for a map that has lamps (switching them changes the shaders once, at the map change); a place under ground
     // has them as well, because a monster that glows (a ghost, a candle creep) may come into it at any time
     this.glowMonsters = monsters;
-    for (const light of this.r.lamps) light.setEnabled(sources.length > 0 || monsters);
+    this.lampSlots = this.r.lamps.map(() => ({ lamp: null, level: 0 }));
+    this.enableLampLights();
+  }
+
+  private enableLampLights(): void {
+    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0;
+    for (const light of this.r.lamps) light.setEnabled(on);
   }
 
   /**
-   * Hands the pool of lamp lights to the lamps nearest to the party, each fading in over its last few units of reach so that no
-   * lamp pops when the choice changes. By day outside they add nothing; underground and at night they do.
+   * Hands the pool of lamp lights to the lamps nearest to the party. A light stays with its lamp while the lamp is among the nearest, and the lamps
+   * fade in and out over `LAMP_FADE` (32nd playtest, point 2): a lamp that moves out of the nearest few dims where it is, and the next one waits for
+   * the free light and then fades in, instead of one popping off and the other on in a single frame. By day outside they add nothing; underground and at night they do.
    */
-  private updateLamps(): void {
-    if (this.lamps.length === 0 && !this.glowMonsters) return;
+  private updateLamps(dt: number): void {
+    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
     const { x, z } = this.player;
     // the monsters that glow carry their light with them: they are lamps that move
     const carried: LampSource[] = this.glowMonsters
-      ? this.monsters.glowing(this.glowModels).map((g) => ({ ...MONSTER_GLOW.get(g.defId)!, x: g.x, y: g.y, z: g.z }))
+      ? this.monsters.glowing(this.glowModels).map((g) => ({ ...MONSTER_GLOW.get(g.defId)!, x: g.x, y: g.y, z: g.z, key: `m:${g.uid}` }))
       : [];
-    const near = [...this.lamps, ...carried]
+    const near = [...this.lamps, ...this.lootLamps, ...carried]
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
       .filter((e) => e.d < LAMP_REACH)
-      .sort((a, b) => a.d - b.d);
+      .sort((a, b) => a.d - b.d)
+      .slice(0, this.lampSlots.length);
+    const step = Math.min(dt, 0.1) / LAMP_FADE;
+    for (const slot of this.lampSlots) {
+      if (!slot.lamp) continue;
+      const key = slot.lamp.key;
+      const e = near.find((n) => n.lamp.key === key);
+      if (e) {
+        slot.lamp = e.lamp;
+        const target = Math.min(1, (LAMP_REACH - e.d) / 4);
+        slot.level = slot.level < target ? Math.min(target, slot.level + step) : Math.max(target, slot.level - step);
+      } else {
+        slot.level -= step;
+        if (slot.level <= 0) slot.lamp = null;
+      }
+    }
+    for (const e of near) {
+      if (this.lampSlots.some((s) => s.lamp?.key === e.lamp.key)) continue;
+      const free = this.lampSlots.find((s) => !s.lamp);
+      if (free) {
+        free.lamp = e.lamp;
+        free.level = 0;
+      }
+    }
     this.r.lamps.forEach((light, i) => {
-      const e = near[i];
-      if (!e) {
+      const slot = this.lampSlots[i];
+      if (!slot?.lamp || slot.level <= 0) {
         light.intensity = 0;
         return;
       }
-      light.position.set(e.lamp.x, e.lamp.y, e.lamp.z);
-      light.diffuse.set(e.lamp.color[0], e.lamp.color[1], e.lamp.color[2]);
-      light.range = e.lamp.range ?? LAMP_RANGE;
-      light.intensity = (e.lamp.intensity ?? LAMP_INTENSITY) * need * Math.min(1, (LAMP_REACH - e.d) / 4);
+      const lamp = slot.lamp;
+      light.position.set(lamp.x, lamp.y, lamp.z);
+      light.diffuse.set(lamp.color[0], lamp.color[1], lamp.color[2]);
+      light.range = lamp.range ?? LAMP_RANGE;
+      light.intensity = (lamp.intensity ?? LAMP_INTENSITY) * need * slot.level;
     });
   }
 
