@@ -6,6 +6,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import { hash2 } from "../core/noise";
 import { QUEST_PROP } from "../data/quest-table";
+import { heapGone } from "../actions/registry";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { hasRoundWalls, roundCorners, ROUND_ITEM, type RoundCorner } from "../interiors/roundCorners";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
@@ -433,6 +434,8 @@ export class InteriorView {
       const h = hash2(0x51, a.x, a.y) >>> 0;
       // a key or key card that has been taken is gone from its chest
       if (a.kind === "treasure" && typeof a.params.quest === "string" && this.opened.has(a.uid)) continue;
+      // so is an emptied heap of treasure
+      if (heapGone(a, this.opened)) continue;
       // a themed place shows the old items of its style (a barrel, a bone pile, a banner) instead of a chest or well picked by chance
       const themed = themedProp(a, x, z, (this.faceOpen(map, a, h >>> 8) * 180) / Math.PI, this.staticInfo, this.opened, this.content ?? undefined);
       // a head of the ring that is not there leaves its cell empty

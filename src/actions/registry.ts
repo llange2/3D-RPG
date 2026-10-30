@@ -275,6 +275,17 @@ export function isSpent(a: { uid: string; kind: ActionKind; params: Record<strin
   return ACTION_DEFS[a.kind].persistence === "once" && opened.has(a.uid);
 }
 
+/** The old item of a heap of treasure ("Treasure"): the chest that is not a chest. */
+export const TREASURE_HEAP = 4;
+
+/**
+ * A heap of treasure that has been emptied (also one that held nothing: "The chest is empty.") is gone: it leaves its cell, which the party can
+ * walk over again. Chests, barrels and the rest stay where they stand.
+ */
+export function heapGone(a: { uid: string; kind: ActionKind; params: Record<string, unknown> }, opened: ReadonlySet<string>): boolean {
+  return a.kind === "treasure" && Number(a.params.chest) === TREASURE_HEAP && isSpent(a, opened);
+}
+
 /** Steps a spear or guillotine trap needs to reload (the old game: 8 seconds), campaign and generated worlds alike. */
 export const TRAP_RELOAD_STEPS = 8;
 

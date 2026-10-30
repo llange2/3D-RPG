@@ -6,7 +6,7 @@ import type { CampaignMapModel } from "../campaign/model";
 import { crossesSlab, slabBetween, stepFacing, type SlabMap } from "../campaign/slabs";
 import { CAMPAIGN_START, facingOfRotation, mapSlugOf, type TrapKind } from "../campaign/types";
 import { CampaignView } from "../render/campaignView";
-import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, validateContent } from "../actions";
+import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, heapGone, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, validateContent } from "../actions";
 import { resolveAction, type ActionContext, type Effect } from "../actions/handlers";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { AudioManager } from "../audio/audio";
@@ -22,12 +22,13 @@ import { inEndRoom } from "../interiors/endRoom";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
 import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
 import { ChunkManager } from "../render/chunkManager";
-import { VIEW_DISTANCES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
+import { LAMP_RANGE, VIEW_DISTANCES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
 import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
+import { CRYSTAL_LAMPS, crystalLamps, lampSource, type LampKind, type LampSource } from "../render/lamps";
 import { cellCenterX, cellCenterZ } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, readModelSet, registryFile, storeModelSet, takeResume, type ModelSet } from "../render/modelSet";
@@ -202,22 +203,18 @@ const TORCH = { range: 13.5, intensity: 1.26 };
 const TORCH_LIT = { range: 25, intensity: 1.465 };
 /**
  * Map objects of the campaign that give light (their item numbers): where the old game only drew them, they light their
- * surroundings here, about one cell around (`LAMP_RANGE` is set in the engine). `y` is the height of the light.
+ * surroundings here, about one cell around (`LAMP_RANGE` is set in the engine), the crystals further (`render/lamps.ts`, which also lights the
+ * crystals of generated places). `y` is the height of the light.
  */
-const LAMPS: Record<number, { y: number; color: [number, number, number] }> = {
+const LAMPS: Record<number, LampKind> = {
   76: { y: 3.2, color: [1, 0.78, 0.45] }, // Rustic lantern, hangs from the ceiling
   71: { y: 1.4, color: [1, 0.6, 0.3] }, // Abandoned fireplace
   121: { y: 1.2, color: [0.55, 0.7, 1] }, // Magic flames
+  ...CRYSTAL_LAMPS,
 };
 /** Lamps farther from the party than this are ignored (units); the pool serves the nearest ones. */
 const LAMP_REACH = 18;
 const LAMP_INTENSITY = 1.7;
-interface LampSource {
-  x: number;
-  y: number;
-  z: number;
-  color: [number, number, number];
-}
 /** The noise of a trap going off. The pit has none here: its stones fall once, when it opens (`useAction`); the magic trap sounds like its element's spell. */
 const TRAP_SOUND: Record<string, number> = { spring: 9036, guillotine: 9042, steal_gold: 9038 };
 
@@ -280,21 +277,24 @@ export class Game {
   /** The painted ground tiles of the flat mode; null when they are not built, and the ground stays 3D then. */
   private flatTiles: FlatTileSet | null = null;
 
-  static async create(canvas: HTMLCanvasElement): Promise<Game> {
+  /** `progress` is told how far the start is (0 to 1), for the message that stands in until the first screen. */
+  static async create(canvas: HTMLCanvasElement, progress?: (share: number) => void): Promise<Game> {
     const g = new Game();
-    await g.init(canvas);
+    await g.init(canvas, progress);
+    progress?.(1);
     return g;
   }
 
   // ---------------------------------------------------------------- setup
 
-  private async init(canvas: HTMLCanvasElement): Promise<void> {
+  private async init(canvas: HTMLCanvasElement, progress?: (share: number) => void): Promise<void> {
     // before any chunk is built: the terrain heights and the party's eyes depend on whether the overworld is flat (tile models)
     // generated levels are always flat: the tile models (mountains, woods) are made for level ground, rolling terrain was dropped
     this.tileModels = true;
     setTileModels(this.tileModels);
     this.viewDistance = readViewDistance(this.settings.viewDistance);
     this.r = createRenderer(canvas, this.settings.resolution);
+    progress?.(0.05);
     this.audio.enableButtonSounds();
     this.audio.setMusicVolume(this.settings.music ? MUSIC_VOLUME : 0);
     this.audio.sfxVolume = this.settings.sfx ? SFX_VOLUME : 0;
@@ -302,10 +302,12 @@ export class Game {
     this.textures = new TextureCache(this.r.scene);
     this.terrain = new TerrainMaterials(this.r.scene, this.textures);
     this.flatTiles = await this.loadFlatTiles();
+    progress?.(0.1);
     this.sky = new SkyDome(this.r.scene, this.textures);
     this.props = new PropRenderer(this.r.scene);
     this.projectiles = new Projectiles(this.props);
     const [staticInfo, monsterInfo] = await this.loadModelRegistries(readModelSet());
+    progress?.(0.15);
     // the model switch covers the ground too: the original set brings the full ground tiles of the old game, the reduced one the reduced tiles
     setUltraGround(this.modelSet === "original");
     this.staticInfo = staticInfo;
@@ -321,7 +323,7 @@ export class Game {
       this.minimapIcons = icons;
       this.minimapDirty = true;
     });
-    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", "poi_dungeon", "poi_cave", "poi_pyramid", "obj_loot", ...PROJECTILE_MODELS]);
+    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", "poi_dungeon", "poi_cave", "poi_pyramid", "obj_loot", ...PROJECTILE_MODELS], (share) => progress?.(0.15 + 0.8 * share));
     this.sceneInst = new SceneInstrumentation(this.r.scene);
     this.sceneInst.captureFrameTime = true;
 
@@ -742,7 +744,7 @@ export class Game {
       const actionAt = new Map<number, ActionInstance>();
       for (const a of content.actions) {
         actionAt.set(a.y * map.width + a.x, a);
-        if (blocksCell(a)) blocked.add(a.y * map.width + a.x);
+        if (blocksCell(a) && !heapGone(a, this.state.opened)) blocked.add(a.y * map.width + a.x);
       }
       this.chunks?.dispose();
       this.chunks = null;
@@ -754,7 +756,7 @@ export class Game {
       this.syncQuestBlocks();
       this.enc = createEncounter();
       this.interiorView.show(map, content, this.state.opened, this.state.broken);
-      this.setLamps([]);
+      this.setLamps(crystalLamps(content));
       this.sky.setVisible(map.theme.open);
       this.spawnInteriorMonsters();
       this.spawnPersonas();
@@ -1932,6 +1934,11 @@ export class Game {
     }
     // the key or key card in its chest is gone from the map once it is taken; the runes of the gongs appear with the last gong
     if ((a.kind === "treasure" && outcome.consumed && typeof a.params.quest === "string") || (a.kind === "gong" && outcome.consumed)) this.interiorView.refreshObjects();
+    // an emptied heap of treasure leaves its cell, which the party may then walk over
+    if (this.interior && !this.interior.campaign && heapGone(a, this.state.opened)) {
+      this.interior.blocked.delete(a.y * this.interior.map.width + a.x);
+      this.interiorView.refreshObjects();
+    }
     await this.applyEffects(a, outcome.effects);
     this.busy = false;
     this.refresh();
@@ -4086,7 +4093,7 @@ export class Game {
       const lamp = c.i === undefined ? undefined : LAMPS[c.i];
       if (!lamp) continue;
       const l = model.toLocal(x, y);
-      out.push({ x: cellCenterX(l.x), y: lamp.y, z: cellCenterZ(l.y), color: lamp.color });
+      out.push(lampSource(lamp, cellCenterX(l.x), cellCenterZ(l.y)));
     }
     return out;
   }
@@ -4118,7 +4125,8 @@ export class Game {
       }
       light.position.set(e.lamp.x, e.lamp.y, e.lamp.z);
       light.diffuse.set(e.lamp.color[0], e.lamp.color[1], e.lamp.color[2]);
-      light.intensity = LAMP_INTENSITY * need * Math.min(1, (LAMP_REACH - e.d) / 4);
+      light.range = e.lamp.range ?? LAMP_RANGE;
+      light.intensity = (e.lamp.intensity ?? LAMP_INTENSITY) * need * Math.min(1, (LAMP_REACH - e.d) / 4);
     });
   }
 

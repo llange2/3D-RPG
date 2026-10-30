@@ -51,6 +51,8 @@ interface Plan {
 function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): InteriorMap {
   const { b, rooms, hall } = plan;
   const quest = ctx.dungeon?.quest;
+  // the maze has its walls one cell thick and keeps its straights short while it is grown (`maze`); every other layout is bent here
+  if (ctx.dungeon?.layout !== "dungeon_3") bendLongCorridors(b);
   rooms.forEach((rects, id) => {
     const r = rects[0]!;
     if (id === 0 || r === hall || r.w < 7 || r.h < 7 || !rng.chance(350)) return;
@@ -285,6 +287,7 @@ function maze(rng: Rng, ctx: BuildContext): InteriorMap {
     carve(cx + dx, cy + dy);
     stack.push((cy + dy) * N + cx + dx);
   }
+  shortenMazeStraights(b, ox, oy, R);
   // the rooms: the entrance at the bottom, the hall of quest 2 at the top, a few small ones between; each lies on the cells of the maze
   const quest = ctx.dungeon?.quest;
   const entrance = entranceRect(rng, ctx, ox + (R >> 1), oy + R - 8);
@@ -309,16 +312,20 @@ function maze(rng: Rng, ctx: BuildContext): InteriorMap {
   const barriers: { x: number; y: number }[] = [];
   const spawnZone = (x: number, y: number) => Math.abs(x - (entrance.x + (entrance.w >> 1))) + Math.abs(y - (entrance.y + entrance.h)) < 14;
   const candidates: { x: number; y: number }[] = [];
+  /** The straight the wall cell would belong to once it is open: the corridor cells on both sides of it along the way it opens. */
+  const joinedStraight = (x: number, y: number): number => straightThrough(b, x, y, b.isFloor(x - 1, y));
   for (let y = oy + 1; y < oy + R - 1; y++) {
     for (let x = ox + 1; x < ox + R - 1; x++) {
       if (b.get(x, y) !== CELL.SOLID) continue;
       const straight = (b.isFloor(x - 1, y) && b.isFloor(x + 1, y) && !b.isFloor(x, y - 1) && !b.isFloor(x, y + 1)) || (b.isFloor(x, y - 1) && b.isFloor(x, y + 1) && !b.isFloor(x - 1, y) && !b.isFloor(x + 1, y));
-      // an even-even cell is a post between four walls; only the cells between two corridors count
-      if (straight && (x - ox) % 2 !== (y - oy) % 2) candidates.push({ x, y });
+      // an even-even cell is a post between four walls; only the cells between two corridors count, and not where the opening would join two straights into a long one
+      if (straight && (x - ox) % 2 !== (y - oy) % 2 && joinedStraight(x, y) <= MAX_STRAIGHT) candidates.push({ x, y });
     }
   }
   const picked = rng.shuffle(candidates).slice(0, Math.floor(candidates.length / 9));
   picked.forEach((c, i) => {
+    // two openings on one line may have joined their straights since the candidates were counted
+    if (joinedStraight(c.x, c.y) > MAX_STRAIGHT) return;
     b.set(c.x, c.y, CELL.FLOOR);
     // a third of the opened walls become rune barriers, at most eight, none near the entrance; rune cells stay single (no two side by side)
     if (i % 3 === 0 && barriers.length < 8 && !spawnZone(c.x, c.y) && !barriers.some((q) => Math.abs(q.x - c.x) + Math.abs(q.y - c.y) < 4)) barriers.push(c);
@@ -399,6 +406,177 @@ function classic(rng: Rng, ctx: BuildContext): InteriorMap {
 
   carveSpurs(b, rng, rng.range(3, 6));
   return finishDungeon(rng, ctx, { b, rooms: placed, ...(hall ? { hall, endNear: hall } : {}) });
+}
+
+/** The longest straight stretch of corridor a dungeon keeps (the user's rule: nobody looks down a tube of more than eight cells). */
+export const MAX_STRAIGHT = 8;
+
+interface Stretch {
+  /** True along a row (x runs), false along a column. */
+  row: boolean;
+  /** The row (or column) the stretch lies on. */
+  line: number;
+  from: number;
+  to: number;
+}
+
+/** The straight stretches of corridor cells (floor outside every room) longer than `max` on one row or column, between `from` and `to`. */
+function stretchesOnLine(b: Builder, row: boolean, line: number, from: number, to: number, max: number): Stretch[] {
+  const out: Stretch[] = [];
+  let start = from;
+  for (let i = from; i <= to + 1; i++) {
+    if (i <= to) {
+      const [x, y] = row ? [i, line] : [line, i];
+      if (b.isFloor(x, y) && b.roomOf[b.idx(x, y)]! < 0) continue;
+    }
+    if (i - start > max) out.push({ row, line, from: start, to: i - 1 });
+    start = i + 1;
+  }
+  return out;
+}
+
+/**
+ * Cuts every straight stretch of corridor longer than `max` with the way `cut` finds (it returns whether it made one). Stretches that are
+ * found by one sweep over the map are worked off one by one, the pieces a cut leaves are looked at again, and a last sweep catches what
+ * a cut made on its way (a bend that touched another corridor). A stretch where `cut` finds no way stays.
+ */
+function cutLongStretches(b: Builder, max: number, cut: (s: Stretch) => boolean): void {
+  const failed = new Set<string>();
+  for (let round = 0; round < 4; round++) {
+    const work: Stretch[] = [];
+    for (const row of [true, false]) for (let line = 0; line < (row ? b.height : b.width); line++) work.push(...stretchesOnLine(b, row, line, 0, (row ? b.width : b.height) - 1, max));
+    if (work.length === 0) return;
+    let progress = false;
+    for (let steps = 0; work.length > 0 && steps < 2000; steps++) {
+      const s = work.pop()!;
+      // earlier cuts may have split it already
+      for (const run of stretchesOnLine(b, s.row, s.line, s.from, s.to, max)) {
+        const key = `${run.row}:${run.line}:${run.from}:${run.to}`;
+        if (failed.has(key)) continue;
+        if (!cut(run)) {
+          failed.add(key);
+          continue;
+        }
+        progress = true;
+        work.push(...stretchesOnLine(b, run.row, run.line, run.from, run.to, max));
+      }
+    }
+    if (!progress) return;
+  }
+}
+
+/** The places along a stretch to cut it at, the best first: pieces of at most `max` cells on both sides if the stretch is short enough for that, else `max` cells from its start. */
+function cutSpots(s: Stretch, max: number, allowed: (p: number) => boolean = () => true): number[] {
+  const length = s.to - s.from + 1;
+  const target = length <= 2 * max + 1 ? s.from + (length >> 1) : s.from + max;
+  const spots: number[] = [];
+  for (let p = s.from + 1; p < s.to; p++) if (allowed(p)) spots.push(p);
+  return spots.sort((p, q) => Math.abs(p - target) - Math.abs(q - target) || p - q);
+}
+
+/**
+ * Breaks up every straight stretch of corridor longer than `max` with a bend: one cell of the stretch is walled up and the corridor goes round it
+ * through the rock beside it (three cells, a step to the side and back). The stretch is then two shorter ones and the party sees a wall at its end
+ * instead of a tube. A bend needs solid rock on its side, so one that would touch another passage is only made where nothing else fits; a stretch
+ * where none fits stays.
+ */
+function bendLongCorridors(b: Builder, max = MAX_STRAIGHT): void {
+  cutLongStretches(b, max, (s) => {
+    // along the stretch `u`, across it `v`: the same code serves rows and columns
+    const rock = (u: number, v: number) => (s.row ? b.get(u, s.line + v) : b.get(s.line + v, u)) === CELL.SOLID;
+    const put = (u: number, v: number, value: number) => (s.row ? b.set(u, s.line + v, value) : b.set(s.line + v, u, value));
+    /** Corridor floor: what the stretch is made of. */
+    const way = (u: number, v: number) => (s.row ? b.isFloor(u, s.line + v) && b.roomOf[b.idx(u, s.line + v)]! < 0 : b.isFloor(s.line + v, u) && b.roomOf[b.idx(s.line + v, u)]! < 0);
+    const spots = cutSpots(s, max);
+    // first with rock all round the bend, then also where it touches another passage (the stretch is cut either way)
+    for (const strict of [true, false]) {
+      for (const p of spots) {
+        const first = (p + s.line) & 1 ? 1 : -1;
+        for (const d of [first, -first]) {
+          // two corridors side by side (two L's laid over each other) are one wide stretch: both are walled up, the bend goes round them on the free side
+          for (const wide of [false, true]) {
+            if (wide && !([-1, 0, 1].every((k) => way(p + k, -d)))) continue;
+            // no passage leaves the stretch at the cell(s) that are walled up
+            const clear = [-1, 0, 1].every((k) => rock(p + k, d)) && rock(p, wide ? -2 * d : -d) && (!strict || ([-2, 2].every((k) => rock(p + k, d)) && [-1, 0, 1].every((k) => rock(p + k, 2 * d))));
+            if (!clear) continue;
+            for (const k of [-1, 0, 1]) put(p + k, d, CELL.FLOOR);
+            put(p, 0, CELL.SOLID);
+            if (wide) put(p, -d, CELL.SOLID);
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  });
+}
+
+/** The length of the straight that a cell would be on along a row or a column: itself and the corridor cells (floor outside every room) in a line on both sides. */
+function straightThrough(b: Builder, x: number, y: number, row: boolean): number {
+  let n = 1;
+  for (const sign of [1, -1]) {
+    for (let k = 1; ; k++) {
+      const cx = row ? x + sign * k : x;
+      const cy = row ? y : y + sign * k;
+      if (!b.isFloor(cx, cy) || b.roomOf[b.idx(cx, cy)]! >= 0) break;
+      n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * Takes the long straights out of a fresh maze (a perfect one: a tree of cells). A connector in the middle of a straight is walled up, which cuts
+ * the maze in two, and the nearest wall between the two halves that makes no long straight itself is opened instead: the maze stays whole and
+ * has the same number of passages, only the line of sight ends at the new wall. A straight where no such wall exists stays.
+ */
+function shortenMazeStraights(b: Builder, ox: number, oy: number, size: number, max = MAX_STRAIGHT): void {
+  /** A connector lies between two cells of the maze: one of its two coordinates is even (counted from the corner of the maze), the other odd. */
+  const isConnector = (x: number, y: number) => ((x - ox) % 2 === 0) !== ((y - oy) % 2 === 0);
+  cutLongStretches(b, max, (s) => {
+    for (const p of cutSpots(s, max, (q) => (s.row ? isConnector(q, s.line) : isConnector(s.line, q))).slice(0, 4)) {
+      const [cx, cy] = s.row ? [p, s.line] : [s.line, p];
+      b.set(cx, cy, CELL.SOLID);
+      // flood both sides of the cut at the same pace until one is whole: the smaller half costs the least, and the walls on its edge that have floor on the far side are the ways back
+      const label = new Uint8Array(b.width * b.height);
+      const sides = [s.row ? b.idx(cx - 1, cy) : b.idx(cx, cy - 1), s.row ? b.idx(cx + 1, cy) : b.idx(cx, cy + 1)].map((start, k) => {
+        label[start] = k + 1;
+        return { queue: [start], head: 0, edge: [] as { x: number; y: number; far: number }[] };
+      });
+      let small: (typeof sides)[number] | null = null;
+      for (let turn = 0; !small; turn++) {
+        const side = sides[turn & 1]!;
+        if (side.head >= side.queue.length) {
+          small = side;
+          break;
+        }
+        const x = side.queue[side.head]! % b.width;
+        const y = Math.floor(side.queue[side.head++]! / b.width);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const [nx, ny] = [x + dx, y + dy];
+          if (b.isFloor(nx, ny)) {
+            if (!label[b.idx(nx, ny)]) {
+              label[b.idx(nx, ny)] = (turn & 1) + 1;
+              side.queue.push(b.idx(nx, ny));
+            }
+          } else if (b.get(nx, ny) === CELL.SOLID && isConnector(nx, ny) && nx > ox && ny > oy && nx < ox + size - 1 && ny < oy + size - 1 && b.isFloor(nx + dx, ny + dy)) side.edge.push({ x: nx, y: ny, far: b.idx(nx + dx, ny + dy) });
+        }
+      }
+      // the nearest wall on its edge that leads out of it (not the connector that was cut) and makes a short straight
+      let best: { x: number; y: number; d: number } | null = null;
+      for (const e of small.edge) {
+        if (label[e.far] === label[small.queue[0]!] || (e.x === cx && e.y === cy)) continue;
+        const d = Math.abs(e.x - cx) + Math.abs(e.y - cy);
+        if ((!best || d < best.d) && straightThrough(b, e.x, e.y, (e.x - ox) % 2 === 0) <= max) best = { x: e.x, y: e.y, d };
+      }
+      if (best) {
+        b.set(best.x, best.y, CELL.FLOOR);
+        return true;
+      }
+      b.set(cx, cy, CELL.FLOOR);
+    }
+    return false;
+  });
 }
 
 const SPUR_DIRS: readonly (readonly [number, number])[] = [

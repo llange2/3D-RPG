@@ -33,12 +33,14 @@ const OPPOSITE: Record<Side, Side> = { N: "S", E: "W", S: "N", W: "E" };
 const SIDES: Record<CornerSide, [Side, Side]> = { NE: ["N", "E"], SE: ["S", "E"], SW: ["S", "W"], NW: ["N", "W"] };
 
 /**
- * The turn that brings a model to a corner, found by looking at them in the browser: the inner model fills its south-east corner by default, the
- * outer one cuts off its north-west corner (the glTF files mirror the OBJ of the old game across the z axis, and the outer model is the other
- * half of the same circle). A quarter turn about the vertical axis moves a corner one step round.
+ * The turn that brings a model to a corner. Both models are halves of the same circle (its centre in the north-east corner of the cell, radius one
+ * cell) and, as Babylon mirrors a glTF model across the x axis, both have the arc in the south-west corner by default: the inner model fills the
+ * crescent there, the outer one has it cut off. A quarter turn about the vertical axis (a compass bearing, clockwise) moves a corner one step round.
+ * The first version turned the inner model's arc to the south-east and the outer one's to the north-west (30th playtest, point 7: every round corner
+ * was a quarter turn off, the inner ones one way and the outer ones the other).
  */
-export function cornerYaw(corner: CornerSide, kind: CornerKind = "inner"): number {
-  return ({ SE: 0, SW: 90, NW: 180, NE: 270 }[corner] + (kind === "outer" ? 180 : 0)) % 360;
+export function cornerYaw(corner: CornerSide): number {
+  return { SW: 0, NW: 90, NE: 180, SE: 270 }[corner];
 }
 
 /** Does the cell belong to a cyber map whose walls are rounded? */
@@ -70,7 +72,7 @@ export function roundCorners(map: InteriorMap): RoundCorner[] {
         if (cell(a) === near && cell(b) === near && diag(a, b) === near && cell(oa) === far && cell(ob) === far && diag(a, ob) === near && diag(b, oa) === near) found.push(corner);
       }
       // two corners in one cell (a pillar, a diagonal) stay square
-      if (found.length === 1) out.push({ kind: inner ? "inner" : "outer", x, y, corner: found[0]!, yaw: cornerYaw(found[0]!, inner ? "inner" : "outer") });
+      if (found.length === 1) out.push({ kind: inner ? "inner" : "outer", x, y, corner: found[0]!, yaw: cornerYaw(found[0]!) });
     }
   }
   return out;

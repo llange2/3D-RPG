@@ -1,5 +1,6 @@
 import { Game } from "./game";
 import { runBenchmark } from "./bench";
+import { bootDone, bootProgress } from "./boot";
 import { interiorFingerprints } from "../actions/fingerprint";
 import { chunkHash, World } from "../world/world";
 import { installCursor } from "../ui/cursor";
@@ -11,7 +12,8 @@ import { parseWorldSize, type WorldSize } from "../world/types";
 
 async function main(): Promise<void> {
   const params = new URLSearchParams(location.search);
-  document.getElementById("boot")?.remove();
+  // the start message of index.html stays up until the game can show a screen of its own (the title or the loading picture)
+  bootProgress(0);
   installCursor();
   preloadImages(["ui/scroll.webp"]);
   // the 78 spell pictures are one sheet: fetched and decoded now, so that the spell window opens with every plate in place
@@ -25,7 +27,7 @@ async function main(): Promise<void> {
   canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;outline:none;touch-action:none";
   document.body.appendChild(canvas);
 
-  const game = await Game.create(canvas);
+  const game = await Game.create(canvas, bootProgress);
   const overlay = document.createElement("pre");
   overlay.style.cssText = "position:fixed;left:8px;bottom:8px;margin:0;padding:6px 8px;background:#000a;color:#cfe;font:12px/1.35 monospace;pointer-events:none;white-space:pre;z-index:50";
   if (params.get("debug") === "1") {
@@ -87,6 +89,7 @@ async function main(): Promise<void> {
   };
 
   // the model switch in the menu reloads the page; the game continues where it was saved
+  bootDone();
   if (await game.resumeAfterReload()) return;
 
   const seed = params.get("seed") ?? "";

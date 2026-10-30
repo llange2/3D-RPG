@@ -7,7 +7,7 @@ import { generateContent } from "./rules";
 import type { MapContent } from "./types";
 
 export * from "./types";
-export { ACTION_DEFS, ACTION_KINDS, SERVICES, actionTrigger, blocksCell, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, kindForLegacyId, type ServiceKind } from "./registry";
+export { ACTION_DEFS, ACTION_KINDS, SERVICES, actionTrigger, blocksCell, heapGone, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, kindForLegacyId, type ServiceKind } from "./registry";
 export { generateContent } from "./rules";
 export { validateContent } from "./validate";
 export { innStart, portalStart } from "./startSpot";
