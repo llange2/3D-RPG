@@ -9,11 +9,13 @@ import { generateCave } from "./cave";
 import { generateDungeon } from "./dungeon";
 import { COINS_PER_CASTLE, planDungeon } from "./dungeonPlan";
 import { generateCastle } from "./castle";
+import { generateShowcase, SHOWCASE_ID } from "./showcase";
 import { generateSpaceship } from "./spaceship";
 import { generateTown } from "./town";
 import type { InteriorMap } from "./types";
 
 export * from "./types";
+export { SHOWCASE_ID, SHOWCASE_NAME } from "./showcase";
 export { analyzeTopology, type Topology, type Mouth } from "./topology";
 export { checkKeyChain, planDungeon } from "./dungeonPlan";
 
@@ -22,6 +24,7 @@ export { checkKeyChain, planDungeon } from "./dungeonPlan";
  * POI twice, on any machine, gives the same map.
  */
 export function generateInterior(world: World, poi: Poi, floor = 0): InteriorMap {
+  if (poi.id === SHOWCASE_ID) return generateShowcase();
   const rng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor);
   const themeRng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "theme");
   const dungeon = planDungeon(world, poi) ?? undefined;

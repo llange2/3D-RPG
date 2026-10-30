@@ -518,12 +518,7 @@ export class UI {
         const top = (window.innerHeight - TITLE_IMAGE.h * scale) / 2;
         el.style.setProperty("--rock-y", `${Math.round(top + TITLE_IMAGE.h * scale * TITLE_ROCK_Y)}px`);
       };
-      const el = h(
-        "div",
-        { class: "title" },
-        menu,
-        h("div", { class: "credit", text: "Move: W A S D / arrow keys   Turn: Q E / arrows   Sidestep: Ctrl + arrows   Attack: Space   Spells: F   Inventory: I   Mascot: 5   Rest: R   Map: M" }),
-      );
+      const el = h("div", { class: "title" }, menu);
       // Esc steps back from the second page; the title is no modal, so it has to listen itself
       const onKey = (e: KeyboardEvent) => {
         if (e.key === "Escape" && page !== "main") show("main");

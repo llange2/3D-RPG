@@ -290,7 +290,6 @@ html.loading-on #game-cursor { display: none; }
 .title .opt { display: flex; justify-content: space-between; align-items: center; gap: 18px; text-align: left; }
 .title .opt.sep { margin-top: 10px; }
 .title .opt .note { font-family: var(--font-body); font-weight: 400; font-size: 14px; opacity: 0.8; text-align: right; }
-.title .credit { position: absolute; bottom: 10px; font-size: 13px; opacity: 0.6; text-align: center; padding: 0 12px; }
 
 /* ---------- loading screen ---------- */
 /* the old game's picture fills the screen, its percentage sits at 86 % of the height (action_handler.py, toggle_loading_screen) */

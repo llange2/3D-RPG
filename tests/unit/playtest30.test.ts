@@ -8,7 +8,7 @@ import { RULE_SETS } from "../../src/data/rules";
 import { generateInterior } from "../../src/interiors";
 import { MAX_STRAIGHT } from "../../src/interiors/dungeon";
 import { longestCorridor } from "../../src/interiors/topology";
-import { CRYSTAL_LAMPS, crystalLamps } from "../../src/render/lamps";
+import { ITEM_LAMPS as CRYSTAL_LAMPS, crystalLamps } from "../../src/render/lamps";
 import { cellCenterX, cellCenterZ } from "../../src/render/interiorMesher";
 import { themedProp, WALL_HUNG } from "../../src/render/interiorProps";
 import { World } from "../../src/world/world";
@@ -84,7 +84,7 @@ describe("30th playtest", () => {
     expect(heapGone(barrel, all)).toBe(false);
   });
 
-  it("lights every crystal of a place in its own colour, and nothing else", { timeout: 120_000 }, () => {
+  it("lights every crystal of a place in its own colour", { timeout: 120_000 }, () => {
     const world = new World("jade-hold-129", "default");
     const place = world.allPois().find((p) => p.name === "Catacombs of Varvaa")!;
     const map = generateInterior(world, place, 0);
@@ -94,7 +94,8 @@ describe("30th playtest", () => {
     const lamps = crystalLamps(content);
     for (const a of crystals) expect(lamps.some((l) => l.x === cellCenterX(a.x) && l.z === cellCenterZ(a.y)), a.uid).toBe(true);
     expect(lamps.length).toBeGreaterThanOrEqual(crystals.length);
-    for (const l of lamps) {
+    // (the runes, wells and the like of the place glow as well since the 31st playtest, each in its own colour: the crystals' cells are the ones that count here)
+    for (const l of lamps.filter((l) => crystals.some((a) => l.x === cellCenterX(a.x) && l.z === cellCenterZ(a.y)))) {
       expect(l.color).toEqual(CRYSTAL_LAMPS[117]!.color);
       // 1 to 2 cells around (a cell is 3 units), and strong
       expect(l.range).toBeGreaterThanOrEqual(6);

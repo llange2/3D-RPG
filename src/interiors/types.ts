@@ -187,6 +187,16 @@ export interface CastleLayout {
   keep: number[];
 }
 
+/** Where everything stands in the debug showcase (`interiors/showcase.ts`). Cells are grid cells. */
+export interface ShowcaseLayout {
+  /** Every monster of the table (`defId`) and every person (`persona`, the item number of the old game). */
+  monsters: { defId: number; x: number; y: number }[];
+  personas: { persona: number; x: number; y: number }[];
+  /** The old items that have a model (shown as decoration, `item`), and the models of the interior view that no item stands for. */
+  items: { item: number; x: number; y: number }[];
+  extras: { model: string; scale: number; x: number; y: number }[];
+}
+
 /** The spaceship under the pyramids (`interiors/spaceship.ts`): five sections side by side, the front one (0) is the control deck. */
 export interface SpaceshipLayout {
   sections: number;
@@ -233,6 +243,8 @@ export interface InteriorMap {
   castle?: CastleLayout;
   /** The spaceship under the pyramids: where its sections, tubes and airlocks are. */
   spaceship?: SpaceshipLayout;
+  /** The debug showcase (`interiors/showcase.ts`): every monster, person and object of the game, each on a cell of its own and without a function. */
+  showcase?: ShowcaseLayout;
   /** Optional per-cell look. `cell` holds, per cell, an index into `list`; generated maps do not use it. */
   styles?: { list: CellStyle[]; cell: Uint8Array };
 }

@@ -489,6 +489,8 @@ export class InteriorView {
       const height = wallHeightOf(map) / 2;
       for (const p of map.pillars ?? []) instances.push({ model: pillar, x: cellCenterX(p.x), y: 0, z: cellCenterZ(p.y), rotY: 0, scale: 1.5, scaleXYZ: [1.5, height, 1.5] });
     }
+    // the models of the debug showcase that no old item stands for, turned to look south at the party
+    for (const e of map.showcase?.extras ?? []) instances.push({ model: e.model, x: cellCenterX(e.x), y: 0, z: cellCenterZ(e.y), rotY: Math.PI, scale: e.scale });
     const flameModel = itemModelKey(MAGIC_FLAMES_ITEM);
     this.flames = flameModel ? instances.filter((p) => p.model === flameModel) : [];
     if (this.flames.length > 0) instances = instances.filter((p) => p.model !== flameModel);

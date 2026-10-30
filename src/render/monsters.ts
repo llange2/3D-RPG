@@ -79,6 +79,8 @@ export const monsterBoost = (mean?: number): number => (mean === undefined || me
 
 interface View {
   uid: string;
+  /** The model number the view was made for (a monster of the table, or a person from `PERSONA_BASE`). */
+  defId: number;
   holder: TransformNode;
   groups: AnimationGroup[];
   skeletons: Skeleton[];
@@ -248,6 +250,7 @@ export class MonsterRenderer {
     holder.position.set(x, y + lift, z);
     const view: View = {
       uid,
+      defId,
       holder,
       groups: entries.animationGroups,
       skeletons: entries.skeletons,
@@ -364,6 +367,18 @@ export class MonsterRenderer {
     const mid = ((minY + maxY) / 2) * v.holder.scaling.y;
     // a flyer's origin is already the middle of its body, so a shot goes there and not half a metre above
     return { x: v.to.x, y: v.to.y + (v.hovers ? mid : Math.min(2.2, Math.max(0.5, mid))), z: v.to.z };
+  }
+
+  /** Where the light of every living monster of these models hangs now: the middle of its body, over the cell it stands on (the glowing monsters, `MONSTER_LAMPS`). */
+  glowing(models: ReadonlySet<number>): { defId: number; x: number; y: number; z: number }[] {
+    const out: { defId: number; x: number; y: number; z: number }[] = [];
+    for (const v of this.views.values()) {
+      if (!models.has(v.defId) || v.dying !== null) continue;
+      const [, minY, , , maxY] = v.info.bounds;
+      const mid = ((minY + maxY) / 2) * v.holder.scaling.y;
+      out.push({ defId: v.defId, x: v.holder.position.x, y: v.holder.position.y + (v.hovers ? mid : Math.min(2.2, Math.max(0.5, mid))), z: v.holder.position.z });
+    }
+    return out;
   }
 
   attack(uid: string): void {
