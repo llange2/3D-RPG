@@ -61,7 +61,7 @@ import { World } from "../world/world";
 import { MinimapIcons } from "./minimapIcons";
 import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, type MapEvent, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend } from "./minimap";
 import { FACING_VEC, PlayerRig, type MoveDir } from "./player";
-import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode } from "./debug";
+import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode, teleportTargets } from "./debug";
 import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
 import { sellerParams } from "../data/talent-sellers";
@@ -3524,6 +3524,7 @@ export class Game {
         { label: "All talents", value: "talents" },
         { label: "Reveal map", value: "map", note: this.mode === "overworld" ? (this.state.campaign ? "150 tiles around" : "the whole world") : "this level" },
         { label: "Identify", value: "identify", note: this.mode === "overworld" ? "the nearest place" : "this place" },
+        ...(this.state.campaign ? [] : [{ label: "Teleport to Level", value: "teleport", note: "any town, cave, dungeon or castle" }]),
       ]);
       if (!choice) return false;
       this.audio.play(9001); // menu-selection, like every other menu click
@@ -3554,9 +3555,23 @@ export class Game {
         case "identify":
           await this.identifyPlace();
           break;
+        case "teleport":
+          if (await this.teleportToLevel()) return true;
+          break;
       }
       this.refresh();
     }
+  }
+
+  /** Debug: a list of every place of the world with its level; the party appears at the entrance of the one picked, whatever key it asks for. True when the party went. */
+  private async teleportToLevel(): Promise<boolean> {
+    const options: Option<string>[] = teleportTargets(this.world.allPois()).map(({ poi, kind }) => ({ label: `${kind}: ${poi.name}`, value: poi.id, note: `Level ${poi.tier}` }));
+    const id = await this.ui.choose("Teleport to Level", "The party appears at the entrance. Keys and key cards are not needed.", options);
+    const poi = id === null ? null : this.world.poiById(id);
+    if (!poi) return false;
+    this.audio.play(9041);
+    await this.openInterior(poi);
+    return true;
   }
 
   /** Debug: what the generator knows about the place the party is in, or about the closest one in the open country (`game/identify.ts`). */
