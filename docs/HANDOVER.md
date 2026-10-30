@@ -686,6 +686,8 @@ Tests in `tests/unit/playtest32.test.ts` (angepasst: `playtest7.test.ts` für di
 
 Offene Punkte: Das Licht eines Monsters hängt in seiner Körpermitte und beleuchtet vor allem die Umgebung; sehr dunkle Modelle (Top Jouster) wirken dadurch kaum selbstleuchtend. Der Kontaktbogen `npm run sheet:monsters` zeigte im Worktree nur Bäume (Kamera im Wald, Seed `test`); die Augenhöhe des Wizards wurde deshalb im Showcase gemessen.
 
+**Nachtrag zu Punkt 5 (Sitzung „bug_fix_30“):** Der Stiel lief auch mit `GRIP_Y` −0,88 noch durch die Hand. Die Axt sitzt jetzt mit `GRIP_Y` −0,95 und `GRIP_TWEAK.wpn_axe` (`render/equipment.ts`: `shift` [5, 0, 6] cm im Rahmen des Handgelenks, also nach vorn und zur Daumenseite, `turn` [−10, 0, −20]°) im Spalt zwischen Daumen und Zeigefinger, der Kopf steht über der Hand. Gefunden, indem Offset und Kippung im Showcase (Minotaurus 18/14) live an der Handtransformation verstellt wurden; die Pose ändert sich mit dem Idle-Clip, der Griff wurde an der Ruhepose eingestellt. `handTransform`/`holdInHand` nehmen den Tweak als letzten Parameter.
+
 ### Gemalte Kartensymbole für Orte, Ereignis und Ausgang (2026-10-24, kein `GEN_VERSION`)
 
 Der Nutzer lieferte `.ignore/mm_tiles.png` (6 Symbole × 5 Böden, transparenter Grund): Stadt, Burg, Dungeon/Höhle, Pyramide, Fragezeichen, Ausgang; Zeilen Wüste, Erde (braun, Berge), Schnee, Wald (grün, Bäume), Lava. Die Datei liegt jetzt in `tools/assets/sources/minimap/mm_tiles.png`; `build-minimap.ts` (`placeTiles`) schneidet die 30 Kacheln je nach Umriss aus (die Kacheln sind 108 bis 121 px groß, rundum Farbflecken), löscht alles, was nicht an der Kachel hängt, und skaliert auf 48 px.
