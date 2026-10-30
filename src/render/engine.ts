@@ -30,6 +30,8 @@ export interface Atmosphere {
 
 /** How many lamps (map objects that give light) can light the scene at once: the nearest ones to the party. */
 export const LAMP_LIGHTS = 2;
+/** The reach of a lamp's light in world units (a cell is 3), unless the lamp says otherwise. */
+export const LAMP_RANGE = 5;
 
 export interface Renderer {
   engine: Engine;
@@ -116,7 +118,7 @@ export function createRenderer(canvas: HTMLCanvasElement, resolution: Resolution
   const lamps = Array.from({ length: LAMP_LIGHTS }, (_, i) => {
     const lamp = new PointLight(`lamp${i}`, new Vector3(0, 3, 0), scene);
     lamp.intensity = 0;
-    lamp.range = 5;
+    lamp.range = LAMP_RANGE;
     lamp.setEnabled(false);
     return lamp;
   });

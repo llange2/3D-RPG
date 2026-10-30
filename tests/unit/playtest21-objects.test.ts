@@ -115,7 +115,7 @@ describe("the 21st playtest: map, debug menu and banners", () => {
   });
 
   it("hangs the banners on the wall: they are not turned by the half circle the standing glTF objects get", () => {
-    expect([...WALL_HUNG].sort()).toEqual([103, 104, 105]);
+    expect([...WALL_HUNG].sort()).toEqual([103, 104, 105, 125]);
     const banner = themedProp({ uid: "u#1", kind: "decor", x: 0, y: 0, params: { item: 103 } }, 0, 0, 90, {});
     expect(banner!.rotY).toBeCloseTo((90 * Math.PI) / 180, 6);
     // any other glTF object (not a banner and with a model of its own in the item table) is turned by 180 degrees

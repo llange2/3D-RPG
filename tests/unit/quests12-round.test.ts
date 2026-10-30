@@ -39,9 +39,12 @@ describe("the rounded corners of the spaceship", () => {
     expect(covered.has("1,1,W")).toBe(true);
     expect(covered.has("2,1,S")).toBe(true);
     expect(covered.has("1,2,E")).toBe(true);
-    expect(cornerYaw("SE")).toBe(0);
-    expect(cornerYaw("SW")).toBe(90);
-    expect(cornerYaw("SE", "outer")).toBe(180);
+    // the arc of both models lies in the south-west corner at yaw 0; a clockwise quarter turn moves it one corner on (30th playtest, point 7)
+    expect(cornerYaw("SW")).toBe(0);
+    expect(cornerYaw("NW")).toBe(90);
+    expect(cornerYaw("NE")).toBe(180);
+    expect(cornerYaw("SE")).toBe(270);
+    expect(corners.map((c) => c.yaw)).toEqual(corners.map((c) => cornerYaw(c.corner)));
   });
 
   it("keep the walls square where they do not run on straight, and in maps that are not cyber", () => {

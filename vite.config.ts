@@ -5,6 +5,11 @@ import { defineConfig } from "vite";
 const frozen = process.env.VITE_FROZEN === "1";
 
 export default defineConfig({
-  server: { port: Number(process.env.VITE_PORT ?? 5173), ...(frozen ? { hmr: false, watch: null } : {}) },
+  server: {
+    port: Number(process.env.VITE_PORT ?? 5173),
+    // the first visit would otherwise wait for the server to transform every module of the game one request at a time
+    warmup: { clientFiles: ["./src/game/main.ts"] },
+    ...(frozen ? { hmr: false, watch: null } : {}),
+  },
   build: { target: "es2022" },
 });

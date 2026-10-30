@@ -1,4 +1,5 @@
 import { gongsStruck, headFacing, ringHeadPresent } from "../actions/quests";
+import { WALL_HUNG_ITEMS } from "../actions/rules";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
 import { isGlbItem, itemModelKey, itemProp } from "./itemProps";
@@ -22,8 +23,11 @@ export const OWN_MODELS: Record<number, { model: string; scale: number }> = {
   88: { model: "obj_well_yellow", scale: 1.5 },
 };
 
-/** Old items that hang on a wall: the model's cloth lies a cell's wall distance behind its origin, so it is turned like the old game's, not like the standing GLB objects. */
-export const WALL_HUNG: ReadonlySet<number> = new Set([103, 104, 105]);
+/**
+ * Old items that hang on a wall (the banners and the moose king's carving): the model's cloth or plaque lies a cell's wall distance behind its origin,
+ * so it is turned like the old game's, not like the standing GLB objects. The carving floated in the room with its back to it (30th playtest, point 3).
+ */
+export const WALL_HUNG: ReadonlySet<number> = new Set(WALL_HUNG_ITEMS);
 
 /** Old items whose model has its working side (the lectern's sloping top) where the others have their back: turned by this many degrees on top of the rule above. */
 const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180 };

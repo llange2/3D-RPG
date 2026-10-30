@@ -99,5 +99,8 @@
  * lead into one spaceship of five sections with airlocks (`interiors/spaceship.ts`); 25 Quatloo coins and 15 silver skulls hide in the chests, Seth Squirm and his machines stand in a dungeon of level 2. Levels and attribute points of the end rooms (and the chalices of the control deck) lie in chalices: the party picks the one hero who gets them.
  * 28 = the layouts dungeon_1 (tube) and dungeon_2 (hub) are compact: 8 to 15 rooms on a 72 x 72 map, about three wall cells between rooms and no corridor longer than 9 cells
  * (the tube winds up as a snake or a spiral, the hub is a star of two rings round the hall).
+ * 29 = thirtieth playtest: no corridor of a dungeon is straight for more than eight cells (a stretch is cut by a bend round one cell of rock, the maze by swapping one of its
+ * connectors for a wall between the two halves it leaves; `bendLongCorridors`, `shortenMazeStraights`); the carving of the moose king (item 125) is a wall hanging, so it no
+ * longer counts as an object that blocks the cell in front of it.
  */
-export const GEN_VERSION = 28;
+export const GEN_VERSION = 29;

@@ -33,6 +33,9 @@ html.custom-cursor, html.custom-cursor * { cursor: none !important; }
   opacity: 0; filter: drop-shadow(0 1px 2px #000a);
 }
 #game-cursor.on { opacity: 1; }
+/* none while the loading screen is up (src/ui/loadingScreen.ts), neither the system pointer nor the game's own */
+html.loading-on, html.loading-on * { cursor: none !important; }
+html.loading-on #game-cursor { display: none; }
 
 #ui { position: fixed; inset: 0; pointer-events: none; user-select: none; }
 #ui .hud-hide { display: none !important; }

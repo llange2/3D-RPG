@@ -124,9 +124,11 @@ export class PropRenderer {
     return dark + (day - dark) * this.daylight;
   }
 
-  async preload(infos: Record<string, StaticModelInfo>, keys: string[]): Promise<void> {
+  /** `progress` is told the share that has arrived (0 to 1) after every model, for the start message. */
+  async preload(infos: Record<string, StaticModelInfo>, keys: string[], progress?: (share: number) => void): Promise<void> {
     this.addProcedural();
-    await Promise.all(keys.map((key) => this.load(key, infos[key])));
+    let done = 0;
+    await Promise.all(keys.map((key) => this.load(key, infos[key]).then(() => progress?.(++done / keys.length))));
   }
 
   private addProcedural(): void {

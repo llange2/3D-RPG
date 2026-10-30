@@ -27,11 +27,11 @@ export interface ContentContext {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** The banners hang on the wall (old items 103 to 105): the cell in front of one stays as free as it was. */
-const WALL_HUNG = [103, 104, 105];
+/** The banners (old items 103 to 105) and the carving of the moose king (125) hang on the wall: the cell in front of one stays as free as it was. */
+export const WALL_HUNG_ITEMS: readonly number[] = [103, 104, 105, 125];
 /** Actions that stand on their cell as an object, blocking it or not (a lore message is one only when it shows a statue or a person). */
 const isObject = (a: { kind: ActionKind; params: Record<string, unknown> }): boolean =>
-  a.kind === "lore" ? a.params.object !== undefined || a.params.persona !== undefined : a.kind === "decor" && WALL_HUNG.includes(Number(a.params.item)) ? false : ["decor", "treasure", "shrine", "fountain", "riddle", "gong", "lever", "head", "teleporter", "talent", "work", "portal"].includes(a.kind);
+  a.kind === "lore" ? a.params.object !== undefined || a.params.persona !== undefined : a.kind === "decor" && WALL_HUNG_ITEMS.includes(Number(a.params.item)) ? false : ["decor", "treasure", "shrine", "fountain", "riddle", "gong", "lever", "head", "teleporter", "talent", "work", "portal"].includes(a.kind);
 /** Cells between two banners on a wall, counting one banner (the old castles hang theirs every second or third cell). */
 const BANNER_SPACING = 3;
 /** Shortest stretch of straight wall that gets a banner, and the number of banners below which a castle hangs them closer together. */

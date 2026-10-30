@@ -50,6 +50,8 @@ export class LoadingScreen {
   async show(): Promise<void> {
     if (this.shown) return;
     this.shown = true;
+    // no pointer on the picture: it is nothing to click on, and the pointer would sit on the percentage
+    document.documentElement.classList.add("loading-on");
     this.value = 0;
     this.percent.textContent = "0%";
     // a screen that is still up or fading out from the last map keeps its picture, a second one would flash by
@@ -99,6 +101,7 @@ export class LoadingScreen {
     if (this.fade !== null) clearTimeout(this.fade);
     this.fade = setTimeout(() => {
       this.element.classList.remove("on");
+      document.documentElement.classList.remove("loading-on");
       this.fade = null;
     }, FADE_MS);
   }
