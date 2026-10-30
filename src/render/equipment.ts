@@ -21,7 +21,16 @@ export type Hand = "right" | "left";
  * Read off the models' profiles; a shield has none (it is strapped on with the old numbers). The axe's haft ran a third of its length out behind the Minotaur's fist
  * at -0.4 (32nd playtest, point 5): it is gripped at its end now, the haft ends in the hand.
  */
-export const GRIP_Y: Record<string, number> = { wpn_sword1: -0.78, wpn_sword2: -0.78, wpn_sword3: -0.78, wpn_axe: -0.88, wpn_hammer: -0.4 };
+export const GRIP_Y: Record<string, number> = { wpn_sword1: -0.78, wpn_sword2: -0.78, wpn_sword3: -0.78, wpn_axe: -0.95, wpn_hammer: -0.4 };
+
+/**
+ * A weapon that the plain grip puts wrong: the Minotaur's axe haft ran through the hand (32nd playtest, point 5, twice). `shift` moves the item in the joint's frame (centimetres:
+ * the axe 6 to the front of the hand and 5 to the thumb side), `turn` tips it about the joint's axes (degrees), applied after the fit. Found by tuning against the Minotaur in the
+ * showcase (Esc > Debug > Teleport to Level, cell 18/14): the haft lies in the web between the thumb and the index finger, the head above the hand and tipped to the right.
+ */
+export const GRIP_TWEAK: Record<string, { shift: readonly [number, number, number]; turn: readonly [number, number, number] }> = {
+  wpn_axe: { shift: [5, 0, 6], turn: [-10, 0, -20] },
+};
 
 export const HAND_FIT: Record<Hand, PandaFit> = {
   right: { pos: [15, 13, 28], hpr: [0, -90, 20], scale: 40 },
@@ -91,7 +100,7 @@ function quaternionOf(m: Mat3): Quaternion {
 }
 
 /** The local transform of an item under a hand joint, in the glTF frame of the skeleton. */
-export function handTransform(hand: Hand, gripY = 0): { position: Vector3; rotation: Quaternion; scale: number } {
+export function handTransform(hand: Hand, gripY = 0, tweak?: (typeof GRIP_TWEAK)[string]): { position: Vector3; rotation: Quaternion; scale: number } {
   const fit = HAND_FIT[hand];
 
   const [h, p, r] = fit.hpr;
@@ -109,15 +118,18 @@ export function handTransform(hand: Hand, gripY = 0): { position: Vector3; rotat
     const blade = new Vector3(turned[0][1], turned[1][1], turned[2][1]);
     position.copyFrom(PALM).addInPlace(blade.scale(-gripY * fit.scale));
   }
-  return { position, rotation: q, scale: fit.scale };
+  if (!tweak) return { position, rotation: q, scale: fit.scale };
+  const about = (axis: Vector3, deg: number) => Quaternion.RotationAxis(axis, rad(deg));
+  const turned2 = about(new Vector3(1, 0, 0), tweak.turn[0]).multiply(about(new Vector3(0, 1, 0), tweak.turn[1])).multiply(about(new Vector3(0, 0, 1), tweak.turn[2])).multiply(q);
+  return { position: position.add(new Vector3(...tweak.shift)), rotation: turned2, scale: fit.scale };
 }
 
 /** The middle of the palm in the glTF frame of the hand joint, in centimetres: a hand's breadth along the fingers from the wrist. */
 const PALM = new Vector3(0, 6, 0);
 
 /** Hangs a mesh of an item under the joint node of a hand with the old game's fit. */
-export function holdInHand(item: TransformNode, joint: TransformNode, hand: Hand, gripY = 0): void {
-  const t = handTransform(hand, gripY);
+export function holdInHand(item: TransformNode, joint: TransformNode, hand: Hand, gripY = 0, tweak?: (typeof GRIP_TWEAK)[string]): void {
+  const t = handTransform(hand, gripY, tweak);
   item.parent = joint;
   item.position.copyFrom(t.position);
   item.rotationQuaternion = t.rotation;

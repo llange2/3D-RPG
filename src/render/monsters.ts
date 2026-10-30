@@ -14,7 +14,7 @@ import "@babylonjs/loaders/glTF";
 import { equipmentModel } from "../data/equipment";
 import { MONSTERS } from "../data/tables";
 import { assetUrl, type MonsterModelInfo, type StaticModelInfo } from "./assets";
-import { GRIP_Y, holdInHand, type Hand } from "./equipment";
+import { GRIP_TWEAK, GRIP_Y, holdInHand, type Hand } from "./equipment";
 import { floatY } from "./itemProps";
 import { toStandardMaterial } from "./props";
 
@@ -234,7 +234,7 @@ export class MonsterRenderer {
       if (!joint) continue;
       const copy = itemContainer.instantiateModelsToScene((n) => `${uid}:${hand}:${n}`, false);
       for (const root of copy.rootNodes) {
-        for (const mesh of root.getChildMeshes(true)) holdInHand(mesh, joint, hand, GRIP_Y[key] ?? 0);
+        for (const mesh of root.getChildMeshes(true)) holdInHand(mesh, joint, hand, GRIP_Y[key] ?? 0, GRIP_TWEAK[key]);
         root.dispose();
       }
     }
