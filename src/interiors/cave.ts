@@ -37,6 +37,7 @@ export function generateCave(rng: Rng, ctx: BuildContext): InteriorMap {
 function generateCaveOnce(rng: Rng, ctx: BuildContext): InteriorMap {
   const layout = ctx.dungeon?.layout;
   const b = layout === "cave_1" ? ring(rng) : layout === "cave_3" ? bigCave(rng) : classicCave(rng);
+  addIslands(b, rng);
   const floors: number[] = [];
   for (let i = 0; i < b.cells.length; i++) if (b.cells[i] === CELL.FLOOR) floors.push(i);
 
@@ -46,7 +47,7 @@ function generateCaveOnce(rng: Rng, ctx: BuildContext): InteriorMap {
   const rooms: Room[] = chambers;
   // the end room: quest 3 teleports the party into it, the others seal it (a cave without room for a sealed one gets a pocket that a teleport reaches)
   const quest = ctx.dungeon?.quest;
-  const endRoom = ctx.dungeon ? carveEndRoomFor(b, rng, spawn, quest === "quest_3") : null;
+  const endRoom = ctx.dungeon ? carveEndRoomFor(b, rng, spawn, quest === "quest_3", undefined, ctx.dungeon.orbs) : null;
   const dungeon = ctx.dungeon ? { ...ctx.dungeon, ...(endRoom ? { endRoom } : {}) } : undefined;
   return { ...b.finish("cave", { ...ctx, dungeon }, exit, spawn), rooms, roomOf: b.roomOf };
 }
@@ -218,6 +219,48 @@ function bigCave(rng: Rng): Builder {
     }
   }
   return b;
+}
+
+/** Is every cell within `r` cells (a square) of the given one floor? */
+function openSquare(b: Builder, x: number, y: number, r: number): boolean {
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!b.isFloor(x + dx, y + dy)) return false;
+  return true;
+}
+
+/** How far from the middle of a hall an island may reach, and how much open floor the hall needs round the middle (so that a way of two cells is left on every side). */
+const ISLAND_REACH = 1;
+const ISLAND_ROOM = 3;
+/** One island for every this many cells where an island could stand, and the most a cave gets; two islands are never closer than `ISLAND_GAP` cells (chebyshev). */
+const ISLAND_PER_SPOTS = 15;
+const ISLAND_MAX = 9;
+const ISLAND_GAP = 8;
+
+/**
+ * Islands of rock in the big halls (31st playtest, point 10): where the floor is open for three cells on every side, a few cells of rock (two to five,
+ * one blob) stand in the hall with a way of two cells round them. The halls of the caves are 20 cells and more across, and there the party saw nothing
+ * but a bare floor. A hall that is not wide enough gets none.
+ */
+function addIslands(b: Builder, rng: Rng): void {
+  const spots: [number, number][] = [];
+  for (let y = 3; y < SIZE - 3; y++) for (let x = 3; x < SIZE - 3; x++) if (openSquare(b, x, y, ISLAND_ROOM)) spots.push([x, y]);
+  const wanted = Math.min(ISLAND_MAX, Math.floor(spots.length / ISLAND_PER_SPOTS));
+  const placed: [number, number][] = [];
+  for (const [x, y] of rng.shuffle(spots)) {
+    if (placed.length >= wanted) break;
+    // an earlier island may have taken the room, and two islands are not twins side by side
+    if (!openSquare(b, x, y, ISLAND_ROOM) || placed.some(([px, py]) => Math.max(Math.abs(px - x), Math.abs(py - y)) < ISLAND_GAP)) continue;
+    const rock: [number, number][] = [[x, y]];
+    const size = rng.range(2, 5);
+    while (rock.length < size) {
+      const next = rock
+        .flatMap(([rx, ry]) => neighbours4(rx, ry))
+        .filter(([nx, ny]) => Math.abs(nx - x) <= ISLAND_REACH && Math.abs(ny - y) <= ISLAND_REACH && !rock.some(([ox, oy]) => ox === nx && oy === ny));
+      if (next.length === 0) break;
+      rock.push(next[rng.int(next.length)]!);
+    }
+    for (const [rx, ry] of rock) b.set(rx, ry, CELL.SOLID);
+    placed.push([x, y]);
+  }
 }
 
 /** Keeps only the largest 4-connected floor component. Returns its size. */

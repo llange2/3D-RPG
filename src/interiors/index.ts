@@ -68,13 +68,13 @@ export function interiorHash(map: InteriorMap): number {
   for (const site of map.sites ?? []) {
     for (const n of [site.x, site.y]) feed(n);
     const what =
-      site.kind === "talent" ? site.talent : site.kind === "cage" ? `cage${site.axis}` : site.kind === "guard" ? `guard${site.monsters.join(",")}` : site.kind === "perch" ? `perch${site.facing}` : site.kind === "work" ? `work${site.persona}` : site.kind === "vault_way" ? `way${site.axis}${site.how}` : site.kind === "vault_chest" ? `vchest${site.main}` : site.kind === "vault_guard" ? `vguard${site.boss}` : `${site.kind}${site.item}`;
+      site.kind === "talent" ? site.talent : site.kind === "cage" ? `cage${site.axis}` : site.kind === "brittle" ? `brittle${site.axis}` : site.kind === "guard" ? `guard${site.monsters.join(",")}` : site.kind === "perch" ? `perch${site.facing}` : site.kind === "work" ? `work${site.persona}` : site.kind === "vault_way" ? `way${site.axis}${site.how}` : site.kind === "vault_chest" ? `vchest${site.main}` : site.kind === "vault_guard" ? `vguard${site.boss}` : `${site.kind}${site.item}`;
     for (let i = 0; i < what.length; i++) feed(what.charCodeAt(i));
   }
   for (let i = 0; i < map.theme.id.length; i++) feed(map.theme.id.charCodeAt(i));
   if (map.castle) {
     for (let i = 0; i < map.castle.alignment.length; i++) feed(map.castle.alignment.charCodeAt(i));
-    for (const c of [map.castle.throne, map.castle.king, map.castle.door, map.castle.answer, ...map.castle.statues, ...map.castle.kingChests, ...map.castle.yardChests]) {
+    for (const c of [map.castle.throne, map.castle.king, map.castle.door, map.castle.answer, ...map.castle.statues, ...map.castle.kingChests, ...map.castle.alarmChests]) {
       feed(c.x);
       feed(c.y);
     }

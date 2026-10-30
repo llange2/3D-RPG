@@ -38,6 +38,14 @@ export function gateTravel(item: number, direction: GateDirection): { from: numb
   return { from: y, to, seconds: (Math.floor(Math.abs(to - y)) + 1) * 0.8 };
 }
 
+/** The magic flames (item 121): the only object that floats on the spot like a static monster does (`floatY`). */
+export const MAGIC_FLAMES_ITEM = 121;
+/** How a static monster bobs in place: height in units and speed in radians per second (`MonsterRenderer.update`, flames of generated maps). */
+export const FLOAT_AMPLITUDE = 0.05;
+export const FLOAT_SPEED = 2;
+/** The bob of something that hangs in the air, `seed` shifts the phase so that two of them do not move in step. */
+export const floatY = (time: number, seed: number): number => Math.sin(time * FLOAT_SPEED + seed) * FLOAT_AMPLITUDE;
+
 /** The map item that hangs in a guillotine trap. The old game animated a second item (9009) of the same model. */
 export const GUILLOTINE_ITEM = 87;
 

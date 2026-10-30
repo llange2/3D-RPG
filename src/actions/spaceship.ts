@@ -128,7 +128,10 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
       }
     });
     const far = rooms[rooms.length - 1] ?? layout.rooms[s]![0]!;
-    place(far, (x, y) => ({ uid: uid("orbs"), kind: "treasure", x, y, params: { level: tier, gold: 0, items: 0, quest: ORB, count: ORBS_PER_SECTION, chest: ORB_OBJECT } }));
+    // an orb of its own for every orb, not two in one (31st playtest, point 11): the far room first, the others of the section if it has no room left
+    for (let k = 0; k < ORBS_PER_SECTION; k++) {
+      for (const room of [far, ...rooms.slice().reverse()]) if (place(room, (x, y) => ({ uid: uid("orbs"), kind: "treasure", x, y, params: { level: tier, gold: 0, items: 0, quest: ORB, chest: ORB_OBJECT } }))) break;
+    }
     for (let k = 0; k < 2; k++) {
       const room = rooms[rng.int(rooms.length)] ?? layout.rooms[s]![0]!;
       if (rng.chance(500)) place(room, (x, y) => ({ uid: uid("crystal"), kind: "shrine", x, y, params: { item: CRYSTAL, effect: rng.chance(600) ? "attribute" : "hurt", amount: rng.chance(500) ? 1 : 2 } }));

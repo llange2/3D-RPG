@@ -15,6 +15,7 @@ import { equipmentModel } from "../data/equipment";
 import { MONSTERS } from "../data/tables";
 import { assetUrl, type MonsterModelInfo, type StaticModelInfo } from "./assets";
 import { GRIP_Y, holdInHand, type Hand } from "./equipment";
+import { floatY } from "./itemProps";
 import { toStandardMaterial } from "./props";
 
 const ATTACK_NAMES = ["Charged_Upward_Slash", "Left_Slash", "Axe_Spin_Attack", "Archery_Shot_1", "mage_soell_cast_3", "mage_soell_cast_4", "Charged_Spell_Cast_1", "Sweeping_Kick"];
@@ -34,6 +35,12 @@ const PHASE_ALPHA = 0.5;
  * for the vampire bat, 1.6 for the screamer, 1.7 for the vulture roc); the camera here is at 1.7.
  */
 const HOVER: Record<number, number> = { 62: 1.6, 74: 1.7, 75: 1.7 };
+
+/**
+ * Monsters whose model is drawn larger than the table's scale says. The Rat Overlord (91) reuses the Moose Rat's mesh at a smaller
+ * footprint, so the boss looked smaller than the rats of its own pack (31st playtest, point 8); 1.4 makes it about a third taller.
+ */
+const SIZE_FACTOR: Record<number, number> = { 91: 1.4 };
 
 /** The height of the party's eyes above the floor (the camera in `engine.ts`). */
 const EYE_LEVEL = 1.7;
@@ -226,7 +233,7 @@ export class MonsterRenderer {
         root.dispose();
       }
     }
-    const scale = info.scale;
+    const scale = info.scale * (SIZE_FACTOR[defId] ?? 1);
     holder.scaling.setAll(scale);
     const hover = info.animated ? undefined : HOVER[defId];
     const eyes = info.animated ? undefined : EYES_AT[defId];
@@ -354,7 +361,7 @@ export class MonsterRenderer {
     if (!v) return null;
     const [, minY, , , maxY] = v.info.bounds;
     // `to.y` is the height of the model's origin; the old game aimed at a fixed height, a bat and a dragon need different ones
-    const mid = ((minY + maxY) / 2) * v.info.scale;
+    const mid = ((minY + maxY) / 2) * v.holder.scaling.y;
     // a flyer's origin is already the middle of its body, so a shot goes there and not half a metre above
     return { x: v.to.x, y: v.to.y + (v.hovers ? mid : Math.min(2.2, Math.max(0.5, mid))), z: v.to.z };
   }
@@ -434,7 +441,7 @@ export class MonsterRenderer {
           this.playIdle(v);
         }
       } else if (!v.animated && v.dying === null && !v.phased) {
-        v.holder.position.y = v.to.y + Math.sin(this.time * 2 + v.bobSeed) * 0.05;
+        v.holder.position.y = v.to.y + floatY(this.time, v.bobSeed);
       }
       if (v.attackUntil > 0 && this.time > v.attackUntil && v.dying === null && !v.phased) {
         v.attackUntil = 0;

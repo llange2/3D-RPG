@@ -68,6 +68,7 @@ export type AnchorKind =
   | "guardSite"
   | "decorSite"
   | "fountainSite"
+  | "brittleSite"
   | "vaultGate"
   | "vaultDoor"
   | "vaultWall"

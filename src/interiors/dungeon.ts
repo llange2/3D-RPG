@@ -70,7 +70,7 @@ function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): InteriorMap {
   const { exit, spawn } = b.pickExit(r0.x + Math.floor(r0.w / 2), r0.y + r0.h - 1, (x, y) => b.roomOf[b.idx(x, y)] === 0 && b.isFloor(x - 1, y) && b.isFloor(x + 1, y));
   // the end room: the quests that teleport the party into it (quest 1 and 3) leave it in the rock on its own, the others seal it
   const wantsRoom = !!ctx.dungeon && quest !== "spaceship";
-  const endRoom = wantsRoom ? carveEndRoomFor(b, rng, spawn, quest === "quest_1" || quest === "quest_3", plan.endNear) : null;
+  const endRoom = wantsRoom ? carveEndRoomFor(b, rng, spawn, quest === "quest_1" || quest === "quest_3", plan.endNear, ctx.dungeon?.orbs) : null;
   // Seth Squirm and the machines of the Quatloo coins: a room behind a door
   const machines = ctx.dungeon?.seth ? carveMachineRoom(b, rng, spawn) : null;
   const entrance = quest === "quest_1" ? { hall: { ...r0 } } : hall ? { hall: { ...hall } } : {};

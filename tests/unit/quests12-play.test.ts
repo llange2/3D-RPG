@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveAction, type ActionContext, type ActionOutcome } from "../../src/actions/handlers";
 import { endFlag, headFacing, moanSolved, ringBlocked, rotationSolved } from "../../src/actions/quests";
+import { heapGone } from "../../src/actions/registry";
 import type { ActionInstance, MapContent } from "../../src/actions/types";
 import { World } from "../../src/world/world";
 import { createDefaultParty } from "../../src/sim/party";
@@ -130,13 +131,15 @@ describe("the end room", () => {
     const inEnd = (a: ActionInstance) => a.x >= end.x && a.y >= end.y && a.x < end.x + end.w && a.y < end.y + end.h;
     const chests = of(content, "treasure").filter(inEnd);
     const quest = chests.filter((c) => typeof c.params.quest === "string");
-    expect(quest.map((c) => c.params.quest).sort()).toEqual(["quest_green_keycard", "quest_key_blue", "quest_orb"]);
-    expect(quest.find((c) => c.params.quest === "quest_orb")!.params.count).toBe(7);
+    // an object of its own for every orb (31st playtest, point 11): seven chests with one orb each, and the cell is free again once the orb is taken
+    expect(quest.map((c) => c.params.quest).sort()).toEqual(["quest_green_keycard", "quest_key_blue", ...Array<string>(7).fill("quest_orb")]);
+    expect(quest.every((c) => c.params.count === undefined)).toBe(true);
     expect(chests.length).toBeGreaterThanOrEqual(quest.length + 2);
     // take them: the party carries 7 orbs afterwards
     for (const c of quest) expect(use(c).consumed).toBe(true);
     const carried = party.characters.flatMap((c) => Object.values(c.inventory)).filter((i) => i && i.type === "quest_orb");
     expect(carried.length).toBe(7);
+    for (const c of quest) expect(heapGone(c, new Set([c.uid])), `${c.uid} leaves its cell once emptied`).toBe(true);
     expect(endFlag("x")).toBe("x@end");
   });
 

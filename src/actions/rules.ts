@@ -101,7 +101,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // Chests, shrines, fountains and statues block their cell. Before placing one, make sure the rest of the map stays connected.
   const blockedCells = new Set<number>();
   // a vault behind a wall that gives way is part of the map: the wall counts as a way through
-  const hiddenWalls = new Set<number>((map.sites ?? []).filter((s) => s.kind === "vault_way" && s.how === "wall").map((s) => idx(s.x, s.y)));
+  const hiddenWalls = new Set<number>((map.sites ?? []).filter((s) => (s.kind === "vault_way" && s.how === "wall") || s.kind === "brittle").map((s) => idx(s.x, s.y)));
   const endRoom = map.dungeon?.endRoom;
   if (endRoom?.seal) hiddenWalls.add(idx(endRoom.seal.x, endRoom.seal.y));
   const seen = new Uint8Array(map.width * map.height);

@@ -209,8 +209,7 @@ const TORCH_LIT = { range: 25, intensity: 1.465 };
 const LAMPS: Record<number, LampKind> = {
   76: { y: 3.2, color: [1, 0.78, 0.45] }, // Rustic lantern, hangs from the ceiling
   71: { y: 1.4, color: [1, 0.6, 0.3] }, // Abandoned fireplace
-  121: { y: 1.2, color: [0.55, 0.7, 1] }, // Magic flames
-  ...CRYSTAL_LAMPS,
+  ...CRYSTAL_LAMPS, // crystals, lava and acid puddles, magic flames
 };
 /** Lamps farther from the party than this are ignored (units); the pool serves the nearest ones. */
 const LAMP_REACH = 18;
@@ -2057,7 +2056,7 @@ export class Game {
   }
 
   /**
-   * The alarm of a castle: the guards of its kind come. Light guards fill the yard, heavy ones stand on the way from the king to the gate of the keep.
+   * The alarm of a castle: the guards of its kind come. Light guards fill the corridors of the keep, heavy ones stand on the way from the king to the gate of the keep.
    * There is one kind of each in a castle (`guardsOf`), their number follows the size of the world and their experience the other way round.
    */
   private spawnGuards(kind: "light" | "heavy"): void {
@@ -2068,9 +2067,9 @@ export class Game {
     const id = guardsOf(castle.alignment, rt.map.tier, rngFor(this.world.rootSeed, LAYER.SPAWN, rt.map.key, "guards"))[kind];
     const count = Math.max(2, Math.round((kind === "light" ? rng.range(10, 20) : rng.range(6, 10)) * castle.scale));
     const w = rt.map.width;
-    // the cells they come to: the yard, or the way from the king to the door of the keep
+    // the cells they come to: the keep, or the way from the king to the cell inside its gate
     let cells: number[];
-    if (kind === "light") cells = castle.yard;
+    if (kind === "light") cells = castle.keep;
     else {
       const prev = new Map<number, number>([[castle.king.y * w + castle.king.x, -1]]);
       const queue = [castle.king.y * w + castle.king.x];

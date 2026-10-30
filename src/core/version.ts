@@ -102,5 +102,8 @@
  * 29 = thirtieth playtest: no corridor of a dungeon is straight for more than eight cells (a stretch is cut by a bend round one cell of rock, the maze by swapping one of its
  * connectors for a wall between the two halves it leaves; `bendLongCorridors`, `shortenMazeStraights`); the carving of the moose king (item 125) is a wall hanging, so it no
  * longer counts as an object that blocks the cell in front of it.
+ * 30 = 31st playtest: a castle is the keep alone (no yard; the gate is the way out and the party starts inside it), its alarm chests stand in the niches of the corridors with a
+ * banner across from each, and the statue that wants the word stands out of every passage; Swamp Town (tier 4) has three brittle walls; the caves get islands of rock in their big
+ * halls; every orb is a chest of its own.
  */
-export const GEN_VERSION = 29;
+export const GEN_VERSION = 30;

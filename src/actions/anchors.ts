@@ -39,6 +39,14 @@ export function computeAnchors(map: InteriorMap, topo: Topology): AnchorSet {
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) protectedCells.add(idx(s.x + dx, s.y + dy));
   }
 
+  // the party stands on the cells at both sides of a brittle wall to bump it (and the quarter behind it is reached through it): nothing stands there
+  for (const s of map.sites ?? []) {
+    if (s.kind !== "brittle") continue;
+    const d = s.axis === "x" ? { dx: 1, dy: 0 } : { dx: 0, dy: 1 };
+    protectedCells.add(idx(s.x - d.dx, s.y - d.dy));
+    protectedCells.add(idx(s.x + d.dx, s.y + d.dy));
+  }
+
   // the end room of a quest is the business of the quest: nothing else is put in it
   const end = map.dungeon?.endRoom;
   if (end) {
@@ -78,6 +86,7 @@ export function computeAnchors(map: InteriorMap, topo: Topology): AnchorSet {
     guardSite: [],
     decorSite: [],
     fountainSite: [],
+    brittleSite: [],
     vaultGate: [],
     vaultDoor: [],
     vaultWall: [],
@@ -161,7 +170,7 @@ export function computeAnchors(map: InteriorMap, topo: Topology): AnchorSet {
   // the people, chests, fountains and decoration of a town's ground plan; what each cell brings along rides on the anchor
   for (const s of map.sites ?? []) {
     // the chamber of a vault behind a hidden wall cannot be reached before the wall gives way: it has no depth, it still counts
-    const vault = s.kind === "vault_way" || s.kind === "vault_chest" || s.kind === "vault_guard";
+    const vault = s.kind === "vault_way" || s.kind === "vault_chest" || s.kind === "vault_guard" || s.kind === "brittle";
     const a: Anchor = { x: s.x, y: s.y, depth: vault ? Math.max(0, depthAt(s.x, s.y)) : depthAt(s.x, s.y), roomId: -1 };
     if (a.depth < 0) continue;
     switch (s.kind) {
@@ -181,6 +190,9 @@ export function computeAnchors(map: InteriorMap, topo: Topology): AnchorSet {
         break;
       case "cage":
         by.cageSite.push({ ...a, facing: s.axis === "x" ? "E" : "S" });
+        break;
+      case "brittle":
+        by.brittleSite.push({ ...a, facing: s.axis === "x" ? "E" : "S" });
         break;
       case "guard":
         by.guardSite.push({ ...a, params: { monsters: s.monsters.join(",") } });
