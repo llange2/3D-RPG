@@ -120,3 +120,18 @@ export function analyzeTopology(map: InteriorMap): Topology {
 export function makeRoom(id: number, x: number, y: number, w: number, h: number): { id: number; x: number; y: number; w: number; h: number; cx: number; cy: number; size: number } {
   return { id, x, y, w, h, cx: x + Math.floor(w / 2), cy: y + Math.floor(h / 2), size: w * h };
 }
+
+/** The longest straight run of corridor cells (floor outside every room) along a row or a column: how far one can look down a passage. */
+export function longestCorridor(map: Pick<InteriorMap, "width" | "height" | "cells" | "roomOf">): number {
+  const corridor = (x: number, y: number) => map.cells[y * map.width + x] === CELL.FLOOR && map.roomOf[y * map.width + x]! < 0;
+  let best = 0;
+  for (let y = 0; y < map.height; y++) {
+    let run = 0;
+    for (let x = 0; x < map.width; x++) best = Math.max(best, (run = corridor(x, y) ? run + 1 : 0));
+  }
+  for (let x = 0; x < map.width; x++) {
+    let run = 0;
+    for (let y = 0; y < map.height; y++) best = Math.max(best, (run = corridor(x, y) ? run + 1 : 0));
+  }
+  return best;
+}
