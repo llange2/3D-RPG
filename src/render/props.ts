@@ -11,6 +11,7 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/loaders/glTF";
+import { QUEST_PROP } from "../data/quest-table";
 import { assetUrl, type StaticModelInfo } from "./assets";
 import { createProceduralModels } from "./proceduralProps";
 import type { PropInstance } from "./terrainMesher";
@@ -62,7 +63,14 @@ const DARK_LEVEL = 1.1;
 const MIN_DARK_LEVEL = 0.3;
 
 /** Models that keep one level in every light: the 3D floor was calibrated under the torch, effects are unlit. */
-const FIXED_LEVEL = (key: string): boolean => key === "blk_floor" || key.startsWith("proj_") || key === "ci_92";
+const FIXED_LEVEL = (key: string): boolean => key === "blk_floor" || key.startsWith("proj_") || key === "ci_92" || QUEST_MODELS.has(key);
+
+/**
+ * The models of the quest keys and key cards. They are drawn unlit: under the torch a key was a dark speck above its golden glow (`GOLD_LAMP`),
+ * and its colour (which key it is) could not be told from three cells away.
+ */
+const QUEST_GLOW = 1.5;
+const QUEST_MODELS: ReadonlySet<string> = new Set(Object.values(QUEST_PROP).map((item) => `ci_${item}`));
 
 /** The 3D dungeon floor as bright as the flat one at the same torch distance (measured: at 3 it came out 1.75 times brighter). */
 const FLOOR_BOOST = 1.7;
@@ -182,6 +190,13 @@ export class PropRenderer {
           std.emissiveColor = Color3.White();
           // the boost above is for lit surfaces; unlit, the texture shows as painted
           if (std.diffuseTexture) std.diffuseTexture.level = 1;
+        }
+        if (QUEST_MODELS.has(key)) {
+          std.disableLighting = true;
+          if (std.diffuseTexture) {
+            std.emissiveColor = Color3.White();
+            std.diffuseTexture.level = QUEST_GLOW; // a little over the painted colour: the dark keys (blue, black) must still read from three cells away
+          } else std.emissiveColor = std.diffuseColor; // a model painted by its material colour, not by a texture
         }
         mesh.material = std;
         // the strip of the town's columns (720 x 5360) is drawn twice as wide as the column is round: squeezed to half its width (the user's wish)

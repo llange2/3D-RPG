@@ -32,7 +32,7 @@ export function createDefaultParty(): Party {
   ];
   const party: Party = {
     characters,
-    gold: 5000, // monster gold and shop prices of the old game are in the hundreds and thousands
+    gold: 2000, // monster gold and shop prices of the old game are in the hundreds and thousands
     bankGold: 0,
     food: 3,
     // 8:00 on the first day

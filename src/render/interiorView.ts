@@ -15,7 +15,7 @@ import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { CELL_SIZE, cellCenterX, cellCenterZ, meshInterior, modelFloorCells, wallHeightOf } from "./interiorMesher";
 import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
-import { floatY, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
+import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
 import { FLAT_Z_OFFSET, flatTileMaterial } from "./materials";
 import type { PropRenderer } from "./props";
@@ -54,6 +54,15 @@ const ROUND_RADIUS = 14;
 /** The models of the rounded corners of the spaceship (`Round inner corner.obj`, `Round outer corner.obj`). */
 export function roundModelKeys(map: InteriorMap): string[] {
   return hasRoundWalls(map) ? [itemModelKey(ROUND_ITEM.inner), itemModelKey(ROUND_ITEM.outer)].filter((k): k is string => k !== null) : [];
+}
+
+/** The old item 100, `Castle Gate.glb` (scale 1.5): its origin is the middle of the cell in front of the gate, the slab stands on that cell's far edge. */
+const CASTLE_GATE_ITEM = 100;
+
+/** The model of the gate of a generated castle (the walls of the other places carry the door texture of their theme instead). */
+export function castleGateModelKeys(map: InteriorMap): string[] {
+  const key = map.castle && !map.styles ? itemModelKey(CASTLE_GATE_ITEM) : null;
+  return key ? [key] : [];
 }
 
 /** The models a map needs beyond `INTERIOR_MODELS`: the rock pieces of a generated cave. */
@@ -225,6 +234,18 @@ export class InteriorView {
     this.buildMesh();
     this.buildObjects();
     this.doors.show(map, content, opened, this.owner);
+    this.pushCastleGate();
+  }
+
+  /** The gate of a generated castle stands on the exit cell, its slab on the edge towards the wall behind it (where the other places have a door texture). */
+  private pushCastleGate(): void {
+    const map = this.map;
+    const key = map ? castleGateModelKeys(map)[0] : undefined;
+    if (!map || !key || !this.props.has(key)) return;
+    const info = ITEM_MODELS[String(CASTLE_GATE_ITEM)]!;
+    const bearing = (Math.atan2(map.exit.x - map.spawn.x, map.spawn.y - map.exit.y) + 2 * Math.PI) % (2 * Math.PI);
+    this.props.setInstances(`${this.owner}:gate`, [{ model: key, x: cellCenterX(map.exit.x), y: 0, z: cellCenterZ(map.exit.y), rotY: bearing, scale: info.scale, scaleXYZ: info.scale3 }]);
+    this.props.flush();
   }
 
   /** The view distance's share of the windows of floor and rock models around the party (1 = the full radius). */
@@ -658,6 +679,7 @@ export class InteriorView {
       this.props.removeOwner(`${this.owner}:round`);
       this.props.removeOwner(`${this.owner}:spin`);
       this.props.removeOwner(`${this.owner}:float`);
+      this.props.removeOwner(`${this.owner}:gate`);
     }
     this.spinners = [];
     this.flames = [];

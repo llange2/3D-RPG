@@ -38,7 +38,7 @@ const SHEET_GROUNDS = ["desert", "dirt", "snow", "forest", "lava"] as const;
  */
 const MADE_GROUNDS: Record<string, [number, number, number]> = { swamp: [84, 94, 40] };
 /** The grounds of the sheet in the register, as the game names them (`PlaceGround` in `minimapIcons.ts`). */
-const PLACE_GROUNDS = ["desert", "forest", "snow", "lava", "meadow", "swamp"] as const;
+const PLACE_GROUNDS = ["desert", "dirt", "forest", "snow", "lava", "meadow", "swamp"] as const;
 /**
  * Single tiles painted later to correct the colours of the sheet (the user's `tex_mm_<ground>_<symbol>.png`, 100 px, frame included). `grass`
  * is the meadow, which was the desert row tinted green and came out too dull; `town` is the ground inside towns, castles and dungeons, where
@@ -49,6 +49,9 @@ const PAINTED_DIR = join(ROOT, "tools", "assets", "sources", "minimap", "tiles")
 const PAINTED: [string, string][] = [
   ["town:meadow", "tex_mm_grass_town"], ["castle:meadow", "tex_mm_grass_castle"], ["dungeon:meadow", "tex_mm_grass_dungeon"],
   ["pyramid:meadow", "tex_mm_grass_pyramid"], ["event:meadow", "tex_mm_grass_event"], ["event:town", "tex_mm_town_event"], ["exit:town", "tex_mm_town_exit"],
+  // the user's repainted desert, dirt and snow tiles (`.ignore/new_mm_tiles`); they replace the sheet's rows, which keeps only the way out
+  ...(["desert", "dirt", "snow"] as const).flatMap((g): [string, string][] =>
+    (["town:city", "castle:castle", "dungeon:dungeon", "pyramid:pyramid", "event:event"] as const).map((k) => [`${k.split(":")[0]}:${g}`, `tex_mm_${g}_${k.split(":")[1]}`] as [string, string])),
 ];
 const paintedFile = (base: string): string => join(PAINTED_DIR, `${base}.png`);
 /** The tiles that exist only on the interior ground. */
@@ -218,7 +221,10 @@ async function placeTiles(): Promise<Map<string, Buffer>> {
     }
   }
 
-  // the swamp: the plain desert tiles with the colour of the ground moved to the wanted one
+  // the painted corrections replace the sheet's tiles; the meadow's way out follows the interior's by the colour the question marks differ by
+  for (const [name, file] of PAINTED) tiles.set(name, (await raw(paintedFile(file))).data);
+
+  // the swamp: the plain desert tiles (the repainted ones) with the colour of the ground moved to the wanted one
   const sand = tiles.get("event:desert")!;
   const base = paintMean(sand);
   for (const [ground, target] of Object.entries(MADE_GROUNDS)) {
@@ -229,9 +235,6 @@ async function placeTiles(): Promise<Map<string, Buffer>> {
       tiles.set(`${kind}:${ground}`, made);
     }
   }
-
-  // the painted corrections replace what was made; the meadow's way out follows the interior's by the colour the question marks differ by
-  for (const [name, file] of PAINTED) tiles.set(name, (await raw(paintedFile(file))).data);
   const from = paintMean(tiles.get("event:town")!);
   const to = paintMean(tiles.get("event:meadow")!);
   const exit = Buffer.from(tiles.get("exit:town")!);

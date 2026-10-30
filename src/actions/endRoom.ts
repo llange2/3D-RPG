@@ -1,4 +1,5 @@
 import { Rng } from "../core/rng";
+import { FORBIDDEN_PROPS } from "../data/dungeon-themes";
 import { allowedIn } from "../data/item-rules";
 import { END_LOOT, QUEST_PROP, ORB } from "../data/quest-table";
 import { placeOf } from "../interiors/place";
@@ -20,15 +21,26 @@ type Params = Record<string, ParamValue>;
  */
 type Reward = { name: string; kind: "treasure" | "chalice"; parts: Params[] };
 
+/** The objects that hold attribute points on levels 1 to 3 (the chalice is for levels 4 and 5): the magic wells, the barrel and the crystals. */
+const BARREL = 5;
+const ATTRIBUTE_VESSELS = [37, 88, BARREL, 117];
+const CHALICE_FROM_LEVEL = 4;
+
 /** The rewards a level offers. */
-function rewardsOf(level: number, rng: Rng): Reward[] {
+function rewardsOf(level: number, rng: Rng, fits: (item: number) => boolean): Reward[] {
   const t = END_LOOT[Math.min(5, Math.max(1, level))]!;
   const lv = Math.min(8, level);
   const out: Reward[] = [{ name: "gold", kind: "treasure", parts: [{ level: lv, gold: rng.range(t.gold[0], t.gold[1]), items: 0 }] }];
   if (t.attributes) {
     const packages = rng.range(t.attributes.packages[0], t.attributes.packages[1]);
     const parts: Params[] = [];
-    for (let i = 0; i < packages; i++) parts.push({ item: 86, bonus: "attr", attr: ATTRS[rng.int(ATTRS.length)]!, amount: t.attributes.package });
+    // a level 1 to 3 package lies in a well, a barrel or crystals that the place and its inhabitants allow (`FORBIDDEN_PROPS`: no barrel for a mage, no crystals
+    // for fire folk); the chalice only from level 4 on
+    const vessels = ATTRIBUTE_VESSELS.filter(fits);
+    for (let i = 0; i < packages; i++) {
+      const item = level >= CHALICE_FROM_LEVEL || vessels.length === 0 ? 86 : vessels[rng.int(vessels.length)]!;
+      parts.push({ item, bonus: "attr", attr: ATTRS[rng.int(ATTRS.length)]!, amount: t.attributes.package });
+    }
     out.push({ name: "attributes", kind: "chalice", parts });
   }
   if (t.levelUps) {
@@ -129,11 +141,14 @@ export function fillEndRoom(env: QuestEnv): void {
   }
 
   // and 2 to 4 more rewards of its level
-  const pool = rng.shuffle(rewardsOf(env.tier, rng));
+  const forbidden = FORBIDDEN_PROPS[ref.look.inhabitants];
+  const pool = rng.shuffle(rewardsOf(env.tier, rng, (item) => allowedIn(item, place) && !forbidden.includes(item)));
   const wanted = Math.min(pool.length, rng.range(2, 4));
   for (const reward of pool.slice(0, wanted)) {
     for (const part of reward.parts) {
-      if (reward.kind === "chalice") put(reward.name, part, "chalice");
+      // a barrel is a container wherever it stands (`treasure` with chest 5): the points in it are drunk like those of a chalice (`resolveAction`)
+      if (part.item === BARREL) put(reward.name, { level: 1, gold: 0, items: 0, chest: BARREL, bonus: part.bonus!, attr: part.attr!, amount: part.amount! }, "treasure");
+      else if (reward.kind === "chalice") put(reward.name, part, "chalice");
       else put(reward.name, { ...part, chest: env.theme.chest });
     }
   }

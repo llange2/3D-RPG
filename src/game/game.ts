@@ -25,7 +25,7 @@ import { ChunkManager } from "../render/chunkManager";
 import { LAMP_RANGE, VIEW_DISTANCES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
 import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
-import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
+import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
 import { ITEM_LAMPS, LOOT_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
@@ -191,13 +191,27 @@ const MASCOT_MODELS = [...Object.values(MASCOT_ITEM), BIRD_PERCH, BLUE_MUSHROOM]
 /** The old item 126 "Float": the raft the party stands on while it crosses deep water (Walk on Water, Seafarer). */
 const RAFT_ITEM = 126;
 const RAFT_OWNER = "raft";
-/** Height of the raft's lowest point: a little under the water, so that its deck stands out of it. */
-const RAFT_Y = -0.12;
 /**
- * The raft is three times as wide and long as the old item (a cell of 3 units): the camera stands 1.7 above the deck and sees the ground only from 2.7 units away, so a raft of
- * one cell lay entirely below the picture. Its height stays that of the model.
+ * Height of the deck above the water: the old raft stood 26 cm out of it and looked like a plate lying on the sea. Lower than about 10 cm the painted ground tiles
+ * (drawn with a depth bias, `FLAT_Z_OFFSET`) swallow it a few cells away: at 6 cm only the ends of the planks showed.
  */
-const RAFT_SPREAD = 3;
+const RAFT_DECK = 0.18;
+/** The raft is the old model scaled evenly, see below. */
+const RAFT_SCALE = 3;
+/** The model's height (`Float.glb`, 0.269 high before scaling) and its lowest point, which the prop renderer rests on `y` less 2 cm. */
+const RAFT_Y = RAFT_DECK + 0.02 - 0.269 * RAFT_SCALE;
+/**
+ * The raft is scaled evenly (stretching only its width and length made it a thin plate): the camera stands 1.7 above the water and sees the ground only from
+ * about 2.6 units away, so the raft lies in front of the party and a third of its length (`RAFT_VISIBLE`) reaches into the picture.
+ */
+const RAFT_LENGTH = 1.89 * RAFT_SCALE;
+const RAFT_VISIBLE = 1 / 3;
+/** The share of the lower half of the picture that is free of the party's portraits and buttons: the visible third of the raft starts at their top edge (about 600 of 720 pixels). */
+const RAFT_FREE_VIEW = 2 / 3;
+/** Distance from the camera at which that edge meets the deck (camera 1.7 up, half the vertical field of view 0.575). */
+const RAFT_SIGHT_START = (1.7 - RAFT_DECK) / (Math.tan(0.575) * RAFT_FREE_VIEW);
+/** How far ahead of the party the raft's middle lies, so that `RAFT_VISIBLE` of its length starts at `RAFT_SIGHT_START`. */
+const RAFT_AHEAD = RAFT_SIGHT_START - RAFT_LENGTH * (0.5 - RAFT_VISIBLE);
 
 const TORCH = { range: 13.5, intensity: 1.26 };
 const TORCH_LIT = { range: 25, intensity: 1.465 };
@@ -747,7 +761,7 @@ export class Game {
         ...content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])),
         ...(map.showcase ? [...map.showcase.monsters.map((m) => m.defId), ...map.showcase.personas.map((p) => personaModelId(p.persona))] : []),
       ]);
-      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
+      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...castleGateModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
       // the end room of a quest solved earlier is open
@@ -4070,8 +4084,8 @@ export class Game {
       return;
     }
     this.raftShown = true;
-    const info = ITEM_MODELS[String(RAFT_ITEM)]!;
-    this.props.setInstances(RAFT_OWNER, [{ model: key!, x: this.player.x, y: RAFT_Y, z: this.player.z, rotY: this.player.yaw, scale: info.scale, scaleXYZ: [info.scale3[0] * RAFT_SPREAD, info.scale3[1], info.scale3[2] * RAFT_SPREAD] }]);
+    const yaw = this.player.yaw;
+    this.props.setInstances(RAFT_OWNER, [{ model: key!, x: this.player.x + Math.sin(yaw) * RAFT_AHEAD, y: RAFT_Y, z: this.player.z + Math.cos(yaw) * RAFT_AHEAD, rotY: yaw, scale: RAFT_SCALE }]);
     this.props.flush();
   }
 
