@@ -1,6 +1,7 @@
 import type { Rng } from "../core/rng";
 import { Builder, extraEdges, primEdges, rectsOverlap, type BuildContext, type Rect } from "./builder";
 import { carveEndRoomFor, carveMachineRoom } from "./endRoom";
+import { longestCorridor } from "./topology";
 import { CELL, type DungeonRef, type InteriorMap } from "./types";
 
 const SIZE = 96;
@@ -75,7 +76,7 @@ function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): InteriorMap {
   return b.finish("dungeon", { ...ctx, dungeon }, exit, spawn);
 }
 
-const inBounds = (r: Rect, m = 3) => r.x >= m && r.y >= m && r.x + r.w <= SIZE - m && r.y + r.h <= SIZE - m;
+const inBounds = (r: Rect, m = 3, size = SIZE) => r.x >= m && r.y >= m && r.x + r.w <= size - m && r.y + r.h <= size - m;
 
 /** A random room of 5 to 7 cells (or 3 to 7 in the classic layout), centred on a point. */
 function roomAround(rng: Rng, cx: number, cy: number, min = 5, max = 7): Rect {
@@ -86,78 +87,169 @@ function roomAround(rng: Rng, cx: number, cy: number, min = 5, max = 7): Rect {
 
 // ---------------------------------------------------------------- dungeon_1: the tube
 
-/** A long tube that leads from room to room along a snake over the map; small niches in its walls hold statues and decoration. */
+/**
+ * Joins two rooms with a short corridor. Rooms that face each other (their rows or columns overlap) get a straight corridor through the middle of
+ * the overlap; rooms that lie diagonally get an L with its bend in the rock between them. A corridor from centre to centre ran along the wall of a
+ * third room when the rooms were shifted against each other, which left that wall open for a dozen cells.
+ */
+function joinRooms(b: Builder, rng: Rng, a: Rect, c: Rect): void {
+  const rows = [Math.max(a.y, c.y), Math.min(a.y + a.h, c.y + c.h) - 1];
+  const cols = [Math.max(a.x, c.x), Math.min(a.x + a.w, c.x + c.w) - 1];
+  if (rows[0]! <= rows[1]!) {
+    const y = (rows[0]! + rows[1]!) >> 1;
+    b.carveL(a.x < c.x ? a.x + a.w - 1 : a.x, y, a.x < c.x ? c.x : c.x + c.w - 1, y, true);
+  } else if (cols[0]! <= cols[1]!) {
+    const x = (cols[0]! + cols[1]!) >> 1;
+    b.carveL(x, a.y < c.y ? a.y + a.h - 1 : a.y, x, a.y < c.y ? c.y : c.y + c.h - 1, false);
+  } else {
+    // two ways to bend; the one that does not line up with a corridor already there (two L's on one column made a straight of 17 cells) wins
+    const [ax, ay, cx, cy] = [a.x + (a.w >> 1), a.y + (a.h >> 1), c.x + (c.w >> 1), c.y + (c.h >> 1)];
+    const first = rng.chance(500);
+    const saved = b.cells.slice();
+    const straight = [first, !first].map((horizontalFirst) => {
+      b.carveL(ax, ay, cx, cy, horizontalFirst);
+      const longest = longestCorridor(b);
+      b.cells.set(saved);
+      return longest;
+    });
+    b.carveL(ax, ay, cx, cy, straight[1]! < straight[0]! ? !first : first);
+  }
+}
+
+const TUBE_SIZE = 72;
+
+/** Grid cells (column, row; row 0 is the bottom one, where the party enters) in the order of the way: a snake along the rows or the columns, or a spiral inwards. */
+function tubeWay(kind: "rows" | "columns" | "spiral", cols: number, rows: number): [number, number][] {
+  const way: [number, number][] = [];
+  if (kind === "rows") {
+    for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) way.push([r % 2 === 0 ? k : cols - 1 - k, r]);
+  } else if (kind === "columns") {
+    for (let c = 0; c < cols; c++) for (let k = 0; k < rows; k++) way.push([c, c % 2 === 0 ? k : rows - 1 - k]);
+  } else {
+    let [x0, y0, x1, y1] = [0, 0, cols - 1, rows - 1];
+    while (x0 <= x1 && y0 <= y1) {
+      for (let x = x0; x <= x1; x++) way.push([x, y0]);
+      for (let y = y0 + 1; y <= y1; y++) way.push([x1, y]);
+      if (y0 < y1) for (let x = x1 - 1; x >= x0; x--) way.push([x, y1]);
+      if (x0 < x1) for (let y = y1 - 1; y > y0; y--) way.push([x0, y]);
+      [x0, y0, x1, y1] = [x0 + 1, y0 + 1, x1 - 1, y1 - 1];
+    }
+  }
+  return way;
+}
+
+/**
+ * A tube of 8 to 15 rooms wound up on itself: the rooms sit on a grid ten cells apart (12 with the hall of quest 2) and follow each other along a snake
+ * or a spiral, so the rows of the way lie side by side with about three wall cells between them and no corridor is longer than 8 or 9 cells. The rooms
+ * are shifted off their grid cells, which gives the short corridors their bends. Small niches in the walls hold statues and decoration.
+ */
 function tube(rng: Rng, ctx: BuildContext): InteriorMap {
-  const b = new Builder(SIZE, SIZE);
-  const xs = [20, 48, 76];
-  const ys = [76, 48, 20];
-  const slots: { x: number; y: number }[] = [];
-  ys.forEach((y, row) => (row % 2 === 0 ? xs : [...xs].reverse()).forEach((x) => slots.push({ x, y })));
-  const count = rng.range(8, 9);
-  const rooms: Rect[][] = [];
-  slots.slice(0, count).forEach((s, i) => {
-    const jitter = { x: s.x + rng.range(-4, 4), y: s.y + rng.range(-4, 4) };
-    const hall = i === count - 1 ? hallRect(ctx, jitter.x, jitter.y) : undefined;
-    rooms.push([i === 0 ? entranceRect(rng, ctx, 48, 80) : (hall ?? roomAround(rng, jitter.x, jitter.y))]);
+  const b = new Builder(TUBE_SIZE, TUBE_SIZE);
+  const count = rng.range(8, 15);
+  const hallWanted = ctx.dungeon?.quest === "quest_2";
+  const pitch = hallWanted ? 12 : 10;
+  const cols = count <= 9 ? 3 : 4;
+  const rows = Math.ceil(count / cols);
+  // the hall needs the end of the way on the rim of the rock, where its sealed end room has room: a snake ends there, a spiral in the middle
+  const kind = hallWanted ? "rows" : rng.pick(["rows", "columns", "spiral"] as const);
+  const way = kind === "columns" ? tubeWay(kind, rows, cols) : tubeWay(kind, cols, rows);
+  const gridCols = kind === "columns" ? rows : cols;
+  const gridRows = kind === "columns" ? cols : rows;
+  const flip = rng.chance(500);
+  const ox = (TUBE_SIZE - gridCols * pitch) >> 1;
+  const oy = (TUBE_SIZE - gridRows * pitch) >> 1;
+  const rects: Rect[] = [];
+  way.slice(0, count).forEach(([c, r], i) => {
+    const sx = ox + ((flip ? gridCols - 1 - c : c) + 0.5) * pitch;
+    const sy = oy + (gridRows - 1 - r + 0.5) * pitch;
+    let room: Rect | undefined;
+    // shifted off the grid cell as far as the neighbours allow; the last try keeps the grid cell
+    for (let attempt = 0; attempt < 10 && !room; attempt++) {
+      const shift = attempt < 8 ? 2 : 0;
+      const cx = Math.round(sx) + rng.range(-shift, shift);
+      const cy = Math.round(sy) + rng.range(-shift, shift);
+      const hall = i === count - 1 ? hallRect(ctx, cx, cy) : undefined;
+      const candidate = i === 0 ? entranceRect(rng, ctx, cx, cy) : (hall ?? roomAround(rng, cx, cy));
+      // the wall to the room before it stays thin (4 cells), so no corridor of the tube is long
+      if (attempt === 9 || (inBounds(candidate, 3, TUBE_SIZE) && !rects.some((o) => rectsOverlap(candidate, o, 2)) && (i === 0 || wallGap(candidate, rects[i - 1]!) <= 4))) room = candidate;
+    }
+    rects.push(room!);
   });
-  const hall = rooms[count - 1]![0]!;
-  const isHall = ctx.dungeon?.quest === "quest_2";
+  const rooms = rects.map((r) => [r]);
+  const hall = rects[rects.length - 1]!;
   for (const r of rooms) b.carveRoom(r);
-  const centre = (r: Rect[]) => ({ x: r[0]!.x + (r[0]!.w >> 1), y: r[0]!.y + (r[0]!.h >> 1) });
-  for (let i = 1; i < rooms.length; i++) b.carveL(centre(rooms[i - 1]!).x, centre(rooms[i - 1]!).y, centre(rooms[i]!).x, centre(rooms[i]!).y, rng.chance(500));
-  carveSpurs(b, rng, rng.range(5, 8), 1, 2);
-  return finishDungeon(rng, ctx, { b, rooms, ...(isHall ? { hall } : {}), endNear: hall });
+  for (let i = 1; i < rects.length; i++) joinRooms(b, rng, rects[i - 1]!, rects[i]!);
+  carveSpurs(b, rng, rng.range(4, 7), 1, 2);
+  return finishDungeon(rng, ctx, { b, rooms, ...(hallWanted ? { hall } : {}), ...(kind === "spiral" ? {} : { endNear: hall }) });
 }
 
 // ---------------------------------------------------------------- dungeon_2: the hall with ways to rooms
 
-/** A hall at the entrance (5 x 4), ways to different rooms, each way shut by a door at its beginning and at its end (the rules set them on every mouth). */
+const HUB_SIZE = 72;
+
+/** Where the rooms of the hub may stand, as offsets from the middle of the entrance hall: the first ring hangs on the hall, the second on the nearest room of the first. */
+const HUB_RING_1: readonly (readonly [number, number])[] = [[-11, -2], [11, -2], [-9, -11], [9, -11], [0, -12]];
+const HUB_RING_2: readonly (readonly [number, number])[] = [[-22, -4], [22, -4], [-20, -15], [20, -15], [-9, -22], [9, -22], [0, -23], [-22, 8], [22, 8]];
+
+/** The wall between two rooms, in cells: the larger of the gaps along the two axes (0 when they touch). */
+const wallGap = (a: Rect, b: Rect): number => Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w), Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h));
+
+/**
+ * A hall at the entrance (5 x 4), ways to different rooms, each way shut by a door at its beginning and at its end (the rules set them on every mouth).
+ * 8 to 15 rooms in two rings round the hall, close together: the ways are short and the rooms of the second ring hang on those of the first.
+ */
 function hub(rng: Rng, ctx: BuildContext): InteriorMap {
-  const b = new Builder(SIZE, SIZE);
+  const b = new Builder(HUB_SIZE, HUB_SIZE);
   const quest = ctx.dungeon?.quest;
-  const first: Rect = quest === "quest_1" ? entranceRect(rng, ctx, 48, 78) : { x: 46, y: 76, w: 5, h: 4 };
-  const rooms: Rect[][] = [[first]];
-  const spokes = rng.shuffle([
-    { x: 16, y: 56 },
-    { x: 80, y: 56 },
-    { x: 24, y: 24 },
-    { x: 72, y: 24 },
-    { x: 48, y: 40 },
-    { x: 48, y: 12 },
-  ]).slice(0, rng.range(4, 5));
+  const mid = HUB_SIZE >> 1;
+  const base = { x: mid, y: 60 };
+  const first: Rect = quest === "quest_1" ? entranceRect(rng, ctx, base.x, base.y) : { x: base.x - 2, y: base.y - 2, w: 5, h: 4 };
+  const target = rng.range(8, 15);
+  const centre = (r: Rect) => ({ x: r.x + (r.w >> 1), y: r.y + (r.h >> 1) });
+  const rects: Rect[] = [first];
+  /** The links of the star, as pairs of indices into `rects`. */
+  const links: [number, number][] = [];
+  const free = (r: Rect) => inBounds(r, 3, HUB_SIZE) && !rects.some((o) => rectsOverlap(r, o, 2));
+  // the hall of quest 2 takes the way straight ahead; the rooms beside it would touch it, so it has fewer neighbours in the first ring
   let hall: Rect | undefined;
-  spokes.forEach((s, i) => {
-    const place = { x: s.x + rng.range(-3, 3), y: s.y + rng.range(-3, 3) };
-    const room = i === 0 ? hallRect(ctx, place.x, place.y) ?? roomAround(rng, place.x, place.y) : roomAround(rng, place.x, place.y);
-    if (i === 0 && quest === "quest_2") hall = room;
-    rooms.push([room]);
+  const first1: (readonly [number, number])[] = quest === "quest_2" ? [[0, -12], ...rng.shuffle<readonly [number, number]>([[-11, -2], [11, -2]])] : rng.shuffle([...HUB_RING_1]).slice(0, rng.range(4, 5));
+  const ring1: number[] = [0];
+  const distance = (a: Rect, b: Rect) => Math.abs(centre(a).x - centre(b).x) + Math.abs(centre(a).y - centre(b).y);
+  /** The room of the ring before it that is nearest to `r` (the hall for the first ring). */
+  const parentOf = (r: Rect, from: number[]) => from.reduce((best, o) => (distance(rects[o]!, r) < distance(rects[best]!, r) ? o : best), from[0]!);
+  /** Puts a room near the offset from the hall, shifted off it as far as the room it hangs on allows (a way of at most 6 cells of wall). Returns its index or -1. */
+  const place = (offset: readonly [number, number], room: (x: number, y: number) => Rect, from: number[]): number => {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const shift = attempt < 6 ? 2 : 0;
+      const r = room(base.x + offset[0] + rng.range(-shift, shift), base.y + offset[1] + rng.range(-shift, shift));
+      if (free(r) && wallGap(r, rects[parentOf(r, from)]!) <= 6) {
+        rects.push(r);
+        return rects.length - 1;
+      }
+    }
+    return -1;
+  };
+  const hallRing = [0];
+  first1.forEach((offset, i) => {
+    const at = place(offset, (x, y) => (i === 0 && quest === "quest_2" ? (hallRect(ctx, x, y) ?? roomAround(rng, x, y)) : roomAround(rng, x, y)), hallRing);
+    if (at < 0) return;
+    if (i === 0 && quest === "quest_2") hall = rects[at];
+    ring1.push(at);
+    links.push([0, at]);
   });
-  // some of the rooms have a second one behind them, so that the ways are long
-  const behind: Rect[][] = [];
-  rooms.slice(1).forEach((r) => {
-    if (!rng.chance(550)) return;
-    const base = r[0]!;
-    const dx = Math.sign(base.x + (base.w >> 1) - 48) * rng.range(10, 14);
-    const dy = -rng.range(8, 12);
-    const extra = roomAround(rng, base.x + (base.w >> 1) + dx, base.y + (base.h >> 1) + dy);
-    if (inBounds(extra) && !rooms.some((o) => rectsOverlap(extra, o[0]!, 2)) && !behind.some((o) => rectsOverlap(extra, o[0]!, 2))) behind.push([extra]);
-  });
-  const all = rooms.filter((r) => inBounds(r[0]!)).concat(behind);
-  for (const r of all) b.carveRoom(r);
-  const centre = (r: Rect[]) => ({ x: r[0]!.x + (r[0]!.w >> 1), y: r[0]!.y + (r[0]!.h >> 1) });
-  // every spoke runs from the hall; a room behind another hangs on that one
-  const hubC = centre(all[0]!);
-  rooms.slice(1).forEach((r) => {
-    const c = centre(r);
-    b.carveL(hubC.x, hubC.y, c.x, c.y, rng.chance(500));
-  });
-  behind.forEach((r) => {
-    const c = centre(r);
-    const nearest = rooms.slice(1).reduce((best, o) => (Math.abs(centre(o).x - c.x) + Math.abs(centre(o).y - c.y) < Math.abs(centre(best).x - c.x) + Math.abs(centre(best).y - c.y) ? o : best), rooms[1]!);
-    b.carveL(centre(nearest).x, centre(nearest).y, c.x, c.y, rng.chance(500));
-  });
-  carveSpurs(b, rng, rng.range(2, 4), 3, 5);
-  return finishDungeon(rng, ctx, { b, rooms: all, ...(hall ? { hall } : {}), ...(hall ? { endNear: hall } : {}) });
+  for (const offset of rng.shuffle([...HUB_RING_2])) {
+    if (rects.length >= target) break;
+    const from = ring1.slice(1);
+    if (from.length === 0) break;
+    const at = place(offset, (x, y) => roomAround(rng, x, y), from);
+    if (at < 0) continue;
+    links.push([parentOf(rects[at]!, from), at]);
+  }
+  const rooms = rects.map((r) => [r]);
+  for (const r of rects) b.carveRoom([r]);
+  for (const [from, to] of links) joinRooms(b, rng, rects[from]!, rects[to]!);
+  carveSpurs(b, rng, rng.range(2, 4), 2, 4);
+  return finishDungeon(rng, ctx, { b, rooms, ...(hall ? { hall, endNear: hall } : {}) });
 }
 
 // ---------------------------------------------------------------- dungeon_3: the maze
@@ -323,8 +415,8 @@ const SPUR_DIRS: readonly (readonly [number, number])[] = [
 function carveSpurs(b: Builder, rng: Rng, count: number, minLen = 3, maxLen = 6): void {
   let made = 0;
   for (let attempt = 0; attempt < 400 && made < count; attempt++) {
-    const x = rng.range(4, SIZE - 5);
-    const y = rng.range(4, SIZE - 5);
+    const x = rng.range(4, b.width - 5);
+    const y = rng.range(4, b.height - 5);
     const [dx, dy] = SPUR_DIRS[rng.int(4)]!;
     const px = dy; // perpendicular axis
     const py = dx;
@@ -336,7 +428,7 @@ function carveSpurs(b: Builder, rng: Rng, count: number, minLen = 3, maxLen = 6)
     for (let k = 1; k <= len + 1 && free; k++) {
       const cx = x + dx * k;
       const cy = y + dy * k;
-      if (cx < 2 || cy < 2 || cx > SIZE - 3 || cy > SIZE - 3) free = false;
+      if (cx < 2 || cy < 2 || cx > b.width - 3 || cy > b.height - 3) free = false;
       else if (b.get(cx, cy) !== CELL.SOLID) free = false;
       else if (k >= 2 && (b.get(cx + px, cy + py) !== CELL.SOLID || b.get(cx - px, cy - py) !== CELL.SOLID)) free = false;
     }

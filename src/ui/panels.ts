@@ -2,7 +2,7 @@ import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables
 import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
 import { bonusLines, combineItems, isTwoHanded, makeItem, weaponHands, type Hands } from "../sim/items";
-import { SPELL_GRID, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, type QuickCast, type QuickCastBlock } from "../sim/spells";
+import { SPELL_GRID, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
@@ -450,6 +450,8 @@ export interface SpellChoice {
   element?: "acid" | "fire" | "ice" | "magic";
   /** Lloyd's Beacon: light the fire or go back to it. */
   beacon?: "set" | "return";
+  /** Teleport: how many fields ahead. */
+  distance?: number;
 }
 
 const QUICK_CAST_BLOCK: Record<QuickCastBlock, string> = {
@@ -519,7 +521,8 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           h("div", { text: s.text }),
         );
       };
-      const slots = c.spells.map((id) => {
+      // alphabetical by name, whatever order the spells were learnt in
+      const slots = [...c.spells].sort((a, b) => (SPELLS[a]?.title ?? "").localeCompare(SPELLS[b]?.title ?? "")).map((id) => {
         const s = SPELLS[id]!;
         const ok = isSpellImplemented(id) && c.sp >= s.mana;
         const slot = h(
@@ -578,6 +581,11 @@ export async function askSpellDetails(ui: UI, party: Party, spellId: number): Pr
     const target = await ui.choose(ITEM_SPELLS.has(spellId) ? "Whose backpack?" : "On whom?", "", party.characters.map((ch, i) => ({ label: ch.name, value: i, note: `${ch.hp}/${ch.health} HP, ${ch.conditions.join(", ")}` })));
     if (target === null) return null;
     choice.target = target;
+  }
+  if (spellId === 47) {
+    const distance = await ui.choose("Teleport", "How many fields ahead should the party be carried?", TELEPORT_DISTANCES.map((d) => ({ label: `${d} fields`, value: d })));
+    if (distance === null) return null;
+    choice.distance = distance;
   }
   if (spellId === 17) {
     const element = await ui.choose("Protect against", "", [

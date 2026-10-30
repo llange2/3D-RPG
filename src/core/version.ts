@@ -97,5 +97,7 @@
  * layouts (tube, hub, maze, classic) and the caves three (ring, classic, big cave). There are exactly three castles (levels 2, 3 and 4; good, neutral, evil), each a keep of the
  * document in a yard (`interiors/castle.ts`), with a king, four statues that spell a word, two chests of 5 million gold and chests in the yard that raise an alarm. The pyramids
  * lead into one spaceship of five sections with airlocks (`interiors/spaceship.ts`); 25 Quatloo coins and 15 silver skulls hide in the chests, Seth Squirm and his machines stand in a dungeon of level 2. Levels and attribute points of the end rooms (and the chalices of the control deck) lie in chalices: the party picks the one hero who gets them.
+ * 28 = the layouts dungeon_1 (tube) and dungeon_2 (hub) are compact: 8 to 15 rooms on a 72 x 72 map, about three wall cells between rooms and no corridor longer than 9 cells
+ * (the tube winds up as a snake or a spiral, the hub is a star of two rings round the hall).
  */
-export const GEN_VERSION = 27;
+export const GEN_VERSION = 28;

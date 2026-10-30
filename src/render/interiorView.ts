@@ -5,6 +5,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import { hash2 } from "../core/noise";
+import { QUEST_PROP } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { hasRoundWalls, roundCorners, ROUND_ITEM, type RoundCorner } from "../interiors/roundCorners";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
@@ -22,6 +23,9 @@ import type { Renderer } from "./engine";
 
 /** The old game hung its shop signs at 0.55 of the model size. */
 const SIGN_SCALE = 0.55;
+/** The old items of the quest keys and key cards (what a quest chest shows), and how fast they turn: about 30 degrees a second. */
+const SPINNING_ITEMS: ReadonlySet<number> = new Set(Object.values(QUEST_PROP));
+const SPIN_SPEED = 0.5;
 
 /** The old dungeon floor and its scale (add_block 10): a cobbled mesh, one model per cell. */
 const FLOOR_MODEL = "blk_floor";
@@ -413,9 +417,14 @@ export class InteriorView {
   /** Cells (`y * width + x`) that an object stands on (a chest, a statue, a person): another object does not turn its front to them. */
   private objectCells = new Set<number>();
 
+  /** The props of keys and key cards (before their turn) and how far they have turned. */
+  private spinners: PropInstance[] = [];
+  private spin = 0;
+
   private buildObjects(): void {
     const map = this.map!;
     const instances: PropInstance[] = [];
+    this.spinners = [];
     this.wallLike = new Set(this.content!.actions.filter((a) => a.kind === "door" || (a.kind === "breakable_wall" && !this.brokenWalls.has(a.uid))).map((a) => a.y * map.width + a.x));
     this.objectCells = new Set(this.content!.actions.filter((a) => a.kind !== "service" && a.kind !== "trap" && a.kind !== "transfer" && a.kind !== "ambush" && !this.wallLike.has(a.y * map.width + a.x)).map((a) => a.y * map.width + a.x));
     for (const a of this.content!.actions) {
@@ -429,7 +438,7 @@ export class InteriorView {
       // a head of the ring that is not there leaves its cell empty
       if (!themed && a.kind === "head") continue;
       if (themed) {
-        instances.push(themed);
+        (a.kind === "treasure" && typeof a.params.chest === "number" && SPINNING_ITEMS.has(a.params.chest) ? this.spinners : instances).push(themed);
         continue;
       }
       switch (a.kind) {
@@ -473,7 +482,13 @@ export class InteriorView {
       for (const p of map.pillars ?? []) instances.push({ model: pillar, x: cellCenterX(p.x), y: 0, z: cellCenterZ(p.y), rotY: 0, scale: 1.5, scaleXYZ: [1.5, height, 1.5] });
     }
     this.props.setInstances(this.owner, instances);
+    this.pushSpinners();
     this.props.flush();
+  }
+
+  /** Keys and key cards turn slowly about their own axis; they have an owner of their own, redrawn every frame. */
+  private pushSpinners(): void {
+    this.props.setInstances(`${this.owner}:spin`, this.spinners.map((p) => ({ ...p, center: true, rotY: p.rotY + this.spin })));
   }
 
   /** Draws the objects again, after one of them changed (a key was taken out of its chest). */
@@ -597,6 +612,10 @@ export class InteriorView {
   update(dt: number): void {
     this.doors.update(dt);
     this.traps.update(dt);
+    if (this.spinners.length === 0) return;
+    this.spin = (this.spin + dt * SPIN_SPEED) % (2 * Math.PI);
+    this.pushSpinners();
+    this.props.flush();
   }
 
   dispose(): void {
@@ -606,7 +625,9 @@ export class InteriorView {
       this.props.removeOwner(`${this.owner}:floor`);
       this.props.removeOwner(`${this.owner}:walls`);
       this.props.removeOwner(`${this.owner}:round`);
+      this.props.removeOwner(`${this.owner}:spin`);
     }
+    this.spinners = [];
     this.caveWalls = [];
     this.caveShown = null;
     this.caveModels = false;

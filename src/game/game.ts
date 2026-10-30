@@ -18,6 +18,7 @@ import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { BLACK_CARD, ORB, ORBS_FOR_KING, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
 import { CELL, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
+import { inEndRoom } from "../interiors/endRoom";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
 import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
 import { ChunkManager } from "../render/chunkManager";
@@ -2689,11 +2690,18 @@ export class Game {
     for (const d of distances) {
       const x = tx + dx * d;
       const y = ty + dy * d;
-      if (!this.canEnter(x, y, how === "ghost")) continue;
+      if (!this.canEnter(x, y, how === "ghost") || this.inClosedEndRoom(x, y)) continue;
       if (how === "hop" && !this.clearBetween(tx, ty, x, y)) continue;
       return { x, y };
     }
     return null;
+  }
+
+  /** The end room of the place before its quest is done: a spell that carried the party in would pass the boss (and the quest). */
+  private inClosedEndRoom(x: number, y: number): boolean {
+    const rt = this.interior;
+    const end = this.mode === "interior" ? rt?.map.dungeon?.endRoom : undefined;
+    return !!rt && inEndRoom(end, x, y) && !this.state.opened.has(endFlag(rt.map.key));
   }
 
   private moveAhead(distances: number[], how: "hop" | "ghost" | "warp" = "warp"): boolean {
@@ -2712,7 +2720,7 @@ export class Game {
   }
 
   /** The party's wild-card spells that move it are checked before the spell points are paid. */
-  private spellRefusal(spellId: number, beacon?: "set" | "return"): string | null {
+  private spellRefusal(spellId: number, beacon?: "set" | "return", distance = 0): string | null {
     if (this.enc.battleMode && movesParty(spellId, beacon)) return IN_MELEE_SPELL;
     // the castles and the spaceship are magically closed to every spell that carries the party away (quest document 1.2)
     const here = this.interior?.map;
@@ -2744,7 +2752,7 @@ export class Game {
         this.gateSpot = this.pickGate();
         return this.outsideNow() ? (this.gateSpot ? null : "Nature's Gate finds nowhere to open.") : "Nature's Gate only opens in the open country.";
       case 47:
-        return this.ahead([9, 8, 7, 6, 5, 4, 3, 2]) ? null : "There is no room to teleport there.";
+        return this.ahead([distance]) ? null : "There is no room to teleport there.";
       case 62:
         return this.ahead([2], "ghost") ? null : "There is no room beyond.";
       case 16:
@@ -2757,7 +2765,7 @@ export class Game {
   /** Time Distortion: the cells nearest to the party that no monster can reach. */
   private safeSpots(): Spot[] {
     const { tx, ty } = this.player;
-    return safeCells(this.enc, tx, ty, (x, y) => this.canEnter(x, y));
+    return safeCells(this.enc, tx, ty, (x, y) => this.canEnter(x, y) && !this.inClosedEndRoom(x, y));
   }
 
   /** The open country: the generated overworld and the campaign's outside map. */
@@ -2912,7 +2920,7 @@ export class Game {
         return false;
       }
       case 47:
-        if (!this.moveAhead([9, 8, 7, 6, 5, 4, 3, 2])) this.ui.log("There is no room to teleport there.", "bad");
+        if (!this.moveAhead([pick.distance ?? 0])) this.ui.log("There is no room to teleport there.", "bad");
         return false;
       case 62:
         // Etherealise: one field is skipped, doors and brittle walls included (the party passes through them like a shadow)
@@ -3052,7 +3060,7 @@ export class Game {
       return;
     }
     // what cannot work now is refused before the spell points are spent
-    const refusal = this.spellRefusal(pick.spellId, pick.beacon);
+    const refusal = this.spellRefusal(pick.spellId, pick.beacon, pick.distance);
     if (refusal) {
       this.audio.play(9014);
       this.ui.log(refusal, "bad");

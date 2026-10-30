@@ -144,6 +144,9 @@ export function needsTarget(id: number): boolean {
   return HEALS.has(id) || id in CURES || id in SUPPRESS || REVIVES.has(id) || ITEM_SPELLS.has(id) || [20, 25, 30, 46, 56].includes(id);
 }
 
+/** Teleport carries the party this many fields ahead; the player picks the distance. */
+export const TELEPORT_DISTANCES: readonly number[] = [2, 3, 4, 5, 6, 7, 8, 9];
+
 /** Lloyd's Beacon asks "Set" or "Return" before it is cast. */
 export function needsBeaconChoice(id: number): boolean {
   return id === 32;

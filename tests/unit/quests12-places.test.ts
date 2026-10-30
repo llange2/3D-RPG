@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateContent } from "../../src/actions";
 import { QUESTS, type LayoutId, type QuestId } from "../../src/data/quest-table";
 import { analyzeTopology } from "../../src/interiors";
+import { longestCorridor } from "../../src/interiors/topology";
 import { questInterior } from "../helpers/quests";
 
 describe("quest places (quest document 1.2)", () => {
@@ -40,12 +41,26 @@ describe("the layouts of the dungeons", () => {
     expect(doors).toBeGreaterThan(20);
   });
 
-  it("dungeon_1 is a tube: one long way through the rooms", () => {
-    for (let i = 0; i < 4; i++) {
+  it("dungeon_1 is a compact tube: 8 to 15 rooms in a chain, thin walls between them, short corridors", () => {
+    for (let i = 0; i < 8; i++) {
       const { map } = questInterior("quest_6", "dungeon_1", 2, i);
+      const rooms = map.rooms.filter((r) => r.size > 4);
+      expect(rooms.length, `#${i}`).toBeGreaterThanOrEqual(8);
+      expect(rooms.length, `#${i}`).toBeLessThanOrEqual(15);
       // a tube has few loops: the rooms are in a chain, so the spawn is far from the last room
       const topo = analyzeTopology(map);
-      expect(topo.maxDepth).toBeGreaterThan(120);
+      expect(topo.maxDepth, `#${i}`).toBeGreaterThan(60);
+      expect(longestCorridor(map), `#${i}`).toBeLessThanOrEqual(9);
+    }
+  });
+
+  it("dungeon_2 is a compact hub: 8 to 15 rooms close round the hall", () => {
+    for (let i = 0; i < 8; i++) {
+      const { map } = questInterior("quest_4", "dungeon_2", 2, i);
+      const rooms = map.rooms.filter((r) => r.size > 4);
+      expect(rooms.length, `#${i}`).toBeGreaterThanOrEqual(8);
+      expect(rooms.length, `#${i}`).toBeLessThanOrEqual(15);
+      expect(longestCorridor(map), `#${i}`).toBeLessThanOrEqual(10);
     }
   });
 
