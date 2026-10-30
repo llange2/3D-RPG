@@ -12,7 +12,7 @@ export type GroundName = "grass" | "forest" | "desert" | "snow" | "swamp" | "vol
 export type DrawingName = "mountain" | "trees" | "palms";
 /** The painted symbols of places and events; the ground is the colour of the tile they stand on. */
 export type PlaceName = "town" | "castle" | "dungeon" | "pyramid" | "event" | "exit";
-export type PlaceGround = "meadow" | "forest" | "desert" | "snow" | "swamp" | "lava" | "town";
+export type PlaceGround = "meadow" | "forest" | "desert" | "dirt" | "snow" | "swamp" | "lava" | "town";
 /** `event` and `exit` are the painted tiles on the interior ground (`INTERIOR_GROUND`). */
 export type SymbolName =
   | "wall" | "floor" | "water" | "door" | "door_open" | "event" | "info" | "persona" | "trap" | "exit"
@@ -39,7 +39,7 @@ const INTERIOR_GROUND: PlaceGround = "town";
 /** The painted ground that goes with a ground of the overworld map (the sheet has no cobblestone, bridge or plain dirt tile). */
 const PLACE_GROUND: Record<GroundName, PlaceGround> = {
   grass: "meadow", forest: "forest", desert: "desert", snow: "snow", swamp: "swamp", volcanic: "lava", lava: "lava",
-  dirt: "desert", road: "desert", floor: "desert", cobble: "desert", shore: "desert",
+  dirt: "dirt", road: "desert", floor: "desert", cobble: "desert", shore: "desert",
 };
 export const placeGroundOf = (ground: GroundName): PlaceGround => PLACE_GROUND[ground];
 

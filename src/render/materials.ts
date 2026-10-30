@@ -67,7 +67,8 @@ export class TerrainMaterials {
       case "shallow": {
         const m = new StandardMaterial(`terrain:${key}`, this.scene);
         m.diffuseTexture = this.textures.get("tex/tex_water.webp");
-        m.diffuseColor = key === "water" ? new Color3(0.55, 0.72, 0.95) : new Color3(0.7, 0.88, 1);
+        // shallows have the deep water's colour (a lighter tint showed the border between them as a seam in the lake)
+        m.diffuseColor = new Color3(0.55, 0.72, 0.95);
         m.specularColor = new Color3(0.25, 0.28, 0.3);
         m.specularPower = 40;
         return m;

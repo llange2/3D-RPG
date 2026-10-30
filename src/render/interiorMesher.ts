@@ -113,7 +113,8 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
     // niche in the city wall, so the wall lies outside the map), the door of a dungeon, a castle, a cave or a cyber complex
     const dx = map.exit.x - map.spawn.x;
     const dy = map.exit.y - map.spawn.y;
-    doorFaces.add(`${map.exit.x + dx},${map.exit.y + dy}|${map.exit.x},${map.exit.y}`);
+    // a generated castle has the Castle Gate model there instead (`InteriorView.pushCastleGate`)
+    if (!map.castle || styles) doorFaces.add(`${map.exit.x + dx},${map.exit.y + dy}|${map.exit.x},${map.exit.y}`);
   }
 
   for (let cy = 0; cy < map.height; cy++) {

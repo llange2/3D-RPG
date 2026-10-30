@@ -29,6 +29,7 @@ describe("the guild sells scrolls of all three schools (eleventh playtest, point
   it("puts a bought scroll into the buyer's backpack, takes the price, and pays half the value back for a sold one", () => {
     const party = createDefaultParty();
     const spell = guildScrolls(1, "Arcane")[0]!;
+    party.gold = 5000; // the test is about the purchase, not about what a new game starts with
     const gold = party.gold;
     const price = spellPrice(spell, party);
     const r = buyScroll(party, 2, spell.id);

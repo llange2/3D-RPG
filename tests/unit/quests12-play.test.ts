@@ -151,16 +151,20 @@ describe("the end room", () => {
       const { party, use } = play(content);
       const end = ref.endRoom!;
       const inEnd = (a: ActionInstance) => a.x >= end.x && a.y >= end.y && a.x < end.x + end.w && a.y < end.y + end.h;
-      for (const c of of(content, "treasure").filter(inEnd)) {
+      for (const c of of(content, "treasure").filter((a) => inEnd(a) && a.params.bonus === undefined)) {
         const gold = party.gold;
         const out = use(c);
         expect(out.consumed).toBe(true);
         if (party.gold > gold) seen.add("gold");
         if (out.effects.some((e) => e.type === "item")) seen.add("items");
       }
-      // a level or points of an attribute lie in a chalice: the party chooses who drinks, and only that hero gets the bonus
-      for (const c of of(content, "chalice").filter(inEnd)) {
-        expect(c.params.item).toBe(86);
+      // a level or points of an attribute lie in a chalice (levels 4 and 5) or, on levels 1 to 3, in a magic well, a barrel or crystals: the party chooses who
+      // drinks, and only that hero gets the bonus. The barrel stays a treasure (a container), the others are chalice actions with another object
+      const holders = [...of(content, "chalice"), ...of(content, "treasure").filter((a) => a.params.bonus !== undefined)].filter(inEnd);
+      for (const c of holders) {
+        const item = Number(c.params.item ?? c.params.chest);
+        if (tier <= 3) expect([37, 88, 5, 117], `level ${tier} holds attribute points in a chalice`).toContain(item);
+        else expect(item).toBe(86);
         const before = party.characters.map((h) => ({ level: h.level, sum: h.str + h.int + h.per + h.end + h.spd + h.acc + h.lck }));
         const out = use(c, undefined, 2);
         expect(out.consumed).toBe(true);

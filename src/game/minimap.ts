@@ -303,6 +303,8 @@ const SERVICE_SYMBOL: Record<string, SymbolName> = { inn: "inn", training: "trai
  */
 export function hasHiddenUse(a: { kind: string; params: Record<string, unknown> }): boolean {
   if (a.kind === "fountain" || a.kind === "shrine") return true;
+  // the attribute points of an end room on levels 1 to 3 lie in a well, a barrel or crystals (a chalice is the one object that is shown)
+  if (a.kind === "chalice") return typeof a.params.bonus === "string" && Number(a.params.item) !== 86;
   if (a.kind === "treasure") {
     if (typeof a.params.quest === "string") return false;
     const chest = Number(a.params.chest);

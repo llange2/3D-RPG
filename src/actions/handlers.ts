@@ -187,6 +187,41 @@ export function resistanceRecipient(party: Party, element: (typeof ELEMENTS)[num
   return tied[rng.int(tied.length)]!;
 }
 
+/**
+ * Where the attribute points of an end room lie (35th playtest): in a magic well, a barrel or crystals on levels 1 to 3 and only on the higher levels in a chalice
+ * (`rewardsOf` in `endRoom.ts`). The object is the action's `item`; it only changes the words, who gets the points is decided by the party in every case.
+ */
+interface Vessel {
+  hint: (attr: string, amount: number) => string;
+  pick: string;
+  done: (name: string, attr: string, amount: number) => string;
+}
+const CHALICE_VESSEL: Vessel = {
+  hint: (attr, amount) => `The liquid in the chalice glows in the colour of ${attr}. Whoever drinks it gains ${amount} points.`,
+  pick: "Which character shall drink from the chalice?",
+  done: (name, attr, amount) => `${name} drinks and is filled with strength: ${attr} +${amount}.`,
+};
+const WELL_VESSEL: Vessel = {
+  hint: (attr, amount) => `The water of the well glows in the colour of ${attr}. Whoever drinks from it gains ${amount} points.`,
+  pick: "Which character shall drink from the well?",
+  done: (name, attr, amount) => `${name} drinks from the well and is filled with strength: ${attr} +${amount}.`,
+};
+const VESSELS: Readonly<Record<number, Vessel>> = {
+  37: WELL_VESSEL,
+  88: WELL_VESSEL,
+  5: {
+    hint: (attr, amount) => `The barrel is filled to the brim with a brew that glows in the colour of ${attr}. Whoever drinks it gains ${amount} points.`,
+    pick: "Which character shall drink from the barrel?",
+    done: (name, attr, amount) => `${name} drinks from the barrel and is filled with strength: ${attr} +${amount}.`,
+  },
+  117: {
+    hint: (attr, amount) => `The crystals hum in the colour of ${attr}. Whoever touches them gains ${amount} points.`,
+    pick: "Which character shall touch the crystals?",
+    done: (name, attr, amount) => `${name} touches the crystals and is filled with strength: ${attr} +${amount}.`,
+  },
+};
+const vesselOf = (p: ActionInstance["params"]): Vessel => VESSELS[Number(p.item ?? p.chest)] ?? CHALICE_VESSEL;
+
 /** What a chalice with a `bonus` holds: a level, points of one attribute or experience. `hint` is what the party sees before it chooses who drinks. */
 export type ChaliceGift = { kind: "level"; amount: number; hint: string } | { kind: "attr"; attribute: Attribute; amount: number; hint: string } | { kind: "xp"; amount: number; hint: string };
 
@@ -194,7 +229,7 @@ export function chaliceGift(p: ActionInstance["params"]): ChaliceGift {
   const amount = Math.max(1, Number(p.amount ?? 1));
   if (p.bonus === "attr") {
     const attribute = p.attr as Attribute;
-    return { kind: "attr", attribute, amount, hint: `The liquid in the chalice glows in the colour of ${attribute.toUpperCase()}. Whoever drinks it gains ${amount} points.` };
+    return { kind: "attr", attribute, amount, hint: vesselOf(p).hint(attribute.toUpperCase(), amount) };
   }
   if (p.bonus === "xp") return { kind: "xp", amount, hint: "The liquid in the chalice shimmers with old wisdom. Only one of you can drink it." };
   return { kind: "level", amount, hint: "The liquid in the chalice gleams like liquid gold. Only one of you can drink it." };
@@ -227,6 +262,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
 
   switch (action.kind) {
     case "treasure": {
+      // a barrel of an end room that holds attribute points: it stays a container (a `treasure`, see the barrel rule), but is drunk from like the chalice
+      if (typeof p.bonus === "string") return resolveAction({ ...action, kind: "chalice" }, ctx);
       // a chest that the quest of the place keeps shut until its puzzle is solved (the head ring, the row of heads)
       if ((p.lock === "ring" && !ringSolved(ctx.content ?? EMPTY, ctx.opened ?? NONE)) || (p.lock === "rotation" && !rotationSolved(ctx.content ?? EMPTY, ctx.opened ?? NONE))) {
         return { effects: [{ type: "text", text: "The chest will not open. Something in this hall is not as it should be." }], consumed: false };
@@ -362,7 +399,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       if (typeof p.bonus === "string") {
         if (p.lock === "code" && !(ctx.opened ?? NONE).has(String(p.requires))) return { effects: [{ type: "text", text: "The chalice is sealed. A message on the nearest terminal says it opens for whoever knows the word." }], consumed: false };
         const gift = chaliceGift(p);
-        if (ctx.hero === undefined) return { effects: [{ type: "text", text: gift.hint }, { type: "pick", question: "Which character shall drink from the chalice?" }], consumed: false };
+        if (ctx.hero === undefined) return { effects: [{ type: "text", text: gift.hint }, { type: "pick", question: gift.kind === "attr" ? vesselOf(p).pick : "Which character shall drink from the chalice?" }], consumed: false };
         if (ctx.hero === null) return { effects, consumed: false };
         const drinker = party.characters[ctx.hero];
         if (!drinker || !canAct(drinker)) return { effects, consumed: false };
@@ -371,7 +408,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           effects.push({ type: "text", text: `${drinker.name} drinks. A surge of experience runs through ${drinker.name}: ${gift.amount === 1 ? "a level" : `${gift.amount} levels`} gained.` });
         } else if (gift.kind === "attr") {
           drinker[gift.attribute] += gift.amount;
-          effects.push({ type: "text", text: `${drinker.name} drinks and is filled with strength: ${gift.attribute.toUpperCase()} +${gift.amount}.` }, { type: "attribute", character: ctx.hero, attribute: gift.attribute, amount: gift.amount });
+          effects.push({ type: "text", text: vesselOf(p).done(drinker.name, gift.attribute.toUpperCase(), gift.amount) }, { type: "attribute", character: ctx.hero, attribute: gift.attribute, amount: gift.amount });
         } else {
           drinker.xp += gift.amount;
           effects.push({ type: "text", text: `${drinker.name} drinks. A great wisdom flows through ${drinker.name}: ${thousands(gift.amount)} experience points.` });

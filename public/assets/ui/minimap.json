@@ -2,7 +2,7 @@
  "version": 2,
  "cell": 48,
  "width": 288,
- "height": 528,
+ "height": 576,
  "icons": {
   "ground": {
    "x": 0,
@@ -120,133 +120,157 @@
    "x": 192,
    "y": 192
   },
-  "town:forest": {
+  "town:dirt": {
    "x": 240,
    "y": 192
   },
-  "castle:forest": {
+  "castle:dirt": {
    "x": 0,
    "y": 240
+  },
+  "dungeon:dirt": {
+   "x": 48,
+   "y": 240
+  },
+  "pyramid:dirt": {
+   "x": 96,
+   "y": 240
+  },
+  "event:dirt": {
+   "x": 144,
+   "y": 240
+  },
+  "exit:dirt": {
+   "x": 192,
+   "y": 240
+  },
+  "town:forest": {
+   "x": 240,
+   "y": 240
+  },
+  "castle:forest": {
+   "x": 0,
+   "y": 288
   },
   "dungeon:forest": {
    "x": 48,
-   "y": 240
+   "y": 288
   },
   "pyramid:forest": {
    "x": 96,
-   "y": 240
+   "y": 288
   },
   "event:forest": {
    "x": 144,
-   "y": 240
+   "y": 288
   },
   "exit:forest": {
    "x": 192,
-   "y": 240
+   "y": 288
   },
   "town:snow": {
    "x": 240,
-   "y": 240
+   "y": 288
   },
   "castle:snow": {
    "x": 0,
-   "y": 288
+   "y": 336
   },
   "dungeon:snow": {
    "x": 48,
-   "y": 288
+   "y": 336
   },
   "pyramid:snow": {
    "x": 96,
-   "y": 288
+   "y": 336
   },
   "event:snow": {
    "x": 144,
-   "y": 288
+   "y": 336
   },
   "exit:snow": {
    "x": 192,
-   "y": 288
+   "y": 336
   },
   "town:lava": {
    "x": 240,
-   "y": 288
+   "y": 336
   },
   "castle:lava": {
    "x": 0,
-   "y": 336
+   "y": 384
   },
   "dungeon:lava": {
    "x": 48,
-   "y": 336
+   "y": 384
   },
   "pyramid:lava": {
    "x": 96,
-   "y": 336
+   "y": 384
   },
   "event:lava": {
    "x": 144,
-   "y": 336
+   "y": 384
   },
   "exit:lava": {
    "x": 192,
-   "y": 336
+   "y": 384
   },
   "town:meadow": {
    "x": 240,
-   "y": 336
+   "y": 384
   },
   "castle:meadow": {
    "x": 0,
-   "y": 384
+   "y": 432
   },
   "dungeon:meadow": {
    "x": 48,
-   "y": 384
+   "y": 432
   },
   "pyramid:meadow": {
    "x": 96,
-   "y": 384
+   "y": 432
   },
   "event:meadow": {
    "x": 144,
-   "y": 384
+   "y": 432
   },
   "exit:meadow": {
    "x": 192,
-   "y": 384
+   "y": 432
   },
   "town:swamp": {
    "x": 240,
-   "y": 384
+   "y": 432
   },
   "castle:swamp": {
    "x": 0,
-   "y": 432
+   "y": 480
   },
   "dungeon:swamp": {
    "x": 48,
-   "y": 432
+   "y": 480
   },
   "pyramid:swamp": {
    "x": 96,
-   "y": 432
+   "y": 480
   },
   "event:swamp": {
    "x": 144,
-   "y": 432
+   "y": 480
   },
   "exit:swamp": {
    "x": 192,
-   "y": 432
+   "y": 480
   },
   "event:town": {
    "x": 240,
-   "y": 432
+   "y": 480
   },
   "exit:town": {
    "x": 0,
-   "y": 480
+   "y": 528
   }
  },
  "tints": {
