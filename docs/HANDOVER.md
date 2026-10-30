@@ -630,6 +630,10 @@ Der Nutzer lieferte `.ignore/mm_tiles.png` (6 Symbole × 5 Böden, transparenter
 - **Nicht eingebaut:** die braune Zeile (Erde). Kein Boden der Karte hat dafür eine Stelle (Straße, Pass und Brücke tragen keine Orte, die Lavainsel hat die rote Zeile); sie liegt in der Quelle für spätere Böden bereit.
 - Tests: `tests/unit/minimapPlaces.test.ts` (alle 36 Kacheln im Register, Wiese heller grün als Wald, Sumpf dunkler, Legende ohne Rahmen).
 
+### Quest-Dokument 1.2 (2026-10-29, Zweig `quests_v1_2`, `GEN_VERSION` 27)
+
+Die Generierung der Höhlen, Dungeons, Burgen und der Pyramide folgt dem Quest-Dokument 1.2 (`.ignore/quests_1.2.md`): Quests statt Themes, vier Dungeon- und drei Höhlen-Layouts, Endräume, Schlüsselkette über die ganze Welt, drei Burgen, ein Raumschiff, Mini-Quests, Quatloo-Münzen, Silberschädel. Vollständige Beschreibung, Entscheidungen und bekannte Lücken: **`docs/QUESTS_UMSETZUNG.md`**. Die Rätselliste ist bereinigt (`docs/RAETSEL_BEREINIGUNG.md`), `docs/DUNGEON_THEMES.md` ist überholt.
+
 ### Zauber der Tabelle „Spells“ und das Zauberfenster mit Bildern (2026-10-22, kein `GEN_VERSION`)
 
 Quelle: `old_code/documentation/MM3_Master_documentation.xlsx`, Blatt „Spells“ (die Definitionen des Nutzers, 33 Zeilen „to implement“), und `RPG_0.1.xlsx`, Blatt „Monster“, Spalte „entity 22: group“ (wer untot ist). Der Nutzer hat vorab 17 Fragen beantwortet; ihre Antworten sind unten als Regeln festgehalten. Tests: `tests/unit/spells23.test.ts` (40), Browserprüfung `npm run check:spells -- <Ordner>`.

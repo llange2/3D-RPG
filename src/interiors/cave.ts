@@ -1,11 +1,14 @@
 import type { Rng } from "../core/rng";
 import { Builder, neighbours4, type BuildContext } from "./builder";
+import { carveEndRoomFor } from "./endRoom";
 import { CELL, type InteriorMap, type Room } from "./types";
 
 // Halved in both directions on the user's request (fifteenth playtest: the caves were 80 x 80 and took too long to cross); the walkable area and the chamber count follow
 const SIZE = 40;
 const MIN_FLOOR = 275;
 const CHAMBERS = 5;
+/** No cave is smaller than this (the tests of the fifteenth playtest ask for more than 200). */
+const MIN_CAVE_FLOOR = 230;
 
 function countSolid8(b: Builder, x: number, y: number): number {
   let n = 0;
@@ -18,8 +21,38 @@ function countSolid8(b: Builder, x: number, y: number): number {
   return n;
 }
 
-/** Cellular-automaton cave. Keeps the largest connected area; chambers are Voronoi cells of far-apart seed points. */
+/**
+ * The three layouts of the caves (quest document 1.2): a ring with bulges and small chambers in the middle (cave_1), the classic organic cave of
+ * chambers and passages (cave_2) and a big cave of chambers that each have one way in (cave_3). A cave of a quest also needs rock for its end
+ * room: one that has none is drawn again (the cave is a pure function of the stream, so the next try is as deterministic as the first).
+ */
 export function generateCave(rng: Rng, ctx: BuildContext): InteriorMap {
+  let map = generateCaveOnce(rng, ctx);
+  // a cave has at least 220 cells of floor (a ring that the smoothing made thin is drawn again), and the cave of a quest an end room
+  const small = (m: InteriorMap) => m.cells.reduce((n, c) => n + (c === CELL.FLOOR ? 1 : 0), 0) < MIN_CAVE_FLOOR;
+  for (let again = 0; again < 12 && (small(map) || (ctx.dungeon && !map.dungeon?.endRoom)); again++) map = generateCaveOnce(rng, ctx);
+  return map;
+}
+
+function generateCaveOnce(rng: Rng, ctx: BuildContext): InteriorMap {
+  const layout = ctx.dungeon?.layout;
+  const b = layout === "cave_1" ? ring(rng) : layout === "cave_3" ? bigCave(rng) : classicCave(rng);
+  const floors: number[] = [];
+  for (let i = 0; i < b.cells.length; i++) if (b.cells[i] === CELL.FLOOR) floors.push(i);
+
+  // Exit: bottom-most wall-backed floor cell near the horizontal middle, then chambers measured from the spawn.
+  const { exit, spawn } = b.pickExit(SIZE / 2, SIZE - 4);
+  const chambers = assignChambers(b, floors, spawn, rng);
+  const rooms: Room[] = chambers;
+  // the end room: quest 3 teleports the party into it, the others seal it (a cave without room for a sealed one gets a pocket that a teleport reaches)
+  const quest = ctx.dungeon?.quest;
+  const endRoom = ctx.dungeon ? carveEndRoomFor(b, rng, spawn, quest === "quest_3") : null;
+  const dungeon = ctx.dungeon ? { ...ctx.dungeon, ...(endRoom ? { endRoom } : {}) } : undefined;
+  return { ...b.finish("cave", { ...ctx, dungeon }, exit, spawn), rooms, roomOf: b.roomOf };
+}
+
+/** The classic cave: a cellular automaton, the largest connected area of it. */
+function classicCave(rng: Rng): Builder {
   let b = new Builder(SIZE, SIZE);
   let bestCount = -1;
   let best: Builder | null = null;
@@ -45,16 +78,146 @@ export function generateCave(rng: Rng, ctx: BuildContext): InteriorMap {
     }
     if (count >= MIN_FLOOR) break;
   }
-  b = best!;
+  return best!;
+}
 
-  const floors: number[] = [];
-  for (let i = 0; i < b.cells.length; i++) if (b.cells[i] === CELL.FLOOR) floors.push(i);
+/**
+ * Grows an organic blob of about `size` cells from a start cell: a random frontier growth over the cells that `allowed` lets through. Returns the
+ * cells (indices) it made floor.
+ */
+function growBlob(b: Builder, rng: Rng, sx: number, sy: number, size: number, allowed: (x: number, y: number) => boolean): number[] {
+  const cells: number[] = [];
+  const frontier: [number, number][] = [[sx, sy]];
+  const taken = new Set<number>();
+  while (cells.length < size && frontier.length > 0) {
+    const at = rng.int(frontier.length);
+    const [x, y] = frontier.splice(at, 1)[0]!;
+    const i = b.idx(x, y);
+    if (taken.has(i) || !allowed(x, y)) continue;
+    taken.add(i);
+    cells.push(i);
+    for (const [nx, ny] of neighbours4(x, y)) if (!taken.has(b.idx(nx, ny))) frontier.push([nx, ny]);
+  }
+  for (const i of cells) b.cells[i] = CELL.FLOOR;
+  return cells;
+}
 
-  // Exit: bottom-most wall-backed floor cell near the horizontal middle, then chambers measured from the spawn.
-  const { exit, spawn } = b.pickExit(SIZE / 2, SIZE - 4);
-  const chambers = assignChambers(b, floors, spawn, rng);
-  const rooms: Room[] = chambers;
-  return { ...b.finish("cave", ctx, exit, spawn), rooms, roomOf: b.roomOf };
+/** Is the cell inside the border of three cells, and has no floor within `m` cells of it (solid ground to carve into)? */
+function rockAround(b: Builder, x: number, y: number, m = 1): boolean {
+  if (x < 3 || y < 3 || x >= SIZE - 3 || y >= SIZE - 3) return false;
+  for (let dy = -m; dy <= m; dy++) for (let dx = -m; dx <= m; dx++) if (b.isFloor(x + dx, y + dy)) return false;
+  return true;
+}
+
+/** cave_1: a ring two to three cells wide, two to five bulges of 20 to 25 cells outwards and small organic chambers inside, each reached by a short opening. */
+function ring(rng: Rng): Builder {
+  const b = new Builder(SIZE, SIZE);
+  const outer = 15 + rng.int(2);
+  const width = rng.range(2, 3);
+  const cx = SIZE >> 1;
+  const cy = SIZE >> 1;
+  const distance = (x: number, y: number): number => {
+    const dx = Math.abs(x - cx);
+    const dy = Math.abs(y - cy);
+    // a rounded square: the chebyshev distance with the corners taken off by the manhattan distance, so the ring is round without trigonometry
+    return Math.max(dx, dy) + ((dx + dy) >> 2);
+  };
+  for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) if (distance(x, y) <= outer && distance(x, y) > outer - width - 1) b.set(x, y, CELL.FLOOR);
+  // the edge of the ring is not a ruler's line: a few cells of rock and floor swap places, then it is smoothed
+  for (let pass = 0; pass < 2; pass++) {
+    const next = new Uint8Array(b.cells);
+    for (let y = 2; y < SIZE - 2; y++) {
+      for (let x = 2; x < SIZE - 2; x++) {
+        const d = distance(x, y);
+        if (d < outer - width - 1 || d > outer + 1) continue;
+        if (pass === 0 && rng.chance(120)) next[b.idx(x, y)] = b.isFloor(x, y) ? CELL.SOLID : CELL.FLOOR;
+        else if (pass === 1) next[b.idx(x, y)] = countSolid8(b, x, y) < 5 ? CELL.FLOOR : CELL.SOLID;
+      }
+    }
+    b.cells.set(next);
+  }
+  keepLargest(b);
+  // bulges outwards: a blob grows from a cell of the outer edge into the rock
+  const edge: [number, number][] = [];
+  for (let y = 3; y < SIZE - 3; y++) for (let x = 3; x < SIZE - 3; x++) if (b.isFloor(x, y) && distance(x, y) >= outer - 1) edge.push([x, y]);
+  const wanted = rng.range(2, 5);
+  let bulges = 0;
+  for (const [x, y] of rng.shuffle(edge)) {
+    if (bulges >= wanted) break;
+    const before = b.cells.slice();
+    const cells = growBlob(b, rng, x, y, rng.range(20, 25), (px, py) => (px === x && py === y) || (!b.isFloor(px, py) && distance(px, py) > outer - 1 && rockAround(b, px, py, 1)));
+    if (cells.length < 14) b.cells.set(before);
+    else bulges++;
+  }
+  // chambers inside, each with a short opening into the ring
+  let inner = 0;
+  for (let tries = 0; tries < 80 && inner < 3; tries++) {
+    const x = cx + rng.range(-5, 5);
+    const y = cy + rng.range(-5, 5);
+    if (distance(x, y) > outer - width - 4 || !rockAround(b, x, y, 2)) continue;
+    const before = b.cells.slice();
+    const cells = growBlob(b, rng, x, y, rng.range(12, 18), (px, py) => distance(px, py) <= outer - width - 3 && !b.isFloor(px, py) && rockAround(b, px, py, 1));
+    if (cells.length < 8) {
+      b.cells.set(before);
+      continue;
+    }
+    // the opening: from the cell of the chamber farthest from the middle, straight outwards through rock to the ring
+    const far = cells.map((i) => [i % SIZE, Math.floor(i / SIZE)] as const).sort(([ax, ay], [bx, by]) => distance(bx, by) - distance(ax, ay))[0]!;
+    const dir = Math.abs(far[0] - cx) > Math.abs(far[1] - cy) ? ([Math.sign(far[0] - cx), 0] as const) : ([0, Math.sign(far[1] - cy)] as const);
+    let px: number = far[0];
+    let py: number = far[1];
+    let reached = false;
+    for (let k = 0; k < 8 && !reached; k++) {
+      px += dir[0];
+      py += dir[1];
+      if (b.isFloor(px, py) && !cells.includes(b.idx(px, py))) reached = true;
+      else b.carveCorridorCell(px, py);
+    }
+    if (!reached) {
+      b.cells.set(before);
+      continue;
+    }
+    inner++;
+  }
+  keepLargest(b);
+  return b;
+}
+
+/** cave_3: a big cave of chambers that each have one way in (a tree of passages), with single rocks standing in the chambers. */
+function bigCave(rng: Rng): Builder {
+  const b = new Builder(SIZE, SIZE);
+  const grid = [8, 20, 32];
+  const centres: { x: number; y: number }[] = [];
+  for (const gy of grid) for (const gx of grid) centres.push({ x: gx + rng.range(-3, 3), y: gy + rng.range(-3, 3) });
+  const chosen = rng.shuffle(centres).slice(0, rng.range(6, 8));
+  // the first chamber is at the bottom: the way in
+  chosen.sort((p, q) => q.y - p.y || p.x - q.x);
+  const blobs: number[][] = [];
+  for (const c of chosen) blobs.push(growBlob(b, rng, c.x, c.y, rng.range(55, 90), (x, y) => x >= 3 && y >= 3 && x < SIZE - 3 && y < SIZE - 3 && !b.isFloor(x, y)));
+  // a tree of passages: every chamber joins the nearest one that is already joined, with a passage one cell wide
+  const joined = [0];
+  for (let i = 1; i < chosen.length; i++) {
+    let best = 0;
+    for (const j of joined) if (Math.abs(chosen[j]!.x - chosen[i]!.x) + Math.abs(chosen[j]!.y - chosen[i]!.y) < Math.abs(chosen[best]!.x - chosen[i]!.x) + Math.abs(chosen[best]!.y - chosen[i]!.y)) best = j;
+    b.carveL(chosen[best]!.x, chosen[best]!.y, chosen[i]!.x, chosen[i]!.y, rng.chance(500));
+    joined.push(i);
+  }
+  keepLargest(b);
+  // single rocks inside the chambers: a cell with floor on all sides, and no other rock within two cells
+  const rocks: number[] = [];
+  for (const cells of blobs) {
+    for (const i of rng.shuffle([...cells])) {
+      const x = i % SIZE;
+      const y = Math.floor(i / SIZE);
+      if (!b.isFloor(x, y) || countSolid8(b, x, y) > 0) continue;
+      if (rocks.some((r) => Math.abs((r % SIZE) - x) < 3 && Math.abs(Math.floor(r / SIZE) - y) < 3)) continue;
+      if (rng.chance(80)) {
+        b.set(x, y, CELL.SOLID);
+        rocks.push(i);
+      }
+    }
+  }
+  return b;
 }
 
 /** Keeps only the largest 4-connected floor component. Returns its size. */

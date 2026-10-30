@@ -2772,7 +2772,7 @@
  "ci_84": {
   "file": "models-original/ci_84.glb",
   "tris": 40,
-  "bytes": 3140,
+  "bytes": 78028,
   "bounds": [
    -1,
    0,
@@ -2783,7 +2783,8 @@
   ],
   "animations": [],
   "groundTop": 0,
-  "fromObj": true
+  "fromObj": true,
+  "mean": 0.257
  },
  "ci_88": {
   "file": "models-original/ci_88.glb",
@@ -2805,7 +2806,7 @@
  "ci_85": {
   "file": "models-original/ci_85.glb",
   "tris": 36,
-  "bytes": 2876,
+  "bytes": 77516,
   "bounds": [
    -1,
    0,
@@ -2816,7 +2817,8 @@
   ],
   "animations": [],
   "groundTop": 2,
-  "fromObj": true
+  "fromObj": true,
+  "mean": 0.257
  },
  "ci_89": {
   "file": "models-original/ci_89.glb",

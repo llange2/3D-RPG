@@ -3,7 +3,6 @@ import { buildMapContent, validateContent } from "../../src/actions";
 import { resolveAction, type ActionContext } from "../../src/actions/handlers";
 import type { ActionInstance } from "../../src/actions/types";
 import { seedFromString } from "../../src/core/rng";
-import { DUNGEON_THEMES, THEMES_BY_ID } from "../../src/data/dungeon-themes";
 import { ITEM_RULES } from "../../src/data/item-rules";
 import { TALENT_SELLERS } from "../../src/data/talent-sellers";
 import { TALENTS } from "../../src/data/tables";
@@ -45,7 +44,7 @@ describe("sixteenth playtest: chests and props", () => {
       for (const kind of ["dungeon", "cave"] as const) {
         const poi = poiFor(kind, i);
         const map = generateInterior(world, poi);
-        const theme = map.dungeon ? THEMES_BY_ID[map.dungeon.id]! : undefined;
+        const theme = map.dungeon?.look;
         if (!theme) continue;
         for (const a of buildMapContent(world, poi, map).actions) {
           if (a.kind !== "decor") continue;
@@ -146,7 +145,6 @@ describe("sixteenth playtest: the towns of the old game (point 3)", () => {
 
   it("knows who sells every talent of a plan or a theme", () => {
     for (const b of TOWN_BLUEPRINTS) for (const t of b.talents) expect(TALENT_SELLERS[t.talent], t.talent).toBeDefined();
-    for (const t of DUNGEON_THEMES) for (const talent of t.talents ?? []) expect(TALENT_SELLERS[talent], `${t.id}: ${talent}`).toBeDefined();
     for (const id of Object.keys(TALENT_SELLERS)) expect(TALENTS[id], id).toBeDefined();
   });
 
@@ -186,33 +184,13 @@ describe("sixteenth playtest: the towns of the old game (point 3)", () => {
 
 describe("sixteenth playtest: the caves that sell talents (point 3), changed by the seventeenth session", () => {
   it("sells no talent in any cave any more: orientation, perception and swimming are sold by the rusty caravans near the towns of tier 1, the lords stand in castles", () => {
-    for (const t of DUNGEON_THEMES) expect(t.talents, t.id).toBeUndefined();
     for (const talent of ["talent_orientation", "talent_perceptive", "talent_swimmer"]) expect(TALENT_SELLERS[talent], talent).toMatchObject({ item: 26 });
     expect(TALENT_SELLERS.talent_prayer_master).toMatchObject({ persona: 52 });
     // the user's object list: a person (Lord) stands in castles and towns only, a head statue in no cave
     expect(ITEM_RULES[52]!.places).not.toContain("cave");
-    expect(THEMES_BY_ID.fountain_head_cavern!.props).not.toContain(29);
   });
 
-  it("stands the lords in castles, one in about every second castle, in a dead end", () => {
-    const world = new World("playtest16-lords");
-    let castles = 0;
-    let lords = 0;
-    for (let i = 0; i < 80; i++) {
-      const poi = poiFor("castle", i);
-      const map = generateInterior(world, poi);
-      const content = buildMapContent(world, poi, map);
-      castles++;
-      for (const a of content.actions.filter((x) => x.kind === "talent")) {
-        lords++;
-        expect(["talent_prayer_master", "talent_prestidigitator"]).toContain(a.params.talent);
-        expect(a.params.persona).toBe(52);
-      }
-      expect(validateContent(map, content), `castle ${i}`).toEqual([]);
-    }
-    expect(lords).toBeGreaterThan(castles / 4);
-    expect(lords).toBeLessThan(castles);
-  });
+  // (the lords of the castles were dropped with the vaults: quest document 1.2 has the king, four statues and chests)
 });
 
 describe("sixteenth playtest: monsters under the torch (point 5)", () => {
@@ -237,7 +215,7 @@ describe("sixteenth playtest: the debug menu's Identify (point 9)", () => {
       const lines = identifyLines(poi, ref);
       expect(lines[0]).toBe(poi.name);
       const text = lines.join("\n");
-      expect(text).toContain(`(${ref.id})`);
+      expect(text).toContain(`Quest: ${ref.quest}, layout ${ref.layout}`);
       expect(text).toMatch(/Class: [ABC]/);
       expect(text).toContain("Quest: ");
       expect(text).toContain("Entrance asks for: ");
@@ -245,6 +223,6 @@ describe("sixteenth playtest: the debug menu's Identify (point 9)", () => {
     }
     expect(themed).toBe(8);
     // towns and castles have no theme
-    expect(identifyLines(poiFor("town", 1), null).join("\n")).toContain("No dungeon theme");
+    expect(identifyLines(poiFor("town", 1), null).join("\n")).toContain("No quest");
   });
 });

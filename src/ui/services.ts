@@ -3,7 +3,7 @@ import { LAYER, rngFor } from "../core/rng";
 import { SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
 import {
-  buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, rumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf,
+  buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, rumour, wordRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf,
   templeCure, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, type GuildSchool,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
@@ -143,7 +143,9 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           for (const c of drunk) addCondition(c, "Drunk", party.minutes);
           ctx.sound?.(drunk.length > 0 ? 9038 : 9000);
           if (drunk.length > 0) note(`${drunk.map((c) => c.name).join(", ")} had a drink too many.`, "bad");
-          const r = ctx.rumour ? { text: ctx.rumour() } : rumour(ctx.world, ctx.x, ctx.y);
+          // one rumour in three lets a word slip (an answer of the riddles of the world, level by level), the others tell where a dungeon lies
+          const word = rngFor(ctx.rootSeed, LAYER.LOOT, "word-rumour", party.minutes, party.gold);
+          const r = ctx.rumour ? { text: ctx.rumour() } : word.int(3) === 0 ? { text: wordRumour(ctx.world, ctx.tier, word) } : rumour(ctx.world, ctx.x, ctx.y);
           note(r ? r.text : "Nobody here knows anything of interest.", r ? "info" : "bad");
           ctx.changed();
           void ui.message(r ? r.text : "The locals shrug. There is nothing worth telling nearby.", "A rumour").then(render);

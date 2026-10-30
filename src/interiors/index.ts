@@ -1,20 +1,21 @@
 import { LAYER, rngFor } from "../core/rng";
 import { pickAlignment } from "../data/castles";
-import { THEMES_BY_ID } from "../data/dungeon-themes";
+import { SIZE_SCALE } from "../data/quest-table";
 import { pickInteriorTheme, withDungeonTheme } from "../data/interior-themes";
 import { BIOME, type Poi } from "../world/types";
 import type { World } from "../world/world";
 import type { BuildContext } from "./builder";
 import { generateCave } from "./cave";
 import { generateDungeon } from "./dungeon";
-import { planDungeon } from "./dungeonPlan";
-import { generateFortress } from "./fortress";
+import { COINS_PER_CASTLE, planDungeon } from "./dungeonPlan";
+import { generateCastle } from "./castle";
+import { generateSpaceship } from "./spaceship";
 import { generateTown } from "./town";
 import type { InteriorMap } from "./types";
 
 export * from "./types";
 export { analyzeTopology, type Topology, type Mouth } from "./topology";
-export { checkKeyChain, planDungeon, planRegion } from "./dungeonPlan";
+export { checkKeyChain, planDungeon } from "./dungeonPlan";
 
 /**
  * Generates the interior of a POI. A pure function of (world seed, POI position, floor): visiting the same
@@ -24,21 +25,24 @@ export function generateInterior(world: World, poi: Poi, floor = 0): InteriorMap
   const rng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor);
   const themeRng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "theme");
   const dungeon = planDungeon(world, poi) ?? undefined;
-  const look = pickInteriorTheme(poi.kind, poi.biome, poi.tier, themeRng, dungeon?.klass === "C");
-  const ctx: BuildContext = {
+  const look = pickInteriorTheme(poi.kind, poi.biome, poi.tier, themeRng, dungeon?.klass === "C");  const ctx: BuildContext = {
     key: `${poi.id}:${floor}`,
     tier: poi.tier,
-    theme: dungeon ? withDungeonTheme(look, THEMES_BY_ID[dungeon.id]!) : look,
+    theme: dungeon ? withDungeonTheme(look, dungeon.look) : look,
     dungeon,
   };
   switch (poi.kind) {
     case "dungeon":
+      // the inside of a pyramid is the spaceship, the same level behind all five, made from the seed of the world alone
+      if (dungeon?.quest === "spaceship") return generateSpaceship(rngFor(world.rootSeed, LAYER.INTERIOR, "spaceship"), { ...ctx, key: "spaceship:0" }, dungeon.section ?? 0);
       return generateDungeon(rng, ctx);
     case "cave":
       return generateCave(rng, ctx);
-    case "castle":
-      // good, neutral or evil: its own stream, so that adding a kind of castle never moves the layout
-      return { ...generateFortress(rng, ctx), castle: { alignment: pickAlignment(rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "alignment"), poi.biome === BIOME.LAVA) } };
+    case "castle": {
+      // good, neutral or evil: the plan of the world says (a castle that is no part of it, a hand-made one in a test, draws from its own stream)
+      const alignment = world.castleAlignment(poi.id) ?? pickAlignment(rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "alignment"), poi.biome === BIOME.LAVA);
+      return generateCastle(rng, ctx, alignment, SIZE_SCALE[world.size] ?? 1, poi.tier === 2 || poi.tier === 3 ? COINS_PER_CASTLE : 0, world.castleWord(poi.id) ?? 0);
+    }
     case "town":
       return generateTown(rng, ctx);
   }
@@ -68,7 +72,13 @@ export function interiorHash(map: InteriorMap): number {
     for (let i = 0; i < what.length; i++) feed(what.charCodeAt(i));
   }
   for (let i = 0; i < map.theme.id.length; i++) feed(map.theme.id.charCodeAt(i));
-  if (map.castle) for (let i = 0; i < map.castle.alignment.length; i++) feed(map.castle.alignment.charCodeAt(i));
+  if (map.castle) {
+    for (let i = 0; i < map.castle.alignment.length; i++) feed(map.castle.alignment.charCodeAt(i));
+    for (const c of [map.castle.throne, map.castle.king, map.castle.door, map.castle.answer, ...map.castle.statues, ...map.castle.kingChests, ...map.castle.yardChests]) {
+      feed(c.x);
+      feed(c.y);
+    }
+  }
   if (map.dungeon) for (const text of [map.dungeon.id, map.dungeon.requires ?? "", ...map.dungeon.gives]) for (let i = 0; i < text.length; i++) feed(text.charCodeAt(i));
   return h >>> 0;
 }

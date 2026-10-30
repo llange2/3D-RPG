@@ -22,20 +22,17 @@ function placesOf(world: World, kind: Poi["kind"], _regions = 2, limit = 12): Po
 }
 
 describe("generated castles have no guillotine trap (twelfth playtest, point 1)", () => {
-  it("sets spear and elemental traps in castles, and never the blade", () => {
-    let traps = 0;
+  it("sets no trap at all in a castle (quest document 1.2: a keep in a yard, guards that come with the alarm)", () => {
+    let castles = 0;
     for (const seed of ["ember", "onyx-keep-479", "kelp-mere-931"]) {
       const world = new World(seed);
       for (const poi of placesOf(world, "castle", 3, 10)) {
         const map = generateInterior(world, poi);
-        for (const a of buildMapContent(world, poi, map).actions) {
-          if (a.kind !== "trap") continue;
-          traps++;
-          expect(a.params.trap, `${seed} ${poi.id}`).not.toBe("guillotine");
-        }
+        castles++;
+        for (const a of buildMapContent(world, poi, map).actions) expect(a.kind, `${seed} ${poi.id}`).not.toBe("trap");
       }
     }
-    expect(traps).toBeGreaterThan(5);
+    expect(castles).toBeGreaterThan(5);
   });
 });
 

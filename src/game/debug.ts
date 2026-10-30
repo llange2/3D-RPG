@@ -3,6 +3,7 @@ import { isAlive, levelUp, recalcValues, removeCondition } from "../sim/characte
 import { cheats } from "../sim/cheats";
 import { SPELL_SCHOOL, isSpellImplemented } from "../sim/spells";
 import type { Party } from "../sim/types";
+import type { Poi, PoiKind } from "../world/types";
 
 /**
  * The debug menu (Esc > Debug). Switch this to false and the entry is gone from the menu and no cheat can be turned on; nothing else
@@ -57,6 +58,16 @@ export function debugAllSpells(party: Party): number {
     c.spells.sort((a, b) => a - b);
   }
   return added;
+}
+
+const KIND_ORDER: Record<PoiKind, number> = { town: 0, cave: 1, dungeon: 2, castle: 3 };
+const KIND_TITLE: Record<PoiKind, string> = { town: "Town", cave: "Cave", dungeon: "Dungeon", castle: "Castle" };
+
+/** The places of the world for Esc > Debug > Teleport to Level: by level, then town, cave, dungeon, castle, then by name. A pyramid (a dungeon of size 3) leads into the spaceship. */
+export function teleportTargets(pois: readonly Poi[]): { poi: Poi; kind: string }[] {
+  return pois
+    .map((poi) => ({ poi, kind: poi.kind === "dungeon" && poi.size === 3 ? "Pyramid" : KIND_TITLE[poi.kind] }))
+    .sort((a, b) => a.poi.tier - b.poi.tier || KIND_ORDER[a.poi.kind] - KIND_ORDER[b.poi.kind] || a.poi.name.localeCompare(b.poi.name));
 }
 
 /** Every talent of the game. Returns how many were added. */

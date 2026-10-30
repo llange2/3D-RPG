@@ -90,5 +90,12 @@
  * and lava all over, their ways are streams of lava one or two tiles wide that run through the mountains (`RoadSeg.lava`), walkable at the price of 25 points of fire damage
  * a step (`sim/lava.ts`); meadows and forests have patches of bare earth (`TileInfo.dirt`); the places of a lava island are fewer.
  * 26 = the ground cleared round a place on a lava island is one tile wide (was two) and lava (was plain ground).
+ * 27 = quest document 1.2, first step: the caves and dungeons are no longer one of the 23 themes of the old maps but a quest (quest_1 to quest_6) in a layout, planned for the
+ * whole world at once (`interiors/dungeonPlan.ts`): exactly five pyramids spread over the islands (the entrances of the spaceship's sections), the keys (up to nine) in the end rooms
+ * of level 1 and 2 places and the key cards of the pyramids in those of level 4 and 5 dungeons, the 21 orbs on the level 5 dungeons; every place has an end room that opens when
+ * its quest is solved (a sealed wall cell, or a pocket in the rock that a teleport reaches) and holds the quest items and 2 to 4 rewards of its level. The dungeons have four
+ * layouts (tube, hub, maze, classic) and the caves three (ring, classic, big cave). There are exactly three castles (levels 2, 3 and 4; good, neutral, evil), each a keep of the
+ * document in a yard (`interiors/castle.ts`), with a king, four statues that spell a word, two chests of 5 million gold and chests in the yard that raise an alarm. The pyramids
+ * lead into one spaceship of five sections with airlocks (`interiors/spaceship.ts`); 25 Quatloo coins and 15 silver skulls hide in the chests, Seth Squirm and his machines stand in a dungeon of level 2. Levels and attribute points of the end rooms (and the chalices of the control deck) lie in chalices: the party picks the one hero who gets them.
  */
-export const GEN_VERSION = 26;
+export const GEN_VERSION = 27;

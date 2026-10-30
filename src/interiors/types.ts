@@ -1,5 +1,7 @@
 /** Interior maps: grid of cells inside a POI. Pure data, no DOM, no Babylon. */
 import type { Alignment } from "../data/castles";
+import type { DungeonTheme } from "../data/dungeon-themes";
+import type { LayoutId, QuestId } from "../data/quest-table";
 
 export const CELL = {
   SOLID: 0,
@@ -118,21 +120,86 @@ export interface InteriorTheme {
 }
 
 /**
- * The dungeon theme a cave or dungeon was generated for (`data/dungeon-themes.ts`) and how it takes part in the key chain: the quest
- * item types its entrance asks for and the ones hidden inside.
+ * What a cave or dungeon of the generated world was built for (`interiors/dungeonPlan.ts`): its quest, its layout, the look its quest and level
+ * draw (monsters, boss, trap, props) and how it takes part in the chain of keys, key cards and orbs.
  */
 export interface DungeonRef {
-  /** `DungeonTheme.id`. */
+  /** `<quest>/<layout>`, or `spaceship` for the inside of a pyramid. */
   id: string;
+  /** Free, needs a key, or a pyramid (needs a key card). */
   klass: "A" | "B" | "C";
+  quest: QuestId | "spaceship";
+  layout: LayoutId;
+  look: DungeonTheme;
   /** Quest item type the entrance asks for (a key or a key card), or null for a free place. */
   requires: string | null;
-  /** Quest item types hidden inside: keys in a Class A place, at most one key card in a Class B place. */
+  /** Quest item types hidden in the end room: keys in a level 1 or 2 place, key cards in a level 4 or 5 dungeon. */
   gives: string[];
-  /** Themes whose quest needs a big hall (the picture, the field, the ring, the row of heads): the room the generator set aside for it. */
+  /** Orbs of ultimate power in the end room (level 5 dungeons). */
+  orbs: number;
+  /** The size of the world as a factor on monster counts: 2/3 for a small world, 1 for a default one, 4/3 and 5/3 (the XP per monster scale the other way). */
+  scale: number;
+  /** Mini quests (statues with an extra riddle) the place carries: the numbers of the riddles in the list of the world (each riddle occurs once in a world). */
+  minis: number[];
+  /** Quest 6: the number of the riddle whose answer the statues spell. */
+  word?: number;
+  /** Quatloo coins (ue_quest_1) and silver skulls (ue_quest_2) hidden in the ordinary chests of the place. */
+  coins: number;
+  skulls: number;
+  /** Seth Squirm and the machines of the Quatloo coins stand in this place (one dungeon of level 2 in the world). */
+  seth?: boolean;
+  /** The room of the machines, set by the layout: behind a door, with the cell in front of the door where Seth stands. */
+  machines?: { x: number; y: number; w: number; h: number; cx: number; cy: number; door: { x: number; y: number }; front: { x: number; y: number } };
+  /** A pyramid: the section of the spaceship it opens (0 is the control deck). */
+  section?: number;
+  /**
+   * The end room, set by the layout generator. It is floor but out of reach until the quest is solved: either behind a wall cell (`seal`) that
+   * gives way, or `isolated` (a pocket of its own that only a teleport reaches). `cx`/`cy` is its middle.
+   */
+  endRoom?: { x: number; y: number; w: number; h: number; cx: number; cy: number; seal?: { x: number; y: number }; isolated: boolean };
+  /** Cells where a rune bars the way (the maze of dungeon_3): the party is thrown to another place, but the maze is whole without them. */
+  barriers?: { x: number; y: number }[];
+  /** The room the layout set aside for the quest: the entrance room of quest 1 (the field of statues) or the hall of quest 2 (the row of heads). */
   hall?: { x: number; y: number; w: number; h: number };
-  /** The picture riddle: the number the walls of the hall draw (what the statue wants to be told). */
-  glyph?: string;
+}
+
+/** A castle of the generated world (`interiors/castle.ts`): a keep inside a yard. */
+export interface CastleLayout {
+  alignment: Alignment;
+  /** The size of the world as a factor on the number of guards (2/3, 1, 4/3, 5/3). */
+  scale: number;
+  /** Quatloo coins hidden in the chests of the yard. */
+  coins: number;
+  /** The riddle (number in the list of the world) whose four-letter answer the statues of the keep spell. */
+  word: number;
+  /** The throne, the king before it, the four statues (with the bearing they face, degrees, 0 north) and the cell of the statue that wants the code word. */
+  throne: { x: number; y: number };
+  king: { x: number; y: number };
+  statues: { x: number; y: number; bearing: number }[];
+  answer: { x: number; y: number };
+  /** The two chests of the king, the chests in the yard and the door of the keep. */
+  kingChests: { x: number; y: number }[];
+  yardChests: { x: number; y: number }[];
+  door: { x: number; y: number };
+  /** The cells inside the keep and those of the yard. */
+  keep: number[];
+  yard: number[];
+}
+
+/** The spaceship under the pyramids (`interiors/spaceship.ts`): five sections side by side, the front one (0) is the control deck. */
+export interface SpaceshipLayout {
+  sections: number;
+  /** The width of a section in cells. */
+  width: number;
+  /** The transporter tube of every section: the cell it stands on and the cell in front of it. The tube of section 0 is in the middle of the control deck. */
+  tubes: { x: number; y: number; front: { x: number; y: number } }[];
+  /** The tube in the middle of the control deck: with the black key card it ends the game. */
+  final: { x: number; y: number; front: { x: number; y: number } };
+  /** The airlock between a section and the next: the cell it shuts and the niches of its two levers. */
+  locks: { door: { x: number; y: number }; a: { x: number; y: number }; b: { x: number; y: number }; from: number }[];
+  /** The control deck and the rooms of every section. */
+  deck: { x: number; y: number; w: number; h: number };
+  rooms: { x: number; y: number; w: number; h: number }[][];
 }
 
 export interface InteriorMap {
@@ -161,8 +228,10 @@ export interface InteriorMap {
   pillars?: { x: number; y: number }[];
   /** Caves and dungeons of the generated world: the theme they were built for. Absent in towns, castles and the campaign. */
   dungeon?: DungeonRef;
-  /** Castles of the generated world: the kind of castle, which decides its banner and its monsters (`data/castles.ts`). */
-  castle?: { alignment: Alignment };
+  /** Castles of the generated world: the kind of castle, which decides its banner, statues and guards (`data/castles.ts`), and where everything stands. */
+  castle?: CastleLayout;
+  /** The spaceship under the pyramids: where its sections, tubes and airlocks are. */
+  spaceship?: SpaceshipLayout;
   /** Optional per-cell look. `cell` holds, per cell, an index into `list`; generated maps do not use it. */
   styles?: { list: CellStyle[]; cell: Uint8Array };
 }

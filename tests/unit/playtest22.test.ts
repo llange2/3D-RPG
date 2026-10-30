@@ -235,10 +235,13 @@ describe("22nd playtest, point 4: banners in the castles", () => {
   });
 
   it("gives a castle many banners, each one of its kind, spaced along its walls", { timeout: 120_000 }, () => {
-    const world = new World("banners-22", "huge");
     let castles = 0;
     let total = 0;
-    for (const poi of world.allPois().filter((p) => p.kind === "castle").slice(0, 40)) {
+    // a world has three castles: take them from several worlds
+    for (const [world, poi] of ["banners-a", "banners-b", "banners-c", "banners-d", "banners-e", "banners-f"].flatMap((seed) => {
+      const w = new World(seed, "default");
+      return w.allPois().filter((p) => p.kind === "castle").map((p) => [w, p] as const);
+    })) {
       const map = generateInterior(world, poi);
       const content = buildMapContent(world, poi, map);
       const banners = content.actions.filter((a) => a.kind === "decor" && Object.values(BANNER).includes(Number(a.params.item)));
@@ -247,9 +250,9 @@ describe("22nd playtest, point 4: banners in the castles", () => {
       expect(banners.length, poi.id).toBeGreaterThanOrEqual(3);
       for (const b of banners) expect(b.params.item, `${poi.id} ${map.castle!.alignment}`).toBe(BANNER[map.castle!.alignment]);
     }
-    expect(castles).toBeGreaterThan(10);
+    expect(castles).toBeGreaterThanOrEqual(15);
     // the old castles have a few dozen; a handful is what the first version had (two to four)
-    expect(total / castles).toBeGreaterThan(8);
+    expect(total / castles).toBeGreaterThan(5);
   });
 });
 

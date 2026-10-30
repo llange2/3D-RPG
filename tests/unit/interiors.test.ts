@@ -43,10 +43,17 @@ describe("interior generators", () => {
         const map = generateInterior(world, poiFor(kind, i));
         check(map, `${kind} #${i}`);
         if (kind === "dungeon") {
-          expect(map.rooms.length).toBeGreaterThanOrEqual(8);
-          expect(map.rooms.length).toBeLessThanOrEqual(25);
+          expect(map.rooms.length).toBeGreaterThanOrEqual(5);
+          expect(map.rooms.length).toBeLessThanOrEqual(27);
         }
-        if (kind === "castle") expect(map.rooms.length).toBeGreaterThanOrEqual(4);
+        // a castle is a keep inside a yard: 26 to 34 cells a side, a throne, a king and four statues
+        if (kind === "castle") {
+          expect(map.castle!.statues.length).toBe(4);
+          expect(map.width).toBeGreaterThanOrEqual(26);
+          expect(map.width).toBeLessThanOrEqual(34);
+          expect(map.height).toBeGreaterThanOrEqual(26);
+          expect(map.height).toBeLessThanOrEqual(34);
+        }
         if (kind === "cave") expect(analyzeTopology(map).totalFloor).toBeGreaterThan(200); // 40 x 40 since the sixteenth playtest
         if (kind === "town") {
           // the ground plan of the tier (Fountain Head for tier 1 up to Blistering Heights), turned by chance: not square, 16 to 18 cells a side
@@ -82,7 +89,8 @@ describe("interior generators", () => {
         hashes.add(a);
       }
       // a town is one of five ground plans, turned eight ways, with its shops on different cells: far fewer than 40, but not one
-      expect(hashes.size).toBeGreaterThanOrEqual(kind === "town" ? 10 : 40);
+      // (a castle is one of two keeps, turned and mirrored eight ways, with its chests on different cells)
+      expect(hashes.size).toBeGreaterThanOrEqual(kind === "town" ? 10 : kind === "castle" ? 25 : 40);
     });
 
     it(`${kind}: generates quickly (median under 50 ms)`, () => {

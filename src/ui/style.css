@@ -79,7 +79,9 @@ html.custom-cursor, html.custom-cursor * { cursor: none !important; }
 .info { position: absolute; left: 10px; top: 10px; padding: 6px 10px; background: #1b1410cc; border: 1px solid var(--gold-dim); border-radius: 6px; font-size: 14px; line-height: 1.35; pointer-events: none; max-width: 280px; }
 .info .place { font-family: var(--font-head); font-size: 15px; color: var(--gold); font-weight: 700; }
 .compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; gap: 22px; padding: 4px 16px; background: #1b1410cc; border: 1px solid var(--gold-dim); border-radius: 18px; font-family: var(--font-head); font-size: 16px; pointer-events: none; }
-.fps { position: absolute; left: 50%; top: 48px; transform: translateX(-50%); padding: 1px 10px; background: #1b1410aa; border-radius: 10px; font-family: var(--font-body); font-size: 13px; color: var(--text); opacity: 0.9; pointer-events: none; }
+.compass.no-talent { display: none; }
+/* below the focus bar (top 56px, about 41px high with name and health bar), which would cover it */
+.fps { position: absolute; left: 50%; top: 104px; transform: translateX(-50%); padding: 1px 10px; background: #1b1410aa; border-radius: 10px; font-family: var(--font-body); font-size: 13px; color: var(--text); opacity: 0.9; pointer-events: none; }
 .fps:empty { display: none; }
 .compass span { opacity: 0.45; width: 18px; text-align: center; }
 .compass span.on { opacity: 1; color: var(--gold); font-weight: 700; text-shadow: 0 0 8px #ffcf5a88; }

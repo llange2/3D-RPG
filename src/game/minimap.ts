@@ -282,11 +282,12 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "door": return opened.has(a.uid) ? "door_open" : "door";
     case "transfer": return "exit";
     case "service": return typeof a.params.service === "string" ? (SERVICE_SYMBOL[a.params.service] ?? "inn") : "inn";
-    case "talent": case "work": return "persona";
+    case "talent": case "work": case "king": case "skullmiser": return "persona";
     case "portal": return "teleporter_city";
     case "lore": return typeof a.params.persona === "number" ? "persona" : null;
     case "shrine": case "fountain": return "event";
-    case "riddle": case "gong": case "lever": case "head": return "info";
+    case "riddle": case "gong": case "lever": case "head": case "chalice": case "machine": return "info";
+    case "qportal": return "teleporter_city";
     default: return null;
   }
 }
@@ -595,6 +596,12 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "gong": return `Gong${used}`;
         case "lever": return "Lever";
         case "head": return "Stone head";
+        case "chalice": return `Chalice${used}`;
+        case "rune": return "Magic runes";
+        case "machine": return "Machine of the Quatloo coins";
+        case "king": return "The king";
+        case "skullmiser": return "The Skull Miser";
+        case "qportal": return "Portal back to the entrance";
         case "portal": return "Portal";
         case "work": return "Job master: work a week for gold";
         default: break;

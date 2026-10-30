@@ -1,4 +1,5 @@
-import { LAYER, rngFor, type SeedState } from "../core/rng";
+import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
+import { RIDDLES_WORLD, RIDDLE_NUMBERS } from "../data/riddles";
 import { CONSTANTS, SPELLS, TALENTS, type SpellDef } from "../data/tables";
 import type { Poi } from "../world/types";
 import type { World } from "../world/world";
@@ -115,6 +116,30 @@ export function innRest(party: Party, tier: number): { ok: boolean; cost: number
   }
   party.effects = party.effects.filter((e) => e.until > party.minutes);
   return { ok: true, cost };
+}
+
+/** What a tavern tells about a word (quest document 1.2, "Rätselmaster": the answers that exist in the world can turn up as rumours, with some silly ones among them). */
+const WORD_RUMOURS = [
+  "You invite a grieving peasant for a beer. He mumbles: \"My father told me on his death bed the word {a}. I have no clue what it means, but it must be important.\"",
+  "A drunk sailor grabs your sleeve. \"{a}! Say it to a statue, and the stone will listen. At least that is what my grandmother swore.\"",
+  "The barkeep wipes a mug and whispers: \"A wandering scholar left here with one word on his lips: {a}. He never came back.\"",
+  "An old woman by the fire nods to herself. \"{a}, {a}, {a}. Whoever knows it, knows what the stones want to hear.\"",
+  "A boy tugs at your cloak. \"There is a word the dead keep: {a}. Don't ask me how I know.\"",
+];
+
+/**
+ * A rumour that lets a word slip: the answer of a riddle that statues of the world ask for (a place up to one level above the tavern), or, now and then, the answer
+ * of a riddle that no statue of this world asks, which is only a funny rumour.
+ */
+export function wordRumour(world: World, tavernTier: number, rng: Rng): string {
+  const hidden = world.riddlesOfWorld();
+  const near = hidden.filter((r) => r.tier <= tavernTier + 1);
+  const real = near.length > 0 && rng.chance(700);
+  const used = new Set(hidden.map((r) => r.riddle));
+  const decoys = RIDDLE_NUMBERS.filter((n) => !used.has(n));
+  const id = real ? near[rng.int(near.length)]!.riddle : (decoys.length > 0 ? decoys : RIDDLE_NUMBERS)[rng.int((decoys.length > 0 ? decoys : RIDDLE_NUMBERS).length)]!;
+  const answer = RIDDLES_WORLD[String(id)]!.answer;
+  return WORD_RUMOURS[rng.int(WORD_RUMOURS.length)]!.replace(/\{a\}/g, answer);
 }
 
 /** A rumour about the closest dungeon, cave or castle: the direction and rough distance from the party. */

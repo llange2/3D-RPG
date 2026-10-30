@@ -1,18 +1,19 @@
 import { derive, Rng, type SeedState } from "../core/rng";
 import type { DungeonTheme } from "../data/dungeon-themes";
 import { allowedIn, type Place } from "../data/item-rules";
+import { letterHints } from "../data/letter-hints";
+import { RIDDLES_WORLD, WORD_RIDDLES } from "../data/riddles";
 import { placeOf } from "../interiors/place";
-import { RIDDLES_MASTER } from "../data/tables";
 import type { InteriorMap } from "../interiors/types";
 import type { AnchorSet } from "./anchors";
-import { FACING_LETTERS, FACING_NAMES } from "./quests";
+import { doorCell, fillEndRoom } from "./endRoom";
 import { themeMonsters } from "./monsterPool";
-import type { ActionInstance, Anchor, ParamValue } from "./types";
+import type { ActionInstance, Anchor, ParamValue, SpawnPoint } from "./types";
 
 /**
- * The puzzles of the dungeon themes (docs/DUNGEON_THEMES.md, chapter 2): riddle statues, the coordinates of a treasure, gongs and
- * the lords with a sum, the number drawn in the walls, the field of runes, the ring of heads and the row of heads. Each one is built
- * from what the place offers (rooms, a hall the generator set aside) and checked by `questIssues` in validate.ts.
+ * The quests of the generated world (quest document 1.2): each one is built from what the place offers (rooms, the end room the layout set
+ * aside) and checked by `questIssues` in questChecks.ts. A quest puts its objects first, before the ordinary rules fill the place, and
+ * `fillEndRoom` puts the loot into the room it opens.
  */
 
 export interface QuestEnv {
@@ -22,52 +23,49 @@ export interface QuestEnv {
   tier: number;
   anchors: AnchorSet;
   mapSeed: SeedState;
+  /** The seed of the world, for what is the same in the whole world (the statue of the machines). */
+  rootSeed: SeedState;
   actions: ActionInstance[];
+  spawns: SpawnPoint[];
+  /** Counts of monsters scale with the size of the world: 2/3, 1, 4/3 and 5/3 (document, "Goldene Regeln"). */
+  scale: number;
   /** A fresh uid `<map key>#<name>:<n>`. */
   uid(name: string): string;
+  /** A random seed of the place for one purpose. */
+  derive(name: string): SeedState;
   /** Is the cell a floor cell that nothing uses and that is not next to the way in or out? */
   free(x: number, y: number): boolean;
   /** Puts an action on its cell; false if the cell is taken or the object would cut the place in two. */
   place(a: ActionInstance): boolean;
+  /** Puts an action in the end room, where the ordinary rules never reach. */
+  placeEnd(a: ActionInstance): boolean;
   /** Keeps a cell clear of the ordinary rules (monsters, props) without putting anything on it. */
   reserve(x: number, y: number): void;
   trapDamage(trap: string, tier: number, rng: Rng): number;
 }
 
 export interface QuestResult {
-  /** The chest that the key card goes into, with the lock the puzzle puts on it, instead of the boss room. */
-  cardChest?: { x: number; y: number; params: Record<string, ParamValue> };
   /** Runs after the ordinary rules, when everything the puzzle counts is where it will stay. */
   finish?: () => void;
 }
 
-/** Riddles of the old table with a short, plain answer. */
-const RIDDLE_IDS: number[] = Object.entries(RIDDLES_MASTER)
-  .filter(([, r]) => /^[a-z ]{2,18}$/.test(r.answer.toLowerCase()))
-  .map(([id]) => Number(id))
-  .sort((a, b) => a - b);
-
-/**
- * Statues that stand for the lords, riddle statues and hints: the first of these the theme uses, else the first the kind of place allows
- * (a stone head in a dungeon, a stone statue in a cave: the user's list keeps heads and pegasi out of caves).
- */
-const STATUES = [28, 27, 61, 29, 95, 33];
-const statueOf = (t: DungeonTheme, place: Place): number => {
-  const fitting = STATUES.filter((i) => allowedIn(i, place));
-  return fitting.find((i) => t.props.includes(i)) ?? fitting[0] ?? 29;
-};
-
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** What a puzzle pays out: the chest formula of the place, with the theme's share of gold and the level above the ordinary. */
-function reward(env: QuestEnv, rng: Rng, extra: number): Record<string, ParamValue> {
-  const level = clamp(env.tier + env.theme.loot.level + extra, 1, 8);
-  return { level, gold: Math.floor(((level * 150 + rng.range(0, 200)) * env.theme.loot.gold) / 100), items: 1 + (extra > 0 ? 1 : 0) };
+/** A number of monsters at the size of the world, at least `min`. */
+export const scaled = (n: number, scale: number, min = 1): number => Math.max(min, Math.round(n * scale));
+
+/** The statue of a place: the first of `choices` that the kind of place allows (a stone head in a dungeon, a stone statue in a cave). */
+function statueOf(rng: Rng, place: Place, choices: readonly number[]): number {
+  const fitting = choices.filter((i) => allowedIn(i, place));
+  return fitting.length > 0 ? fitting[rng.int(fitting.length)]! : 95;
 }
 
 function edgeSpots(env: QuestEnv, rng: Rng, outside?: { x: number; y: number; w: number; h: number }): Anchor[] {
   const inside = (a: Anchor) => !!outside && a.x >= outside.x && a.y >= outside.y && a.x < outside.x + outside.w && a.y < outside.y + outside.h;
-  return rng.shuffle(env.anchors.byKind.roomEdge.filter((a) => env.free(a.x, a.y) && !inside(a)));
+  // the walls of the rooms first, then the ends of side passages (a maze has few rooms but many of those)
+  const walls = rng.shuffle(env.anchors.byKind.roomEdge.filter((a) => env.free(a.x, a.y) && !inside(a)));
+  const ends = rng.shuffle(env.anchors.byKind.deadEnd.filter((a) => env.free(a.x, a.y) && !inside(a)));
+  return [...walls, ...ends];
 }
 
 /** Puts `make(spot)` on the first spot that takes it. */
@@ -76,302 +74,372 @@ function placeOnFirst(env: QuestEnv, spots: Anchor[], make: (a: Anchor) => Actio
   return null;
 }
 
-export function placeQuest(env: QuestEnv): QuestResult {
-  const rng = new Rng(derive(env.mapSeed, "quest-puzzle", env.theme.quest));
-  switch (env.theme.quest) {
-    case "riddle_statues":
-      return riddleStatues(env, rng);
-    case "coordinates":
-      return coordinates(env, rng);
-    case "gongs":
-      return gongs(env, rng);
-    case "map_picture":
-      return mapPicture(env, rng);
-    case "jump_field":
-      return jumpField(env, rng);
-    case "head_ring":
-      return headRing(env, rng);
-    case "head_rotation":
-      return headRotation(env, rng);
-    default:
-      return {};
-  }
+/** The floor cell in front of the end room's seal, where the party stands before the wall. */
+function approach(env: QuestEnv): { x: number; y: number } | null {
+  const end = env.map.dungeon?.endRoom;
+  if (!end?.seal) return null;
+  const door = doorCell(env);
+  return { x: end.seal.x - (door.x - end.seal.x), y: end.seal.y - (door.y - end.seal.y) };
 }
 
-// ---------------------------------------------------------------- riddle statues
+/**
+ * Puts an object on the free cell nearest to the end room, for the statue that wants the answer: close to the cell in front of the seal, but not on
+ * it (that cell stays open, it is the way to the wall). A place whose end room is a pocket has no such cell: the deepest free cell then. Every
+ * candidate is tried in turn, so the statue is placed wherever the place has room for it at all.
+ */
+function placeNearEnd(env: QuestEnv, make: (x: number, y: number) => ActionInstance, minDistance = 2): Anchor | null {
+  const front = approach(env);
+  const pool = [...env.anchors.byKind.roomEdge, ...env.anchors.byKind.deadEnd, ...env.anchors.byKind.corridor, ...env.anchors.byKind.roomCenter].filter((a) => env.free(a.x, a.y));
+  const dist = (a: Anchor) => (front ? Math.abs(a.x - front.x) + Math.abs(a.y - front.y) : -a.depth);
+  const sorted = pool.filter((a) => !front || dist(a) >= minDistance).sort((p, q) => dist(p) - dist(q) || p.y - q.y || p.x - q.x);
+  for (const a of sorted) if (env.place(make(a.x, a.y))) return a;
+  return null;
+}
 
-function riddleStatues(env: QuestEnv, rng: Rng): QuestResult {
-  const count = env.theme.id === "cursed_cold_cavern" ? 4 : 2;
-  const ids = rng.shuffle([...RIDDLE_IDS]).slice(0, count);
-  const spots = edgeSpots(env, rng);
+export function placeQuest(env: QuestEnv): QuestResult {
+  const ref = env.map.dungeon;
+  if (!ref || ref.quest === "spaceship") return {};
+  const rng = new Rng(derive(env.mapSeed, "quest-puzzle", ref.quest));
+  let result: QuestResult = {};
+  switch (ref.quest) {
+    case "quest_1":
+      result = movingStatues(env, rng);
+      break;
+    case "quest_2":
+      result = facesAndChalices(env, rng);
+      break;
+    case "quest_3":
+      result = gongs(env, rng);
+      break;
+    case "quest_4":
+      result = calculations(env, rng);
+      break;
+    case "quest_5":
+      result = endBoss(env, rng);
+      break;
+    case "quest_6":
+      result = riddleWord(env, rng);
+      break;
+  }
+  placeMinis(env, new Rng(derive(env.mapSeed, "minis")));
+  return result;
+}
+
+// ---------------------------------------------------------------- mini quests
+
+const FAILS = ["none", "away", "trap"] as const;
+
+/**
+ * The mini quests of a place (quest document 1.2, "Miniquest - Extra Loot"): statues or crystals with a riddle of the world's list, independent of the
+ * main quest. Easy statues take any number of answers, hard ones three; a wrong answer does nothing, throws the party away or onto a field of traps. The
+ * reward is twice the ordinary loot of the level times the difficulty: 1 or 2 for the answers and 1, 2 or 3 for the penalty (12 at the most).
+ */
+function placeMinis(env: QuestEnv, rng: Rng): void {
+  const ids = env.map.dungeon?.minis ?? [];
+  if (ids.length === 0) return;
+  const place = placeOf(env.map);
   for (const id of ids) {
-    const r = RIDDLES_MASTER[id]!;
-    placeOnFirst(env, spots, (s) => ({
-      uid: env.uid("riddle"),
+    const r = RIDDLES_WORLD[String(id)];
+    if (!r) continue;
+    const hard = rng.chance(500);
+    const fail = rng.int(3);
+    const mult = (hard ? 2 : 1) * (fail + 1);
+    const item = allowedIn(117, place) && rng.chance(300) ? 117 : statueOf(rng, place, [95, 61, 29, 28, 27]);
+    const normalGold = env.tier * 150 + rng.range(0, 200);
+    const gold = 2 * mult * normalGold;
+    const items = Math.min(10, 2 * mult);
+    const spot = placeOnFirst(env, edgeSpots(env, rng), (s) => ({
+      uid: env.uid("mini"),
       kind: "riddle",
       x: s.x,
       y: s.y,
-      params: { item: statueOf(env.theme, placeOf(env.map)), question: r.question, answer: r.answer.toLowerCase(), riddle: id, ...reward(env, rng, 0) },
+      params: { item, question: r.question, answer: r.answer, aliases: r.aliases.join(","), riddle: id, level: Math.min(8, env.tier), gold, items, mult, fail: FAILS[fail]!, tx: 0, ty: 0, damage: 0, ...(hard ? { tries: 3 } : {}) },
     }));
-  }
-  return {};
-}
-
-// ---------------------------------------------------------------- coordinates
-
-const compass = (d: number, neg: string, pos: string) => (d < 0 ? neg : pos);
-
-function coordinates(env: QuestEnv, rng: Rng): QuestResult {
-  // The treasure lies at the end of a side passage, or in a corner of a room if no passage is in reach of two statues; the statues
-  // tell where it lies from where they stand.
-  const deep = [...env.anchors.byKind.deadEnd].filter((a) => env.free(a.x, a.y)).sort((a, b) => b.depth - a.depth || a.y - b.y || a.x - b.x);
-  const statues = edgeSpots(env, rng);
-  const reach = (t: Anchor) => statues.filter((s) => s.x !== t.x && s.y !== t.y && Math.abs(t.x - s.x) <= REACH && Math.abs(t.y - s.y) <= REACH);
-  for (const t of [...deep, ...statues]) {
-    const near = reach(t);
-    if (near.length < 2) continue;
-    if (!env.place({ uid: env.uid("treasure"), kind: "treasure", x: t.x, y: t.y, params: { ...reward(env, rng, 1), chest: env.theme.chest } })) continue;
-    let placed = 0;
-    for (const s of near) {
-      if (placed >= 2) break;
-      const dx = t.x - s.x;
-      const dy = t.y - s.y;
-      const text = `The treasure lies ${Math.abs(dx)} ${compass(dx, "west", "east")} and ${Math.abs(dy)} ${compass(dy, "north", "south")} of this statue.`;
-      if (env.place({ uid: env.uid("hint"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statueOf(env.theme, placeOf(env.map)), text, treasure: `${t.x},${t.y}` } })) placed++;
+    if (!spot) continue;
+    const statue = env.actions[env.actions.length - 1]!;
+    if (fail === 0) continue;
+    // where a wrong answer throws the party: away to a far place, or onto a trap of its own (a pit, in a cave a puddle of fire)
+    const far = rng.shuffle(env.anchors.byKind.roomEdge.filter((a) => a.depth >= 0 && Math.abs(a.x - spot.x) + Math.abs(a.y - spot.y) > 10 && env.free(a.x, a.y)));
+    const target = far[0];
+    let kind = fail;
+    if (!target) kind = 0;
+    else if (fail === 2) {
+      // the trap of the place if it has one; else a pit, in a cave a puddle of fire
+      const cave = env.map.kind === "cave";
+      const theme = env.theme.trap !== "none" ? env.theme.trap : cave ? "generic" : "pit";
+      const damage = env.trapDamage(theme, env.tier, rng);
+      const params: Record<string, ParamValue> = theme === "generic" ? { trap: "generic", damage, element: env.theme.trapElement ?? "fire" } : { trap: theme, damage };
+      const field = far.find((a) => env.place({ uid: env.uid("trapfield"), kind: "trap", x: a.x, y: a.y, params }));
+      if (field) {
+        statue.params.tx = field.x;
+        statue.params.ty = field.y;
+        statue.params.damage = damage;
+      } else kind = 1;
     }
-    break;
+    if (kind === 1) {
+      statue.params.tx = target!.x;
+      statue.params.ty = target!.y;
+    }
+    // a penalty that could not be built is a milder one, and the reward follows
+    if (kind !== fail) {
+      const m = (hard ? 2 : 1) * (kind + 1);
+      statue.params.fail = FAILS[kind]!;
+      statue.params.mult = m;
+      statue.params.gold = 2 * m * normalGold;
+      statue.params.items = Math.min(10, 2 * m);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- quest 1: the moaning statues
+
+const HERE: readonly [number, number][] = [
+  [-1, -1],
+  [0, -1],
+  [1, -1],
+  [-1, 0],
+  [1, 0],
+  [-1, 1],
+  [0, 1],
+  [1, 1],
+];
+
+function movingStatues(env: QuestEnv, rng: Rng): QuestResult {
+  const hall = env.map.dungeon?.hall;
+  if (!hall) return {};
+  const place = placeOf(env.map);
+  // the field lies in the entrance room, a 3 x 3 field with a free ring round it, on the far side from the way in
+  const centre = { x: hall.x + (hall.w >> 1), y: hall.y + 3 };
+  const statue = statueOf(rng, place, [33, 29]);
+  // the solution: the four corners stand and the edges are empty, or (document, "Alternative") one side of three stands and the rest is empty
+  const side = rng.chance(300) ? (["N", "E", "S", "W"] as const)[rng.int(4)]! : null;
+  const stands = (dx: number, dy: number): boolean => (side === null ? dx !== 0 && dy !== 0 : side === "N" ? dy === -1 : side === "S" ? dy === 1 : side === "W" ? dx === -1 : dx === 1);
+  const want = HERE.map(([dx, dy]) => (stands(dx, dy) ? 1 : 0));
+  // the start is never the solution: at least two statues differ
+  let start = HERE.map(() => rng.int(2));
+  while (start.filter((s, i) => s !== want[i]).length < 2) start = HERE.map(() => rng.int(2));
+
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) env.reserve(centre.x + dx, centre.y + dy);
+  const heads = HERE.map(() => env.uid("moan"));
+  const levers = HERE.map(() => env.uid("lever"));
+  HERE.forEach(([dx, dy], i) => {
+    env.actions.push({ uid: heads[i]!, kind: "head", x: centre.x + dx, y: centre.y + dy, params: { mode: "moan", item: statue, start: start[i]!, want: want[i]!, lever: levers[i]! } });
+  });
+  // the middle is bare: it teleports the party into the end room once the field is right, and does nothing before
+  env.actions.push({ uid: env.uid("rune"), kind: "rune", x: centre.x, y: centre.y, params: { need: "moan" } });
+
+  // twelve levers in the rest of the place: eight of them set a statue, four do the same without any effect
+  const spots = edgeSpots(env, rng, hall);
+  let next = 0;
+  const take = (a: ActionInstance): void => {
+    while (next < spots.length) {
+      const s = spots[next++]!;
+      if (env.place({ ...a, x: s.x, y: s.y })) return;
+    }
+  };
+  levers.forEach((uid, i) => take({ uid, kind: "lever", x: 0, y: 0, params: { item: 39, target: heads[i]! } }));
+  for (let i = 0; i < 4; i++) take({ uid: env.uid("lever"), kind: "lever", x: 0, y: 0, params: { item: 39, target: "" } });
+
+  // the statue at the entrance tells what to do
+  const words = side === null ? "Only when all four corners moan will the middle show the way." : `Only when the ${({ N: "north", E: "east", S: "south", W: "west" } as const)[side]} moans will the middle show the way.`;
+  const entry = edgeSpots(env, rng).filter((a) => a.roomId === env.anchors.entranceRoom);
+  placeOnFirst(env, entry, (s) => ({ uid: env.uid("hint"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statue, text: words } }));
+  return {};
+}
+
+// ---------------------------------------------------------------- quest 2: the faces
+
+const DIRECTIONS = ["N", "E", "S", "W"] as const;
+const ORDINAL_HINTS = [
+  "I was the first king of this realm.",
+  "I was the second to discover Sha'an Island.",
+  "I was the third of the brothers who built this hall.",
+  "I was the fourth to hold the sword of the old kings.",
+  "I was the fifth and last of the guardians.",
+];
+
+function facesAndChalices(env: QuestEnv, rng: Rng): QuestResult {
+  const hall = env.map.dungeon?.hall;
+  if (!hall) return {};
+  const place = placeOf(env.map);
+  // every number from 1 to 5 once, each with a direction; at least three of the heads start the wrong way (they all look into the room)
+  const conditions = env.tier <= 2 ? "Poisoned,Diseased,Crazy,Cursed" : "Petrified,Dead,Paralyzed,Rotten";
+
+  // five heads in a row along a long wall of the hall that no passage leaves through, number 1 on the left of whoever faces the wall
+  const solid = (x: number, y: number) => env.map.cells[y * env.map.width + x] !== 1;
+  // (a hall whose long walls both have a passage in them gets the row one cell in from a wall)
+  const walls = [
+    ...rng.shuffle([
+      { y: hall.y, wall: hall.y - 1, away: 2, ascending: true },
+      { y: hall.y + hall.h - 1, wall: hall.y + hall.h, away: 0, ascending: false },
+    ]),
+    { y: hall.y + 1, wall: -1, away: 2, ascending: true },
+    { y: hall.y + hall.h - 2, wall: -1, away: 0, ascending: false },
+  ];
+  // (and the seal of the end room may be in the same wall: the way to it must stay clear)
+  const front = approach(env);
+  const row = walls.find((w) => [0, 1, 2, 3, 4].every((i) => (w.wall < 0 || solid(hall.x + 1 + i * 2, w.wall)) && env.free(hall.x + 1 + i * 2, w.y) && !(front && front.x === hall.x + 1 + i * 2 && front.y === w.y)));
+  if (!row) return {};
+  let code = [0, 1, 2, 3, 4].map(() => rng.int(4));
+  while (code.filter((d) => d !== row.away).length < 3) code = [0, 1, 2, 3, 4].map(() => rng.int(4));
+  const head = statueOf(rng, place, [95, 29]);
+  for (let dy = 0; dy < hall.h; dy++) for (let dx = 0; dx < hall.w; dx++) env.reserve(hall.x + dx, hall.y + dy);
+  code.forEach((want, i) => {
+    const column = row.ascending ? i : 4 - i;
+    env.actions.push({ uid: env.uid("head"), kind: "head", x: hall.x + 1 + column * 2, y: row.y, params: { mode: "rotate", item: head, order: i + 1, start: row.away, want, hint: ORDINAL_HINTS[i]! } });
+  });
+  // five chalices in the rest of the place, each tells a number and a direction
+  const spots = edgeSpots(env, rng, hall);
+  const order = rng.shuffle([0, 1, 2, 3, 4]);
+  let next = 0;
+  for (const n of order) {
+    while (next < spots.length) {
+      const s = spots[next++]!;
+      if (env.place({ uid: env.uid("chalice"), kind: "chalice", x: s.x, y: s.y, params: { item: 86, number: n + 1, dir: DIRECTIONS[code[n]!]!, conditions } })) break;
+    }
   }
   return {};
 }
 
-/** How far (in cells, along each axis) a statue can send the party to a treasure. */
-const REACH = 30;
-
-// ---------------------------------------------------------------- gongs and the lords
+// ---------------------------------------------------------------- quest 3: the gongs
 
 function gongs(env: QuestEnv, rng: Rng): QuestResult {
+  const map = env.map;
+  const five = rng.chance(250);
+  const wanted = five ? 5 : 4;
   const monsters = themeMonsters(env.theme, env.tier).join(",");
+  // one gong in each of the corners of the place: the rooms nearest to the corners of the box the rooms span, the fifth in the middle
+  const rooms = map.rooms.filter((r) => r.size >= 6);
+  const box = rooms.reduce((b, r) => ({ x0: Math.min(b.x0, r.cx), y0: Math.min(b.y0, r.cy), x1: Math.max(b.x1, r.cx), y1: Math.max(b.y1, r.cy) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+  const targets = [
+    { x: box.x0, y: box.y0 },
+    { x: box.x1, y: box.y0 },
+    { x: box.x0, y: box.y1 },
+    { x: box.x1, y: box.y1 },
+    { x: (box.x0 + box.x1) >> 1, y: (box.y0 + box.y1) >> 1 },
+  ].slice(0, wanted);
   const used = new Set<number>();
-  const spots = edgeSpots(env, rng);
-  const placedGongs: ActionInstance[] = [];
-  // one gong to a room as far as the place allows, in the corners of the map in the old game
-  for (const pass of [0, 1]) {
-    for (const s of spots) {
-      if (placedGongs.length >= 4) break;
-      if (pass === 0 && used.has(s.roomId)) continue;
-      const a: ActionInstance = { uid: env.uid("gong"), kind: "gong", x: s.x, y: s.y, params: { item: 118, group: 1 + Math.floor(env.tier / 2), monsters } };
-      if (env.place(a)) {
-        placedGongs.push(a);
-        used.add(s.roomId);
+  const group = scaled(rng.range(5, 7), env.scale, 2);
+  const placed: ActionInstance[] = [];
+  for (const t of targets) {
+    const order = rooms.filter((r) => !used.has(r.id)).sort((a, b) => Math.abs(a.cx - t.x) + Math.abs(a.cy - t.y) - (Math.abs(b.cx - t.x) + Math.abs(b.cy - t.y)) || a.id - b.id);
+    for (const room of order) {
+      const spots = rng.shuffle(env.anchors.byKind.roomEdge.filter((a) => a.roomId === room.id && env.free(a.x, a.y)));
+      const spot = spots.find((s) => env.place({ uid: env.uid("gong"), kind: "gong", x: s.x, y: s.y, params: { item: 118, group, monsters, xp: Math.round(100 / env.scale) } }));
+      if (spot) {
+        used.add(room.id);
+        placed.push(env.actions[env.actions.length - 1]!);
+        break;
       }
     }
   }
-  const bossSpots = env.anchors.byKind.bossRoomEdge.filter((a) => env.free(a.x, a.y));
-  const lord = placeOnFirst(env, [...bossSpots, ...edgeSpots(env, rng)], (s) => ({
-    uid: env.uid("lord"),
-    kind: "riddle",
-    x: s.x,
-    y: s.y,
-    params: { item: statueOf(env.theme, placeOf(env.map)), question: "?", answer: "0", requires: "gongs", ...reward(env, rng, 2) },
-  }));
-  const hints: ActionInstance[] = [];
-  for (let i = 0; i < 3; i++) {
-    const s = placeOnFirst(env, edgeSpots(env, rng), (c) => ({ uid: env.uid("hint"), kind: "lore", x: c.x, y: c.y, params: { pool: "dungeon", line: 0, item: statueOf(env.theme, placeOf(env.map)), text: "?" } }));
-    if (s) hints.push(env.actions[env.actions.length - 1]!);
-  }
-  return {
-    finish: () => {
-      if (!lord || placedGongs.length === 0) return;
-      // the sum the lords describe: start with S, add g for every gong, subtract c for every crystal of the cavern
-      const crystals = env.actions.filter((a) => (a.kind === "decor" || a.kind === "shrine") && a.params.item === 117).length;
-      const g = rng.range(2, 5);
-      const c = rng.range(1, 3);
-      const answer = rng.range(25, 70);
-      const start = answer - g * placedGongs.length + c * crystals;
-      const lines = [`Lord Personality says: "Start with ${start}."`, `Lord Luck says: "Add ${g} for every gong in this cavern."`, `Lord Speed says: "Subtract ${c} for every crystal in this cavern."`];
-      hints.forEach((h, i) => {
-        h.params.text = lines[i]!;
-        h.params.sum = i === 0 ? start : i === 1 ? g : c;
-      });
-      const master = env.actions.find((a) => a.kind === "riddle" && a.params.requires === "gongs")!;
-      master.params.question = "I am Lord Intelligence. My brothers have told you the sum. What is the number?";
-      master.params.answer = String(answer);
-    },
-  };
+  // the runes appear in the middle of the place when the last gong has sounded: the floor cell nearest to the middle of the floor
+  const floor: { x: number; y: number }[] = [];
+  for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) if (env.free(x, y)) floor.push({ x, y });
+  const mid = floor.length > 0 ? { x: Math.round(floor.reduce((s, c) => s + c.x, 0) / floor.length), y: Math.round(floor.reduce((s, c) => s + c.y, 0) / floor.length) } : { x: map.width >> 1, y: map.height >> 1 };
+  const rune = [...floor].sort((a, b) => Math.abs(a.x - mid.x) + Math.abs(a.y - mid.y) - (Math.abs(b.x - mid.x) + Math.abs(b.y - mid.y)) || a.y - b.y || a.x - b.x).find((c) => env.place({ uid: env.uid("rune"), kind: "rune", x: c.x, y: c.y, params: { need: "gongs", item: 73 } }));
+  void rune;
+  return {};
 }
 
-// ---------------------------------------------------------------- the number in the walls
+// ---------------------------------------------------------------- quest 4: calculations
 
-function mapPicture(env: QuestEnv, rng: Rng): QuestResult {
-  const dungeon = env.map.dungeon;
-  if (!dungeon?.hall || !dungeon.glyph) return {};
-  placeOnFirst(env, edgeSpots(env, rng, dungeon.hall), (s) => ({
+const HEROES = ["Gordak", "Waldemar the Bold", "Thorgrim", "Eadric", "Sir Halvard", "Brenna Ironhand"];
+const UNITS = ["Bluefinger Garrison", "Ironhelm Company", "Raven Guard", "Pikemen of Eldermoor", "Free Archers of the Marsh"];
+const FIELDS = ["Lumpuz", "Castle Elfenstone", "the Black Ford", "Dunmere", "the Salt Pass", "Greywater"];
+const TWO_THREE = ["two", "three"] as const;
+
+/** One statue: what its plaque says and how many warriors it adds to the count of the fallen. */
+function plaque(rng: Rng): { text: string; fallen: number } {
+  const hero = HEROES[rng.int(HEROES.length)]!;
+  const unit = UNITS[rng.int(UNITS.length)]!;
+  const field = FIELDS[rng.int(FIELDS.length)]!;
+  const n = rng.range(4, 45);
+  const kind = rng.int(6);
+  if (kind === 0) return { text: `'In honour of the hero ${hero}, who fell with his ${n} warriors in the battle of ${field}.'`, fallen: n + 1 };
+  if (kind === 1 || kind === 5) return { text: `'In honour of the ${unit}, who lost ${n} of their warriors in the defence of ${field}.'`, fallen: n };
+  if (kind === 2) return { text: `'In honour of General ${hero.split(" ")[0]}, whose foresight saved ${n} warriors from certain death.'`, fallen: 0 };
+  if (kind === 3) {
+    const back = rng.range(1, Math.max(1, n - 2));
+    return { text: `'In honour of the ${unit}, who lost ${n} warriors at ${field}. ${back} of them were found alive in the end.'`, fallen: n - back };
+  }
+  const times = rng.chance(500) ? 0 : 1;
+  const per = rng.range(3, 25);
+  return { text: `'In honour of the ${TWO_THREE[times]} brothers of ${field}, who each brought ${per} warriors to the field. All of them fell.'`, fallen: (times + 2) * per };
+}
+
+function calculations(env: QuestEnv, rng: Rng): QuestResult {
+  const place = placeOf(env.map);
+  const count = clamp(5 + Math.floor((env.map.rooms.length - 8) / 3), 5, 8);
+  const statue = statueOf(rng, place, [28, 34, 95]);
+  let sum = 0;
+  const spots = edgeSpots(env, rng);
+  for (let i = 0; i < count; i++) {
+    const p = plaque(rng);
+    if (!placeOnFirst(env, spots, (s) => ({ uid: env.uid("statue"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statue, text: `The plaque on the statue reads: ${p.text}`, fallen: p.fallen } }))) continue;
+    sum += p.fallen;
+  }
+  const endStatue = statueOf(rng, place, [27, 61]);
+  placeNearEnd(env, (x, y) => ({ uid: env.uid("riddle"), kind: "riddle", x, y, params: { item: endStatue, question: "A dull voice speaks: 'How many warriors have fallen with honour?'", answer: String(sum), opens: "end" } }));
+  return {};
+}
+
+// ---------------------------------------------------------------- quest 5: the end boss
+
+function endBoss(env: QuestEnv, rng: Rng): QuestResult {
+  const front = approach(env);
+  let spot: { x: number; y: number } | null = front && env.free(front.x, front.y) ? front : null;
+  if (!spot) {
+    const pool = [...env.anchors.byKind.roomEdge, ...env.anchors.byKind.deadEnd, ...env.anchors.byKind.corridor].filter((a) => env.free(a.x, a.y));
+    const dist = (a: Anchor) => (front ? Math.abs(a.x - front.x) + Math.abs(a.y - front.y) : -a.depth);
+    spot = pool.sort((p, q) => dist(p) - dist(q) || p.y - q.y || p.x - q.x)[0] ?? null;
+  }
+  if (spot) {
+    env.reserve(spot.x, spot.y);
+    env.spawns.push({ uid: env.uid("endboss"), x: spot.x, y: spot.y, monsterIds: [env.theme.boss], boss: true });
+  }
+  void rng;
+  return {};
+}
+
+// ---------------------------------------------------------------- quest 6: the riddle word
+
+/** The riddle whose answer the statues spell: a word of 3 to 8 letters (a castle: exactly 4). */
+export function pickWord(rng: Rng, length?: number): { id: number; word: string; aliases: string[] } {
+  const pool = WORD_RIDDLES.filter((n) => length === undefined || RIDDLES_WORLD[String(n)]!.answer.length === length);
+  const id = pool[rng.int(pool.length)]!;
+  const r = RIDDLES_WORLD[String(id)]!;
+  return { id, word: r.answer, aliases: r.aliases };
+}
+
+/** The word, answer and aliases of a riddle of the list of the world. */
+export function wordById(id: number): { id: number; word: string; aliases: string[] } {
+  const r = RIDDLES_WORLD[String(id)]!;
+  return { id, word: r.answer, aliases: r.aliases };
+}
+
+function riddleWord(env: QuestEnv, rng: Rng): QuestResult {
+  const place = placeOf(env.map);
+  const statue = statueOf(rng, place, [95, 61, 34, 29, 28, 27]);
+  // as many hint statues as the word has letters, in the rooms; a word longer than the place has spots for is not chosen
+  const spots = edgeSpots(env, rng);
+  const longest = Math.min(8, Math.max(3, spots.length - 2));
+  // the plan chose the riddle (so that a tavern can let the word slip); a place short of room takes a three-letter word instead
+  const pick = env.map.dungeon?.word !== undefined ? wordById(env.map.dungeon.word) : pickWord(rng);
+  const chosen = pick.word.length <= longest ? pick : pickWord(rng, 3);
+  const { hints, ask } = letterHints(rng, chosen.word);
+  hints.forEach((text, i) => placeOnFirst(env, spots, (s) => ({ uid: env.uid("statue"), kind: "lore", x: s.x, y: s.y, params: { pool: "dungeon", line: 0, item: statue, text, letter: chosen.word[i]!.toUpperCase(), order: i + 1 } })));
+  placeNearEnd(env, (x, y) => ({
     uid: env.uid("riddle"),
     kind: "riddle",
-    x: s.x,
-    y: s.y,
-    params: { item: statueOf(env.theme, placeOf(env.map)), question: "I guard a secret number. It is written in the walls of the great hall, for those who can read a map. What is it?", answer: dungeon.glyph!, ...reward(env, rng, 1) },
+    x,
+    y,
+    params: { item: statue, question: ask, answer: chosen.word, aliases: chosen.aliases.join(","), opens: "end", riddle: chosen.id },
   }));
   return {};
 }
 
-// ---------------------------------------------------------------- the field of runes
-
-function jumpField(env: QuestEnv, rng: Rng): QuestResult {
-  const hall = env.map.dungeon?.hall;
-  if (!hall) return {};
-  const mid = hall.y + Math.floor(hall.h / 2);
-  const centre = { x: hall.x + Math.floor(hall.w / 2), y: mid };
-  const back = { x: hall.x, y: mid };
-  const inner = { x0: hall.x + 1, y0: hall.y + 1, x1: hall.x + hall.w - 2, y1: hall.y + hall.h - 2 };
-  const key = (x: number, y: number) => `${x},${y}`;
-
-  // the way through: from the west side of the field to its middle, with turns, over cells that hold nothing
-  const safe = new Set<string>();
-  let x = inner.x0;
-  let y = clamp(mid + rng.range(-3, 3), inner.y0, inner.y1);
-  safe.add(key(x, y));
-  // it ends on the cell west of the middle, so it never runs over the cells of the two chests above and below the middle
-  const door = { x: centre.x - 1, y: centre.y };
-  while (x !== door.x || y !== door.y) {
-    const wantX = x !== door.x;
-    const wantY = y !== door.y;
-    if (wantX && (!wantY || rng.chance(550))) x += Math.sign(door.x - x);
-    else if (wantY) y += Math.sign(door.y - y);
-    safe.add(key(x, y));
-  }
-  safe.add(key(centre.x, centre.y));
-  const chests = [
-    { x: centre.x, y: centre.y - 1 },
-    { x: centre.x, y: centre.y + 1 },
-  ];
-  for (const c of chests) safe.add(key(c.x, c.y));
-  const chestCells = new Set(chests.map((c) => key(c.x, c.y)));
-
-  const visible = env.theme.id === "maze_from_hell";
-  const traps = env.theme.trap !== "none" && env.theme.trap !== "steal_gold";
-  for (let cy = inner.y0; cy <= inner.y1; cy++) {
-    for (let cx = inner.x0; cx <= inner.x1; cx++) {
-      if (chestCells.has(key(cx, cy))) continue;
-      if (safe.has(key(cx, cy)) || !env.free(cx, cy)) {
-        env.reserve(cx, cy);
-        continue;
-      }
-      if (!rng.chance(380)) {
-        env.reserve(cx, cy);
-        continue;
-      }
-      if (traps && rng.chance(330)) {
-        env.place({ uid: env.uid("trap"), kind: "trap", x: cx, y: cy, params: { trap: env.theme.trap, damage: env.trapDamage(env.theme.trap, env.tier, rng) } });
-      } else {
-        // the runes of the Maze from Hell are drawn on the floor, the ones of the Slithercult are not
-        env.place({ uid: env.uid("rune"), kind: "teleporter", x: cx, y: cy, params: { tx: back.x, ty: back.y, ...(visible ? { item: 73 } : {}) } });
-      }
-    }
-  }
-  for (const c of chests) env.place({ uid: env.uid("treasure"), kind: "treasure", x: c.x, y: c.y, params: { ...reward(env, rng, 1), chest: env.theme.chest } });
-  env.reserve(back.x, back.y);
-  env.place({
-    uid: env.uid("hint"),
-    kind: "lore",
-    x: hall.x,
-    y: mid - 2,
-    params: {
-      pool: "dungeon",
-      line: 0,
-      text: visible ? "Runes are carved into the floor of this hall. Whoever steps on one is thrown back to the door. Jump over them, or find the way between." : "Some of the floor in this hall is not what it seems. Whoever steps on the wrong stone is thrown back to the door. Remember where it happened.",
-    },
-  });
-  // the ring of floor around the field is the way to its door: nothing else may stand on it
-  for (let ry = hall.y; ry < hall.y + hall.h; ry++) for (let rx = hall.x; rx < hall.x + hall.w; rx++) env.reserve(rx, ry);
-  return {};
-}
-
-// ---------------------------------------------------------------- the ring of heads
-
-function headRing(env: QuestEnv, rng: Rng): QuestResult {
-  const hall = env.map.dungeon?.hall;
-  if (!hall) return {};
-  const cx = hall.x + Math.floor(hall.w / 2);
-  const cy = hall.y + Math.floor(hall.h / 2);
-  // the eight cells around the middle: corners first, then the sides
-  const cells: { x: number; y: number; corner: boolean }[] = [
-    { x: cx - 1, y: cy - 1, corner: true },
-    { x: cx + 1, y: cy - 1, corner: true },
-    { x: cx - 1, y: cy + 1, corner: true },
-    { x: cx + 1, y: cy + 1, corner: true },
-    { x: cx, y: cy - 1, corner: false },
-    { x: cx + 1, y: cy, corner: false },
-    { x: cx, y: cy + 1, corner: false },
-    { x: cx - 1, y: cy, corner: false },
-  ];
-  // two corners start empty, two sides start empty (so that the middle can be reached), the rest stand
-  const emptyCorners = new Set(rng.shuffle([0, 1, 2, 3]).slice(0, 2));
-  const emptySides = new Set(rng.shuffle([4, 5, 6, 7]).slice(0, 2));
-  const headUids = cells.map(() => env.uid("head"));
-  const leverUids = cells.map(() => env.uid("lever"));
-  cells.forEach((c, i) => {
-    const start = c.corner ? (emptyCorners.has(i) ? 0 : 1) : emptySides.has(i) ? 0 : 1;
-    const head: ActionInstance = { uid: headUids[i]!, kind: "head", x: c.x, y: c.y, params: { item: 33, mode: "ring", start, lever: leverUids[i]!, corner: c.corner } };
-    env.reserve(c.x, c.y);
-    env.actions.push(head);
-  });
-  env.reserve(cx, cy);
-  // eight levers that work and eight that look the same and do nothing, scattered over the other rooms
-  const spots = edgeSpots(env, rng, hall);
-  let used = 0;
-  const next = (): Anchor | undefined => spots[used++];
-  cells.forEach((_, i) => {
-    for (let tries = 0; tries < spots.length; tries++) {
-      const s = next();
-      if (!s) return;
-      if (env.place({ uid: leverUids[i]!, kind: "lever", x: s.x, y: s.y, params: { item: 39, target: headUids[i]! } })) return;
-    }
-  });
-  for (let i = 0; i < 8; i++) {
-    const s = next();
-    if (s) env.place({ uid: env.uid("lever"), kind: "lever", x: s.x, y: s.y, params: { item: 39, target: "" } });
-  }
-  // the hint on a coffin or a stone head
-  for (let i = 0; i < 2; i++) {
-    placeOnFirst(env, edgeSpots(env, rng, hall), (s) => ({
-      uid: env.uid("hint"),
-      kind: "lore",
-      x: s.x,
-      y: s.y,
-      params: { pool: "dungeon", line: 0, item: env.theme.props.includes(62) ? 62 : 33, text: "Only if the corners groan, the middle will reveal my master." },
-    }));
-  }
-  return { cardChest: { x: cx, y: cy, params: { lock: "ring" } } };
-}
-
-// ---------------------------------------------------------------- the row of heads
-
-function headRotation(env: QuestEnv, rng: Rng): QuestResult {
-  const hall = env.map.dungeon?.hall;
-  if (!hall) return {};
-  const cx = hall.x + Math.floor(hall.w / 2);
-  const cy = hall.y + Math.floor(hall.h / 2);
-  const columns = [2, 4, 6, 8, 10].map((d) => hall.x + d);
-  const wants = columns.map(() => rng.int(4));
-  // at least three of the heads start the wrong way
-  const starts = wants.map((w) => (w + 1 + rng.int(3)) % 4);
-  columns.forEach((x, i) => {
-    env.reserve(x, hall.y + 2);
-    env.actions.push({ uid: env.uid("head"), kind: "head", x, y: hall.y + 2, params: { item: 29, mode: "rotate", start: starts[i]!, want: wants[i]! } });
-  });
-  // the cups in a row below them: whoever drinks sees the way the head above should look
-  columns.forEach((x, i) => {
-    const text = `You drink from the chalice. A vision shows you a stone head that looks ${FACING_NAMES[wants[i]!]}: the letter ${FACING_LETTERS[wants[i]!]}.`;
-    env.place({ uid: env.uid("chalice"), kind: "lore", x, y: hall.y + 8, params: { pool: "dungeon", line: 0, item: 86, text, letter: FACING_LETTERS[wants[i]!]! } });
-  });
-  env.reserve(cx, cy);
-  env.place({
-    uid: env.uid("hint"),
-    kind: "lore",
-    x: hall.x,
-    y: cy,
-    params: { pool: "dungeon", line: 0, text: "Drink from the cups, turn the heads to see what the cups have shown you, and the chest will open." },
-  });
-  return { cardChest: { x: cx, y: cy, params: { lock: "rotation" } } };
+/** Fills the end room once the ordinary rules are done (the loot depends on nothing else, but the room must not have been touched). */
+export function finishQuest(env: QuestEnv): void {
+  fillEndRoom(env);
 }

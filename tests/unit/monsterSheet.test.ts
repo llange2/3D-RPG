@@ -29,7 +29,8 @@ describe("the monster sheet (docs/RPG_0.1.xlsx)", () => {
     expect(MONSTERS[id("Vampire")]).toMatchObject({ regen: 0.1, steal_mana: 0.2 });
     expect(MONSTERS[id("Ghost")]!.aging_years).toBe(1);
     expect(MONSTERS[id("Wild Fungus")]!.hits_all).toBe(true);
-    expect(MONSTERS[id("Dragon Worm")]!.terrain).toBe("both");
+    // the user's sheet (edited 2026-10-28) lists the Dragon Worm as a water monster
+    expect(MONSTERS[id("Dragon Worm")]!.terrain).toBe("water");
     expect(MONSTERS[id("Vampire")]!.special_abilties).toBe("Regenerates 10%, Drains 20% of Spell Points");
   });
 

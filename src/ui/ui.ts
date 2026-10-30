@@ -63,7 +63,7 @@ export class UI {
   private readonly compass: HTMLElement;
   private readonly logEl: HTMLElement;
   private readonly stats: HTMLElement;
-  /** Frames per second in the top centre, under the compass (option "Show FPS"). */
+  /** Frames per second in the top centre, under the monster's name bar (option "Show FPS"). */
   private readonly fps: HTMLElement;
   /** Icons of the spells that are working (protection, levitation), like the old update_gui. */
   private readonly status: HTMLElement;
@@ -152,6 +152,8 @@ export class UI {
 
   updateHud(party: Party, info: HudInfo): void {
     this.info.replaceChildren(h("div", { class: "place", text: info.place }), h("div", { text: info.sub }), h("div", { class: "small", text: `${info.x}, ${info.y}` }));
+    // the compass is the talent "Well-oriented" (talent_orientation)
+    this.compass.classList.toggle("no-talent", !party.talents.includes("talent_orientation"));
     for (const el of this.compass.children) (el as HTMLElement).classList.toggle("on", (el as HTMLElement).dataset.d === info.facing);
     const t = clockText(party);
     this.stats.replaceChildren(

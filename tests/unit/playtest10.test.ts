@@ -18,7 +18,7 @@ import { createDefaultParty } from "../../src/sim/party";
 import type { Attribute, Item, Party } from "../../src/sim/types";
 import type { Poi } from "../../src/world/types";
 import { World } from "../../src/world/world";
-import { themedInterior } from "../helpers/themes";
+import { findPlace } from "../helpers/quests";
 
 const rootSeed = seedFromString("playtest10");
 
@@ -209,15 +209,13 @@ describe("a door sounds like what is drawn (tenth playtest, point 3)", () => {
     expect(doorSound("gate")).toBe(9034);
   });
 
-  it("makes the picked wooden door of the Catacombs of Zanvaa (67/30) a wooden door", () => {
-    const world = new World("kelp-mere-931");
-    const poi: Poi | undefined = CATACOMBS;
-    expect(poi).toBeTruthy();
-    const map = generateInterior(world, poi!);
-    const content = buildMapContent(world, poi!, map);
-    const door = content.actions.find((a) => a.kind === "door" && a.x === 67 && a.y === 30)!;
-    expect(door.params.locked).toBe(true);
-    expect(doorLook(map, door.x, door.y)).toBe("door");
+  it("makes a picked door of a dungeon a wooden door or a gate by its look, and a locked one stays locked", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 40; i++) {
+      const { map, content } = findPlace((p) => p.map.kind === "dungeon" && p.content.actions.some((a) => a.kind === "door"), 400 + i);
+      for (const a of content.actions.filter((x) => x.kind === "door")) seen.add(doorLook(map, a.x, a.y));
+    }
+    expect([...seen].sort()).toEqual(["door", "gate"]);
   });
 });
 
@@ -318,20 +316,16 @@ describe("traps of the generated dungeons (tenth playtest, point 2)", () => {
     expect(party.characters.every((c) => c.hp === c.health)).toBe(true);
   });
 
-  // A place has one kind of trap, the one of its theme (docs/DUNGEON_THEMES.md): the pit of the Temple of Moo, the spears of the Cyclops
-  // Cavern, the blade of the Cursed Cold Cavern and the fire trap of the Blistering Heights.
-  it("finds the traps of the themed places and turns them across the corridor", () => {
+  // A place has one kind of trap, the one its look drew (`buildLook`): the pit, the spears, the blade or an elemental trap (a puddle of fire, acid or magic).
+  it("finds the traps of the quest places and turns them across the corridor", () => {
     const seen = new Set<string>();
-    for (const [theme, tier] of [["temple_of_moo", 1], ["cyclops_cavern", 2], ["cursed_cold_cavern", 2], ["blistering_heights_cavern", 3]] as const) {
-      const { map, content } = themedInterior(theme, tier);
+    for (let i = 0; i < 60; i++) {
+      const { map, content } = findPlace((p) => p.content.actions.some((x) => x.kind === "trap" && !seen.has(String(x.params.trap))), 200);
       const traps = content.actions.filter((x) => x.kind === "trap");
-      expect(traps.length, theme).toBeGreaterThan(0);
       for (const a of traps) {
         seen.add(String(a.params.trap));
-        expect(hasTrapModel(a), `${theme} ${String(a.params.trap)}`).toBe(true);
+        expect(hasTrapModel(a), String(a.params.trap)).toBe(true);
         expect(trapKindOf(a)).toBe(a.params.trap === "spring" ? "spear" : a.params.trap === "guillotine" ? "guillotine" : null);
-        // the fire trap of the Blistering Heights is a fire trap with the old game's lava puddle, whatever its uid
-        if (a.params.trap === "generic") expect(elementOf(a)).toBe("fire");
         const rotation = trapRotationAt(map, a.x, a.y);
         expect([0, 90]).toContain(rotation);
         const open = (dx: number, dy: number) => map.cells[(a.y + dy) * map.width + a.x + dx] === CELL.FLOOR;
@@ -339,7 +333,7 @@ describe("traps of the generated dungeons (tenth playtest, point 2)", () => {
         if (open(0, -1) && open(0, 1) && !open(1, 0) && !open(-1, 0)) expect(rotation).toBe(0);
         if (open(1, 0) && open(-1, 0) && !open(0, -1) && !open(0, 1)) expect(rotation).toBe(90);
       }
-      if (theme === "blistering_heights_cavern") expect(trapModelKeys(content)).toContain("ci_120");
+      if (["generic", "guillotine", "pit", "spring"].every((k) => seen.has(k))) break;
     }
     expect([...seen].sort()).toEqual(["generic", "guillotine", "pit", "spring"]);
   });
@@ -347,8 +341,8 @@ describe("traps of the generated dungeons (tenth playtest, point 2)", () => {
   it("every spear, guillotine, pit and elemental trap that the generator sets has something to see", () => {
     const { content } = catacombs();
     for (const a of content.actions) if (a.kind === "trap" && ["spring", "guillotine", "pit", "generic"].includes(String(a.params.trap))) expect(hasTrapModel(a)).toBe(true);
-    for (const theme of ["wildabar_cavern", "dragontooth_dungeon", "fountain_head_cavern", "swamp_town_cavern"]) {
-      for (const a of themedInterior(theme, 2).content.actions) if (a.kind === "trap") expect(hasTrapModel(a), theme).toBe(true);
+    for (let i = 0; i < 12; i++) {
+      for (const a of findPlace((p) => p.content.actions.some((x) => x.kind === "trap"), 200).content.actions) if (a.kind === "trap") expect(hasTrapModel(a), a.uid).toBe(true);
     }
     // the taker of a purse has nothing to see
     expect(hasTrapModel({ uid: "x", kind: "trap", x: 1, y: 1, params: { trap: "steal_gold", damage: 0 } })).toBe(false);
@@ -388,9 +382,9 @@ describe("the Crow shows the traps in sight on the map (tenth playtest, point 1)
   });
 
   it("marks the traps it is given, names them and lists them in the legend only then", () => {
-    // one place per trap: the pit of the Temple of Moo, the spears of the Cyclops Cavern, the fire trap of the Blistering Heights
-    const named = (theme: string, tier: number): { label: string | null; unseen: string | null; other: string | null; legendOn: boolean; legendOff: boolean } => {
-      const { map, content } = themedInterior(theme, tier);
+    // one place per trap: the pit, the spears, the fire trap
+    const named = (trap: string, element?: string): { label: string | null; unseen: string | null; other: string | null; legendOn: boolean; legendOff: boolean } => {
+      const { map, content } = findPlace((p) => p.content.actions.filter((x) => x.kind === "trap").length >= 2 && p.content.actions.filter((x) => x.kind === "trap").every((x) => x.params.trap === trap && (element === undefined || x.params.element === element)), 400);
       const traps = content.actions.filter((a) => a.kind === "trap");
       const [first, second] = traps as [ActionInstance, ActionInstance];
       const explored = new Explored();
@@ -406,9 +400,9 @@ describe("the Crow shows the traps in sight on the map (tenth playtest, point 1)
         legendOff: interiorLegend(map, content).some((e) => e.label.startsWith("Trap")),
       };
     };
-    expect(named("temple_of_moo", 1)).toMatchObject({ label: "Pit", unseen: "Floor", other: "Floor", legendOn: true, legendOff: false });
-    expect(named("cyclops_cavern", 2)).toMatchObject({ label: "Spear trap", unseen: "Floor", other: "Floor" });
-    // the generic trap of the Blistering Heights is a fire trap (what the game showed: "Fire trap!")
-    expect(named("blistering_heights_cavern", 3).label).toBe("Fire trap");
+    expect(named("pit")).toMatchObject({ label: "Pit", unseen: "Floor", other: "Floor", legendOn: true, legendOff: false });
+    expect(named("spring")).toMatchObject({ label: "Spear trap", unseen: "Floor", other: "Floor" });
+    // the generic trap is an elemental trap (what the game showed: "Fire trap!")
+    expect(named("generic", "fire").label).toBe("Fire trap");
   });
 });
