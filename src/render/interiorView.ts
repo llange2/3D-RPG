@@ -14,8 +14,8 @@ import type { StaticModelInfo, TextureCache } from "./assets";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { CELL_SIZE, cellCenterX, cellCenterZ, meshInterior, modelFloorCells, wallHeightOf } from "./interiorMesher";
-import { themedProp } from "./interiorProps";
-import { itemModelKey, itemProp } from "./itemProps";
+import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
+import { floatY, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
 import { FLAT_Z_OFFSET, flatTileMaterial } from "./materials";
 import type { PropRenderer } from "./props";
@@ -421,10 +421,13 @@ export class InteriorView {
   /** The props of keys and key cards (before their turn) and how far they have turned. */
   private spinners: PropInstance[] = [];
   private spin = 0;
+  /** Magic flames standing as objects (decoration, shrines): they float on the spot like static monsters. */
+  private flames: PropInstance[] = [];
+  private clock = 0;
 
   private buildObjects(): void {
     const map = this.map!;
-    const instances: PropInstance[] = [];
+    let instances: PropInstance[] = [];
     this.spinners = [];
     this.wallLike = new Set(this.content!.actions.filter((a) => a.kind === "door" || (a.kind === "breakable_wall" && !this.brokenWalls.has(a.uid))).map((a) => a.y * map.width + a.x));
     this.objectCells = new Set(this.content!.actions.filter((a) => a.kind !== "service" && a.kind !== "trap" && a.kind !== "transfer" && a.kind !== "ambush" && !this.wallLike.has(a.y * map.width + a.x)).map((a) => a.y * map.width + a.x));
@@ -448,9 +451,11 @@ export class InteriorView {
         case "treasure":
           instances.push({ model: CHESTS[h % CHESTS.length]!, x, y: 0, z, rotY: this.faceOpen(map, a, h >>> 8), scale: 0.85 });
           break;
-        case "shrine":
-          instances.push({ model: SHRINES[h % SHRINES.length]!, x, y: 0, z, rotY: this.faceOpen(map, a, h >>> 8), scale: 1.5 });
+        case "shrine": {
+          const model = SHRINES[h % SHRINES.length]!;
+          instances.push({ model, x, y: 0, z, rotY: this.faceOpen(map, a, h >>> 8), scale: model === "obj_altar" ? ALTAR_SCALE : 1.5 });
           break;
+        }
         case "service": {
           const lot = map.lots.find((l) => l.door.x === a.x && l.door.y === a.y);
           instances.push(this.shopSign(map, `obj_sign_${String(a.params.service)}`, a, lot?.door.facing ?? "S", lot?.inline === true));
@@ -484,14 +489,24 @@ export class InteriorView {
       const height = wallHeightOf(map) / 2;
       for (const p of map.pillars ?? []) instances.push({ model: pillar, x: cellCenterX(p.x), y: 0, z: cellCenterZ(p.y), rotY: 0, scale: 1.5, scaleXYZ: [1.5, height, 1.5] });
     }
+    // the models of the debug showcase that no old item stands for, turned to look south at the party
+    for (const e of map.showcase?.extras ?? []) instances.push({ model: e.model, x: cellCenterX(e.x), y: 0, z: cellCenterZ(e.y), rotY: Math.PI, scale: e.scale });
+    const flameModel = itemModelKey(MAGIC_FLAMES_ITEM);
+    this.flames = flameModel ? instances.filter((p) => p.model === flameModel) : [];
+    if (this.flames.length > 0) instances = instances.filter((p) => p.model !== flameModel);
     this.props.setInstances(this.owner, instances);
     this.pushSpinners();
+    this.pushFlames();
     this.props.flush();
   }
 
   /** Keys and key cards turn slowly about their own axis; they have an owner of their own, redrawn every frame. */
   private pushSpinners(): void {
     this.props.setInstances(`${this.owner}:spin`, this.spinners.map((p) => ({ ...p, center: true, rotY: p.rotY + this.spin })));
+  }
+
+  private pushFlames(): void {
+    this.props.setInstances(`${this.owner}:float`, this.flames.map((p) => ({ ...p, y: p.y + floatY(this.clock, p.x * 7 + p.z * 13) })));
   }
 
   /** Draws the objects again, after one of them changed (a key was taken out of its chest). */
@@ -562,6 +577,13 @@ export class InteriorView {
     };
     const emptySides = sides(true);
     const { openAt, floorAt } = bearings.some(([front]) => emptySides.floorAt(front)) ? emptySides : sides(false);
+    // a banner hangs on a wall with its back to it, whichever way the corridor runs: facing along a corridor it stood across the way (31st playtest, point 2)
+    if (WALL_HUNG.has(shownItem(a) ?? -1)) {
+      const hung = bearings.filter(([front, back]) => floorAt(front) && !floorAt(back));
+      const walled = hung.length > 0 ? hung : bearings.filter(([, back]) => !floorAt(back));
+      const options = walled.length > 0 ? walled : bearings;
+      return (options[pick % options.length]![2] * Math.PI) / 180;
+    }
     /** Open cells in a row from this one in a direction (up to 8). */
     const run = (f: Facing) => {
       let n = 0;
@@ -615,9 +637,15 @@ export class InteriorView {
   update(dt: number): void {
     this.doors.update(dt);
     this.traps.update(dt);
-    if (this.spinners.length === 0) return;
-    this.spin = (this.spin + dt * SPIN_SPEED) % (2 * Math.PI);
-    this.pushSpinners();
+    if (this.spinners.length === 0 && this.flames.length === 0) return;
+    if (this.spinners.length > 0) {
+      this.spin = (this.spin + dt * SPIN_SPEED) % (2 * Math.PI);
+      this.pushSpinners();
+    }
+    if (this.flames.length > 0) {
+      this.clock += dt;
+      this.pushFlames();
+    }
     this.props.flush();
   }
 
@@ -629,8 +657,10 @@ export class InteriorView {
       this.props.removeOwner(`${this.owner}:walls`);
       this.props.removeOwner(`${this.owner}:round`);
       this.props.removeOwner(`${this.owner}:spin`);
+      this.props.removeOwner(`${this.owner}:float`);
     }
     this.spinners = [];
+    this.flames = [];
     this.caveWalls = [];
     this.caveShown = null;
     this.caveModels = false;

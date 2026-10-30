@@ -12,7 +12,7 @@ const paramValue = z.union([z.number(), z.string(), z.boolean()]);
 const ruleSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["treasure", "door", "trap", "lore", "transfer", "service", "ambush", "shrine", "fountain", "breakable_wall", "decor", "riddle", "gong", "lever", "head", "teleporter", "talent", "portal", "work", "spawn"]),
-  anchor: z.enum(["exit", "mouth", "deadEnd", "roomCenter", "roomEdge", "corridor", "bossRoom", "bossRoomEdge", "lot", "plaza", "plazaCorner", "wallBetween", "street", "talentSite", "portalSite", "workSite", "chestSite", "looseSite", "cageSite", "guardSite", "decorSite", "fountainSite", "vaultGate", "vaultDoor", "vaultWall", "vaultChest", "vaultGuard", "beforeTreasure"]),
+  anchor: z.enum(["exit", "mouth", "deadEnd", "roomCenter", "roomEdge", "corridor", "bossRoom", "bossRoomEdge", "lot", "plaza", "plazaCorner", "wallBetween", "street", "talentSite", "portalSite", "workSite", "chestSite", "looseSite", "cageSite", "guardSite", "decorSite", "fountainSite", "brittleSite", "vaultGate", "vaultDoor", "vaultWall", "vaultChest", "vaultGuard", "beforeTreasure"]),
   when: z
     .object({
       minDepth: z.number().optional(),

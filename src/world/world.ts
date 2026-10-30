@@ -5,6 +5,7 @@ import { CASTLE_TIERS } from "../data/quest-table";
 import { placeName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { planPlaces } from "../interiors/dungeonPlan";
+import { SHOWCASE_ID, SHOWCASE_NAME } from "../interiors/showcase";
 import type { DungeonRef } from "../interiors/types";
 import { FIELD_UNIT, ISLAND_EDGE, buildLayout, fieldAt, isqrt, tierOn, wrapDist2, type Island, type Layout } from "./islands";
 import { roadThrough, type Pt, type RoadSeg } from "./roads";
@@ -203,6 +204,9 @@ interface BaseTile {
 function toInt(seed: SeedState): number {
   return seed[0] | 0;
 }
+
+/** The debug showcase as a place: only its id and name matter (`interiors/showcase.ts`); the party comes back to where it stood. */
+const SHOWCASE_POI: Poi = { id: SHOWCASE_ID, kind: "dungeon", name: SHOWCASE_NAME, x: 0, y: 0, size: 1, side: "S", region: { rx: 0, ry: 0 }, anchor: false, tier: 1, biome: BIOME.MEADOW };
 
 export class World {
   readonly seedText: string;
@@ -940,6 +944,8 @@ export class World {
   }
 
   poiById(id: string): Poi | null {
+    // the debug showcase is no place of the world, but it is entered and saved like one
+    if (id === SHOWCASE_ID) return SHOWCASE_POI;
     this.plan();
     return this.poiMap.get(id) ?? null;
   }

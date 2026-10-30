@@ -114,13 +114,16 @@ export function carveMachineRoom(b: Builder, rng: Rng, spawn: { x: number; y: nu
 }
 
 const SIZES: readonly (readonly [number, number])[] = [[5, 4], [4, 4], [4, 3], [3, 3]];
+/** The rooms tried first for a place that holds three orbs or more. */
+const CROWDED: readonly (readonly [number, number])[] = [[7, 5], [6, 5]];
 
 /**
  * The end room of a place, as the quest wants it: a pocket for the quests that teleport, a sealed room otherwise (in the wall of `within` if the
  * quest says so). A place without rock for the first choice takes the other kind, then a smaller room, so a place always has one.
  */
-export function carveEndRoomFor(b: Builder, rng: Rng, spawn: { x: number; y: number }, teleported: boolean, within?: { x: number; y: number; w: number; h: number }): EndRoom | null {
-  for (const [w, h] of SIZES) {
+export function carveEndRoomFor(b: Builder, rng: Rng, spawn: { x: number; y: number }, teleported: boolean, within?: { x: number; y: number; w: number; h: number }, orbs = 0): EndRoom | null {
+  // every orb is a chest of its own (31st playtest): a small world puts up to seven orbs into one room, which then needs room for them
+  for (const [w, h] of orbs >= 3 ? [...CROWDED, ...SIZES] : SIZES) {
     const order = teleported ? [true, false] : [false, true];
     for (const isolated of order) {
       const room = (!isolated && within ? carveEndRoom(b, rng, spawn, false, w, h, within) : null) ?? carveEndRoom(b, rng, spawn, isolated, w, h);

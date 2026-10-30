@@ -6,7 +6,7 @@ import { hash2 } from "../core/noise";
 import { CELL, type InteriorMap } from "../interiors/types";
 import type { StaticModelInfo } from "./assets";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
-import { GUILLOTINE_ITEM, ITEM_MODELS, itemModelKey, itemProp, trapMover, trapSeconds, TRAP_MOTION } from "./itemProps";
+import { floatY, GUILLOTINE_ITEM, ITEM_MODELS, itemModelKey, itemProp, trapMover, trapSeconds, TRAP_MOTION } from "./itemProps";
 import type { PropRenderer } from "./props";
 import type { PropInstance } from "./terrainMesher";
 
@@ -106,6 +106,9 @@ export class InteriorTraps {
   private readonly traps = new Map<string, Trap>();
   private owner = "";
   private width = 0;
+  /** The flames of magic traps float on the spot like static monsters; they have an owner of their own, redrawn every frame. */
+  private flames: PropInstance[] = [];
+  private clock = 0;
 
   constructor(
     private readonly props: PropRenderer,
@@ -155,6 +158,11 @@ export class InteriorTraps {
   }
 
   update(dt: number): void {
+    if (this.flames.length > 0) {
+      this.clock += dt;
+      this.pushFlames();
+      this.props.flush();
+    }
     let moving = false;
     let ended = false;
     for (const t of this.traps.values()) {
@@ -182,14 +190,21 @@ export class InteriorTraps {
     if (this.owner) {
       this.props.removeOwner(`${this.owner}:traps`);
       this.props.removeOwner(`${this.owner}:traps-fx`);
+      this.props.removeOwner(`${this.owner}:traps-float`);
       this.props.flush();
     }
     this.traps.clear();
+    this.flames = [];
     this.owner = "";
+  }
+
+  private pushFlames(): void {
+    this.props.setInstances(`${this.owner}:traps-float`, this.flames.map((p) => ({ ...p, y: p.y + floatY(this.clock, p.x * 7 + p.z * 13) })));
   }
 
   private pushStill(): void {
     const list: PropInstance[] = [];
+    this.flames = [];
     const pit = BLOCKS[BLOCK_PIT]!.style.model!;
     for (const t of this.traps.values()) {
       const x = cellCenterX(t.cx);
@@ -200,7 +215,7 @@ export class InteriorTraps {
         if (blade) list.push(blade);
       } else if (t.element) {
         const object = elementalProp(t.element, t.cx, t.cy, t.rotation, this.staticInfo);
-        if (object) list.push(object);
+        if (object) (t.element === "magic" ? this.flames : list).push(object);
       } else if (!t.mover && t.open) {
         // the pit hangs below its floor: `y` is where the old game put the model's origin, the renderer rests the lowest point on the height it is given
         const bottom = this.staticInfo[pit.key]?.bounds[1] ?? 0;
@@ -208,6 +223,7 @@ export class InteriorTraps {
       }
     }
     this.props.setInstances(`${this.owner}:traps`, list);
+    this.pushFlames();
     this.props.flush();
   }
 }

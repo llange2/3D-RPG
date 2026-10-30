@@ -12,13 +12,16 @@ import type { PropInstance } from "./terrainMesher";
  * item table, the way the campaign draws it.
  */
 
+/** The altar (item 35) is 60 % of the size the wells have (31st playtest, point 6); a prop rests its lowest point on the floor whatever its scale. */
+export const ALTAR_SCALE = 0.9;
+
 /** Old item id -> the interior view's own model and its scale, for the objects it has had since before the themes. */
 export const OWN_MODELS: Record<number, { model: string; scale: number }> = {
   1: { model: "obj_chest", scale: 0.85 },
   74: { model: "obj_chest_iron", scale: 0.85 },
   72: { model: "obj_chest_noble", scale: 0.85 },
   96: { model: "obj_chest_sapphire", scale: 0.85 },
-  35: { model: "obj_altar", scale: 1.5 },
+  35: { model: "obj_altar", scale: ALTAR_SCALE },
   37: { model: "obj_well_red", scale: 1.5 },
   88: { model: "obj_well_yellow", scale: 1.5 },
 };
@@ -39,6 +42,11 @@ const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "g
 export function shownItem(a: Pick<ActionInstance, "kind" | "params">): number | null {
   const id = a.kind === "treasure" ? a.params.chest : SHOWS_ITEM.has(a.kind) ? a.params.item : undefined;
   return typeof id === "number" ? id : null;
+}
+
+/** Has this lever been pulled? An airlock lever stays pulled for good (`<airlock>@<side>`), every other one flips with each pull (its uid). */
+export function leverPulled(a: Pick<ActionInstance, "uid" | "params">, opened: ReadonlySet<string>): boolean {
+  return typeof a.params.airlock === "string" ? opened.has(`${a.params.airlock}@${String(a.params.side)}`) : opened.has(a.uid);
 }
 
 /** Static model keys that a map's themed objects need besides the interior view's own models. */
@@ -77,6 +85,8 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   // the cell, emblem to the room. The half circle moved the cloth to the room side, 2.85 units from the wall and with its emblem to the wall (21st playtest, point 7).
   if (isGlbItem(item) && !OWN_MODELS[item] && !WALL_HUNG.has(item)) bearing += 180;
   bearing += FRONT_TURN[item] ?? 0;
+  // a pulled lever has turned half a circle, so that its handle lies on the other side (the campaign turns its levers the same way)
+  if (a.kind === "lever" && leverPulled(a, opened)) bearing += 180;
   const own = OWN_MODELS[item];
   if (own) return { model: own.model, x, y: 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale };
   return itemProp(item, bearing, x, z, staticInfo);

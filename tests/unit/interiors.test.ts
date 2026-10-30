@@ -46,13 +46,14 @@ describe("interior generators", () => {
           expect(map.rooms.length).toBeGreaterThanOrEqual(5);
           expect(map.rooms.length).toBeLessThanOrEqual(27);
         }
-        // a castle is a keep inside a yard: 26 to 34 cells a side, a throne, a king and four statues
+        // a castle is the keep alone (31st playtest, no yard): 17 to 21 cells a side, a throne, a king and four statues, started inside the gate
         if (kind === "castle") {
           expect(map.castle!.statues.length).toBe(4);
-          expect(map.width).toBeGreaterThanOrEqual(26);
-          expect(map.width).toBeLessThanOrEqual(34);
-          expect(map.height).toBeGreaterThanOrEqual(26);
-          expect(map.height).toBeLessThanOrEqual(34);
+          expect(map.width).toBeGreaterThanOrEqual(17);
+          expect(map.width).toBeLessThanOrEqual(21);
+          expect(map.height).toBeGreaterThanOrEqual(17);
+          expect(map.height).toBeLessThanOrEqual(21);
+          expect(map.castle!.door).toMatchObject({ x: map.spawn.x, y: map.spawn.y });
         }
         if (kind === "cave") expect(analyzeTopology(map).totalFloor).toBeGreaterThan(200); // 40 x 40 since the sixteenth playtest
         if (kind === "town") {

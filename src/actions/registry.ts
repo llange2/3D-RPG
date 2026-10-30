@@ -280,10 +280,11 @@ export const TREASURE_HEAP = 4;
 
 /**
  * A heap of treasure that has been emptied (also one that held nothing: "The chest is empty.") is gone: it leaves its cell, which the party can
- * walk over again. Chests, barrels and the rest stay where they stand.
+ * walk over again. So is the object of a quest item (a key, a key card, an orb) once the party has taken it: the view stops drawing it, and a cell
+ * that stayed blocked was an invisible chest in the way (31st playtest, point 11). Chests, barrels and the rest stay where they stand.
  */
 export function heapGone(a: { uid: string; kind: ActionKind; params: Record<string, unknown> }, opened: ReadonlySet<string>): boolean {
-  return a.kind === "treasure" && Number(a.params.chest) === TREASURE_HEAP && isSpent(a, opened);
+  return a.kind === "treasure" && (Number(a.params.chest) === TREASURE_HEAP || typeof a.params.quest === "string") && isSpent(a, opened);
 }
 
 /** Steps a spear or guillotine trap needs to reload (the old game: 8 seconds), campaign and generated worlds alike. */

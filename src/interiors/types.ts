@@ -88,6 +88,8 @@ export type TownSite =
   | { kind: "perch"; x: number; y: number; facing: Facing }
   /** A gate on a street cell that shuts off a pocket with chests; `axis` is the way through it. */
   | { kind: "cage"; x: number; y: number; axis: "x" | "y" }
+  /** A wall between two streets that gives way to a perceptive party (`BRITTLE_WALLS` in `interiors/town.ts`); `axis` is the way through it. The cell is a wall. */
+  | { kind: "brittle"; x: number; y: number; axis: "x" | "y" }
   /** A cell inside a cage where a guard stands; `monsters` are the old monster ids it may be. */
   | { kind: "guard"; x: number; y: number; monsters: number[] }
   /**
@@ -163,12 +165,12 @@ export interface DungeonRef {
   hall?: { x: number; y: number; w: number; h: number };
 }
 
-/** A castle of the generated world (`interiors/castle.ts`): a keep inside a yard. */
+/** A castle of the generated world (`interiors/castle.ts`): a keep, entered through its gate. */
 export interface CastleLayout {
   alignment: Alignment;
   /** The size of the world as a factor on the number of guards (2/3, 1, 4/3, 5/3). */
   scale: number;
-  /** Quatloo coins hidden in the chests of the yard. */
+  /** Quatloo coins hidden in the alarm chests. */
   coins: number;
   /** The riddle (number in the list of the world) whose four-letter answer the statues of the keep spell. */
   word: number;
@@ -177,13 +179,22 @@ export interface CastleLayout {
   king: { x: number; y: number };
   statues: { x: number; y: number; bearing: number }[];
   answer: { x: number; y: number };
-  /** The two chests of the king, the chests in the yard and the door of the keep. */
+  /** The two chests of the king, the chests in the niches that raise the alarm, and the cell inside the gate of the keep (where the party starts). */
   kingChests: { x: number; y: number }[];
-  yardChests: { x: number; y: number }[];
+  alarmChests: { x: number; y: number }[];
   door: { x: number; y: number };
-  /** The cells inside the keep and those of the yard. */
+  /** The cells inside the keep (the gate itself is the way out and not one of them). */
   keep: number[];
-  yard: number[];
+}
+
+/** Where everything stands in the debug showcase (`interiors/showcase.ts`). Cells are grid cells. */
+export interface ShowcaseLayout {
+  /** Every monster of the table (`defId`) and every person (`persona`, the item number of the old game). */
+  monsters: { defId: number; x: number; y: number }[];
+  personas: { persona: number; x: number; y: number }[];
+  /** The old items that have a model (shown as decoration, `item`), and the models of the interior view that no item stands for. */
+  items: { item: number; x: number; y: number }[];
+  extras: { model: string; scale: number; x: number; y: number }[];
 }
 
 /** The spaceship under the pyramids (`interiors/spaceship.ts`): five sections side by side, the front one (0) is the control deck. */
@@ -232,6 +243,8 @@ export interface InteriorMap {
   castle?: CastleLayout;
   /** The spaceship under the pyramids: where its sections, tubes and airlocks are. */
   spaceship?: SpaceshipLayout;
+  /** The debug showcase (`interiors/showcase.ts`): every monster, person and object of the game, each on a cell of its own and without a function. */
+  showcase?: ShowcaseLayout;
   /** Optional per-cell look. `cell` holds, per cell, an index into `list`; generated maps do not use it. */
   styles?: { list: CellStyle[]; cell: Uint8Array };
 }

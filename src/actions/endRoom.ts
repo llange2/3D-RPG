@@ -95,12 +95,14 @@ export function fillEndRoom(env: QuestEnv): void {
       return ([[0, 1], [1, 0], [0, -1], [-1, 0]] as const).some(([dx, dy]) => seen.has(key(bx + dx, by + dy)));
     });
   };
-  const put = (name: string, params: Params, kind: "treasure" | "chalice" = "treasure"): void => {
+  const put = (name: string, params: Params, kind: "treasure" | "chalice" = "treasure"): ActionInstance | null => {
     const at = cells.findIndex(keeps);
-    if (at < 0) return;
+    if (at < 0) return null;
     const cell = cells.splice(at, 1)[0]!;
     taken.add(`${cell.x},${cell.y}`);
-    env.placeEnd({ uid: env.uid(`end-${name}`), kind, x: cell.x, y: cell.y, params });
+    const action: ActionInstance = { uid: env.uid(`end-${name}`), kind, x: cell.x, y: cell.y, params };
+    env.placeEnd(action);
+    return action;
   };
 
   // a pocket in the rock has a portal that leads back to the way in: A > B > A
@@ -117,7 +119,14 @@ export function fillEndRoom(env: QuestEnv): void {
     const model = QUEST_PROP[type];
     put("quest", { level: 1, gold: 0, items: 0, quest: type, chest: model !== undefined && allowedIn(model, place) ? model : env.theme.chest });
   }
-  if (ref.orbs > 0) put("orbs", { level: 1, gold: 0, items: 0, quest: ORB, count: ref.orbs, chest: allowedIn(109, place) ? 109 : env.theme.chest });
+  // (an orb of its own for every orb, not several in one: the party saw one and found two in the backpack, 31st playtest)
+  // (a room with no cell left for one more adds the orb to the last chest instead: an orb is never lost)
+  let lastOrb: ActionInstance | null = null;
+  for (let k = 0; k < ref.orbs; k++) {
+    const chest = put("orbs", { level: 1, gold: 0, items: 0, quest: ORB, chest: allowedIn(109, place) ? 109 : env.theme.chest });
+    if (chest) lastOrb = chest;
+    else if (lastOrb) lastOrb.params.count = Number(lastOrb.params.count ?? 1) + 1;
+  }
 
   // and 2 to 4 more rewards of its level
   const pool = rng.shuffle(rewardsOf(env.tier, rng));

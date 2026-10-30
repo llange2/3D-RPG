@@ -38,8 +38,10 @@ describe("the spaceship (quest document 1.2, spaceship_1)", () => {
     const poi = pyramidsOf(world)[0]!;
     const map = generateInterior(world, poi);
     const content = buildMapContent(world, poi, map);
-    const orbs = content.actions.filter((a) => a.params.quest === "quest_orb").reduce((n, a) => n + Number(a.params.count), 0);
-    expect(orbs).toBe(10);
+    // one chest for every orb (31st playtest, point 11), two in each section
+    const chests = content.actions.filter((a) => a.params.quest === "quest_orb");
+    expect(chests.length).toBe(10);
+    expect(chests.every((a) => a.params.count === undefined)).toBe(true);
     expect(content.spawns.length).toBeGreaterThan(5);
   });
 

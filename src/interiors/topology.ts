@@ -42,7 +42,8 @@ export function analyzeTopology(map: InteriorMap): Topology {
   let head = 0;
   let tail = 0;
   // the chamber of a castle vault behind a wall that gives way is part of the level: the wall counts as a way through
-  const hidden = new Set<number>((map.sites ?? []).filter((s) => s.kind === "vault_way" && s.how === "wall").map((s) => s.y * w + s.x));
+  // (so is the quarter of a town behind its brittle walls)
+  const hidden = new Set<number>((map.sites ?? []).filter((s) => (s.kind === "vault_way" && s.how === "wall") || s.kind === "brittle").map((s) => s.y * w + s.x));
   // so is the end room of a quest: behind its seal, or (a pocket in the rock that a teleport reaches) a second place the search starts from
   const end = map.dungeon?.endRoom;
   if (end?.seal) hidden.add(end.seal.y * w + end.seal.x);

@@ -17,7 +17,7 @@ import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { BLACK_CARD, ORB, ORBS_FOR_KING, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
-import { CELL, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
+import { CELL, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
 import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
@@ -28,7 +28,7 @@ import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { CRYSTAL_LAMPS, crystalLamps, lampSource, type LampKind, type LampSource } from "../render/lamps";
+import { ITEM_LAMPS, MONSTER_LAMPS, crystalLamps, lampSource, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, readModelSet, registryFile, storeModelSet, takeResume, type ModelSet } from "../render/modelSet";
@@ -203,15 +203,12 @@ const TORCH = { range: 13.5, intensity: 1.26 };
 const TORCH_LIT = { range: 25, intensity: 1.465 };
 /**
  * Map objects of the campaign that give light (their item numbers): where the old game only drew them, they light their
- * surroundings here, about one cell around (`LAMP_RANGE` is set in the engine), the crystals further (`render/lamps.ts`, which also lights the
- * crystals of generated places). `y` is the height of the light.
+ * surroundings here, about one cell around (`LAMP_RANGE` is set in the engine), the others (`render/lamps.ts`, which also lights the
+ * objects of generated places) further. `y` is the height of the light.
  */
-const LAMPS: Record<number, LampKind> = {
-  76: { y: 3.2, color: [1, 0.78, 0.45] }, // Rustic lantern, hangs from the ceiling
-  71: { y: 1.4, color: [1, 0.6, 0.3] }, // Abandoned fireplace
-  121: { y: 1.2, color: [0.55, 0.7, 1] }, // Magic flames
-  ...CRYSTAL_LAMPS,
-};
+const LAMPS: Readonly<Record<number, LampKind>> = ITEM_LAMPS;
+/** The monsters that glow, by the number in the monster table (`MONSTER_LAMPS` names them). */
+const MONSTER_GLOW: ReadonlyMap<number, MonsterLamp> = new Map(Object.values(MONSTERS).flatMap((m) => (MONSTER_LAMPS[m.name] ? [[m.id, MONSTER_LAMPS[m.name]!] as [number, MonsterLamp]] : [])));
 /** Lamps farther from the party than this are ignored (units); the pool serves the nearest ones. */
 const LAMP_REACH = 18;
 const LAMP_INTENSITY = 1.7;
@@ -268,6 +265,9 @@ export class Game {
   private lootOwner = "loot";
   private lightLevel = 1;
   private lamps: LampSource[] = [];
+  /** Whether the lamp pool also serves the monsters that glow (`MONSTER_GLOW`): in the interiors of generated places. */
+  private glowMonsters = false;
+  private readonly glowModels: ReadonlySet<number> = new Set(MONSTER_GLOW.keys());
   /** Whether the overworld is drawn with the old game's tile models on flat ground (the setting, or `?tiles=`). */
   private tileModels = true;
   private viewDistance: ViewDistance = "medium";
@@ -728,12 +728,15 @@ export class Game {
     try {
       map = generateInterior(this.world, poi, 0);
       const content = buildMapContent(this.world, poi, map);
-      if (import.meta.env.DEV) {
+      if (import.meta.env.DEV && !map.showcase) {
         const issues = validateContent(map, content);
         if (issues.length) console.warn(`interior ${poi.id} has content issues`, issues);
       }
       this.ui.loading.set(LOAD_DATA);
-      await this.monsters.preload(content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])));
+      await this.monsters.preload([
+        ...content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])),
+        ...(map.showcase ? [...map.showcase.monsters.map((m) => m.defId), ...map.showcase.personas.map((p) => personaModelId(p.persona))] : []),
+      ]);
       await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
@@ -756,10 +759,11 @@ export class Game {
       this.syncQuestBlocks();
       this.enc = createEncounter();
       this.interiorView.show(map, content, this.state.opened, this.state.broken);
-      this.setLamps(crystalLamps(content));
+      this.setLamps(crystalLamps(content), true);
       this.sky.setVisible(map.theme.open);
       this.spawnInteriorMonsters();
       this.spawnPersonas();
+      this.spawnShowcase();
       const start = at ?? map.spawn;
       // back out on the tile in front of the place, looking away from it
       const front = this.world.frontOf(poi);
@@ -865,6 +869,26 @@ export class Game {
       }
       const p = this.worldPos(a.x, a.y);
       void this.monsters.add(`npc:${a.uid}`, personaModelId(persona), p.x, p.y, p.z, { yaw: personaYaw(persona, bearing), idle: PERSONAS[persona]!.idle });
+    }
+  }
+
+  /**
+   * The debug showcase: every monster and every person of the game stands on its cell, facing the party. They are views only, no monster of the encounter,
+   * so none of them fights, blocks a cell or can be shot at (`interiors/showcase.ts`).
+   */
+  private spawnShowcase(): void {
+    const showcase = this.interior?.map.showcase;
+    if (!showcase) return;
+    for (const m of showcase.monsters) {
+      if (!this.monsters.knows(m.defId)) continue;
+      const p = this.worldPos(m.x, m.y);
+      void this.monsters.add(`showcase:m${m.defId}`, m.defId, p.x, p.y, p.z);
+    }
+    for (const s of showcase.personas) {
+      const model = personaModelId(s.persona);
+      if (!PERSONAS[s.persona] || !this.monsters.knows(model)) continue;
+      const p = this.worldPos(s.x, s.y);
+      void this.monsters.add(`showcase:p${s.persona}`, model, p.x, p.y, p.z, { yaw: personaYaw(s.persona, 180), idle: PERSONAS[s.persona]!.idle });
     }
   }
 
@@ -2057,7 +2081,7 @@ export class Game {
   }
 
   /**
-   * The alarm of a castle: the guards of its kind come. Light guards fill the yard, heavy ones stand on the way from the king to the gate of the keep.
+   * The alarm of a castle: the guards of its kind come. Light guards fill the corridors of the keep, heavy ones stand on the way from the king to the gate of the keep.
    * There is one kind of each in a castle (`guardsOf`), their number follows the size of the world and their experience the other way round.
    */
   private spawnGuards(kind: "light" | "heavy"): void {
@@ -2068,9 +2092,9 @@ export class Game {
     const id = guardsOf(castle.alignment, rt.map.tier, rngFor(this.world.rootSeed, LAYER.SPAWN, rt.map.key, "guards"))[kind];
     const count = Math.max(2, Math.round((kind === "light" ? rng.range(10, 20) : rng.range(6, 10)) * castle.scale));
     const w = rt.map.width;
-    // the cells they come to: the yard, or the way from the king to the door of the keep
+    // the cells they come to: the keep, or the way from the king to the cell inside its gate
     let cells: number[];
-    if (kind === "light") cells = castle.yard;
+    if (kind === "light") cells = castle.keep;
     else {
       const prev = new Map<number, number>([[castle.king.y * w + castle.king.x, -1]]);
       const queue = [castle.king.y * w + castle.king.x];
@@ -3580,12 +3604,18 @@ export class Game {
 
   /** Debug: a list of every place of the world with its level; the party appears at the entrance of the one picked, whatever key it asks for. True when the party went. */
   private async teleportToLevel(): Promise<boolean> {
-    const options: Option<string>[] = teleportTargets(this.world.allPois()).map(({ poi, kind }) => ({ label: `${kind}: ${poi.name}`, value: poi.id, note: `Level ${poi.tier}` }));
+    // the showcase comes first: a dark hall with every monster, person and object of the game (`interiors/showcase.ts`)
+    const options: Option<string>[] = [
+      { label: "Showcase: all monsters and objects", value: SHOWCASE_ID, note: "Dungeon" },
+      ...teleportTargets(this.world.allPois()).map(({ poi, kind }) => ({ label: `${kind}: ${poi.name}`, value: poi.id, note: `Level ${poi.tier}` })),
+    ];
     const id = await this.ui.choose("Teleport to Level", "The party appears at the entrance. Keys and key cards are not needed.", options);
     const poi = id === null ? null : this.world.poiById(id);
     if (!poi) return false;
     this.audio.play(9041);
-    await this.openInterior(poi);
+    // the showcase is no place of the world: the way out leads back to where the party stood
+    const at = this.state.at;
+    await this.openInterior(poi, undefined, poi.id === SHOWCASE_ID ? (at.mode === "interior" ? at.ret : { x: at.x, y: at.y, facing: at.facing }) : undefined);
     return true;
   }
 
@@ -4098,10 +4128,12 @@ export class Game {
     return out;
   }
 
-  private setLamps(sources: LampSource[]): void {
+  private setLamps(sources: LampSource[], monsters = false): void {
     this.lamps = sources;
-    // the lights of the pool only exist for a map that has lamps (switching them changes the shaders once, at the map change)
-    for (const light of this.r.lamps) light.setEnabled(sources.length > 0);
+    // the lights of the pool only exist for a map that has lamps (switching them changes the shaders once, at the map change); a place under ground
+    // has them as well, because a monster that glows (a ghost, a candle creep) may come into it at any time
+    this.glowMonsters = monsters;
+    for (const light of this.r.lamps) light.setEnabled(sources.length > 0 || monsters);
   }
 
   /**
@@ -4109,11 +4141,15 @@ export class Game {
    * lamp pops when the choice changes. By day outside they add nothing; underground and at night they do.
    */
   private updateLamps(): void {
-    if (this.lamps.length === 0) return;
+    if (this.lamps.length === 0 && !this.glowMonsters) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
     const { x, z } = this.player;
-    const near = this.lamps
+    // the monsters that glow carry their light with them: they are lamps that move
+    const carried: LampSource[] = this.glowMonsters
+      ? this.monsters.glowing(this.glowModels).map((g) => ({ ...MONSTER_GLOW.get(g.defId)!, x: g.x, y: g.y, z: g.z }))
+      : [];
+    const near = [...this.lamps, ...carried]
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
       .filter((e) => e.d < LAMP_REACH)
       .sort((a, b) => a.d - b.d);

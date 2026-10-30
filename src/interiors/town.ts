@@ -32,6 +32,12 @@ const PORTAL_REACH = 14;
 /** The portal (old item 3): every town has one, a few steps from the way in. */
 const PORTAL_ITEM = 3;
 
+/**
+ * Street cells of a ground plan that are brittle walls instead (plan coordinates, by tier): the three short links between the long street and the one
+ * below it in Swamp Town (tier 4), which the user wants closed by walls that give way to a perceptive party (31st playtest, point 5).
+ */
+const BRITTLE_WALLS: Readonly<Record<number, readonly (readonly [number, number])[]>> = { 4: [[3, 3], [5, 3], [7, 3]] };
+
 /** The ground plan of a tier: tier 1 is Fountain Head, tier 5 Blistering Heights (`data/town-blueprints.ts`). */
 export function blueprintFor(tier: number): TownBlueprint {
   return TOWN_BLUEPRINTS.find((b) => b.tier === Math.min(5, Math.max(1, tier))) ?? TOWN_BLUEPRINTS[0]!;
@@ -111,6 +117,16 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (b.get(x, y) === CELL.BUILDING) walls.push([x, y]);
   for (const [x, y] of walls) if (touchesOutside(x, y)) b.set(x, y, CELL.SOLID);
 
+  // the brittle walls: street cells of the plan turned to house wall, each with a street on both sides (checked before the walls are set)
+  const brittle: { x: number; y: number; axis: "x" | "y" }[] = [];
+  for (const [px, py] of BRITTLE_WALLS[plan.tier] ?? []) {
+    const [x, y] = place(px, py);
+    const through = b.isFloor(x, y - 1) && b.isFloor(x, y + 1) ? "y" : b.isFloor(x - 1, y) && b.isFloor(x + 1, y) ? "x" : null;
+    if (!b.isFloor(x, y) || through === null) continue;
+    b.set(x, y, CELL.BUILDING);
+    brittle.push({ x, y, axis: through });
+  }
+
   const isWall = (x: number, y: number) => b.get(x, y) !== CELL.FLOOR;
   /** The two sides of a wall, along it. */
   const along = (f: Facing): Facing[] => (f === "N" || f === "S" ? ["W", "E"] : ["N", "S"]);
@@ -142,6 +158,7 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
   };
   keepClear(exit.x, exit.y, 2);
   keepClear(spawn.x, spawn.y, 2);
+  for (const w of brittle) keepClear(w.x, w.y, 1);
   for (const [px, py] of plan.services) keepClear(...place(px, py), 1);
   for (const o of [...plan.talents, ...plan.chests, ...plan.decor]) keepClear(...place(o.x, o.y), 1);
   const open4 = (x: number, y: number): number => SIDES.filter((f) => b.isFloor(x + FACING_DELTA[f].dx, y + FACING_DELTA[f].dy)).length;
@@ -186,8 +203,14 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
   }
 
   // cells that hold something other than a shop
-  const sites: TownSite[] = [];
+  const sites: TownSite[] = brittle.map((w) => ({ kind: "brittle", x: w.x, y: w.y, axis: w.axis }));
   const used = new Set<number>([exit.y * width + exit.x, spawn.y * width + spawn.x]);
+  // the party stands beside a brittle wall to bump it: no shop, person or object takes those cells (`protectedCells` in the anchors does the same for the rules)
+  for (const w of brittle) {
+    const d = w.axis === "x" ? { dx: 1, dy: 0 } : { dx: 0, dy: 1 };
+    used.add((w.y - d.dy) * width + w.x - d.dx);
+    used.add((w.y + d.dy) * width + w.x + d.dx);
+  }
   const claim = (px: number, py: number): [number, number] | null => {
     const [x, y] = place(px, py);
     if (!b.isFloor(x, y) || used.has(y * width + x)) return null;
@@ -229,7 +252,25 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
   // which carries the door (and the sign over the cell); stepping onto the cell enters it
   const lots: Lot[] = [];
   const shopCells: [number, number][] = [];
+  // the streets the party walks without breaking a wall: a shop never stands behind a brittle wall (the quarter behind it holds the plan's storage chests)
+  const walkedTo = new Uint8Array(width * height);
+  {
+    const stack = [spawn.y * width + spawn.x];
+    walkedTo[stack[0]!] = 1;
+    while (stack.length > 0) {
+      const i = stack.pop()!;
+      for (const f of SIDES) {
+        const nx = (i % width) + FACING_DELTA[f].dx;
+        const ny = Math.floor(i / width) + FACING_DELTA[f].dy;
+        if (!b.isFloor(nx, ny) || walkedTo[ny * width + nx]) continue;
+        walkedTo[ny * width + nx] = 1;
+        stack.push(ny * width + nx);
+      }
+    }
+  }
   const addShop = (x: number, y: number, strict = true): boolean => {
+    // a wall that gives way is never next to a shop's door (it would leave the door or the sign hanging)
+    if (brittle.some((w) => Math.abs(w.x - x) <= 1 && Math.abs(w.y - y) <= 1)) return false;
     const backs = SIDES.filter((s) => isWall(x + FACING_DELTA[s].dx, y + FACING_DELTA[s].dy) && (!strict || wallGoesOn(x + FACING_DELTA[s].dx, y + FACING_DELTA[s].dy, s)));
     if (backs.length === 0) return false;
     // a wall with a street in front of it (the cell opposite is open) is the better door; otherwise any wall will do
@@ -254,7 +295,7 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
     const free: [number, number][] = [];
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
-        if (!b.isFloor(x, y) || used.has(y * width + x)) continue;
+        if (!b.isFloor(x, y) || used.has(y * width + x) || !walkedTo[y * width + x]) continue;
         if (nearStart(x, y)) continue;
         free.push([x, y]);
       }

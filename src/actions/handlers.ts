@@ -45,7 +45,7 @@ export type Effect =
   | { type: "pick"; question: string }
   /** The quest of the place is done: its end room opens (the seal gives way, or the party is teleported into the pocket). */
   | { type: "endroom" }
-  /** An alarm: the guards of the castle come (`light` in the yard, `heavy` between the throne room and the gate). */
+  /** An alarm: the guards of the castle come (`light` in the halls of the keep, `heavy` between the throne room and the gate). */
   | { type: "guards"; kind: "light" | "heavy" }
   /** The party stands before a king: the game takes the orbs, if there are any, and pays. */
   | { type: "king"; alignment: "good" | "neutral" | "evil" }
@@ -243,13 +243,13 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         for (const i of activeCharacters(party)) best = Math.max(best, thieveryRoll(party.characters[i]!, rng));
         if (best < Number(p.difficulty ?? 2)) return { effects: [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }], consumed: false };
       }
-      // a chest in the yard of a castle is wired to an alarm: the party is asked, and the first one tried calls the light guards
+      // a chest in a niche of a castle is wired to an alarm: the party is asked, and the first one tried calls the light guards
       if (p.warn === "alarm") {
         if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Chest", question: "A thin wire runs from the lid into the wall. This chest is guarded by an alarm. Do you really want to break it open?", yes: "Break it open", no: "Leave" }], consumed: false };
         if (ctx.answer === null) return { effects, consumed: false };
         const flag = `${mapKey}@light`;
         const first = !(ctx.opened ?? NONE).has(flag);
-        if (first) effects.push({ type: "text", text: "An alarm bell rings out over the yard. The guards of the castle come!" }, { type: "guards", kind: "light" });
+        if (first) effects.push({ type: "text", text: "An alarm bell rings out through the halls of the keep. The guards of the castle come!" }, { type: "guards", kind: "light" });
         payOut(p, rng, party, effects);
         return { effects, consumed: true, ...(first ? { state: { add: [flag], remove: [] } } : {}) };
       }
@@ -328,9 +328,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         return { effects: [{ type: "text", text: "You hear a buzz and afterwards mechanical noises. However the lock still stands in place." }], consumed: false, state: { add: [mine], remove: [] } };
       }
       effects.push({ type: "text", text: "You pull the lever. Somewhere in the walls stone grinds on stone." });
-      // a lever with a target flips it; the look-alikes without one do nothing but look the same
-      const target = String(p.target ?? "");
-      if (target === "") return { effects, consumed: false };
+      // a lever with a target flips it; the look-alikes without one do nothing but look the same, and turn in their cell like the others (31st playtest, point 9)
       const pulled = (ctx.opened ?? NONE).has(action.uid);
       return { effects, consumed: false, state: pulled ? { add: [], remove: [action.uid] } : { add: [action.uid], remove: [] } };
     }

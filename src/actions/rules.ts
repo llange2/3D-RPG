@@ -1,6 +1,7 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { QUEST_PROP, SHRINE_EFFECT, type DungeonTheme } from "../data/dungeon-themes";
 import { buildCastleContent } from "./castle";
+import { buildShowcaseContent } from "./showcase";
 import { buildSpaceshipContent } from "./spaceship";
 import { hideInChests, placeMachines } from "./machines";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
@@ -82,6 +83,7 @@ const FITTED_ANCHOR = /Site$|^vault|^deadEnd$|^exit$/;
  */
 export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentContext, topology?: Topology): MapContent {
   // a castle is made of its own parts (`actions/castle.ts`), not of the rules
+  if (map.showcase) return buildShowcaseContent(map);
   if (map.castle) return buildCastleContent(map, ctx.rootSeed);
   if (map.spaceship) return buildSpaceshipContent(map, ctx.rootSeed);
   const topo = topology ?? analyzeTopology(map);
@@ -101,7 +103,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // Chests, shrines, fountains and statues block their cell. Before placing one, make sure the rest of the map stays connected.
   const blockedCells = new Set<number>();
   // a vault behind a wall that gives way is part of the map: the wall counts as a way through
-  const hiddenWalls = new Set<number>((map.sites ?? []).filter((s) => s.kind === "vault_way" && s.how === "wall").map((s) => idx(s.x, s.y)));
+  const hiddenWalls = new Set<number>((map.sites ?? []).filter((s) => (s.kind === "vault_way" && s.how === "wall") || s.kind === "brittle").map((s) => idx(s.x, s.y)));
   const endRoom = map.dungeon?.endRoom;
   if (endRoom?.seal) hiddenWalls.add(idx(endRoom.seal.x, endRoom.seal.y));
   const seen = new Uint8Array(map.width * map.height);

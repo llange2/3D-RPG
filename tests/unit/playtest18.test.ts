@@ -141,6 +141,8 @@ describe("eighteenth playtest: the streets of a town", () => {
           // the way in and out are no dead ends to fill
           if (Math.abs(x - map.spawn.x) <= 1 && Math.abs(y - map.spawn.y) <= 1) continue;
           if (Math.abs(x - map.exit.x) <= 1 && Math.abs(y - map.exit.y) <= 1) continue;
+          // the cell in front of a brittle wall stays free: the party stands there to bump the wall (31st playtest, point 5)
+          if (content.actions.some((a) => a.uid.includes("#brittle:") && Math.abs(a.x - x) + Math.abs(a.y - y) === 1)) continue;
           deadEnds++;
           // a dead end can hold one thing that did not fit the plan (a blocked cell the rules turned down), so allow a rare empty one
           if (!taken.has(`${x},${y}`)) expect(deadEnds, `town #${i}: nothing at ${x},${y}`).toBe(-1);

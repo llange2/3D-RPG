@@ -226,16 +226,16 @@ describe("castles and the open sky", () => {
     expect(INTERIOR_THEMES.dungeon!.open).toBe(false); // dungeons keep theirs
   });
 
-  it("are compact compounds like the old game's (Whiteshield 18 x 21, Bloodreign 25 x 22, Dragontooth 21 x 34)", () => {
+  it("are the keep alone, as compact as the old game's (Whiteshield 18 x 21, Bloodreign 25 x 22, Dragontooth 21 x 34; 31st playtest: no yard)", () => {
     const world = new World("castles");
     let sizes = 0;
     for (let i = 0; i < 80; i++) {
       const poi: Poi = { id: `p:0:0:${i}`, kind: "castle" as PoiKind, name: "Test", x: i * 7, y: i * 3, size: 1, side: "S", region: { rx: 0, ry: 0 }, anchor: false, tier: 1 + (i % 5), biome: BIOME.MEADOW };
       const map = generateInterior(world, poi, 0);
-      expect(map.width).toBeGreaterThanOrEqual(26);
-      expect(map.width).toBeLessThanOrEqual(34);
-      expect(map.height).toBeGreaterThanOrEqual(24);
-      expect(map.height).toBeLessThanOrEqual(34);
+      expect(map.width).toBeGreaterThanOrEqual(17);
+      expect(map.width).toBeLessThanOrEqual(21);
+      expect(map.height).toBeGreaterThanOrEqual(17);
+      expect(map.height).toBeLessThanOrEqual(21);
       expect(map.cells.some((c) => c === CELL.FLOOR)).toBe(true);
       sizes++;
     }

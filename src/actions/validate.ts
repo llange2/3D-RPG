@@ -69,7 +69,7 @@ export function themeIssues(map: InteriorMap, content: MapContent): string[] {
 /**
  * What a castle demands (quest document 1.2, castle_1): the banner of its kind along the walls, its throne and its king before it, four statues of its
  * kind whose letters spell the word that the statue near the king wants, the king's two chests of 5 million gold behind that word, chests in the
- * yard that raise an alarm, and no roaming monster: the guards come with the alarm.
+ * niches that raise an alarm, and no roaming monster: the guards come with the alarm.
  */
 export function castleIssues(map: InteriorMap, content: MapContent): string[] {
   const issues: string[] = [];
@@ -101,7 +101,7 @@ export function castleIssues(map: InteriorMap, content: MapContent): string[] {
     if (c.params.gold !== 5_000_000) issues.push(`${c.uid}: holds ${String(c.params.gold)} gold, not 5 million`);
     if (c.params.requires !== answer?.uid) issues.push(`${c.uid}: not sealed by the statue's word`);
   }
-  if (of("treasure").filter((a) => a.params.warn === "alarm").length < 3) issues.push(`${map.key}: too few chests in the yard`);
+  if (of("treasure").filter((a) => a.params.warn === "alarm").length < 3) issues.push(`${map.key}: too few alarm chests in the niches`);
   return issues;
 }
 
@@ -187,7 +187,7 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
   const blocked = new Set<number>();
   for (const a of content.actions) if (blocksCell(a) && map.cells[idx(a.x, a.y)] === CELL.FLOOR) blocked.add(idx(a.x, a.y));
   // a wall that gives way is a way through (the chamber of a castle's vault lies behind one); it is one more cell to reach
-  const hidden = new Set<number>(content.actions.filter((a) => a.uid.includes("#vault_wall:")).map((a) => idx(a.x, a.y)));
+  const hidden = new Set<number>(content.actions.filter((a) => a.uid.includes("#vault_wall:") || a.uid.includes("#brittle:")).map((a) => idx(a.x, a.y)));
   const end = map.dungeon?.endRoom;
   if (end?.seal) hidden.add(idx(end.seal.x, end.seal.y));
   const seen = new Uint8Array(map.width * map.height);
