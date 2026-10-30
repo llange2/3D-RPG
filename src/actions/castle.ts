@@ -106,8 +106,39 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
     taken.add(y * map.width + x);
     actions.push({ uid: uid("banner"), kind: "decor", x, y, params: { item: BANNER[castle.alignment], bearing: BEARING[facing] } });
   };
-  // a banner on the wall across from every niche, looking at it (the wall behind the cell in front of the niche)
   const floorAt = (x: number, y: number) => map.cells[y * map.width + x] === CELL.FLOOR;
+  // two banners behind the king, one on each side of him (32nd playtest, point 11): the free cells of the throne room (at most four steps from the king) that touch a wall,
+  // the nearest on each side of the line from the throne through the king, those level with him or behind him first; the king's chests and the statue take the nooks, so the
+  // banners hang on the next cells. Each hangs on a wall of its cell (the one behind it, else the one at its side) and looks away from it.
+  const fx = Math.sign(castle.king.x - castle.throne.x);
+  const fy = Math.sign(castle.king.y - castle.throne.y);
+  const steps = new Map<number, number>([[castle.king.y * map.width + castle.king.x, 0]]);
+  for (const q = [castle.king]; q.length > 0; ) {
+    const c = q.shift()!;
+    const d = steps.get(c.y * map.width + c.x)!;
+    if (d >= 4) continue;
+    for (const f of FACINGS) {
+      const n = { x: c.x + FACING_DELTA[f].dx, y: c.y + FACING_DELTA[f].dy };
+      if (!floorAt(n.x, n.y) || steps.has(n.y * map.width + n.x)) continue;
+      steps.set(n.y * map.width + n.x, d + 1);
+      q.push(n);
+    }
+  }
+  const nooks = [...steps]
+    .map(([i, d]) => ({ x: i % map.width, y: Math.floor(i / map.width), d }))
+    .filter((c) => c.d > 0 && !taken.has(c.y * map.width + c.x) && !(c.x === castle.throne.x && c.y === castle.throne.y) && FACINGS.some((f) => !floorAt(c.x + FACING_DELTA[f].dx, c.y + FACING_DELTA[f].dy)))
+    .map((c) => ({ ...c, across: (c.x - castle.king.x) * -fy + (c.y - castle.king.y) * fx, behind: (c.x - castle.king.x) * fx + (c.y - castle.king.y) * fy <= 0 }))
+    .sort((p, q) => p.d * 2 + (p.behind ? 0 : 1) - (q.d * 2 + (q.behind ? 0 : 1)) || p.y - q.y || p.x - q.x);
+  for (const side of [1, -1]) {
+    const c = nooks.find((n) => n.across * side > 0 && !taken.has(n.y * map.width + n.x)) ?? nooks.find((n) => n.across === 0 && !taken.has(n.y * map.width + n.x));
+    if (!c) continue;
+    const px = -fy * side;
+    const py = fx * side;
+    const wall = [{ dx: -fx, dy: -fy }, { dx: px, dy: py }, { dx: -px, dy: -py }, { dx: fx, dy: fy }].find((d) => !floorAt(c.x + d.dx, c.y + d.dy))!;
+    const look = FACINGS.find((f) => FACING_DELTA[f].dx === -wall.dx && FACING_DELTA[f].dy === -wall.dy)!;
+    banner(c.x, c.y, look);
+  }
+  // a banner on the wall across from every niche, looking at it (the wall behind the cell in front of the niche)
   for (const c of castle.alarmChests) {
     const f = FACINGS.find((o) => floorAt(c.x + FACING_DELTA[o].dx, c.y + FACING_DELTA[o].dy));
     if (!f) continue;

@@ -663,6 +663,29 @@ Tests in `tests/unit/playtest31.test.ts` (angepasst: `interiors.test.ts`, `playt
 
 Offene Punkte: Dradale hat hinter den drei Wänden kein Gebäude; wo das Viertel sonst Läden, Personen oder Truhen bekommt, hängt von den Regeln ab (Dorfbewohner und Fässer in Sackgassen sind möglich). Die Zellen der Kampagne und alte Spielstände bleiben unberührt (neue `GEN_VERSION`, alte Orte werden neu erzeugt).
 
+### Zweiunddreißigster Playtest (2026-10-30, 14 Punkte, `GEN_VERSION` 31)
+
+Tests in `tests/unit/playtest32.test.ts` (angepasst: `playtest7.test.ts` für die neuen XP-Werte, `playtest16.test.ts` für den Quest-Namen). Im Browser geprüft (Showcase, eingefrorener Server auf Port 5174): Wizard, Top Jouster, Sprite, Minotaurus, Computer, Schatzhaufen und Schlüssel; Lichtübergänge beim Gehen (größter Sprung einer Lampenstärke je Frame 0,13, vorher die volle Stärke von bis zu 4,5); der Kampfmodus ohne Nachbarn löst sich vor dem Schritt.
+
+| # | Wunsch | Umsetzung |
+|---|---|---|
+| 1 | Entity 23 und 24 der Tabelle nachziehen, Excel einchecken | `npm run data:monsters`: neue XP bei 89 Monstern, neue Hütten-XP bei 20, neue Stufe (Entity 24) bei Dragon Worm (5 → 4) und Black Knight (4 → 5). Die Stufe ändert, welche Monster wo stehen: `GEN_VERSION` 31, `golden:update`. `docs/RPG_0.1.xlsx` liegt im Commit. |
+| 2 | Lichter springen an und aus, wenn es mehrere gibt | Der Pool von zwei Lichtern (`Game.updateLamps`) vergab die Lichter jeden Frame neu nach Abstand: kam eine dritte Lampe näher, übernahm sie ein Licht mit voller Stärke, die verdrängte ging auf 0. Jetzt hält ein Licht seine Lampe (`LampSource.key`, `Game.lampSlots`) und blendet sie in `LAMP_FADE` (0,4 s) ein und aus; eine Lampe, die kein Licht bekommt, wartet, bis eines frei ist. Die Stärke folgt dem Abstand (Randabfall `LAMP_REACH`) ebenfalls über diese Rampe. |
+| 3 | Orb, Key Cards, Schlüssel, Schatzhaufen leuchten golden | `ITEM_LAMPS` (`render/lamps.ts`): Orb 109 (`ORB_LAMP`, vorher blau), Schatzhaufen 4, Schlüssel 17 bis 25 und Key Cards 64, 65, 66, 122, 123, 124 (`GOLD_LAMP`). Die Kampagne übernimmt es (gleiche Tabelle). |
+| 4 | Computerterminal leuchtet bläulich | Item 68, `COMPUTER_LAMP`. |
+| 5 | Minotaurus: Axtstiel geht durch die Hand | `GRIP_Y.wpn_axe` −0,88 (vorher −0,4: ein Drittel des Stiels lag hinter der Faust). Gilt auch für den Minotaur King. Der Hammer (Mad Dwarf, Ogre) blieb. |
+| 6 | Top Jouster (10/22 im Showcase) zu klein, soll feuerorange leuchten | Die Pipeline (`readStaticMonsterMap`) liest nur 60 000 Zeichen von `add_monster`; Fall 89 liegt am Rand, Maßstab und Höhe fielen auf 1 (Altspiel: `scale=1.7`). `SIZE_FACTOR` 89 = 1,7 (`render/monsters.ts`), die Pipeline wurde nicht geändert. Licht `Top Jouster` in `MONSTER_LAMPS`. Dasselbe Leseloch betrifft den Rat Overlord (91, `SIZE_FACTOR` 1,4 seit dem 31. Playtest). |
+| 7 | Bläulich leuchten: Carnage Hand (14/8), Guardian (20/12), Sorcerer (12/18), Jouster (24/12) | `MONSTER_LAMPS` (`BLUISH`). |
+| 8 | Fee (Sprite, 16/18) blau-grünlich | `MONSTER_LAMPS.Sprite` (0,3; 0,95; 0,75). |
+| 9 | Wizard (14/20) schwebt nicht auf Augenhöhe, grau | `EYES_AT[79]` 0,85, Licht grau. |
+| 10 | Wicked Witch (10/20) grünlich | `MONSTER_LAMPS["Wicked Witch"]`. |
+| 11 | Thronsaal: immer 2 Banner, links und rechts hinter dem König | `actions/castle.ts`: je Seite der Achse Thron–König die nächste freie Zelle des Thronsaals (höchstens 4 Schritte vom König, mit einer Wand daneben, Zellen auf gleicher Höhe oder hinter ihm zuerst); die Truhen des Königs und die Statue belegen oft die Nischen neben ihm, dann hängen die Banner auf den nächsten Zellen. Sie hängen an der Wand hinter der Zelle, sonst an einer Seitenwand, und blicken von ihr weg. Test über 60 Burgen. |
+| 12 | Cedar-Isle-736, Varguard 13/11: Fire Stalker mit Starburst besiegt, die Gruppe steckt fest („cannot step away from a fight“) | Nach einem Angriffszauber (`Game.castSpell`, Fall `attack`) rief niemand `updateBattleMode` auf: das letzte Nachbarmonster war tot, `enc.battleMode` blieb wahr und jeder Schritt wurde abgelehnt (Ton 9014, `IN_MELEE_STEP`). Jetzt ruft `castSpell` es nach jedem Angriffszauber, und `PlayerCallbacks.canEnter` prüft den Kampfmodus vor dem Schritt frisch, egal was den Kampf beendet hat (Zauber, Wolf, Falle). |
+| 13 | Identify: „quest_1 (The Moaning Statues)“ | `identifyLines` (`game/identify.ts`) setzt den Namen aus `QUESTS` (`data/quest-table.ts`) dahinter. Die Namen im Code sind englisch („The Gongs“, „The Final Boss“), das Dokument nennt quest_5 „Endgegner“. |
+| 14 | Loot leuchtet golden | `Game.renderLoot` legt zu jedem Haufen eine Lampe `LOOT_LAMP` (Schlüssel `l:<Zelle>`), die durch den Pool läuft; der Pool wird mit dem ersten Haufen eingeschaltet (`enableLampLights`), auch auf Karten ohne Lampen. |
+
+Offene Punkte: Das Licht eines Monsters hängt in seiner Körpermitte und beleuchtet vor allem die Umgebung; sehr dunkle Modelle (Top Jouster) wirken dadurch kaum selbstleuchtend. Der Kontaktbogen `npm run sheet:monsters` zeigte im Worktree nur Bäume (Kamera im Wald, Seed `test`); die Augenhöhe des Wizards wurde deshalb im Showcase gemessen.
+
 ### Gemalte Kartensymbole für Orte, Ereignis und Ausgang (2026-10-24, kein `GEN_VERSION`)
 
 Der Nutzer lieferte `.ignore/mm_tiles.png` (6 Symbole × 5 Böden, transparenter Grund): Stadt, Burg, Dungeon/Höhle, Pyramide, Fragezeichen, Ausgang; Zeilen Wüste, Erde (braun, Berge), Schnee, Wald (grün, Bäume), Lava. Die Datei liegt jetzt in `tools/assets/sources/minimap/mm_tiles.png`; `build-minimap.ts` (`placeTiles`) schneidet die 30 Kacheln je nach Umriss aus (die Kacheln sind 108 bis 121 px groß, rundum Farbflecken), löscht alles, was nicht an der Kachel hängt, und skaliert auf 48 px.

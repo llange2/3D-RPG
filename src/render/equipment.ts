@@ -18,9 +18,10 @@ export type Hand = "right" | "left";
 
 /**
  * Where a weapon is gripped, along its long axis in item units (-1 pommel, 1 tip): swords and the like by the hilt, hammer and axe low on the haft.
- * Read off the models' profiles; a shield has none (it is strapped on with the old numbers).
+ * Read off the models' profiles; a shield has none (it is strapped on with the old numbers). The axe's haft ran a third of its length out behind the Minotaur's fist
+ * at -0.4 (32nd playtest, point 5): it is gripped at its end now, the haft ends in the hand.
  */
-export const GRIP_Y: Record<string, number> = { wpn_sword1: -0.78, wpn_sword2: -0.78, wpn_sword3: -0.78, wpn_axe: -0.4, wpn_hammer: -0.4 };
+export const GRIP_Y: Record<string, number> = { wpn_sword1: -0.78, wpn_sword2: -0.78, wpn_sword3: -0.78, wpn_axe: -0.88, wpn_hammer: -0.4 };
 
 export const HAND_FIT: Record<Hand, PandaFit> = {
   right: { pos: [15, 13, 28], hpr: [0, -90, 20], scale: 40 },

@@ -215,7 +215,8 @@ describe("sixteenth playtest: the debug menu's Identify (point 9)", () => {
       const lines = identifyLines(poi, ref);
       expect(lines[0]).toBe(poi.name);
       const text = lines.join("\n");
-      expect(text).toContain(`Quest: ${ref.quest}, layout ${ref.layout}`);
+      // the quest comes with its name from the quest document, e.g. "quest_1 (The Moaning Statues)" (32nd playtest, point 13)
+      expect(text).toMatch(new RegExp(`Quest: ${ref.quest} \\([A-Za-z ]+\\), layout ${ref.layout}`));
       expect(text).toMatch(/Class: [ABC]/);
       expect(text).toContain("Quest: ");
       expect(text).toContain("Entrance asks for: ");
