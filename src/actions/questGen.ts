@@ -223,7 +223,9 @@ function movingStatues(env: QuestEnv, rng: Rng): QuestResult {
   const heads = HERE.map(() => env.uid("moan"));
   const levers = HERE.map(() => env.uid("lever"));
   HERE.forEach(([dx, dy], i) => {
-    env.actions.push({ uid: heads[i]!, kind: "head", x: centre.x + dx, y: centre.y + dy, params: { mode: "moan", item: statue, start: start[i]!, want: want[i]!, lever: levers[i]! } });
+    // the heads in the corners look diagonally out of the field (36th playtest, point 11): the bearing is the compass direction from the middle to the corner
+    const corner: Record<string, ParamValue> = dx !== 0 && dy !== 0 ? { bearing: (Math.round((Math.atan2(dx, -dy) * 180) / Math.PI) + 360) % 360 } : {};
+    env.actions.push({ uid: heads[i]!, kind: "head", x: centre.x + dx, y: centre.y + dy, params: { mode: "moan", item: statue, start: start[i]!, want: want[i]!, lever: levers[i]!, ...corner } });
   });
   // the middle is bare: it teleports the party into the end room once the field is right, and does nothing before
   env.actions.push({ uid: env.uid("rune"), kind: "rune", x: centre.x, y: centre.y, params: { need: "moan" } });

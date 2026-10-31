@@ -621,6 +621,9 @@ export class InteriorView {
     let choices = bearings.filter(([front, back]) => floorAt(front) && !floorAt(back));
     if (choices.length === 0) choices = bearings.filter(([front]) => floorAt(front));
     if (choices.length === 0) choices = bearings;
+    // the back goes to a real wall, not to a neighbouring statue or chest: the chest of the Vault of Corthea (85/31) sat with its side to the wall (36th playtest, point 21)
+    const wallBehind = choices.filter(([, back]) => !floorCell(a.x + FACING_DELTA[back].dx, a.y + FACING_DELTA[back].dy));
+    if (wallBehind.length > 0) choices = wallBehind;
     if (choices.length > 1) {
       // a corner, a corridor: it looks along the longer way and turns its back to the nearer wall
       const score = ([front, back]: [Facing, Facing, number]) => run(front) - run(back);

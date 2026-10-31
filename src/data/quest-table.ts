@@ -1,5 +1,5 @@
 /**
- * The quests of the generated world as the user's quest document (`.ignore/quests_1.2.md`, table "Generierung") names them: which layouts a
+ * The quests of the generated world as the user's quest document (`.ignore/quests_1.3.md`, table "Generierung") names them: which layouts a
  * quest can be built in, at which levels and with which kind of monsters. A cave or dungeon of the world gets exactly one of them
  * (`world/questPlan.ts`); the castles and the spaceship are places of their own. Pure data: no DOM, no Babylon.
  */
@@ -25,7 +25,7 @@ export interface QuestDef {
 }
 
 export const QUESTS: Readonly<Record<QuestId, QuestDef>> = {
-  quest_1: { id: "quest_1", name: "The Moaning Statues", layouts: ["dungeon_2", "dungeon_3", "dungeon_4"], groups: LAND_GROUPS },
+  quest_1: { id: "quest_1", name: "The Moaning Statues", layouts: ["dungeon_2", "dungeon_4"], groups: LAND_GROUPS }, // (quest document 1.3: never in the maze, the field of statues needs a hall)
   quest_2: { id: "quest_2", name: "Direction of Faces", layouts: ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4"], groups: LAND_GROUPS },
   quest_3: { id: "quest_3", name: "The Gongs", layouts: ["dungeon_4", "cave_1", "cave_2", "cave_3"], groups: ["beast", "plant"] },
   quest_4: { id: "quest_4", name: "Calculations", layouts: ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4"], groups: LAND_GROUPS },

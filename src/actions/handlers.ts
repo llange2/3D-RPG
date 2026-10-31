@@ -2,7 +2,7 @@ import { thousands } from "../core/format";
 import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
 import { loreLine } from "../data/lore";
 import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, propLine } from "../data/prop-texts";
-import { BONE_PILE, RAT_TRAP, dodgeChance, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
+import { RAT_TRAP, SEARCHABLE_DECOR, dodgeChance, trapDamageFor, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
 import { isBookshelf } from "../data/spell-loot";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
@@ -173,7 +173,7 @@ function springChestTrap(action: ActionInstance, ctx: ActionContext, effects: Ef
     effects.push({ type: "text", text: trapMiss(element, hero, rng), tone: "good" });
     return false;
   }
-  const raw = Number(p.trapDamage ?? 0);
+  const raw = trapDamageFor(Number(p.trapDamage ?? 0), victim.level);
   const amount = elementalDamage(party, victim, element, raw);
   if (amount <= 0) {
     effects.push({ type: "text", text: raw > 0 && protectionLevel(party, element) > 0 ? trapProtected(hero) : trapShrugged(hero), tone: "good" });
@@ -195,12 +195,12 @@ function springRatTrap(action: ActionInstance, ctx: ActionContext, effects: Effe
   if (target === null) return false;
   const victim = party.characters[target]!;
   const hero: TrapHero = { name: victim.name, female: CONSTANTS.CHARACTER_FEMALE.includes(victim.avatar) };
-  effects.push({ type: "text", text: ratOpening(hero, rng), tone: "bad" });
+  effects.push({ type: "text", text: ratOpening(hero, rng, Number(action.params.item)), tone: "bad" });
   if (rng.float() < dodgeChance(attr(victim, "lck"), Number(action.params.trapLevel ?? ctx.tier))) {
     effects.push({ type: "text", text: ratMiss(hero, rng), tone: "good" });
     return false;
   }
-  const amount = Math.max(1, Number(action.params.trapDamage ?? 1));
+  const amount = Math.max(1, trapDamageFor(Number(action.params.trapDamage ?? 1), victim.level));
   const hit = applyHit(party, target, amount, null, rng);
   effects.push({ type: "text", text: ratHit(hero, amount, rng), tone: "bad" }, { type: "damage", character: target, amount, damageType: "physical", conditions: hit.conditions });
   return hit.defeated;
@@ -452,8 +452,9 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           effects.push({ type: "text", text: p.fail === "away" ? "The floor gives way beneath you, and you are thrown far from here!" : "The statue's eyes flare red. The floor opens, and you are thrown onto a field of traps!" }, { type: "jump", x: Number(p.tx), y: Number(p.ty) });
           const victim = p.fail === "trap" ? randomActive(party, rng) : null;
           if (victim !== null && Number(p.damage ?? 0) > 0) {
-            const hit = applyHit(party, victim, Number(p.damage), null, rng);
-            effects.push({ type: "damage", character: victim, amount: Number(p.damage), damageType: "physical", conditions: hit.conditions });
+            const amount = trapDamageFor(Number(p.damage), party.characters[victim]!.level);
+            const hit = applyHit(party, victim, amount, null, rng);
+            effects.push({ type: "damage", character: victim, amount, damageType: "physical", conditions: hit.conditions });
             if (hit.defeated) effects.push({ type: "defeat" });
           }
         }
@@ -655,7 +656,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       if (kind === "pit" && hasEffect(party, "levitate")) return { effects, consumed: false };
       const target = randomActive(party, rng);
       if (target === null) return { effects, consumed: true };
-      let amount = Number(p.damage ?? 0);
+      // a trap hits harder the higher the level of the hero it catches: 1 + level / 10 (36th playtest, point 25)
+      let amount = trapDamageFor(Number(p.damage ?? 0), party.characters[target]!.level);
       let damageType: DamageType = "physical";
       let text = kind === "pit" ? "You fall into a pit!" : kind === "guillotine" ? "A blade swings out of the wall!" : kind === "spring" ? "A spring trap snaps shut!" : "You trigger a trap!";
       if (kind === "generic") {
@@ -811,7 +813,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     case "decor": {
       effects.push({ type: "text", text: propLine(Number(p.item), action.uid) });
       // a pile of bones that hides something (one in five, fixed by the generator): the party finds it the first time it steps on the pile (the game asks a decoration once)
-      if (Number(p.item) === BONE_PILE && p.find === 1) {
+      if (SEARCHABLE_DECOR.includes(Number(p.item)) && p.find === 1) {
         const struck = p.trapped === RAT_TRAP && springRatTrap(action, ctx, effects);
         payOut(p, rng, party, effects);
         if (struck) effects.push({ type: "defeat" });

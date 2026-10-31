@@ -173,6 +173,8 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
     note(s.uid, s.x, s.y, false);
     if (spawnZone(s.x, s.y)) issues.push(`${s.uid} spawns inside the spawn zone`);
     if (s.monsterIds.length === 0) issues.push(`${s.uid} has no monsters`);
+    // the party is set down on these cells by a rune, a wrong answer or a portal: never inside a monster
+    for (const a of content.actions) if ((a.kind === "teleporter" || a.kind === "riddle" || a.kind === "qportal") && a.params.tx === s.x && a.params.ty === s.y) issues.push(`${s.uid} starts on the landing cell of ${a.uid}`);
     for (const id of s.monsterIds) {
       const m = MONSTERS[id];
       if (!m) {

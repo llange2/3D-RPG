@@ -114,5 +114,8 @@
  * 35 = 35th playtest: 0 to 3 treasure chambers behind brittle walls in every cave and dungeon (`DungeonRef.vaults`, `carveVaults`, `actions/vaults.ts`: a chest with twice the loot, one time in
  * ten points of an attribute or a resistance of the level below), a pile of bones hides something one time in five (`find`, a rat one time in five of those), the maze (dungeon_3) has ten
  * more groups of monsters (`MAZE_GROUPS`), Pandora's box is no starting spell and no scroll of a starting spell lies in the world (`isStartingSpell`).
+ * 36 = 36th playtest: storage equipment (item 13) is searched like a pile of bones; quest 1 is never built in the maze (quest document 1.3); the heads in the corners of the field of
+ * quest 1 look diagonally outward (`bearing`); no group of monsters starts on a cell where a rune, a wrong answer or a portal sets the party down, and the runes of the maze set it down
+ * beside a room rather than in its middle.
  */
-export const GEN_VERSION = 35;
+export const GEN_VERSION = 36;

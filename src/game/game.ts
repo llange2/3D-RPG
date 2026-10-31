@@ -17,7 +17,7 @@ import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { BLACK_CARD, ORB, ORBS_FOR_KING, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
-import { CELL, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
+import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
 import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
@@ -28,7 +28,7 @@ import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { ITEM_LAMPS, LOOT_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
+import { ITEM_LAMPS, LOOT_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, readModelSet, registryFile, storeModelSet, takeResume, type ModelSet } from "../render/modelSet";
@@ -74,7 +74,7 @@ import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { readSettings, writeSettings, type Settings } from "./settings";
 import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
-import { askSpellDetails, openInventory, pickSpell, quickCastOption, type CharacterView, type SpellChoice } from "../ui/panels";
+import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
 import { BIRD_PERCH, BLUE_MUSHROOM, MASCOT_ASK, MASCOT_ITEM, isSolidSpotItem, mascotSpotItem } from "../data/mascots";
@@ -82,7 +82,7 @@ import { propLine } from "../data/prop-texts";
 import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
-import { SKULL_MISER_MET, lockSeenFlag, reachedFlag, worldQuestLog } from "./questLog";
+import { SKULL_MISER_MET, clueFlag, lockSeenFlag, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
 import { overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
@@ -90,7 +90,7 @@ import { cursorStepped, setCursorFade } from "../ui/cursor";
 import { h } from "../ui/dom";
 import { thousands } from "../core/format";
 import { UI, randomSeed, type HudInfo, type Option } from "../ui/ui";
-import { TRAP_RELOAD_STEPS, type ServiceKind } from "../actions/registry";
+import { TRAP_RELOAD_STEPS, TREASURE_HEAP, type ServiceKind } from "../actions/registry";
 
 type Mode = "title" | "overworld" | "interior";
 
@@ -178,6 +178,10 @@ const SPAWN_CHUNKS = 4;
 const REVEAL_RADIUS = 150;
 /** Seconds between the noise of a chest opening and the sound of what is in it. */
 const CHEST_SOUND_GAP = 0.35;
+/** The old item "Hut" (item 45), the straw hut that stands on the open land. */
+const STRAW_HUT = 45;
+/** The old items "Fountain" and "Mermaid fountain": a town stands several, only one of them heals, all of them splash (36th playtest). */
+const FOUNTAIN_ITEMS: readonly number[] = [2, 89];
 /** Monsters of an ambush or a spawn action fade in over this long (seconds). */
 const APPEAR_SECONDS = 0.3;
 /** A Monster Hut is drawn when it lies within this many tiles of the party (the farthest view is four chunks). */
@@ -642,6 +646,8 @@ export class Game {
         const t = this.world.tile(x, y);
         return t.deco === 1 || t.ground === GROUND.MOUNTAIN || t.ground === GROUND.POI_BLOCK;
       },
+      // a hut (the straw hut, item 45, and a Monster Hut) is a solid thing: no arrow, bolt or spell passes through it (36th playtest); the view stays open (it is no mountain)
+      obstacle: (x, y) => !!this.hutAt(x, y) || (this.world.tile(x, y).deco === DECO.LANDMARK && landmarkItemAt(this.world.wrapX(x), this.world.wrapY(y)) === STRAW_HUT),
     };
   }
 
@@ -792,7 +798,7 @@ export class Game {
       this.syncQuestBlocks();
       this.enc = createEncounter();
       this.interiorView.show(map, content, this.state.opened, this.state.broken);
-      this.setLamps(crystalLamps(content), true);
+      this.setLamps(crystalLamps(content, this.state.opened), true);
       this.sky.setVisible(map.theme.open);
       this.spawnInteriorMonsters();
       this.spawnPersonas();
@@ -1611,7 +1617,7 @@ export class Game {
   }
 
   /** The quests as the log shows them: the campaign keeps its own list, the generated world's is read from its plan and the flags in the save (`game/questLog.ts`). */
-  private questLogView(): { open: string[]; done: string[] } {
+  private questLogView(): QuestLogView {
     const progress = this.state.campaign?.progress;
     if (progress) return { open: Object.keys(progress.quests.active).map(tidy), done: Object.keys(progress.quests.completed).map(tidy) };
     const carried = carriedItems(this.state.party);
@@ -1627,7 +1633,7 @@ export class Game {
         const box = document.createElement("div");
         box.append(Object.assign(document.createElement("h3"), { textContent: title }));
         if (names.length === 0) box.append(Object.assign(document.createElement("p"), { textContent: empty, className: "small" }));
-        for (const n of names) box.append(Object.assign(document.createElement("p"), { textContent: n }));
+        for (const n of names) box.append(Object.assign(document.createElement("p"), { textContent: n, ...(view.notes?.[n] ? { title: view.notes[n], className: "has-note" } : {}) }));
         return box;
       };
       const button = Object.assign(document.createElement("button"), { className: "btn close", textContent: "Close (Esc)", onclick: close });
@@ -2004,8 +2010,7 @@ export class Game {
       this.player.locked = true;
       // what the object says before it asks (the colour of the liquid, the plaque of a machine)
       for (const e of outcome.effects) if (e.type === "text") this.ui.log(e.text, "info");
-      const options = this.state.party.characters.map((c, i) => ({ label: c.name, value: i, note: `${c.hp}/${c.health} HP`, disabled: !canAct(c) }));
-      const hero = await this.ui.choose("", pick.question, options);
+      const hero = await pickHeroPortrait(this.ui, this.state.party, pick.question, canAct);
       this.player.locked = false;
       outcome = resolveAction(a, { ...ctx, hero });
     }
@@ -2028,7 +2033,9 @@ export class Game {
       this.syncQuestBlocks();
       this.interiorView.refreshObjects();
       // (a gong rings with its own sound: the `sound` effect)
-      if (a.kind !== "gong") this.audio.play(a.kind === "lever" ? 9034 : 9014, 0.6);
+      // (a lever that turns a stone head, and the head that is turned by hand, grind like stone, 36th playtest, points 12 and 22)
+      const turnsStone = a.kind === "head" || (a.kind === "lever" && !!this.interior?.content.actions.some((h) => h.kind === "head" && h.uid === a.params.target));
+      if (a.kind !== "gong") this.audio.play(turnsStone ? 9050 : a.kind === "lever" ? 9034 : 9014, turnsStone ? 0.9 : 0.6);
     }
     if (opening) {
       this.audio.play(9007);
@@ -2036,6 +2043,8 @@ export class Game {
     }
     // the key or key card in its chest is gone from the map once it is taken; the runes of the gongs appear with the last gong
     if ((a.kind === "treasure" && outcome.consumed && typeof a.params.quest === "string") || (a.kind === "gong" && outcome.state)) this.interiorView.refreshObjects();
+    // (and the glow of the key or the heap goes out with it; the runes light up with the last gong)
+    if (this.interior && !this.interior.campaign && (objectTaken(a, this.state.opened) || a.kind === "gong")) this.lamps = crystalLamps(this.interior.content, this.state.opened);
     // an emptied heap of treasure leaves its cell, which the party may then walk over
     if (this.interior && !this.interior.campaign && heapGone(a, this.state.opened)) {
       this.interior.blocked.delete(a.y * this.interior.map.width + a.x);
@@ -2050,6 +2059,7 @@ export class Game {
     const ui = this.ui;
     const rt = this.interior;
     this.playLootSounds(a, effects);
+    this.noteClue(a, effects);
     for (const e of effects) {
       switch (e.type) {
         case "text":
@@ -2365,6 +2375,23 @@ export class Game {
     await this.portalTravel(options);
   }
 
+  /** What the heroes find out in a place is kept for the quest log's mouse-over (36th playtest, point 18): the words of a statue, what a hero heard after the chalice. */
+  private noteClue(a: ActionInstance, effects: Effect[]): void {
+    const rt = this.interior;
+    if (!rt || rt.campaign || this.state.campaign) return;
+    let clue: string | null = null;
+    if (a.kind === "lore" && typeof a.params.text === "string" && typeof a.params.item === "number") clue = a.params.text;
+    else if (a.kind === "chalice" && a.params.number !== undefined) {
+      const drunk = effects.find((e): e is Extract<Effect, { type: "condition" }> => e.type === "condition");
+      const hero = drunk ? this.state.party.characters[drunk.character] : undefined;
+      if (drunk && hero) {
+        const female = CONSTANTS.CHARACTER_FEMALE.includes(hero.avatar);
+        clue = `${hero.name} heard ${String(a.params.number)}-${String(a.params.dir)} in ${female ? "her" : "his"} mind, before ${female ? "she" : "he"} was ${drunk.condition.toLowerCase()}.`;
+      }
+    }
+    if (clue) this.state.opened.add(clueFlag(rt.poi.id, clue));
+  }
+
   /**
    * A chest that gives something opens with its own noise, then the coins and items follow: the pile of loot for gold and ordinary
    * items, the fanfare for a quest item (a key, a key card). One of each, however much the chest held.
@@ -2375,7 +2402,9 @@ export class Game {
     const plain = gold || items.some((i) => !i.quest);
     const special = items.some((i) => i.quest);
     if (!plain && !special) return;
-    const opens = a.kind === "treasure";
+    // a heap of treasure is no chest (36th playtest): the coins alone clink; a key or key card on its own has no lid to open, only the fanfare
+    const heap = a.kind === "treasure" && Number(a.params.chest) === TREASURE_HEAP;
+    const opens = a.kind === "treasure" && !heap && plain;
     if (opens) this.audio.play(9008);
     let at = opens ? CHEST_SOUND_GAP : 0;
     const play = (id: number): void => {
@@ -2383,7 +2412,7 @@ export class Game {
       else this.audio.play(id);
       at += CHEST_SOUND_GAP;
     };
-    if (plain) play(9020);
+    if (plain) play(heap ? 9000 : 9020);
     if (special) play(9018);
   }
 
@@ -2411,10 +2440,48 @@ export class Game {
     if (step.defeated) void this.gameOver();
   }
 
+  /**
+   * The party is about to land on a cell: a monster that stands there (it wandered onto the spot after the place was generated) is pushed to the nearest free cell, so
+   * that the party never appears inside a monster (36th playtest, point 4).
+   */
+  private evictMonsters(x: number, y: number): void {
+    const here = this.enc.monsters.filter((m) => m.hp > 0 && m.x === x && m.y === y);
+    if (here.length === 0) return;
+    const view = this.gridView();
+    const taken = (cx: number, cy: number): boolean => this.enc.monsters.some((o) => o.hp > 0 && o.x === cx && o.y === cy);
+    for (const m of here) {
+      const seen = new Set<string>([`${x},${y}`]);
+      const queue: [number, number][] = [[x, y]];
+      let spot: [number, number] | null = null;
+      for (let head = 0; head < queue.length && !spot && head < 400; head++) {
+        const [qx, qy] = queue[head]!;
+        for (const d of Object.values(FACING_DELTA)) {
+          const nx = qx + d.dx;
+          const ny = qy + d.dy;
+          const key = `${nx},${ny}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          if (!view.walkable(nx, ny)) continue;
+          if (!taken(nx, ny)) {
+            spot = [nx, ny];
+            break;
+          }
+          queue.push([nx, ny]);
+        }
+      }
+      if (!spot) continue;
+      m.x = spot[0];
+      m.y = spot[1];
+      const w = this.monsterWorld(m);
+      this.monsters.place(m.uid, w.x, w.y, w.z);
+    }
+  }
+
   /** A rune throws the party to another cell of the place. */
   private jumpTo(x: number, y: number): void {
     const rt = this.interior;
     if (!rt) return;
+    this.evictMonsters(x, y);
     const p = this.worldPos(x, y);
     this.player.place(x, y, this.player.facing, p.x, p.z);
     if (this.state.at.mode === "interior") this.state.at = { ...this.state.at, x, y, facing: this.player.facing };
@@ -3175,14 +3242,11 @@ export class Game {
       }
       if (casters.length === 1) who = casters[0]!.i;
       else {
-        const options: Option<number | SpellChoice>[] = casters.map(({ c, i }) => ({ label: c.name, value: i, note: `${c.sp}/${c.mana} SP` }));
-        if (quick) options.push(quickCastOption(party, quick));
-        const choice = await this.ui.choose("Who casts?", "", options);
+        const choice = await pickCaster(this.ui, party, casters.map(({ i }) => i), this.focusMonster() !== null, (id) => this.audio.play(id));
         if (choice === null) return;
-        if (typeof choice === "number") who = choice;
-        else {
-          who = quick!.caster;
-          pick = await askSpellDetails(this.ui, party, choice.spellId);
+        who = choice.who;
+        if (choice.repeat) {
+          pick = await askSpellDetails(this.ui, party, party.lastCast?.spellId ?? 6);
           if (!pick) return;
         }
       }
@@ -3481,7 +3545,8 @@ export class Game {
     const here = (): { x: number; y: number } => (interior ? { x: this.player.tx, y: this.player.ty } : { x: this.world.wrapX(this.player.tx), y: this.world.wrapY(this.player.ty) });
     // opens 25 cells across (the user's wish); zooming out is one wheel step away
     let view: MapViewport = { ...here(), cells: clampCells(MAP_OPEN_CELLS, limits) };
-    const monsters = this.enc.monsters.filter((m) => m.hp > 0).map((m) => ({ x: m.x, y: m.y }));
+    const monsters = this.mappedMonsters();
+    const detect = this.detectOn() || this.eyeOn();
     // the game stands still while the map is open, so what the Crow sees is the same until it is closed
     const traps = this.trapsShown();
     const eye = this.eyeOn();
@@ -3501,9 +3566,9 @@ export class Game {
         return;
       }
       if (interior) {
-        drawInteriorMap(canvas, interior.map, interior.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, traps, view, this.minimapIcons, eye);
+        drawInteriorMap(canvas, interior.map, interior.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, traps, view, this.minimapIcons, eye, detect);
       } else {
-        drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, eye, view, this.minimapIcons, false, events);
+        drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, eye, view, this.minimapIcons, detect, events);
       }
     };
     const show = (next: MapViewport) => {
@@ -3807,6 +3872,7 @@ export class Game {
       "",
       [
         { label: () => `Ground and floors: ${draft.floorModel ? "3D" : "flat"}`, flip: () => (draft.floorModel = !draft.floorModel) },
+        { label: () => `Textures: ${draft.textureQuality}`, flip: () => (draft.textureQuality = draft.textureQuality === "high" ? "normal" : "high") },
         { label: () => `Models: ${draft.models === "original" ? "original" : "low poly"}`, flip: () => (draft.models = draft.models === "original" ? "lowpoly" : "original") },
         { label: () => `Distance: ${VIEW_NAMES[draft.viewDistance]}`, flip: () => (draft.viewDistance = VIEW_DISTANCES[(VIEW_DISTANCES.indexOf(draft.viewDistance) + 1) % VIEW_DISTANCES.length]!) },
         { label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
@@ -3816,7 +3882,7 @@ export class Game {
         { label: () => `Music: ${onOff(draft.music)}`, flip: () => (draft.music = !draft.music) },
         { label: () => `Sound effects: ${onOff(draft.sfx)}`, flip: () => (draft.sfx = !draft.sfx) },
       ],
-      "Apply puts every change into effect at once. Switching the models restarts the game: it is saved first.",
+      "Apply puts every change into effect at once. Switching the models or the textures restarts the game: it is saved first.",
     );
     return picked === "apply" ? this.applyOptions(draft) : false;
   }
@@ -3868,10 +3934,22 @@ export class Game {
     writeSettings(this.settings);
 
     if (models === this.modelSet) {
+      // the textures stay in the cache for the whole session, so a new quality is a reload as well (the settings were stored above)
+      if (next.textureQuality !== before.textureQuality) return this.reloadPage();
       this.ui.toast("Options applied");
       return false;
     }
     return this.switchModelSet(models);
+  }
+
+  /** Saves the game, marks the reload as a continuation and reloads the page (after a change that the loaded textures and models cannot follow). */
+  private reloadPage(): boolean {
+    if (this.mode !== "title") {
+      this.save("auto");
+      markResume(kindOfState(this.state));
+    }
+    location.reload();
+    return true;
   }
 
   /**
@@ -3957,7 +4035,7 @@ export class Game {
         }
       }
     } else if (this.mode === "interior" && rt) {
-      for (const a of rt.content.actions) if (a.kind === "fountain") add(1, Math.hypot(a.x - this.player.tx, a.y - this.player.ty), 5);
+      for (const a of rt.content.actions) if (a.kind === "fountain" || (a.kind === "decor" && FOUNTAIN_ITEMS.includes(Number(a.params.item)))) add(1, Math.hypot(a.x - this.player.tx, a.y - this.player.ty), 5);
     } else if (this.mode === "overworld") {
       const tile = this.world.tile(this.player.tx, this.player.ty);
       const night = isNight(this.state.party);
@@ -4075,10 +4153,25 @@ export class Game {
     return !!this.state && hasEffect(this.state.party, "detect_monster");
   }
 
+  /**
+   * The monsters the maps may show (36th playtest): only the ones inside the viewing cone, where nothing hides them. Wizard's Eye and Detect Monster lift that
+   * (Eye shows every monster of the level, Detect Monster the same, the maps then skip the ground check).
+   */
+  private mappedMonsters(): { x: number; y: number }[] {
+    const alive = this.enc.monsters.filter((m) => m.hp > 0).map((m) => ({ x: m.x, y: m.y }));
+    if (this.eyeOn() || this.detectOn() || alive.length === 0) return alive;
+    const { tx, ty, facing } = this.player;
+    const seen = new Set<string>();
+    for (const [x, y] of visibleCells(this.gridView().opaque, tx, ty, facing, this.sightRadius())) seen.add(`${x},${y}`);
+    if (this.mode === "interior") return alive.filter((m) => seen.has(`${m.x},${m.y}`));
+    // outside the world wraps: a monster stands at its place in the world, the cone at the copy next to the party
+    return alive.filter((m) => seen.has(`${tx + wrapDelta(tx, m.x, this.world.width)},${ty + wrapDelta(ty, m.y, this.world.height)}`));
+  }
+
   private drawMinimap(): void {
     const canvas = this.ui.minimap;
-    const monsters = this.enc.monsters.filter((m) => m.hp > 0).map((m) => ({ x: m.x, y: m.y }));
-    const detect = this.detectOn();
+    const monsters = this.mappedMonsters();
+    const detect = this.detectOn() || this.eyeOn();
     if (this.mode === "interior" && this.interior) {
       const rt = this.interior;
       drawInteriorMap(canvas, rt.map, rt.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.trapsShown(), undefined, this.minimapIcons, this.eyeOn(), detect);

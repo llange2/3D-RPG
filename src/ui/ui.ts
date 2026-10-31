@@ -7,7 +7,7 @@ import { assetPath, clear, h } from "./dom";
 import { thousands } from "../core/format";
 import { DEFAULT_WORLD_SIZE, WORLD_SIZES, WORLD_SIZE_NAMES, type WorldSize } from "../world/types";
 import { hitEffect, portraitImage, protectionEffect, type AvatarEffect } from "./avatarFx";
-import { conditionTitle } from "./conditionInfo";
+import { conditionTitle, shownCondition } from "./conditionInfo";
 import { mascotPortrait } from "./panels";
 import { LoadingScreen } from "./loadingScreen";
 
@@ -209,7 +209,7 @@ export class UI {
   private renderCards(party: Party, attacker: number | null, battle: boolean): void {
     clear(this.cardsEl);
     party.characters.forEach((c, i) => {
-      const cond = worstCondition(c);
+      const cond = shownCondition(c, party.minutes);
       const down = !isAlive(c) || c.conditions.includes("Unconscious");
       const card = h(
         "div",

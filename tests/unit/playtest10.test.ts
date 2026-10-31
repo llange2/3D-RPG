@@ -270,11 +270,11 @@ describe("traps of the generated dungeons (tenth playtest, point 2)", () => {
     };
     const plain = hurtOnce(() => undefined);
     expect(plain.e.damageType).toBe(element);
-    expect(plain.e.amount).toBe(10);
+    expect(plain.e.amount).toBe(11); // 10 times 1 + level / 10, level 1 (36th playtest, point 25)
     expect(plain.out.effects.some((x) => x.type === "text" && x.text === `${element[0]!.toUpperCase()}${element.slice(1)} trap!`)).toBe(true);
-    expect(plain.party.characters[0]!.health - plain.party.characters[0]!.hp).toBe(10);
+    expect(plain.party.characters[0]!.health - plain.party.characters[0]!.hp).toBe(11);
     // 50 percent resistance halves it, the Fairy takes 20 off the rest
-    expect(hurtOnce((p) => (p.characters[0]![field] = 50)).e.amount).toBe(5);
+    expect(hurtOnce((p) => (p.characters[0]![field] = 50)).e.amount).toBe(6); // (11 halved)
     expect(hurtOnce((p) => ((p.characters[0]![field] = 0), (p.mascot = "Fairy"))).e.amount).toBe(0);
   });
 

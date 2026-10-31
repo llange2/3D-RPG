@@ -438,14 +438,18 @@ export function quickCast(party: Party, aimed: boolean, turn: number | null = nu
   const last = party.lastCast;
   if (!last) return null;
   const caster = party.characters.findIndex((c) => c.name === last.caster);
-  const spell = SPELLS[last.spellId];
-  const base = { caster, spellId: last.spellId, target: last.target, element: last.element };
+  return { caster, spellId: last.spellId, target: last.target, element: last.element, block: castBlock(party, caster, last.spellId, aimed, turn) };
+}
+
+/** Why this hero cannot cast this spell right now (the spell menu greys it out), or null: not known, cannot act, no spell points, an attack with nothing to aim at. */
+export function castBlock(party: Party, caster: number, spellId: number, aimed: boolean, turn: number | null = null): QuickCastBlock | null {
+  const spell = SPELLS[spellId];
   const c = party.characters[caster];
-  if (!c || !spell || !c.spells.includes(last.spellId) || !isSpellImplemented(last.spellId)) return { ...base, block: "gone" };
-  if (!canAct(c) || (turn !== null && turn !== caster)) return { ...base, block: "cannot_act" };
-  if (c.sp < spell.mana) return { ...base, block: "mana" };
-  if (isAttackSpell(last.spellId) && !aimed) return { ...base, block: "no_target" };
-  return { ...base, block: null };
+  if (!c || !spell || !c.spells.includes(spellId) || !isSpellImplemented(spellId)) return "gone";
+  if (!canAct(c) || (turn !== null && turn !== caster)) return "cannot_act";
+  if (c.sp < spell.mana) return "mana";
+  if (isAttackSpell(spellId) && !aimed) return "no_target";
+  return null;
 }
 
 /** The one school of magic a class can learn from (the old `handle_right_click`); classes without an entry have no spells. */

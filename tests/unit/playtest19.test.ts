@@ -317,11 +317,11 @@ describe("nineteenth playtest: the towns vary, have a portal, and the first tier
         expect(blocksCell(portals[0]!)).toBe(true);
         // within twenty steps of the way in (it is near, not at the far end)
         expect(Math.abs(portals[0]!.x - map.spawn.x) + Math.abs(portals[0]!.y - map.spawn.y), `tier ${tier} town #${i}`).toBeLessThanOrEqual(20);
-        // the party arrives on a free street cell next to it, looking at it
+        // the party arrives on a free street cell next to it, looking away: the portal stands behind it (36th playtest)
         const arrival = portalStart(map, content);
         expect(map.cells[arrival.y * map.width + arrival.x]).toBe(CELL.FLOOR);
         const d = FACING_DELTA[arrival.facing];
-        expect([arrival.x + d.dx, arrival.y + d.dy]).toEqual([portals[0]!.x, portals[0]!.y]);
+        expect([arrival.x - d.dx, arrival.y - d.dy]).toEqual([portals[0]!.x, portals[0]!.y]);
         expect(validateContent(map, content), `tier ${tier} town #${i}`).toEqual([]);
       }
     }

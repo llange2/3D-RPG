@@ -3,6 +3,7 @@
  * Storage can be missing (private window, blocked site data): a failed read gives the default, a failed write just means the
  * choice is not remembered. (The model set is stored on its own, see `render/modelSet.ts`: the page is reloaded for it.)
  */
+import type { TextureQuality } from "../render/assets";
 import type { Resolution, ViewDistance } from "../render/engine";
 
 export interface Settings {
@@ -22,12 +23,14 @@ export interface Settings {
   sfx: boolean;
   /** The service windows of the towns show the old game's moving pictures (`ui/townScenes.ts`) instead of stills. */
   animatedTown: boolean;
+  /** The wall and floor textures of the interiors: 512 px, or the 1024 px set of `npm run assets:hd`. Applying a change reloads the page. Absent in older stored settings: normal. */
+  textureQuality: TextureQuality;
   /** The mouse pointer fades out after five steps of the party without a mouse movement (`ui/cursor.ts`). Absent in older stored settings: on. */
   fadeCursor: boolean;
 }
 
 const KEY = "mm3-seed-rpg:settings:v1";
-export const DEFAULT_SETTINGS: Settings = { floorModel: true, viewDistance: "medium", resolution: "normal", showFps: false, music: true, sfx: true, animatedTown: false, fadeCursor: true };
+export const DEFAULT_SETTINGS: Settings = { floorModel: true, viewDistance: "medium", resolution: "normal", showFps: false, music: true, sfx: true, animatedTown: false, fadeCursor: true, textureQuality: "normal" };
 
 /** The chunk radius of the old quality setting (`low` 2, `med` 3, `high` and `ultra` 4) is what the view distance is now. */
 const OLD_QUALITY_VIEW: Record<string, ViewDistance> = { low: "close", med: "medium", high: "far", ultra: "far" };
@@ -64,6 +67,7 @@ export function parseSettings(raw: string | null): Settings {
   if (typeof stored.sfx === "boolean") out.sfx = stored.sfx;
   if (typeof stored.animatedTown === "boolean") out.animatedTown = stored.animatedTown;
   if (typeof stored.fadeCursor === "boolean") out.fadeCursor = stored.fadeCursor;
+  if (stored.textureQuality === "normal" || stored.textureQuality === "high") out.textureQuality = stored.textureQuality;
   return out;
 }
 
