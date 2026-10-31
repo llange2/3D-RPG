@@ -1252,6 +1252,13 @@ Tests: `tests/unit/playtest38.test.ts` (Heilbrunnen: nur Stufe 1, genau einer, z
 
 ---
 
+## Der 39. Playtest
+
+1. **Monster und Beute versinken im 3D-Boden nicht mehr** (`Game.monsterWorld`, `Game.renderLoot`, `MonsterRenderer.update`). Ursache: Statische Monster (Wild Fungus …) schwingen um ihre Höhe (`floatY`, ±0,05); wer am Boden steht, tauchte dabei bis 0,05 unter die Standhöhe, und die Plateaus der 3D-Bodenkacheln liegen 0,06 über der Ebene (`groundPropLift`). Jetzt stehen Landmonster und Beute im 3D-Modus um `groundPropLift()` höher (wie Hütten, Wagen, Maskottchen), und ein Monster auf dem Boden steigt nur von der Standhöhe auf und sinkt wieder auf sie zurück (`FLOAT_AMPLITUDE` dazu); nur Flieger (`hovers`: `HOVER`, `EYES_AT`) schwingen um ihre Höhe. Beim Umschalten des Bodens („Ground and floors“) werden Monster und Beute neu gesetzt. Gemessen im Browser: tiefster Netzpunkt des Wild Fungus bleibt über 4 s bei 0,06 (3D) bzw. 0 (flat), animierte Monster ebenso.
+2. **Menü:** die Erklärungen hinter „Options“ („graphics, sound“) und „Debug“ („cheats for testing“) im Esc-Menü sind weg; im Debug-Menü haben jetzt auch „+100k Gold“ und „All talents“ ihre Zeile („for the party“, „for each hero“).
+
+---
+
 ## 15. Rezepte: wo ändere ich was?
 
 | Ziel | Vorgehen |
