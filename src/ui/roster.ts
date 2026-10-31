@@ -2,7 +2,7 @@ import { Rng, seedFromString } from "../core/rng";
 import { TEXTS, flowText } from "../data/tables";
 import { armor } from "../sim/character";
 import {
-  AVATAR_COUNT, CLASSES, MAX_NAME_LENGTH, MAX_RESERVE, addRecruit, avatarKey, classRequirement, dismissMember, isEligible, randomName, raceOfAvatar, rollAttributes, swapMember,
+  AVATAR_COUNT, CLASSES, MAX_NAME_LENGTH, MAX_RESERVE, addRecruit, avatarKey, classRequirement, dismissMember, hasLockpicker, isEligible, randomName, raceOfAvatar, rollAttributes, swapMember,
   type RosterResult,
 } from "../sim/roster";
 import type { Attribute, Character, ClassName, Party, RaceName } from "../sim/types";
@@ -31,6 +31,8 @@ const ATTRIBUTES: [Attribute, string][] = [
 const CLASS_TEXT: Record<ClassName, number> = { Knight: 93, Paladin: 94, Wizard: 95, Thief: 96, Barbarian: 97, Archer: 98, Cleric: 99, Ninja: 100, Druid: 101, Ranger: 102 };
 const RACE_TEXT: Record<RaceName, number> = { Human: 88, Elf: 89, Gnome: 90, Dwarf: 91, Orc: 92 };
 
+const NO_LOCKPICKER = "You have created a group without a Thief/Ninja. You might face challenges cracking some locks in the game.";
+
 const REFUSAL: Record<Exclude<RosterResult, { ok: true }>["reason"], string> = {
   no_reserve: "Nobody is waiting in the inn to take the place. Create a hero first.",
   reserve_full: `The inn cannot house more than ${MAX_RESERVE} heroes.`,
@@ -46,6 +48,16 @@ const REFUSAL: Record<Exclude<RosterResult, { ok: true }>["reason"], string> = {
  * with the heroes who wait there. Nothing here is random but the rolls and the names the player asks for.
  */
 export function openRoster(ui: UI, party: Party, hooks: RosterHooks): Promise<void> {
+  // leaving (the button, Esc) with a party that has neither a thief nor a ninja asks first: the locks of the game are meant for them (`data/locks.ts`)
+  let asking = false;
+  const mayLeave = async (): Promise<boolean> => {
+    if (hasLockpicker(party)) return true;
+    if (asking) return false;
+    asking = true;
+    const accepted = await ui.confirm("No Thief or Ninja", NO_LOCKPICKER, "Accept", "Back");
+    asking = false;
+    return accepted;
+  };
   return ui.panel((close, root) => {
     const rng = new Rng(seedFromString(`roster:${Date.now()}:${Math.random()}`));
     let attrs = rollAttributes(rng);
@@ -141,7 +153,7 @@ export function openRoster(ui: UI, party: Party, hooks: RosterHooks): Promise<vo
       const saveButton = h("button", { class: "btn primary", text: "Keep in the inn", disabled: !chosen || name.trim().length === 0, onclick: save }) as HTMLButtonElement;
 
       root.append(
-        h("button", { class: "btn close", text: "Close (Esc)", onclick: close }),
+        h("button", { class: "btn close", text: "Close (Esc)", onclick: () => void mayLeave().then((ok) => ok && close()) }),
         h("h2", { text: "The Book of Heroes" }),
         h(
           "div",
@@ -190,5 +202,5 @@ export function openRoster(ui: UI, party: Party, hooks: RosterHooks): Promise<vo
     };
 
     render();
-  });
+  }, { canDismiss: mayLeave });
 }

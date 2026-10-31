@@ -30,7 +30,7 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     trigger: "interact",
     persistence: "once",
     minimap: "tex_mm_event",
-    params: loose({ level: z.number().int().min(1).max(8), gold: z.number().int().min(0), items: z.number().int().min(0).max(10) }),
+    params: loose({ level: z.number().int().min(1).max(8), gold: z.number().int().min(0), items: z.number().int().min(0).max(10), difficulty: z.number().int().min(0).optional() }),
   },
   door: {
     kind: "door",

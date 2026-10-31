@@ -290,7 +290,7 @@ export class UI {
   // ---------------------------------------------------------------- modal plumbing
 
   /** Shows content in a modal layer; resolves when `close` is called. */
-  modal<T>(build: (close: (value: T) => void) => HTMLElement, options: { dismissWith?: T; wide?: boolean } = {}): Promise<T> {
+  modal<T>(build: (close: (value: T) => void) => HTMLElement, options: { dismissWith?: T; wide?: boolean; canDismiss?: () => Promise<boolean> } = {}): Promise<T> {
     return new Promise<T>((resolve) => {
       const back = h("div", { class: "modal-back" });
       const close = (value: T) => {
@@ -305,7 +305,9 @@ export class UI {
         if (e.key === "Escape" && "dismissWith" in options) {
           e.stopPropagation();
           e.preventDefault();
-          close(options.dismissWith as T);
+          // a panel may ask first (the book of heroes warns about a party without a lockpicker)
+          if (options.canDismiss) void options.canDismiss().then((ok) => ok && close(options.dismissWith as T));
+          else close(options.dismissWith as T);
         }
       };
       document.addEventListener("keydown", onKey, true);
@@ -430,14 +432,14 @@ export class UI {
   }
 
   /** Free-form panel (inventory, shops with live updates). `build` receives close and returns the root element. */
-  panel(build: (close: () => void, root: HTMLElement) => void): Promise<void> {
+  panel(build: (close: () => void, root: HTMLElement) => void, options: { canDismiss?: () => Promise<boolean> } = {}): Promise<void> {
     return this.modal<void>(
       (close) => {
         const root = h("div", { class: "panel" });
         build(() => close(undefined as void), root);
         return root;
       },
-      { dismissWith: undefined as void },
+      { dismissWith: undefined as void, ...options },
     );
   }
 
