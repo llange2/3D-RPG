@@ -76,7 +76,7 @@ betretbaren Orten plus die 34 handgebauten Kampagnenkarten des Altspiels. Alles 
 ## Vor dem Abschluss einer Änderung
 ```
 npm run typecheck
-npm test            # 793 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
+npm test            # 803 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
 npm run check:chrome   # nur bei Generatoränderungen, braucht laufenden Dev-Server (npm run dev) und Chrome
 npm run check:render   # nur bei Rendering-Änderungen (Monster, Innenräume, Materialien), gleiche Voraussetzungen
 npm run check:effects -- <Ordner>   # nur bei Änderungen an Kampf-Darstellung, Zauberbildern, Zeiger (Screenshots in <Ordner>)
@@ -180,4 +180,5 @@ Beim Clean-up zur Finalisierung des Spiels **diese Fragen dem Nutzer stellen, ni
 - **Der Thronsaal hat immer zwei Banner links und rechts vom König** (`actions/castle.ts`, Test `playtest32.test.ts`); der Kampfmodus (`enc.battleMode`) wird nach jedem Angriffszauber neu berechnet und vor jedem Schritt geprüft.
 - **Das Floß ist gleichmäßig skaliert und liegt vor der Gruppe** (`Game.syncRaft`, `RAFT_SCALE`, `RAFT_AHEAD`, `RAFT_DECK`): nie wieder x und z strecken (die Planken wurden zur Platte), nie das Deck unter etwa 0,1 über das Wasser setzen (der Tiefen-Offset der gemalten Bodenkacheln verschluckt es). **Schlüssel und Key Cards werden unbeleuchtet gezeichnet** (`QUEST_MODELS` in `render/props.ts`), sonst sind sie unter der Fackel dunkle Flecken. **Die generierte Burg hat ihr Tor als Modell** (Altitem 100, `InteriorView.pushCastleGate`), die Türtextur der Wand gibt es nur noch in den anderen Orten.
 - **Attributspunkte der Endräume liegen auf Stufe 1 bis 3 in Brunnen, Fass oder Kristallen, im Kelch nur ab Stufe 4** (`ATTRIBUTE_VESSELS` in `actions/endRoom.ts`, `Vessel` in `handlers.ts`): das Fass bleibt ein `treasure` (Fassregel), die anderen sind `chalice`-Aktionen mit anderem `item`; der Spieler wählt, wer trinkt. Startgold 2'000 (`createDefaultParty`).
-- **`GEN_VERSION` 32** (war 31); `tests` 793.
+- **Schlösser** (`src/data/locks.ts`, `docs/THIEVERY_SCHLOESSER.md`): gewöhnliche Kisten haben eine einfache Thievery-Probe (`difficulty` 1 / 9 / 23 / 42 / 83 je Tier, ein Ninja mit Thievery 20 schafft sie beim Eintritt ins Tier zu 80 %), Königstruhen eine schwere (2 / 13 / 33 / 60 / 119, 50 %). **Türen, Gitter, Fässer, Brunnen, Kelche und Quest-Kisten haben nie ein Schloss.** Die Zahlen kommen aus `tools/balance/thievery.ts` (`--anchor=entry --ref=ninja --hardref=ninja`), nicht aus dem Gefühl; `tests/unit/thievery.test.ts` rechnet sie nach. Ändert sich Ausrüstung, Attributwachstum oder die Formel der Probe: Werkzeug laufen lassen, `locks.ts` übernehmen, `GEN_VERSION`, `golden:update`. Das Buch der Helden warnt beim Verlassen, wenn die Gruppe weder Dieb noch Ninja hat.
+- **`GEN_VERSION` 33** (war 32); `tests` 803.

@@ -1,6 +1,7 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { BANNER, CASTLE_STATUES, KING, THRONE } from "../data/castles";
 import { letterHints } from "../data/letter-hints";
+import { chestLock, kingChestLock } from "../data/locks";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { hideInChests } from "./machines";
 import { pickWord, wordById } from "./questGen";
@@ -93,11 +94,11 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
 
   // the king's two chests: sealed until the word is said, then an alarm and the heavy guards, then a lock to pick
   for (const c of castle.kingChests) {
-    actions.push({ uid: uid("kingchest"), kind: "treasure", x: c.x, y: c.y, params: { chest: CHEST_NOBLE, level: Math.min(8, tier + 1), gold: KING_CHEST_GOLD, items: 0, lock: "code", requires: answerUid, difficulty: tier + 1 } });
+    actions.push({ uid: uid("kingchest"), kind: "treasure", x: c.x, y: c.y, params: { chest: CHEST_NOBLE, level: Math.min(8, tier + 1), gold: KING_CHEST_GOLD, items: 0, lock: "code", requires: answerUid, difficulty: kingChestLock(tier) } });
   }
   // the chests in the niches: one level above the castle and twice the loot; the first one tried raises the alarm
   for (const c of castle.alarmChests) {
-    actions.push({ uid: uid("alarmchest"), kind: "treasure", x: c.x, y: c.y, params: { chest: rng.chance(500) ? CHEST_PLAIN : CHEST_NOBLE, level: Math.min(8, tier + 1), gold: (tier + 1) * 140 * 2 + rng.range(0, 200), items: 2, warn: "alarm" } });
+    actions.push({ uid: uid("alarmchest"), kind: "treasure", x: c.x, y: c.y, params: { chest: rng.chance(500) ? CHEST_PLAIN : CHEST_NOBLE, level: Math.min(8, tier + 1), gold: (tier + 1) * 140 * 2 + rng.range(0, 200), items: 2, warn: "alarm", difficulty: chestLock(tier) } });
   }
   const taken = new Set<number>(actions.map((a) => a.y * map.width + a.x));
   // nothing hangs in the cells round the gate and the start (the spawn zone of the validation)

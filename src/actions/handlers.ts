@@ -280,6 +280,22 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         for (const i of activeCharacters(party)) best = Math.max(best, thieveryRoll(party.characters[i]!, rng));
         if (best < Number(p.difficulty ?? 2)) return { effects: [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }], consumed: false };
       }
+      // an ordinary chest has a simple lock (`data/locks.ts`): the best thief of the party picks it. The roll has a stream of its own, so the loot below stays what it was;
+      // the attempt number changes with every step, so a failed party tries again after a few steps
+      if (p.lock === undefined && Number(p.difficulty ?? 0) > 0) {
+        const lockRng = actionRng(ctx, `${action.uid}@lock`);
+        let best = -1;
+        let picker = -1;
+        for (const i of activeCharacters(party)) {
+          const roll = thieveryRoll(party.characters[i]!, lockRng);
+          if (roll > best) {
+            best = roll;
+            picker = i;
+          }
+        }
+        if (best < Number(p.difficulty)) return { effects: [{ type: "text", text: "The chest is locked, and nobody in your party can pick the lock yet. Try again in a few steps." }], consumed: false };
+        effects.push({ type: "text", text: `${party.characters[picker]!.name} picks the lock.` });
+      }
       // a chest in a niche of a castle is wired to an alarm: the party is asked, and the first one tried calls the light guards
       if (p.warn === "alarm") {
         if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Chest", question: "A thin wire runs from the lid into the wall. This chest is guarded by an alarm. Do you really want to break it open?", yes: "Break it open", no: "Leave" }], consumed: false };

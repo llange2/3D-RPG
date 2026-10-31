@@ -11,6 +11,14 @@ export const MAX_NAME_LENGTH = 16;
 /** Number of portraits; they also decide the race. */
 export const AVATAR_COUNT = CONSTANTS.MAX_AVATARS;
 
+/**
+ * Whether somebody in the party can pick a lock: a class with a thievery skill of its own (thief, ninja). Everybody else rolls on luck and accuracy alone and
+ * fails the harder locks (`data/locks.ts`), which the book of heroes says when the player leaves it without one.
+ */
+export function hasLockpicker(party: Pick<Party, "characters">): boolean {
+  return party.characters.some((c) => (BASE_CLASS[c.classType]?.thievery ?? 0) > 0);
+}
+
 /** The classes in the order of the old buttons. */
 export const CLASSES: readonly ClassName[] = ["Knight", "Paladin", "Wizard", "Thief", "Barbarian", "Archer", "Cleric", "Ninja", "Druid", "Ranger"];
 

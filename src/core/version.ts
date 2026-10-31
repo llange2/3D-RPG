@@ -108,5 +108,6 @@
  * 31 = 32nd playtest: the monster sheet's new treasure levels (Dragon Worm 4, Black Knight 5) change who lives where; the throne room of a castle always has two banners
  * beside the king.
  * 32 = 33rd playtest: the attribute points of an end room on levels 1 to 3 lie in a magic well, a barrel or crystals instead of a chalice (the chalice is for levels 4 and 5).
+ * 33 = thievery locks: an ordinary chest carries a `difficulty` by tier (1 / 9 / 23 / 42 / 83, `data/locks.ts`), the chests of the castle too, and the king's chests ask 2 / 13 / 33 / 60 / 119 instead of tier + 1.
  */
-export const GEN_VERSION = 32;
+export const GEN_VERSION = 33;

@@ -55,6 +55,7 @@ Die Berichte vor den Korrekturen liegen unverändert in `out/report-vor-korrektu
 | `sweep.ts [Formeln] [Stufen] [Maskottchen] [Läufe]` | alle 715 Klassenkombinationen, CSV in `out/` und Streuung |
 | `xpcurve.ts [Formeln…] [--bands=…]` | Stufe nach dem Räumen von x % der Tiers; Kämpfe je Stufe |
 | `xpfit.ts [Kämpfe] [Bänder]` | glatte XP-Kurve an den Inhalt der Welt anpassen |
+| `thievery.ts [--anchor=entry\|mid\|exit\|mean] [--ref=…] [--hardref=…]` | Schwierigkeit (`difficulty`) von Schlössern je Tier, damit eine leichte Probe zu 80 % und eine schwere zu 50 % gelingt; Erfolgschance je Heldenprofil (Min, Kein Dieb, Ninja, Dieb, Max) und Gruppe; prüft die Formel gegen die echte `thieveryRoll`; die Zahlen im Spiel stehen in `src/data/locks.ts` |
 | `supply.ts [Seed] [Größe]` | XP, Gold und Monster je Tier einer generierten Welt (alle Orte werden erzeugt, Ergebnis zwischengespeichert) |
 | `groups.ts` | was der Generator wirklich in ein Tier setzt |
 | `monsterxp.ts` | Monster-XP gegen Monsterstärke (Ausreißer) |

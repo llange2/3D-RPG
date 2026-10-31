@@ -63,6 +63,8 @@ describe("the three castles (quest document 1.2, castle_1)", () => {
     const map = generateInterior(world, poi);
     const content = buildMapContent(world, poi, map);
     const party = createDefaultParty();
+    // the lock asks 13 to 60 (`data/locks.ts`), which a party of level 1 never reaches: the castles lie in tiers 2 to 4
+    for (const c of party.characters) c.level = 20;
     const opened = new Set<string>();
     let attempt = 0;
     const use = (a: ActionInstance, answer?: string | null) => {
@@ -102,6 +104,8 @@ describe("the three castles (quest document 1.2, castle_1)", () => {
     const poi = castlesOf(world)[0]!;
     const content = buildMapContent(world, poi, generateInterior(world, poi));
     const party = createDefaultParty();
+    // a party that has come this far picks the simple lock of the chests in the niches (thievery grows with the level), so the alarm is the first thing in the way
+    for (const c of party.characters) c.level = 40;
     const opened = new Set<string>();
     const chests = content.actions.filter((a) => a.params.warn === "alarm");
     const run = (a: ActionInstance) => {

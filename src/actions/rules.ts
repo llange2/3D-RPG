@@ -5,6 +5,7 @@ import { buildShowcaseContent } from "./showcase";
 import { buildSpaceshipContent } from "./spaceship";
 import { hideInChests, placeMachines } from "./machines";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
+import { chestLock, hasOrdinaryLock } from "../data/locks";
 import { sellerParams } from "../data/talent-sellers";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
@@ -352,6 +353,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
         delete params.item;
         Object.assign(params, { chest: BARREL, level: 1, items: 0, gold: local.chance(500) ? Math.max(1, tier * 12 + local.range(3, 30)) : 0 });
       }
+      // an ordinary chest is locked (a simple check for the best thief of the party); barrels and the like are not
+      if (kind === "treasure" && hasOrdinaryLock(params)) params.difficulty = chestLock(baseTier);
 
       // what a prop does depends on the old item it shows, so whether it blocks is known only now
       const blocking = blocksCell({ kind, params }) && rule.anchor !== "vaultChest";
