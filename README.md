@@ -24,17 +24,16 @@ tiles (grass, snow, swamp, desert, dirt: bushes, stones and tufts, simplified to
 party; farther away the flat ground texture is all there is). Places and short one-tile roads are about as dense as there. With the
 `flat` ground (below) the painted ground tiles of `terrain/flat` take their place.
 
-Options (title screen and Esc menu, `Options`): switches that only turn a draft over; `Apply` (right of `Back`) puts all of them into effect at
-once, `Back` drops them. Ground and floors (3D or flat: the overworld, the outdoor cells of campaign maps, dungeon floors; towns always have
-their flat floor; flat is the painted ground tiles with their transitions, 3D the old ground models), models (low poly or original: all
-models, ground tiles and monsters; the original set brings the full ground tiles of the old game, 5 to 7 million triangles), distance
-(close, medium, far: 2, 3 or 4 chunks around the party; close is clear for 10 tiles and fully fogged at 15, medium for 22 and 38; `?view=`
-overrides it), resolution (normal or low: the picture is rendered smaller), show FPS, music and sound effects. Only the models restart the
-page (the game is saved first); everything else applies at once. The choices are remembered.
+Options (title screen and Esc menu, `Options`): three windows, Controls, Graphics and Sound. Their rows only change a draft; `Apply` (right of `Back`)
+puts the window into effect at once, `Back` drops it. **Controls:** Key bindings (every action has up to two keys, a key that is given to another action is taken
+from the first, Escape stays the menu, Reset to defaults), Fade out cursor, if unused, Show action keys in GUI (the key names on the buttons at the lower right).
+**Graphics:** the Quality slider (Low, Medium, High, Custom) sets the five rows below it, and a mix that is no preset moves it to Custom; the default is Medium.
+Low: flat ground, normal textures, distance close, resolution low, no town films. Medium: flat, normal, medium, normal, films. High: 3D ground, high textures, far,
+normal, films. Ground and floors (3D or flat: the overworld, the outdoor cells of campaign maps, dungeon floors; towns always have their flat floor), Textures
+(normal or high, the page restarts), Distance (close, medium, far: 2, 3 or 4 chunks around the party; `?view=` overrides it), Resolution (normal or low), Animated
+town scenes, Show FPS. **Sound:** Music and Sound effects on or off, and a volume slider for each (the middle is the default). The choices are remembered.
 
-Models: the game shows the reduced low-poly models by default. After `npm run assets:originals`, `Models: original` in the options
-switches to the unreduced originals (sharper props, several times the graphics memory). The switch saves the game and
-reloads the page; the choice is remembered, `?models=original|lowpoly` overrides it.
+The game shows the original models (the unreduced ones of `npm run assets:originals`); the low-poly set and its switch are gone.
 
 Map (M): the wheel or + and - zoom (around the pointer), dragging or the arrow keys move the map, `Whole map` (F) shows a whole level,
 `My position` (C) comes back.
@@ -59,7 +58,6 @@ into the backpack when they are put on (one free place more is needed when weapo
 | `npm run golden:update` | Rewrites `tests/golden/world-hashes.json` (only after bumping `GEN_VERSION` on purpose) |
 | `npm run check:chrome` | Hashes of worlds, interiors and actions computed in Node and in Chrome must match (needs `npm run dev`) |
 | `npm run check:render` | In Chrome: all 91 monsters keep their textures after others of their type were removed, a town opened after a dungeon wears its own textures, nothing of a campaign map stays in a generated world (needs `npm run dev`) |
-| `npm run check:models -- <outDir>` | In Chrome: the menu's model switch (low poly, reload into the same game with originals only, back, fallback when the originals are not built, campaign) with screenshots (needs `npm run dev` and `npm run assets:originals`) |
 | `npm run check:effects -- <outDir>` | In Chrome: own mouse pointer, a projectile for ranged attacks and attack spells, the healing picture over a portrait, screenshots (needs `npm run dev`) |
 | `npm run check:spells -- <outDir>` | In Chrome: the spell window (all 36 plates of the biggest school, pictures, costs), casting from it, travelling and item spells, screenshots (needs `npm run dev`) |
 | `npm run data:spells` | Spell names and descriptions from the user's workbook, undead from the monster sheet (`src/data/spell-sheet.json`, `monster-groups.json`) |

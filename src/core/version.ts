@@ -118,5 +118,6 @@
  * quest 1 look diagonally outward (`bearing`); no group of monsters starts on a cell where a rune, a wrong answer or a portal sets the party down, and the runes of the maze set it down
  * beside a room rather than in its middle.
  * 37 = 36th playtest, follow-up: no object is placed on a cell where a rune or a wrong answer sets the party down (the targets are reserved).
+ * 38 = 37th playtest: a wild group above level 1 keeps `STRONG_KEEP_OFF` (12) tiles from Starthaven and the start (another island of level 4 can lie a few tiles off the first town on a small world).
  */
-export const GEN_VERSION = 37;
+export const GEN_VERSION = 38;

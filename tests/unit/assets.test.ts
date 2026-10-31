@@ -13,7 +13,7 @@ import { PROFILES } from "../../tools/assets/build-models";
 
 const PUBLIC = join(import.meta.dirname, "..", "..", "public", "assets");
 const built = existsSync(join(PUBLIC, "manifest.json"));
-const originalsBuilt = existsSync(join(PUBLIC, registryFile("static", "original"))) && existsSync(join(PUBLIC, registryFile("monsters", "original")));
+const originalsBuilt = existsSync(join(PUBLIC, registryFile("static"))) && existsSync(join(PUBLIC, registryFile("monsters")));
 
 describe.skipIf(!built)("asset pipeline output", () => {
   const manifest = built ? (JSON.parse(readFileSync(join(PUBLIC, "manifest.json"), "utf-8")) as { totalBytes: number; coreBytes: number; groups: Record<string, { files: string[] }> }) : null;
@@ -93,10 +93,9 @@ describe.skipIf(!built)("asset pipeline output", () => {
 
 describe("model set registries", () => {
   it("are named the same in the pipeline and in the game", () => {
-    expect(PROFILES.reduced.staticRegistry).toBe(registryFile("static", "lowpoly"));
-    expect(PROFILES.reduced.monsterRegistry).toBe(registryFile("monsters", "lowpoly"));
-    expect(PROFILES.original.staticRegistry).toBe(registryFile("static", "original"));
-    expect(PROFILES.original.monsterRegistry).toBe(registryFile("monsters", "original"));
+    // the game loads the originals only; the reduced set is what the pipeline still writes (`npm run assets:models`) and what the size budget measures
+    expect(PROFILES.original.staticRegistry).toBe(registryFile("static"));
+    expect(PROFILES.original.monsterRegistry).toBe(registryFile("monsters"));
   });
 });
 
@@ -104,7 +103,7 @@ describe("model set registries", () => {
 describe.skipIf(!originalsBuilt)("original models", () => {
   type Registry = Record<string, { file: string; tris: number; animated: boolean; scale: number }>;
   // read inside the tests: the body of a skipped suite still runs while tests are collected, and the files may not exist
-  const read = (kind: "static" | "monsters", set: "lowpoly" | "original"): Registry => JSON.parse(readFileSync(join(PUBLIC, registryFile(kind, set)), "utf-8")) as Registry;
+  const read = (kind: "static" | "monsters", set: "lowpoly" | "original"): Registry => JSON.parse(readFileSync(join(PUBLIC, set === "original" ? registryFile(kind) : `models.${kind}.json`), "utf-8")) as Registry;
 
   it("cover exactly the models of the low-poly set, with their files", () => {
     expect(Object.keys(read("static", "original")).sort()).toEqual(Object.keys(read("static", "lowpoly")).sort());

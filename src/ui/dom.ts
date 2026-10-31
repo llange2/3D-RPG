@@ -10,6 +10,10 @@ export interface Props {
   type?: string;
   value?: string;
   placeholder?: string;
+  /** Range inputs. */
+  min?: string;
+  max?: string;
+  step?: string;
   disabled?: boolean;
   style?: string;
   onclick?: (e: MouseEvent) => void;

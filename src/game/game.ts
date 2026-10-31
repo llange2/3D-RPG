@@ -31,7 +31,9 @@ import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
 import { ITEM_LAMPS, LOOT_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
-import { markResume, readModelSet, registryFile, storeModelSet, takeResume, type ModelSet } from "../render/modelSet";
+import { markResume, registryFile, takeResume } from "../render/modelSet";
+import { MENU_KEY, actionOf, assignKey, defaultKeys, primaryKey, GAME_ACTIONS } from "./keybindings";
+import { QUALITY_LEVELS, QUALITY_NAMES, applyQuality, qualityOf } from "./quality";
 import { PropRenderer } from "../render/props";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
@@ -94,8 +96,6 @@ import { TRAP_RELOAD_STEPS, TREASURE_HEAP, type ServiceKind } from "../actions/r
 
 type Mode = "title" | "overworld" | "interior";
 
-/** The options while they are being turned over in the dialog: the stored settings and the model set (which is stored on its own). */
-type OptionsDraft = Settings & { models: ModelSet };
 
 interface CampaignRuntime {
   slug: string;
@@ -166,9 +166,11 @@ const BUFF_TEXT: Partial<Record<TimedEffect["kind"], (caster: string, target: st
 };
 
 const VIEW_NAMES: Record<ViewDistance, string> = { close: "Close", medium: "Medium", far: "Far" };
-/** Loudness of the music and the effects when switched on (the menu only turns them on and off). */
+/** Loudness of the music and the effects at the middle of their sliders (the volume the game was made with; the sliders of the options run from nothing to twice that). */
 const MUSIC_VOLUME = 0.45;
 const SFX_VOLUME = 0.7;
+const musicGain = (s: Settings): number => (s.music ? MUSIC_VOLUME * (s.musicVolume / 50) : 0);
+const sfxGain = (s: Settings): number => (s.sfx ? SFX_VOLUME * (s.sfxVolume / 50) : 0);
 /** How much of its daytime colour the distance fog keeps at night (the sky and the ground are as dark by then, a bright fog would stand out as a white wall). */
 const NIGHT_FOG = 0.05;
 /** Chunks around the party (of 10 x 10 tiles) whose wild monsters are alive: nine across, which is 90 tiles, more than any view distance reaches. */
@@ -251,9 +253,6 @@ export class Game {
   mode: Mode = "title";
   world!: World;
   state!: GameState;
-  /** The model set in use. Differs from the stored choice only when the originals were asked for but are not built. */
-  modelSet: ModelSet = "lowpoly";
-  private originalsBuilt: boolean | null = null;
   private r!: Renderer;
   private textures!: TextureCache;
   private terrain!: TerrainMaterials;
@@ -328,10 +327,11 @@ export class Game {
     this.r = createRenderer(canvas, this.settings.resolution);
     progress?.(0.05);
     this.audio.enableButtonSounds();
-    this.audio.setMusicVolume(this.settings.music ? MUSIC_VOLUME : 0);
-    this.audio.sfxVolume = this.settings.sfx ? SFX_VOLUME : 0;
+    this.audio.setMusicVolume(musicGain(this.settings));
+    this.audio.sfxVolume = sfxGain(this.settings);
     setAnimatedTown(this.settings.animatedTown);
     setCursorFade(this.settings.fadeCursor);
+    this.showKeyHints();
     this.textures = new TextureCache(this.r.scene);
     this.terrain = new TerrainMaterials(this.r.scene, this.textures);
     this.flatTiles = await this.loadFlatTiles();
@@ -339,10 +339,10 @@ export class Game {
     this.sky = new SkyDome(this.r.scene, this.textures);
     this.props = new PropRenderer(this.r.scene);
     this.projectiles = new Projectiles(this.props);
-    const [staticInfo, monsterInfo] = await this.loadModelRegistries(readModelSet());
+    const [staticInfo, monsterInfo] = await Promise.all([fetchJson<Record<string, StaticModelInfo>>(registryFile("static")), fetchJson<Record<string, MonsterModelInfo>>(registryFile("monsters"))]);
     progress?.(0.15);
-    // the model switch covers the ground too: the original set brings the full ground tiles of the old game, the reduced one the reduced tiles
-    setUltraGround(this.modelSet === "original");
+    // the models are the originals, and so is the ground: the full ground tiles of the old game
+    setUltraGround(true);
     this.staticInfo = staticInfo;
     this.monsters = new MonsterRenderer(this.r.scene, monsterInfo, staticInfo);
     this.interiorView = new InteriorView(this.r, this.textures, this.props, staticInfo);
@@ -411,31 +411,8 @@ export class Game {
     this.campaignView.setFlatGround(tiles !== null);
   }
 
-  /** Registries of a model set. The originals are optional: when they are not built, the low-poly set is used instead. */
-  private async loadModelRegistries(set: ModelSet): Promise<[Record<string, StaticModelInfo>, Record<string, MonsterModelInfo>]> {
-    try {
-      const registries = await Promise.all([fetchJson<Record<string, StaticModelInfo>>(registryFile("static", set)), fetchJson<Record<string, MonsterModelInfo>>(registryFile("monsters", set))]);
-      this.modelSet = set;
-      return registries;
-    } catch (e) {
-      if (set === "lowpoly") throw e;
-      console.warn("original models are not built (npm run assets:originals), using the low-poly set", e);
-      return this.loadModelRegistries("lowpoly");
-    }
-  }
-
-  /** Whether the originals are built, so the menu can say so before it reloads the page. */
-  private async haveOriginals(): Promise<boolean> {
-    // the dev server answers a missing file with the index page, so the registry is parsed instead of trusting the status
-    this.originalsBuilt ??= await fetchJson(registryFile("static", "original")).then(
-      () => true,
-      () => false,
-    );
-    return this.originalsBuilt;
-  }
-
   /**
-   * Continues the autosave without the title screen when the page was reloaded by the model switch (`switchModelSet`).
+   * Continues the autosave without the title screen when the page was reloaded by the game itself (`reloadPage`, after a change of the texture quality).
    * Returns false when this load is not such a reload.
    */
   async resumeAfterReload(): Promise<boolean> {
@@ -636,7 +613,8 @@ export class Game {
     return {
       walkable: (x, y) => {
         const t = this.world.tile(x, y);
-        return isTileWalkable(t) && t.poiId === null && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y) && !this.caravanAt(x, y) && !this.hutAt(x, y);
+        // shallow water is walkable for a swimming party, but a land monster never wades into it: only water monsters (and `both`, through `water`) cross it (37th playtest, point 2)
+        return isTileWalkable(t) && t.ground !== GROUND.SHALLOW && t.poiId === null && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y) && !this.caravanAt(x, y) && !this.hutAt(x, y);
       },
       water: (x, y) => {
         const g = this.world.tile(x, y).ground;
@@ -3430,25 +3408,32 @@ export class Game {
       if (k === "ArrowRight") return cmd("right");
       return;
     }
-    switch (k) {
-      case "w": case "W": case "ArrowUp": return cmd("forward");
-      case "s": case "S": case "ArrowDown": return cmd("back");
-      case "a": case "A": return cmd("left");
-      case "d": case "D": return cmd("right");
-      case "q": case "Q": case "ArrowLeft": player.command({ type: "turn", by: -1 }); e.preventDefault(); return;
-      case "e": case "E": case "ArrowRight": player.command({ type: "turn", by: 1 }); e.preventDefault(); return;
-      case " ": e.preventDefault(); void this.attackFocus(); return;
-      case "f": case "F": void this.castSpells(); return;
-      case "i": case "I": case "c": case "C": void this.openInventory(0); return;
-      case "r": case "R": void this.camp(); return;
-      case "j": case "J": void this.openQuestLog(); return;
-      case "m": case "M": void this.openMap(); return;
-      case "Escape": void this.menu(); return;
-      case "F5": e.preventDefault(); this.save("quick"); this.ui.toast("Quicksaved"); return;
-      case "F9": { e.preventDefault(); const q = readSave(kindOfState(this.state), "quick"); if (q) void this.loadFromFile(q); return; }
-      case "1": case "2": case "3": case "4": void this.openInventory(Number(k) - 1); return;
-      case "5": void this.openInventory("mascot"); return;
-      case "t": case "T": void this.openInventory("perks"); return;
+    // Escape is the menu and cannot be given to another action; everything else follows the key bindings of the options (`game/keybindings.ts`)
+    if (k === MENU_KEY) {
+      void this.menu();
+      return;
+    }
+    switch (actionOf(this.settings.keys, k)) {
+      case "forward": return cmd("forward");
+      case "back": return cmd("back");
+      case "left": return cmd("left");
+      case "right": return cmd("right");
+      case "turnLeft": player.command({ type: "turn", by: -1 }); e.preventDefault(); return;
+      case "turnRight": player.command({ type: "turn", by: 1 }); e.preventDefault(); return;
+      case "attack": e.preventDefault(); void this.attackFocus(); return;
+      case "cast": void this.castSpells(); return;
+      case "inventory": void this.openInventory(0); return;
+      case "rest": void this.camp(); return;
+      case "quests": void this.openQuestLog(); return;
+      case "map": void this.openMap(); return;
+      case "quicksave": e.preventDefault(); this.save("quick"); this.ui.toast("Quicksaved"); return;
+      case "quickload": { e.preventDefault(); const q = readSave(kindOfState(this.state), "quick"); if (q) void this.loadFromFile(q); return; }
+      case "hero1": void this.openInventory(0); return;
+      case "hero2": void this.openInventory(1); return;
+      case "hero3": void this.openInventory(2); return;
+      case "hero4": void this.openInventory(3); return;
+      case "mascot": void this.openInventory("mascot"); return;
+      case "talents": void this.openInventory("perks"); return;
     }
   }
 
@@ -3885,36 +3870,98 @@ export class Game {
   }
 
   /**
-   * The options, graphics and sound, as switches. A click only turns a switch over on a draft; Apply puts the whole draft into effect at
-   * once, so the page is reloaded at most once however much was changed, and only for the model set (the renderers keep their models and
-   * textures for the whole session). Back drops the draft. Returns true when the page reloads and the menu has nothing to return to.
+   * The options: Controls, Graphics and Sound, each a window of its own with Back and Apply. Apply puts what was changed in that window into effect at once (the draft
+   * is dropped by Back); the page is reloaded only for a new texture quality, because the renderers keep their textures for the whole session. Returns true when the
+   * page reloads and the menu has nothing to return to.
    */
   private async optionsMenu(): Promise<boolean> {
-    const draft: OptionsDraft = { ...this.settings, viewDistance: this.viewDistance, models: this.modelSet };
+    for (;;) {
+      const choice = await this.ui.choose<"controls" | "graphics" | "sound">("Options", "", [
+        { label: "Controls", value: "controls" },
+        { label: "Graphics", value: "graphics" },
+        { label: "Sound", value: "sound" },
+      ]);
+      if (!choice) return false;
+      const reloads = choice === "controls" ? await this.controlsOptions() : choice === "graphics" ? await this.graphicsOptions() : await this.soundOptions();
+      if (reloads) return true;
+    }
+  }
+
+  /** The settings as the options window starts with them: the view distance is the one in use, which a `?view=` in the address may have set. */
+  private optionsDraft(): Settings {
+    return { ...this.settings, viewDistance: this.viewDistance };
+  }
+
+  private async controlsOptions(): Promise<boolean> {
+    const draft = this.optionsDraft();
     const onOff = (v: boolean) => (v ? "on" : "off");
-    const picked = await this.ui.toggles(
-      "Options",
-      "",
-      [
-        { label: () => `Ground and floors: ${draft.floorModel ? "3D" : "flat"}`, flip: () => (draft.floorModel = !draft.floorModel) },
-        { label: () => `Textures: ${draft.textureQuality}`, flip: () => (draft.textureQuality = draft.textureQuality === "high" ? "normal" : "high") },
-        { label: () => `Models: ${draft.models === "original" ? "original" : "low poly"}`, flip: () => (draft.models = draft.models === "original" ? "lowpoly" : "original") },
-        { label: () => `Distance: ${VIEW_NAMES[draft.viewDistance]}`, flip: () => (draft.viewDistance = VIEW_DISTANCES[(VIEW_DISTANCES.indexOf(draft.viewDistance) + 1) % VIEW_DISTANCES.length]!) },
-        { label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
-        { label: () => `Animated town scenes: ${onOff(draft.animatedTown)}`, flip: () => (draft.animatedTown = !draft.animatedTown) },
-        { label: () => `Fade out cursor, if unused: ${onOff(draft.fadeCursor)}`, flip: () => (draft.fadeCursor = !draft.fadeCursor) },
-        { label: () => `Show FPS: ${onOff(draft.showFps)}`, flip: () => (draft.showFps = !draft.showFps) },
-        { label: () => `Music: ${onOff(draft.music)}`, flip: () => (draft.music = !draft.music) },
-        { label: () => `Sound effects: ${onOff(draft.sfx)}`, flip: () => (draft.sfx = !draft.sfx) },
-      ],
-      "Apply puts every change into effect at once. Switching the models or the textures restarts the game: it is saved first.",
-    );
+    const picked = await this.ui.settingsPanel("Controls", [
+      {
+        type: "button",
+        label: () => "Key bindings",
+        press: () =>
+          this.ui.keyBindings(
+            () => draft.keys,
+            (action, slot, key) => {
+              const result = assignKey(draft.keys, action, slot, key);
+              draft.keys = result.bindings;
+              return result.stolenFrom ? `The key was taken from "${GAME_ACTIONS.find((a) => a.id === result.stolenFrom)!.label}".` : "";
+            },
+            () => (draft.keys = defaultKeys()),
+          ),
+      },
+      { type: "toggle", label: () => `Fade out cursor, if unused: ${onOff(draft.fadeCursor)}`, flip: () => (draft.fadeCursor = !draft.fadeCursor) },
+      { type: "toggle", label: () => `Show action keys in GUI: ${onOff(draft.showKeys)}`, flip: () => (draft.showKeys = !draft.showKeys) },
+    ]);
     return picked === "apply" ? this.applyOptions(draft) : false;
   }
 
-  /** Puts a draft of the options into effect and stores it. Everything applies on the spot except the model set, which reloads the page. */
-  private async applyOptions(draft: OptionsDraft): Promise<boolean> {
-    const { models, ...next } = draft;
+  /** The quality slider sets five switches at once and follows them: a mix that is no preset is "Custom" (`game/quality.ts`). */
+  private async graphicsOptions(): Promise<boolean> {
+    const draft = this.optionsDraft();
+    const onOff = (v: boolean) => (v ? "on" : "off");
+    const picked = await this.ui.settingsPanel("Graphics", [
+      {
+        type: "slider",
+        label: () => `Quality: ${QUALITY_NAMES[qualityOf(draft)]}`,
+        min: 0,
+        max: QUALITY_LEVELS.length - 1,
+        value: () => QUALITY_LEVELS.indexOf(qualityOf(draft)),
+        set: (v) => Object.assign(draft, applyQuality(QUALITY_LEVELS[v] ?? "custom", draft)),
+        ticks: QUALITY_LEVELS.map((l) => QUALITY_NAMES[l]),
+      },
+      { type: "toggle", label: () => `Ground and floors: ${draft.floorModel ? "3D" : "flat"}`, flip: () => (draft.floorModel = !draft.floorModel) },
+      { type: "toggle", label: () => `Textures: ${draft.textureQuality}`, flip: () => (draft.textureQuality = draft.textureQuality === "high" ? "normal" : "high") },
+      { type: "toggle", label: () => `Distance: ${VIEW_NAMES[draft.viewDistance]}`, flip: () => (draft.viewDistance = VIEW_DISTANCES[(VIEW_DISTANCES.indexOf(draft.viewDistance) + 1) % VIEW_DISTANCES.length]!) },
+      { type: "toggle", label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
+      { type: "toggle", label: () => `Animated town scenes: ${onOff(draft.animatedTown)}`, flip: () => (draft.animatedTown = !draft.animatedTown) },
+      { type: "toggle", label: () => `Show FPS: ${onOff(draft.showFps)}`, flip: () => (draft.showFps = !draft.showFps) },
+    ]);
+    return picked === "apply" ? this.applyOptions(draft) : false;
+  }
+
+  /** The sliders run from nothing to twice the volume the game was made with: the middle is the default. */
+  private async soundOptions(): Promise<boolean> {
+    const draft = this.optionsDraft();
+    const onOff = (v: boolean) => (v ? "on" : "off");
+    const ticks = ["0", "Default", "Max"];
+    const picked = await this.ui.settingsPanel("Sound", [
+      { type: "toggle", label: () => `Music: ${onOff(draft.music)}`, flip: () => (draft.music = !draft.music) },
+      { type: "slider", label: () => `Music volume: ${draft.musicVolume}`, min: 0, max: 100, step: 5, value: () => draft.musicVolume, set: (v) => (draft.musicVolume = v), ticks },
+      { type: "toggle", label: () => `Sound effects: ${onOff(draft.sfx)}`, flip: () => (draft.sfx = !draft.sfx) },
+      { type: "slider", label: () => `Sound volume: ${draft.sfxVolume}`, min: 0, max: 100, step: 5, value: () => draft.sfxVolume, set: (v) => (draft.sfxVolume = v), ticks },
+    ]);
+    return picked === "apply" ? this.applyOptions(draft) : false;
+  }
+
+  /** The names of the action keys on the buttons and in the tips (they follow the key bindings and the option "Show action keys in GUI"). */
+  private showKeyHints(): void {
+    const k = this.settings.keys;
+    this.ui.setKeyHints({ attack: primaryKey(k, "attack"), cast: primaryKey(k, "cast"), inventory: primaryKey(k, "inventory"), rest: primaryKey(k, "rest"), map: primaryKey(k, "map"), menu: "Esc", quests: primaryKey(k, "quests") }, this.settings.showKeys);
+  }
+
+  /** Puts a draft of the options into effect and stores it. Everything applies on the spot except the texture quality, which reloads the page. */
+  private async applyOptions(next: Settings): Promise<boolean> {
     const before = this.settings;
     // the view distance in the draft is the one in use, which a ?view= in the address may have set: only a changed choice is stored
     const viewChanged = next.viewDistance !== this.viewDistance;
@@ -3953,46 +4000,20 @@ export class Game {
     setAnimatedTown(next.animatedTown);
     setCursorFade(next.fadeCursor);
     if (!next.showFps) this.ui.setFps(null);
-    this.audio.setMusicVolume(next.music ? MUSIC_VOLUME : 0);
-    this.audio.sfxVolume = next.sfx ? SFX_VOLUME : 0;
+    this.audio.setMusicVolume(musicGain(next));
+    this.audio.sfxVolume = sfxGain(next);
     if (next.sfx !== before.sfx && this.mode !== "title") this.updateAmbient();
+    this.showKeyHints();
     writeSettings(this.settings);
 
-    if (models === this.modelSet) {
-      // the textures stay in the cache for the whole session, so a new quality is a reload as well (the settings were stored above)
-      if (next.textureQuality !== before.textureQuality) return this.reloadPage();
-      this.ui.toast("Options applied");
-      return false;
-    }
-    return this.switchModelSet(models);
+    // the textures stay in the cache for the whole session, so a new quality is a reload (the settings were stored above)
+    if (next.textureQuality !== before.textureQuality) return this.reloadPage();
+    this.ui.toast("Options applied");
+    return false;
   }
 
-  /** Saves the game, marks the reload as a continuation and reloads the page (after a change that the loaded textures and models cannot follow). */
+  /** Saves the game, marks the reload as a continuation and reloads the page (after a change that the loaded textures cannot follow). */
   private reloadPage(): boolean {
-    if (this.mode !== "title") {
-      this.save("auto");
-      markResume(kindOfState(this.state));
-    }
-    location.reload();
-    return true;
-  }
-
-  /**
-   * Switches between the low-poly and the original models, ground tiles included. The renderers hold the loaded models and their textures
-   * for the whole session, so the switch is a page reload: the game is saved first and `resumeAfterReload` continues it.
-   * Returns true when the page reloads.
-   */
-  private async switchModelSet(next: ModelSet): Promise<boolean> {
-    if (next === "original" && !(await this.haveOriginals())) {
-      this.ui.toast("Original models are not built (npm run assets:originals)");
-      return false;
-    }
-    // the choice goes first: if the browser cannot store it, it cannot keep the save either, and nothing is lost by stopping here
-    if (!storeModelSet(next)) {
-      this.ui.toast("Could not store the setting (browser storage unavailable)");
-      return false;
-    }
-    // on the title screen there is no game to save and to continue
     if (this.mode !== "title") {
       this.save("auto");
       markResume(kindOfState(this.state));
@@ -4097,11 +4118,10 @@ export class Game {
     this.minimapDirty = true;
   }
 
-  /** The short list beside the minimap: the campaign shows all its open quests, the generated world the first few (the whole log is one click or J away) and nothing before the first one. */
+  /** The short list beside the minimap: the campaign shows all its open quests, the generated world the first few (the whole log is one click or J away); the panel is there before the first one and says "none" (37th playtest, point 5). */
   private hudQuests(): HudInfo["quests"] {
     if (this.state.campaign) return { open: Object.keys(this.state.campaign.progress.quests.active).map(tidy), done: Object.keys(this.state.campaign.progress.quests.completed).length };
     const view = this.questLogView();
-    if (view.open.length === 0 && view.done.length === 0) return null;
     // (the lines are cut short: the panel is narrow and sits above the buttons; the full text is in the log)
     const shown = view.open.slice(0, HUD_QUESTS).map((q) => (q.length > HUD_QUEST_CHARS ? `${q.slice(0, HUD_QUEST_CHARS - 1).trimEnd()}…` : q));
     return { open: view.open.length > shown.length ? [...shown, `... and ${view.open.length - shown.length} more (J)`] : shown, done: view.done.length };

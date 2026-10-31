@@ -1,10 +1,11 @@
 /**
  * Preferences that belong to the player and not to a save: kept in the browser's storage, so they survive new games.
  * Storage can be missing (private window, blocked site data): a failed read gives the default, a failed write just means the
- * choice is not remembered. (The model set is stored on its own, see `render/modelSet.ts`: the page is reloaded for it.)
+ * choice is not remembered.
  */
 import type { TextureQuality } from "../render/assets";
 import type { Resolution, ViewDistance } from "../render/engine";
+import { defaultKeys, parseKeys, type KeyBindings } from "./keybindings";
 
 export interface Settings {
   /**
@@ -19,25 +20,37 @@ export interface Settings {
   /** Frames per second in the corner of the screen. */
   showFps: boolean;
   music: boolean;
+  /** 0 to 100; 50, the middle of the slider, is the volume the game was made with (`MUSIC_VOLUME` in game.ts), 100 twice that. */
+  musicVolume: number;
   /** Sound effects and the background sounds of the surroundings. */
   sfx: boolean;
+  /** Like `musicVolume`, for the effects. */
+  sfxVolume: number;
   /** The service windows of the towns show the old game's moving pictures (`ui/townScenes.ts`) instead of stills. */
   animatedTown: boolean;
   /** The wall and floor textures of the interiors: 512 px, or the 1024 px set of `npm run assets:hd`. Applying a change reloads the page. Absent in older stored settings: normal. */
   textureQuality: TextureQuality;
   /** The mouse pointer fades out after five steps of the party without a mouse movement (`ui/cursor.ts`). Absent in older stored settings: on. */
   fadeCursor: boolean;
+  /** The keys of the actions (Options > Controls > Key bindings). */
+  keys: KeyBindings;
+  /** The keys are written on the action buttons of the screen ("Attack (Space)"). */
+  showKeys: boolean;
 }
 
 const KEY = "mm3-seed-rpg:settings:v1";
-export const DEFAULT_SETTINGS: Settings = { floorModel: true, viewDistance: "medium", resolution: "normal", showFps: false, music: true, sfx: true, animatedTown: false, fadeCursor: true, textureQuality: "normal" };
+/** The defaults are the "Medium" quality (`game/quality.ts`): flat ground, normal textures, medium distance, normal resolution, animated town scenes. */
+export function defaultSettings(): Settings {
+  return { floorModel: false, viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true };
+}
+export const DEFAULT_SETTINGS: Settings = defaultSettings();
 
 /** The chunk radius of the old quality setting (`low` 2, `med` 3, `high` and `ultra` 4) is what the view distance is now. */
 const OLD_QUALITY_VIEW: Record<string, ViewDistance> = { low: "close", med: "medium", high: "far", ultra: "far" };
 
 /** Settings from the stored text; older versions kept a `quality` (view and resolution in one) that is split up here. */
 export function parseSettings(raw: string | null): Settings {
-  const out: Settings = { ...DEFAULT_SETTINGS };
+  const out: Settings = defaultSettings();
   if (!raw) return out;
   let stored: Record<string, unknown>;
   try {
@@ -65,6 +78,10 @@ export function parseSettings(raw: string | null): Settings {
   if (typeof stored.showFps === "boolean") out.showFps = stored.showFps;
   if (typeof stored.music === "boolean") out.music = stored.music;
   if (typeof stored.sfx === "boolean") out.sfx = stored.sfx;
+  if (typeof stored.musicVolume === "number" && Number.isFinite(stored.musicVolume)) out.musicVolume = Math.max(0, Math.min(100, Math.round(stored.musicVolume)));
+  if (typeof stored.sfxVolume === "number" && Number.isFinite(stored.sfxVolume)) out.sfxVolume = Math.max(0, Math.min(100, Math.round(stored.sfxVolume)));
+  if (typeof stored.showKeys === "boolean") out.showKeys = stored.showKeys;
+  if (stored.keys !== undefined) out.keys = parseKeys(stored.keys);
   if (typeof stored.animatedTown === "boolean") out.animatedTown = stored.animatedTown;
   if (typeof stored.fadeCursor === "boolean") out.fadeCursor = stored.fadeCursor;
   if (stored.textureQuality === "normal" || stored.textureQuality === "high") out.textureQuality = stored.textureQuality;
@@ -75,7 +92,7 @@ export function readSettings(): Settings {
   try {
     return parseSettings(localStorage.getItem(KEY));
   } catch {
-    return { ...DEFAULT_SETTINGS }; // storage blocked
+    return defaultSettings(); // storage blocked
   }
 }
 
