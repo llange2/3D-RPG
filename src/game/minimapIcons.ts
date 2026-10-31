@@ -132,7 +132,11 @@ export class MinimapIcons {
       ctx.drawImage(this.sheet, at.x, at.y, this.cell, this.cell, x, y, w, h);
       return;
     }
-    // something that has done its work (a talent the party has bought) is drawn grey and faint
+    // something that has done its work (a talent the party has bought): only the question mark goes grey, the tile keeps its ground and frame
+    if (name === "event") {
+      ctx.drawImage(this.greyedEvent(ground), x, y, w, h);
+      return;
+    }
     const filter = ctx.filter;
     const alpha = ctx.globalAlpha;
     ctx.filter = "grayscale(1)";
@@ -140,6 +144,38 @@ export class MinimapIcons {
     ctx.drawImage(this.sheet, at.x, at.y, this.cell, this.cell, x, y, w, h);
     ctx.filter = filter;
     ctx.globalAlpha = alpha;
+  }
+
+  /**
+   * The event tile of `ground` with the black question mark painted mid-grey (made once). The mark is the only near-black paint inside the frame,
+   * so it is found by brightness; the frame (outer tenth) is left alone, and the soft edge of the mark blends by how dark the pixel is.
+   */
+  private greyedEvent(ground: PlaceGround): HTMLCanvasElement {
+    const key = `event-done:${ground}`;
+    let tile = this.tiles.get(key);
+    if (tile) return tile;
+    const n = this.cell;
+    tile = document.createElement("canvas");
+    tile.width = n;
+    tile.height = n;
+    const ctx = tile.getContext("2d")!;
+    const at = this.source(`event:${ground}`);
+    ctx.drawImage(this.sheet, at.x, at.y, n, n, 0, 0, n, n);
+    const px = ctx.getImageData(0, 0, n, n);
+    const lo = Math.round(n * 0.14);
+    const hi = n - lo;
+    const GREY = 150;
+    for (let yy = lo; yy < hi; yy++) {
+      for (let xx = lo; xx < hi; xx++) {
+        const i = (yy * n + xx) * 4;
+        const lum = 0.299 * px.data[i]! + 0.587 * px.data[i + 1]! + 0.114 * px.data[i + 2]!;
+        const ink = Math.max(0, Math.min(1, (65 - lum) / 35));
+        if (ink > 0) for (let c = 0; c < 3; c++) px.data[i + c] = Math.round(px.data[i + c]! * (1 - ink) + GREY * ink);
+      }
+    }
+    ctx.putImageData(px, 0, 0);
+    this.tiles.set(key, tile);
+    return tile;
   }
 
   /** A symbol, a painted place or a ground as a small picture for the legend (a data URL). */
