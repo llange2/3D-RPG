@@ -25,7 +25,7 @@ export function questInterior(quest: QuestId, layout: LayoutId, tier: number, va
   const root = new World("quests").rootSeed;
   const kind = layout.startsWith("cave") ? "cave" : "dungeon";
   const look = buildLook(rngFor(derive(root, LAYER.INTERIOR), LAYER.INTERIOR, quest, layout, variant, "look"), kind, tier, quest, QUESTS[quest].name, QUESTS[quest].groups as never, options.requires ? "B" : "A", `${quest}/${layout}`);
-  const ref: DungeonRef = { id: `${quest}/${layout}`, klass: options.requires ? "B" : "A", quest, layout, look, requires: options.requires ?? null, gives: options.gives ?? [], orbs: options.orbs ?? 0, minis: [], coins: 0, skulls: 0, scale: options.scale ?? 1 };
+  const ref: DungeonRef = { id: `${quest}/${layout}`, klass: options.requires ? "B" : "A", quest, layout, look, requires: options.requires ?? null, gives: options.gives ?? [], orbs: options.orbs ?? 0, minis: [], coins: 0, skulls: 0, spells: [], scale: options.scale ?? 1 };
   const rng = rngFor(derive(root, LAYER.INTERIOR), LAYER.INTERIOR, quest, layout, tier, variant);
   const ctx = { key: `t:${quest}:${layout}:${variant}`, tier, theme: withDungeonTheme(INTERIOR_THEMES[kind === "cave" ? "cave" : "dungeon"]!, look), dungeon: ref };
   const map = kind === "cave" ? generateCave(rng, ctx) : generateDungeon(rng, ctx);

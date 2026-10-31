@@ -109,5 +109,7 @@
  * beside the king.
  * 32 = 33rd playtest: the attribute points of an end room on levels 1 to 3 lie in a magic well, a barrel or crystals instead of a chalice (the chalice is for levels 4 and 5).
  * 33 = thievery locks: an ordinary chest carries a `difficulty` by tier (1 / 9 / 23 / 42 / 83, `data/locks.ts`), the chests of the castle too, and the king's chests ask 2 / 13 / 33 / 60 / 119 instead of tier + 1.
+ * 34 = 34th playtest: every spell lies exactly twice in the world as a scroll (`planSpellLoot`, `scrolls` on the containers of caves, dungeons and castles of the spell's level), the
+ * bookshelves (items 75 and 97) are containers, a chest without a lock springs a trap one time in five (`trapped`, `trapDamage`, `trapLevel`), the end rooms hand out no random scrolls any more.
  */
-export const GEN_VERSION = 33;
+export const GEN_VERSION = 34;

@@ -240,6 +240,8 @@ export class World {
   private dungeonRefs = new Map<string, DungeonRef>();
   private castleKinds = new Map<string, Alignment>();
   private readonly castleWords = new Map<string, number>();
+  /** The spell scrolls that lie in each castle (`planSpellLoot`); the ones of caves and dungeons are part of their `DungeonRef`. */
+  private readonly castleSpells = new Map<string, number[]>();
   private poiList: Poi[] = [];
   private readonly poiMap = new Map<string, Poi>();
   private readonly flatElevation = new Map<string, number>();
@@ -828,7 +830,7 @@ export class World {
     // the quests, keys and orbs are planned for the whole world; the plan says which dungeons are pyramids (they ask for a key card), and those are three tiles wide
     const placed = this.layout.islands.map((isl) => this.placesOf(isl));
     this.planCastles(placed.flat());
-    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords);
+    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords, this.castleSpells);
     for (const p of placed.flat()) if (this.dungeonRefs.get(p.id)?.klass === "C") p.size = PYRAMID_SIZE;
     this.plans = this.layout.islands.map((isl, i) => this.planIsland(isl, placed[i]!));
     // the bridge between the start island and the level-3 island: a road from a place on the level-2 half to the place of the other island nearest to it
@@ -924,6 +926,12 @@ export class World {
   castleWord(poiId: string): number | undefined {
     this.plan();
     return this.castleWords.get(poiId);
+  }
+
+  /** The ids of the spells whose scrolls lie in a castle (34th playtest); none for any other place. */
+  castleSpellsOf(poiId: string): readonly number[] {
+    this.plan();
+    return this.castleSpells.get(poiId) ?? [];
   }
 
   /** What a cave or dungeon was planned for (quest, layout, keys); undefined for any other place. */

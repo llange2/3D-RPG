@@ -118,6 +118,20 @@ export const BARREL_COINS: readonly string[] = [
   "Between the staves a few coins have been wedged. A thrifty barrel!",
 ];
 
+/** A bookshelf is a container too (34th playtest): the party looks through the books and finds nothing, or a spell scroll between them. */
+export const BOOKSHELF_EMPTY: readonly string[] = [
+  "You leaf through the books. Recipes, tax lists and one very long poem about a turnip. Nothing of use.",
+  "The books crumble to dust as you touch them. Nothing else on the shelf.",
+  "You pull out volume after volume. Behind the last one sits a mouse, who looks at you reproachfully.",
+  "Someone has hollowed out the books, and then forgotten to put anything inside.",
+  "All of the books are about the same spider. You put them back.",
+];
+export const BOOKSHELF_FOUND: readonly string[] = [
+  "Between two dusty volumes a loose scroll is tucked away.",
+  "One of the books is no book at all: it hides a scroll with a spell.",
+  "A scroll has slipped behind the books. Someone left in a hurry.",
+];
+
 /** What the people of a town say when the party talks to them (generic villagers, the ones standing in dead ends). */
 export const VILLAGER_LINES: readonly string[] = [
   "\"I came here for a quiet moment. You are not helping.\"",

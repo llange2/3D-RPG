@@ -87,7 +87,7 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 | 72 | Noble chest | **ja** | x |  | x | x |  |  |  |
 | 73 | Magic runes | **ja** |  | x | x |  |  | x |  |
 | 74 | Iron chest | **ja** | x | x | x |  |  |  |  |
-| 75 | Book shelf |  | x |  | x | x |  |  |  |
+| 75 | Book shelf | **ja** | x |  | x | x |  |  |  |
 | 76 | Rustic lantern |  |  |  | x |  |  |  |  |
 | 77 | Trap door | **ja** | x | x | x | x |  |  |  |
 | 78 | Mascot: Bird Perch | **ja** |  |  |  | x |  |  |  |
@@ -109,7 +109,7 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 | 94 | Rustic Table |  | x |  | x | x |  |  |  |
 | 95 | Stone Statue |  | x | x | x | x |  |  |  |
 | 96 | Sapphire chest | **ja** | x |  | x | x |  |  |  |
-| 97 | Book shelf (old) |  | x |  | x | x |  |  |  |
+| 97 | Book shelf (old) | **ja** | x |  | x | x |  |  |  |
 | 98 | Gallow |  | x | x | x |  |  |  |  |
 | 99 | Wooden support beam |  |  |  | x |  |  |  |  |
 | 100 | Castle gate |  | x |  |  |  |  |  |  |

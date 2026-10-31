@@ -1,14 +1,16 @@
 import { thousands } from "../core/format";
 import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
 import { loreLine } from "../data/lore";
-import { BARREL_COINS, BARREL_EMPTY, propLine } from "../data/prop-texts";
+import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, propLine } from "../data/prop-texts";
+import { dodgeChance, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
+import { isBookshelf } from "../data/spell-loot";
 import { pickMonsterWeighted } from "../data/monsters";
-import { BASE_CLASS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
+import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
 import { attr, canAct, canBeHealed, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
 import { addCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
-import { activeCharacters, addXp, carriedItems, freeSlots, giveItem, grantTalent, hasEffect, takeOne } from "../sim/party";
+import { activeCharacters, addXp, carriedItems, freeSlots, giveItem, grantTalent, hasEffect, protectionLevel, takeOne } from "../sim/party";
 import type { Attribute, Character, Condition, Item, Party } from "../sim/types";
 import type { ActionInstance, MapContent } from "./types";
 import { FACING_NAMES, gongsStruck, headFacing, moanSolved, ringSolved, rotationSolved, sameAnswer, turnHead } from "./quests";
@@ -16,7 +18,8 @@ import { answerMatches } from "../data/riddles";
 import { trapElementOf, type ServiceKind } from "./registry";
 
 export type Effect =
-  | { type: "text"; text: string }
+  /** `tone`: how the log shows it when the action is no trap itself (the trap of a chest says "bad" for its hit and "good" for a miss). */
+  | { type: "text"; text: string; tone?: "bad" | "good" }
   | { type: "gold"; amount: number }
   | { type: "item"; item: Item; stored: boolean }
   | { type: "damage"; character: number; amount: number; damageType: DamageType; conditions: Condition[] }
@@ -108,8 +111,9 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
   const gold = Number(p.gold ?? 0);
   const level = Number(p.level ?? 1);
   const items = Number(p.items ?? 0);
-  // a barrel is a container like a chest: it gives a few coins or a joke, never nothing at all
+  // a barrel is a container like a chest: it gives a few coins or a joke, never nothing at all; so is a bookshelf, with a joke about its books
   const barrel = Number(p.chest) === 5;
+  const shelf = isBookshelf(p.chest);
   if (barrel) {
     const lines = gold > 0 ? BARREL_COINS : BARREL_EMPTY;
     effects.push({ type: "text", text: lines[rng.int(lines.length)]! });
@@ -131,18 +135,48 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
       effects.push({ type: "item", item, stored: giveItem(party, item) });
     }
   }
-  // end room rewards (quest document 1.2): scrolls of spells of the level (attribute points and levels lie in chalices: only one hero gets them)
-  const scrolls = Number(p.spells ?? 0);
-  if (scrolls > 0) {
-    const wanted = Number(p.spellLevel ?? level);
-    const pool = Object.values(SPELLS).filter((sp) => sp.level === wanted);
-    for (let i = 0; i < scrolls && pool.length > 0; i++) {
-      const item = spellScroll(pool[rng.int(pool.length)]!.id);
-      effects.push({ type: "item", item, stored: giveItem(party, item) });
-    }
+  // the spell scrolls the plan of the world put into this container (`actions/spellScrolls.ts`): every spell lies twice in the world, nowhere else
+  const scrolls = typeof p.scrolls === "string" && p.scrolls !== "" ? p.scrolls.split(",").map(Number) : [];
+  if (shelf && scrolls.length > 0) effects.push({ type: "text", text: BOOKSHELF_FOUND[rng.int(BOOKSHELF_FOUND.length)]! });
+  for (const id of scrolls) {
+    if (!SPELLS[id]) continue;
+    const item = spellScroll(id);
+    effects.push({ type: "item", item, stored: giveItem(party, item) });
   }
-  const nothing = gold === 0 && items === 0 && scrolls === 0 && !(typeof p.extra === "string" && p.extra !== "");
-  if (nothing && !barrel) effects.push({ type: "text", text: "The chest is empty." });
+  const nothing = gold === 0 && items === 0 && scrolls.length === 0 && !(typeof p.extra === "string" && p.extra !== "");
+  if (nothing && shelf) effects.push({ type: "text", text: BOOKSHELF_EMPTY[rng.int(BOOKSHELF_EMPTY.length)]! });
+  else if (nothing && !barrel) effects.push({ type: "text", text: "The chest is empty." });
+}
+
+/**
+ * The trap of a chest that is not locked (`data/chest-traps.ts`; the chest carries its element, damage and level from the generator). A hero chosen by chance is hit,
+ * unless luck (luck / 20 on level 1, / 40 on level 2 and so on) gets them out of the way. Elemental protection can take all of the damage away, and the text says so.
+ * The trap has a random stream of its own, so the loot of the chest stays what it was. Returns true when the hit killed the last hero standing.
+ */
+function springChestTrap(action: ActionInstance, ctx: ActionContext, effects: Effect[]): boolean {
+  const { party } = ctx;
+  const p = action.params;
+  const element = p.trapped as ChestTrapElement;
+  const rng = actionRng(ctx, `${action.uid}@trap`);
+  const target = randomActive(party, rng);
+  if (target === null) return false;
+  const victim = party.characters[target]!;
+  const hero: TrapHero = { name: victim.name, female: CONSTANTS.CHARACTER_FEMALE.includes(victim.avatar) };
+  const level = Number(p.trapLevel ?? ctx.tier);
+  effects.push({ type: "text", text: trapOpening(Number(p.chest), element, hero, rng), tone: "bad" });
+  if (rng.float() < dodgeChance(attr(victim, "lck"), level)) {
+    effects.push({ type: "text", text: trapMiss(element, hero, rng), tone: "good" });
+    return false;
+  }
+  const raw = Number(p.trapDamage ?? 0);
+  const amount = elementalDamage(party, victim, element, raw);
+  if (amount <= 0) {
+    effects.push({ type: "text", text: raw > 0 && protectionLevel(party, element) > 0 ? trapProtected(hero) : trapShrugged(hero), tone: "good" });
+    return false;
+  }
+  const hit = applyHit(party, target, amount, null, rng);
+  effects.push({ type: "text", text: trapHit(element, hero, amount, rng), tone: "bad" }, { type: "damage", character: target, amount, damageType: element, conditions: hit.conditions });
+  return hit.defeated;
 }
 
 function randomActive(party: Party, rng: Rng): number | null {
@@ -318,7 +352,10 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         items.forEach((item) => effects.push({ type: "item", item, stored: true }));
         return { effects, consumed: true };
       }
+      // a chest without a lock may be trapped: the trap springs as it is opened, the loot is the party's all the same
+      const struck = typeof p.trapped === "string" && springChestTrap(action, ctx, effects);
       payOut(p, rng, party, effects);
+      if (struck) effects.push({ type: "defeat" });
       return { effects, consumed: true };
     }
 

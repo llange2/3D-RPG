@@ -24,7 +24,9 @@ ENVIRONMENTS = {"Castle": "castle", "Cave": "cave", "Dungeon": "dungeon", "Town"
 # separate from the town portals). 17..25 the keys also in caves: the end rooms of level 1 and 2 caves hold keys (document 1.2, "End-Raeume").
 ADD_PLACES = {118: ["cave"], 86: ["cave"], 3: ["town", "dungeon"], **{k: ["cave"] for k in range(17, 26)}}
 # 73 Magic runes: a quest object (the way into the end room of quest_3, the barriers of dungeon_3), never plain decoration (open point 4).
-ADD_FUNCTIONAL = {73}
+# 75 / 97 Book shelf, Book shelf (old): containers since the 34th playtest ("Spells can be found in chests, barrels, heaps of treasure or bookshelves"): searched once,
+# they may hold a spell scroll, so they are never plain decoration (`BOOKSHELVES` in src/data/spell-loot.ts).
+ADD_FUNCTIONAL = {73, 75, 97}
 
 DOC = os.path.join(ROOT, "docs", "OBJECTS.md")
 
