@@ -1,19 +1,24 @@
 import type { BoonKey } from "../sim/types";
 
 /**
- * The words of a boon of the open land (35th playtest): which object it is (a fountain or a giant stone head), and what it does to the party. The opener is picked by the
+ * The words of a boon of the open land (35th playtest): which object it is (a fountain, a well or a giant stone head), and what it does to the party. The opener is picked by the
  * tile, the effect says the stat and the points. `{n}` is the number of points, `{h}` the hours.
  */
-export type BoonSource = "fountain" | "head";
+export type BoonSource = "fountain" | "well" | "head";
 
-/** The old items that can hold a boon: Fountain (2) and Giant stone head (33). The plain Well (91) of the open land is decoration only, and the magic wells (37, 88) belong to the end rooms. */
-export const BOON_SOURCE: Readonly<Record<number, BoonSource>> = { 2: "fountain", 33: "head" };
+/** The old items that can hold a boon: Fountain (2), Giant stone head (33), Well (91). */
+export const BOON_SOURCE: Readonly<Record<number, BoonSource>> = { 2: "fountain", 91: "well", 33: "head" };
 
 const OPENERS: Record<BoonSource, readonly string[]> = {
   fountain: [
     "You cup your hands and drink from the little fountain. It tastes of old coins and distant rain.",
     "The fountain gurgles as if it had been waiting for visitors. Everybody takes a sip, and nobody mentions the pigeons.",
     "Water splashes from a stone fish's mouth. It is the cleanest thing you have seen all week, so the whole party drinks.",
+  ],
+  well: [
+    "You lower the bucket into the well and haul up something that is definitely not just water.",
+    "A voice from the bottom of the well says: \"Make a wish.\" Nobody dares to tell it that wells are for water, so you drink.",
+    "The rope of the old well creaks. What the bucket brings up shimmers a little too much to be ordinary water.",
   ],
   head: [
     "The giant stone head opens one eye, looks at you and hums a low note through its nose.",
@@ -45,5 +50,6 @@ export function boonText(source: BoonSource, pick: number, stat: BoonKey, points
 /** Said when the party bumps into an object whose magic it has used up today. */
 export const BOON_SPENT: Readonly<Record<BoonSource, string>> = {
   fountain: "The fountain only trickles. Whatever made its water special today is spent; try again tomorrow.",
+  well: "You haul up the bucket, but it holds plain water. The magic of the well is spent for today.",
   head: "The giant stone head snores. It has nothing more to give today.",
 };
