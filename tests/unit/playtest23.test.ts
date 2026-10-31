@@ -125,10 +125,10 @@ describe("23rd playtest, point 5: the item pictures are one sheet", () => {
 });
 
 describe("23rd playtest, point 6: animated town scenes", () => {
-  it("are off by default, read from the stored settings and ignored when junk", () => {
-    expect(DEFAULT_SETTINGS.animatedTown).toBe(false);
-    expect(parseSettings(JSON.stringify({ animatedTown: true })).animatedTown).toBe(true);
-    expect(parseSettings(JSON.stringify({ animatedTown: "yes" })).animatedTown).toBe(false);
+  it("are on by default (the Medium quality, 37th playtest), read from the stored settings and ignored when junk", () => {
+    expect(DEFAULT_SETTINGS.animatedTown).toBe(true);
+    expect(parseSettings(JSON.stringify({ animatedTown: false })).animatedTown).toBe(false);
+    expect(parseSettings(JSON.stringify({ animatedTown: "yes" })).animatedTown).toBe(true);
   });
 
   it("has a clip for every service window", () => {

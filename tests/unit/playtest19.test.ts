@@ -320,8 +320,8 @@ describe("nineteenth playtest: the towns vary, have a portal, and the first tier
         // the party arrives on a free street cell next to it, looking away: the portal stands behind it (36th playtest)
         const arrival = portalStart(map, content);
         expect(map.cells[arrival.y * map.width + arrival.x]).toBe(CELL.FLOOR);
-        const d = FACING_DELTA[arrival.facing];
-        expect([arrival.x - d.dx, arrival.y - d.dy]).toEqual([portals[0]!.x, portals[0]!.y]);
+        // beside the portal; it stands behind the party unless a wall would be ahead (37th playtest, point 1)
+        expect(Math.abs(arrival.x - portals[0]!.x) + Math.abs(arrival.y - portals[0]!.y)).toBe(1);
         expect(validateContent(map, content), `tier ${tier} town #${i}`).toEqual([]);
       }
     }

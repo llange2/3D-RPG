@@ -78,9 +78,6 @@ async function main(): Promise<void> {
     get campaignModel() {
       return game.campaignModel;
     },
-    get modelSet() {
-      return game.modelSet;
-    },
     perf: () => {
       const s = game.stats();
       return { fps: s.fps, drawCalls: s.drawCalls, chunks: s.chunks, instances: s.instances, triangles: s.triangles, maxBuildMs: s.maxChunkBuildMs, monsters: s.monsters };

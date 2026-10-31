@@ -2,7 +2,7 @@ import { LAYER, rngFor, type Rng } from "../core/rng";
 import { pickSeaMonster, pickWildMonster } from "./difficulty";
 import { hutsOf } from "./huts";
 import { isqrt, wrapDist2, type Island } from "./islands";
-import { SAFE_RADIUS, inSafeZone } from "./safezone";
+import { SAFE_RADIUS, inSafeZone, inStrongKeepOff } from "./safezone";
 import { CHUNK_SIZE, GROUND, isTileWalkable, wrap } from "./types";
 import type { World } from "./world";
 
@@ -66,6 +66,7 @@ function reachesShore(world: World, x: number, y: number): boolean {
  */
 function fitsLand(world: World, isl: Island, x: number, y: number, shore: boolean): boolean {
   if (world.islandAt(x, y) !== isl || inSafeZone(world, x, y)) return false;
+  if (world.tierAt(x, y) > 1 && inStrongKeepOff(world, x, y)) return false;
   const t = world.tile(x, y);
   if (t.poiId !== null || !isTileWalkable(t) || t.ground === GROUND.ROAD || t.ground === GROUND.BRIDGE || t.ground === GROUND.PASS || t.ground === GROUND.WATER || t.ground === GROUND.SHALLOW) return false;
   return shore ? reachesShore(world, x, y) : world.isOpenGround(x, y);

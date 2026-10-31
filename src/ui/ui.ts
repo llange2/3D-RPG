@@ -10,6 +10,7 @@ import { hitEffect, portraitImage, protectionEffect, type AvatarEffect } from ".
 import { conditionTitle, shownCondition } from "./conditionInfo";
 import { mascotPortrait } from "./panels";
 import { LoadingScreen } from "./loadingScreen";
+import { GAME_ACTIONS, KEYS_PER_ACTION, MENU_KEY, keyLabel, normalizeKey, type GameAction, type KeyBindings } from "../game/keybindings";
 
 export type LogKind = "info" | "good" | "bad" | "combat" | "loot";
 
@@ -45,11 +46,17 @@ export interface Option<T> {
   apart?: boolean;
 }
 
-/** One switch of `UI.toggles`: a click calls `flip`, then the label is read again. */
-export interface ToggleRow {
-  label: () => string;
-  flip: () => void;
-}
+/**
+ * One row of `UI.settingsPanel`. After every change all rows are read again, so a row can change what others show (the quality slider sets the switches
+ * below it, and a switch moves the slider to "Custom").
+ */
+export type SettingsRow =
+  /** A switch: a click calls `flip`. */
+  | { type: "toggle"; label: () => string; flip: () => void }
+  /** A slider with whole steps from `min` to `max`; `ticks` name the positions under it. */
+  | { type: "slider"; label: () => string; min: number; max: number; step?: number; value: () => number; set: (value: number) => void; ticks?: string[] }
+  /** A row that opens something (a window of its own): `press` runs on a click. */
+  | { type: "button"; label: () => string; press: () => void | Promise<void> };
 
 /** DOM overlay: HUD, message log and modal dialogs. All dialogs return promises, so game code reads linearly. */
 export class UI {
@@ -69,6 +76,8 @@ export class UI {
   private readonly status: HTMLElement;
   /** The list of open quests under the stats (campaign only). A click opens the whole log. */
   private readonly questList: HTMLElement;
+  /** The "(Space)" beside the name of each action button (see `setKeyHints`). */
+  private readonly actionHints = new Map<string, HTMLElement>();
   private readonly focus: HTMLElement;
   private readonly flash: HTMLElement;
   readonly minimap: HTMLCanvasElement;
@@ -130,7 +139,9 @@ export class UI {
   }
 
   private actionButton(label: string, key: string, action: Parameters<UI["onAction"]>[0]): HTMLElement {
-    return h("button", { class: "btn", onclick: () => this.onAction(action) }, label, " ", h("small", { text: `(${key})` }));
+    const small = h("small", { text: `(${key})` });
+    this.actionHints.set(action, small);
+    return h("button", { class: "btn", onclick: () => this.onAction(action) }, label, " ", small);
   }
 
   setHudVisible(visible: boolean): void {
@@ -191,7 +202,7 @@ export class UI {
     if (!quests) return;
     this.questList.replaceChildren(
       h("div", { class: "quest-head", text: `Quests${quests.done > 0 ? ` (${quests.done} done)` : ""}` }),
-      ...(quests.open.length === 0 ? [h("div", { class: "small", text: "No open quests." })] : quests.open.map((q) => h("div", { class: "quest", text: q }))),
+      ...(quests.open.length === 0 ? [h("div", { class: "small", text: "none" })] : quests.open.map((q) => h("div", { class: "quest", text: q }))),
     );
   }
 
@@ -370,42 +381,147 @@ export class UI {
   }
 
   /**
-   * Parchment of switches for settings: a click on a row turns that setting over (the label is read again), nothing takes effect until
-   * Apply, which resolves "apply". Back, Esc and a click outside resolve null and the caller drops what was turned.
+   * Parchment of settings (switches, sliders, rows that open a window): a click on a switch turns that setting over, a slider is moved, and every row is read again
+   * after each change. Nothing takes effect until Apply, which resolves "apply". Back, Esc and a click outside resolve null and the caller drops what was changed.
+   * `extra` buttons sit between Back and Apply (Reset to defaults).
    */
-  toggles(title: string, text: string, rows: ToggleRow[], footer = ""): Promise<"apply" | null> {
+  settingsPanel(title: string, rows: SettingsRow[], extra: { label: string; run: () => void }[] = []): Promise<"apply" | null> {
     return this.modal<"apply" | null>(
       (close) => {
-        const labels = rows.map((r) => h("span", { text: r.label() }));
+        const refreshers: (() => void)[] = [];
+        const refresh = () => refreshers.forEach((f) => f());
         const list = h(
           "div",
           { class: "list" },
-          ...rows.map((r, i) =>
-            h(
+          ...rows.map((r) => {
+            const label = h("span", { text: r.label() });
+            if (r.type === "slider") {
+              const input = h("input", { type: "range", min: String(r.min), max: String(r.max), step: String(r.step ?? 1) }) as HTMLInputElement;
+              input.value = String(r.value());
+              input.addEventListener("input", () => {
+                r.set(Number(input.value));
+                refresh();
+              });
+              // the keys that move the slider must not turn the party or open a window behind the dialog
+              input.addEventListener("keydown", (e) => e.stopPropagation());
+              refreshers.push(() => {
+                label.textContent = r.label();
+                if (Number(input.value) !== r.value()) input.value = String(r.value());
+              });
+              const ticks = r.ticks ? h("div", { class: "ticks" }, ...r.ticks.map((t) => h("span", { text: t }))) : null;
+              return h("div", { class: "opt slider" }, label, input, ticks);
+            }
+            refreshers.push(() => (label.textContent = r.label()));
+            return h(
               "div",
               {
                 class: "opt",
                 onclick: () => {
-                  r.flip();
-                  rows.forEach((row, k) => (labels[k]!.textContent = row.label()));
+                  if (r.type === "toggle") r.flip();
+                  else void Promise.resolve(r.press()).then(refresh);
+                  refresh();
                 },
               },
-              labels[i]!,
-            ),
-          ),
+              label,
+            );
+          }),
         );
         return h(
           "div",
           { class: "parchment" },
           h("h2", { text: title }),
-          text ? h("p", { text }) : null,
           list,
-          footer ? h("p", { class: "small", text: footer }) : null,
-          h("div", { class: "buttons" }, h("button", { class: "btn", text: "Back", onclick: () => close(null) }), h("button", { class: "btn primary", text: "Apply", onclick: () => close("apply") })),
+          h(
+            "div",
+            { class: "buttons" },
+            h("button", { class: "btn", text: "Back", onclick: () => close(null) }),
+            ...extra.map((x) => h("button", { class: "btn", text: x.label, onclick: () => (x.run(), refresh()) })),
+            h("button", { class: "btn primary", text: "Apply", onclick: () => close("apply") }),
+          ),
         );
       },
       { dismissWith: null },
     );
+  }
+
+  /**
+   * The key bindings window: every action with its two keys; a click on a key waits for the next key press (Escape keeps the old key, Backspace or Delete empties the slot).
+   * `get` reads the table, `assign` changes it and answers with a line to show (a key taken from another action), `reset` brings the defaults back. Resolves when closed.
+   */
+  keyBindings(get: () => KeyBindings, assign: (action: GameAction, slot: number, key: string | null) => string, reset: () => void): Promise<void> {
+    return this.modal<void>(
+      (close) => {
+        const note = h("p", { class: "small", text: "Click a key, then press the new one. Escape keeps the old key, Backspace empties it. A key belongs to one action only." });
+        const list = h("div", { class: "list keys" });
+        const draw = () => {
+          list.replaceChildren(
+            ...GAME_ACTIONS.map(({ id, label }) =>
+              h(
+                "div",
+                { class: "opt keyrow" },
+                h("span", { text: label }),
+                ...Array.from({ length: KEYS_PER_ACTION }, (_, slot) => {
+                  const key = get()[id][slot];
+                  const button = h("button", {
+                    class: "btn keycap",
+                    text: key === undefined ? "-" : keyLabel(key),
+                    onclick: async () => {
+                      button.textContent = "press a key";
+                      button.classList.add("waiting");
+                      const pressed = await this.captureKey();
+                      const next = pressed === null ? undefined : pressed === "Backspace" || pressed === "Delete" ? null : normalizeKey(pressed);
+                      if (next !== undefined && next !== null && next === MENU_KEY) note.textContent = "Escape stays the menu key.";
+                      else if (next !== undefined) note.textContent = assign(id, slot, next) || "";
+                      draw();
+                    },
+                  });
+                  return button;
+                }),
+              ),
+            ),
+          );
+        };
+        draw();
+        return h(
+          "div",
+          { class: "parchment" },
+          h("h2", { text: "Key bindings" }),
+          list,
+          note,
+          h("div", { class: "buttons" }, h("button", { class: "btn", text: "Reset to defaults", onclick: () => (reset(), draw()) }), h("button", { class: "btn primary", text: "Back", onclick: () => close() })),
+        );
+      },
+      { dismissWith: undefined as void },
+    );
+  }
+
+  /**
+   * Waits for the next key (the key bindings window): resolves with its `KeyboardEvent.key`, or null when Escape was pressed (the caller keeps the old key).
+   * The key is taken before anything else sees it.
+   */
+  captureKey(): Promise<string | null> {
+    return new Promise((resolve) => {
+      const onKey = (e: KeyboardEvent) => {
+        if (["Shift", "Control", "Alt", "Meta", "AltGraph", "CapsLock"].includes(e.key)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        window.removeEventListener("keydown", onKey, true);
+        resolve(e.key === "Escape" ? null : e.key);
+      };
+      window.addEventListener("keydown", onKey, true);
+    });
+  }
+
+  /**
+   * The key names on the action buttons and in the tips: `labels` gives the key of every action, `show` false takes them off the buttons (the option "Show action keys in GUI").
+   * The tip of the quest panel always names its key.
+   */
+  setKeyHints(labels: Record<"attack" | "cast" | "inventory" | "rest" | "map" | "menu" | "quests", string>, show: boolean): void {
+    for (const [action, small] of this.actionHints) {
+      const key = labels[action as keyof typeof labels];
+      small.textContent = show && key ? `(${key})` : "";
+    }
+    this.questList.title = `Click for the whole quest log (${labels.quests})`;
   }
 
   /** Parchment with a question and a text field; resolves with the answer or null when dismissed. */

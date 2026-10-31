@@ -21,7 +21,7 @@ export type Hand = "right" | "left";
  * Read off the models' profiles; a shield has none (it is strapped on with the old numbers). The axe's haft ran a third of its length out behind the Minotaur's fist
  * at -0.4 (32nd playtest, point 5): it is gripped at its end now, the haft ends in the hand.
  */
-export const GRIP_Y: Record<string, number> = { wpn_sword1: -0.78, wpn_sword2: -0.78, wpn_sword3: -0.78, wpn_axe: -0.95, wpn_hammer: -0.4 };
+export const GRIP_Y: Record<string, number> = { wpn_sword1: -0.78, wpn_sword2: -0.78, wpn_sword3: -0.78, wpn_axe: -0.95, wpn_hammer: -0.85 };
 
 /**
  * A weapon that the plain grip puts wrong: the Minotaur's axe haft ran through the hand (32nd playtest, point 5, twice). `shift` moves the item in the joint's frame (centimetres:
@@ -30,6 +30,16 @@ export const GRIP_Y: Record<string, number> = { wpn_sword1: -0.78, wpn_sword2: -
  */
 export const GRIP_TWEAK: Record<string, { shift: readonly [number, number, number]; turn: readonly [number, number, number] }> = {
   wpn_axe: { shift: [5, 0, 6], turn: [-10, 0, -20] },
+  // 37th playtest, point 3: the hilt of the Orc Warrior's sword and the haft of the Mad Dwarf's hammer lay at the wrist and ran through the hand. Nine
+  // centimetres further along the fingers puts the grip into the fist, the hilt emerges at the thumb and index finger (found in front and behind views of both).
+  wpn_sword1: { shift: [0, 9, 0], turn: [0, 0, 0] },
+  wpn_sword2: { shift: [0, 9, 0], turn: [0, 0, 0] },
+  wpn_sword3: { shift: [0, 9, 0], turn: [0, 0, 0] },
+  wpn_hammer: { shift: [0, 9, 0], turn: [0, 0, 0] },
+  // the fingers of the left hand stuck through the face of the shield (Castle Guard, Skeleton, Troll): 8 centimetres further out in the joint's z, the hand lies behind it
+  wpn_shield1: { shift: [0, 0, -8], turn: [0, 0, 0] },
+  wpn_shield2: { shift: [0, 0, -8], turn: [0, 0, 0] },
+  wpn_shield3: { shift: [0, 0, -8], turn: [0, 0, 0] },
 };
 
 export const HAND_FIT: Record<Hand, PandaFit> = {

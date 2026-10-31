@@ -221,9 +221,10 @@ describe("eighteenth playtest: where a new game begins", () => {
       const inn = content.actions.find((a) => a.kind === "service" && a.params.service === "inn")!;
       expect(map.cells[spot.y * map.width + spot.x], seed).toBe(CELL.FLOOR);
       expect(content.actions.some((a) => blocksCell(a) && a.x === spot.x && a.y === spot.y), `${seed}: nothing in the way`).toBe(false);
-      // the inn is one step behind the party: it looks away from the door
+      // the inn is one step from the party; it looks away from the door where the street goes on ahead, else along the street (37th playtest, point 1: never at a wall)
+      expect(Math.abs(spot.x - inn.x) + Math.abs(spot.y - inn.y), seed).toBe(1);
       const d = FACING_DELTA[spot.facing];
-      expect([spot.x - d.dx, spot.y - d.dy], seed).toEqual([inn.x, inn.y]);
+      expect([spot.x + d.dx, spot.y + d.dy], seed).not.toEqual([inn.x, inn.y]);
     }
   });
 });

@@ -80,8 +80,10 @@ describe("36th playtest, point 17: a town portal puts the party in front of it, 
     const content = buildMapContent(world, poi, map);
     const portal = content.actions.find((a) => a.kind === "portal")!;
     const arrival = portalStart(map, content);
+    // (37th playtest, point 1: where the street goes on ahead only; with a wall ahead the party looks along the street, the portal beside it)
+    expect(Math.abs(arrival.x - portal.x) + Math.abs(arrival.y - portal.y)).toBe(1);
     const d = FACING_DELTA[arrival.facing];
-    expect([arrival.x - d.dx, arrival.y - d.dy]).toEqual([portal.x, portal.y]);
+    expect([arrival.x + d.dx, arrival.y + d.dy]).not.toEqual([portal.x, portal.y]);
   });
 });
 

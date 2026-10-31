@@ -20,6 +20,17 @@ export function safeSpots(world: World): { x: number; y: number }[] {
   return spots;
 }
 
+/**
+ * A group above level 1 keeps this far from the safe spots (`SAFE_RADIUS` plus the monsters' action radius of 7 and a margin): on a small world another island of level 4
+ * can lie a few tiles from Starthaven, and its Paladins would shoot at the party across the water the moment it leaves the town (37th playtest, point 2).
+ */
+export const STRONG_KEEP_OFF = SAFE_RADIUS + 9;
+
+/** Is the tile too near the town and the start for a monster stronger than level 1? */
+export function inStrongKeepOff(world: World, x: number, y: number): boolean {
+  return safeSpots(world).some((p) => wrapDist2(x, y, p.x, p.y, world.width, world.height) <= STRONG_KEEP_OFF * STRONG_KEEP_OFF);
+}
+
 /** Is the tile inside the safe zone? */
 export function inSafeZone(world: World, x: number, y: number): boolean {
   return safeSpots(world).some((p) => wrapDist2(x, y, p.x, p.y, world.width, world.height) <= SAFE_RADIUS * SAFE_RADIUS);
