@@ -154,8 +154,8 @@ try {
   await click(".modal-back:last-child .parchment .opt", "Show action keys");
   await apply();
   await sleep(300);
-  const attackButton = await evalJs<string>(`[...document.querySelectorAll(".actions .btn")].map((b) => b.textContent.trim()).join(" | ")`);
-  expect(attackButton === "Attack | Spells | Inventory | Rest | Map | Menu", `the action buttons show no keys (${attackButton})`);
+  const buttonsShown = await evalJs<boolean>(`getComputedStyle(document.querySelector(".actions")).display !== "none"`);
+  expect(!buttonsShown, "the action buttons are gone when the keys are not shown");
   const storedKeys = (await stored())?.keys as Record<string, string[]> | undefined;
   expect(storedKeys?.cast?.[0] === "r" && storedKeys?.rest?.length === 0, "the new keys are stored");
   await page.keyboard.press("Escape");

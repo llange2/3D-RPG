@@ -78,6 +78,8 @@ export class UI {
   private readonly questList: HTMLElement;
   /** The "(Space)" beside the name of each action button (see `setKeyHints`). */
   private readonly actionHints = new Map<string, HTMLElement>();
+  /** The column of action buttons at the lower right; the option "Show action keys in GUI" off takes the whole column away. */
+  private actionsEl!: HTMLElement;
   private readonly focus: HTMLElement;
   private readonly flash: HTMLElement;
   readonly minimap: HTMLCanvasElement;
@@ -111,7 +113,7 @@ export class UI {
     this.minimap.height = 176;
     this.focus = h("div", { class: "focusbar hud-hide" });
     this.flash = h("div", { class: "dim-overlay" });
-    const actions = h(
+    const actions = (this.actionsEl = h(
       "div",
       { class: "actions" },
       this.actionButton("Attack", "Space", "attack"),
@@ -120,7 +122,7 @@ export class UI {
       this.actionButton("Rest", "R", "rest"),
       this.actionButton("Map", "M", "map"),
       this.actionButton("Menu", "Esc", "menu"),
-    );
+    ));
     this.root.append(
       this.info,
       this.compass,
@@ -513,14 +515,15 @@ export class UI {
   }
 
   /**
-   * The key names on the action buttons and in the tips: `labels` gives the key of every action, `show` false takes them off the buttons (the option "Show action keys in GUI").
+   * The key names on the action buttons and in the tips: `labels` gives the key of every action, `show` false takes the buttons away altogether (the option "Show action keys in GUI": the keys alone play the game).
    * The tip of the quest panel always names its key.
    */
   setKeyHints(labels: Record<"attack" | "cast" | "inventory" | "rest" | "map" | "menu" | "quests", string>, show: boolean): void {
     for (const [action, small] of this.actionHints) {
       const key = labels[action as keyof typeof labels];
-      small.textContent = show && key ? `(${key})` : "";
+      small.textContent = key ? `(${key})` : "";
     }
+    this.actionsEl.classList.toggle("keys-off", !show);
     this.questList.title = `Click for the whole quest log (${labels.quests})`;
   }
 

@@ -26,7 +26,7 @@ party; farther away the flat ground texture is all there is). Places and short o
 
 Options (title screen and Esc menu, `Options`): three windows, Controls, Graphics and Sound. Their rows only change a draft; `Apply` (right of `Back`)
 puts the window into effect at once, `Back` drops it. **Controls:** Key bindings (every action has up to two keys, a key that is given to another action is taken
-from the first, Escape stays the menu, Reset to defaults), Fade out cursor, if unused, Show action keys in GUI (the key names on the buttons at the lower right).
+from the first, Escape stays the menu, Reset to defaults), Fade out cursor, if unused, Show action keys in GUI (off removes the action buttons at the lower right altogether; the keys alone play the game).
 **Graphics:** the Quality slider (Low, Medium, High, Custom) sets the five rows below it, and a mix that is no preset moves it to Custom; the default is Medium.
 Low: flat ground, normal textures, distance close, resolution low, no town films. Medium: flat, normal, medium, normal, films. High: 3D ground, high textures, far,
 normal, films. Ground and floors (3D or flat: the overworld, the outdoor cells of campaign maps, dungeon floors; towns always have their flat floor), Textures

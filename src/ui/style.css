@@ -105,6 +105,7 @@ html.loading-on #game-cursor { display: none; }
 
 /* ---------- action buttons ---------- */
 .actions { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
+.actions.keys-off { display: none; }
 .btn {
   font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.03em;
   padding: 7px 14px; background: linear-gradient(180deg, #4a3622, #2f2113); border: 2px solid var(--gold-dim); border-radius: 6px; cursor: pointer;
