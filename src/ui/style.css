@@ -343,3 +343,19 @@ html.loading-on #game-cursor { display: none; }
 .card.rifted { box-shadow: 0 0 10px #8a4ad8; }
 /* the items a spell may not touch are dimmed in the backpack window of Combine, Duplication and Transform Ring */
 .slot.off { opacity: 0.3; cursor: default; }
+
+/* "Who casts?" and the pick of a hero by portrait (36th playtest): the portraits stand side by side in the middle; the bar, the spell and the button are as wide as the portrait */
+.caster-row { display: flex; justify-content: center; align-items: flex-start; gap: 22px; flex-wrap: wrap; margin: 12px 0 4px; }
+.caster-col { width: 110px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.caster-col .bar { width: 100%; margin-top: 0; }
+img.portrait.caster-portrait { width: 110px; height: 110px; object-fit: cover; border: 2px solid var(--gold-dim); border-radius: 6px; background: #000; }
+.caster-spell { position: relative; display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 10px; transition: transform 0.08s, filter 0.08s; }
+.caster-spell:hover:not(.off) { transform: scale(1.05); filter: brightness(1.12) drop-shadow(0 0 5px #fff8); }
+.caster-spell.off { cursor: default; filter: grayscale(0.85) brightness(0.7); }
+.plate-button { display: flex; align-items: center; justify-content: center; padding: 0 0 6% 0; border: 0; background-color: transparent; background-repeat: no-repeat; background-size: 100% 100%; cursor: pointer; color: #3b2208; font: 700 17px var(--font-head); transition: transform 0.08s, filter 0.08s; }
+.plate-button:hover { transform: scale(1.04); filter: brightness(1.08) drop-shadow(0 0 4px #fff8); }
+.hero-btn { padding: 0; border: 0; background: none; cursor: pointer; transition: transform 0.08s, filter 0.08s; }
+.hero-btn:hover:not(.off) img.portrait { border-color: var(--gold); }
+.hero-btn:hover:not(.off) { transform: scale(1.05); }
+.hero-btn.off { cursor: default; opacity: 0.4; filter: grayscale(0.7); }
+.hero-pick p { text-align: center; max-width: 520px; }

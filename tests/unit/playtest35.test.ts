@@ -156,7 +156,7 @@ describe("35th playtest, point 5: a pile of bones hides something", () => {
       if (bite?.type === "damage") {
         bites++;
         expect(bite.damageType).toBe("physical");
-        expect(bite.amount).toBe(6);
+        expect(bite.amount).toBe(7); // 6 times 1 + level / 10 for a hero of level 1 (36th playtest, point 25)
       } else {
         misses++;
         expect(result.effects.some((e) => e.type === "text" && e.tone === "good")).toBe(true);

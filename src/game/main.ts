@@ -5,8 +5,11 @@ import { interiorFingerprints } from "../actions/fingerprint";
 import { chunkHash, World } from "../world/world";
 import { installCursor } from "../ui/cursor";
 import { preloadImages } from "../ui/dom";
+import { preloadButtonArt } from "../ui/buttonArt";
 import { preloadSpellIcons } from "../ui/spellIcons";
 import { preloadItemIcons } from "../ui/itemIcons";
+import { setTextureQuality } from "../render/assets";
+import { readSettings } from "./settings";
 import { splitLegacySaves } from "./state";
 import { parseWorldSize, type WorldSize } from "../world/types";
 
@@ -18,9 +21,13 @@ async function main(): Promise<void> {
   preloadImages(["ui/scroll.webp"]);
   // the 78 spell pictures are one sheet: fetched and decoded now, so that the spell window opens with every plate in place
   void preloadSpellIcons();
+  // the blank button of the "Select" plate of the spell window, decoded now as well
+  void preloadButtonArt();
   // the same for the item pictures: every slot of an inventory or a shop is a window onto one decoded sheet
   void preloadItemIcons();
   splitLegacySaves();
+  // the textures are chosen once, before the first one is asked for (a change in the menu reloads the page)
+  setTextureQuality(readSettings().textureQuality);
 
   const canvas = document.createElement("canvas");
   canvas.id = "view";

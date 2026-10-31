@@ -45,7 +45,9 @@ async function main(): Promise<void> {
   // The unreduced models (npm run assets:originals) are an optional extra of ~470 MB for the menu's model switch: they
   // are neither part of the load groups nor of the size budget, and are reported on their own.
   const isOriginal = (p: string): boolean => p.startsWith("models-original/") || /^models\.(static|monsters)\.original\.json$/.test(p);
-  const files = all.filter((p) => !p.endsWith(".stats.json") && p !== "manifest.json" && !isOriginal(p));
+  // the textures of the "high" setting (`npm run assets:hd`, up to 1024 px) are an optional extra as well
+  const isHd = (p: string): boolean => p.startsWith("hd/");
+  const files = all.filter((p) => !p.endsWith(".stats.json") && p !== "manifest.json" && !isOriginal(p) && !isHd(p));
   const originalBytes = all.filter(isOriginal).reduce((s, p) => s + statSync(join(OUT, p)).size, 0);
   const groups: Record<string, { bytes: number; files: string[] }> = {};
   let total = 0;

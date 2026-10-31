@@ -1,4 +1,6 @@
-import type { MapContent } from "../actions/types";
+import { gongsStruck } from "../actions/quests";
+import { heapGone } from "../actions/registry";
+import type { ActionInstance, MapContent } from "../actions/types";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
 import { shownItem } from "./interiorProps";
 import { TRAP_OBJECT, elementOf } from "./interiorTraps";
@@ -94,14 +96,30 @@ export function lampSource(kind: LampKind, x: number, z: number, key = `${x.toFi
   return { x, z, key, y: kind.y, color: kind.color, ...(kind.range !== undefined ? { range: kind.range } : {}), ...(kind.intensity !== undefined ? { intensity: kind.intensity } : {}) };
 }
 
+/** The key of the lamp that an action's object carries. */
+export const lampKeyOf = (a: Pick<ActionInstance, "uid">): string => `a:${a.uid}`;
+
+/** The object of this action is gone from the map: its key or key card is in a backpack, or its heap of treasure is empty. */
+export function objectTaken(a: Pick<ActionInstance, "uid" | "kind" | "params">, opened: ReadonlySet<string>): boolean {
+  return a.kind === "treasure" && opened.has(a.uid) && (typeof a.params.quest === "string" || heapGone(a, opened));
+}
+
 /** The glowing objects of a generated place (crystals of shrines, riddles and decoration, the objects of the elemental traps): each lights its cell. */
-export function crystalLamps(content: MapContent): LampSource[] {
+export function crystalLamps(content: MapContent, opened: ReadonlySet<string> = new Set()): LampSource[] {
   const out: LampSource[] = [];
   for (const a of content.actions) {
+    // a key or key card that was taken, and a heap that was emptied, take their glow with them (36th playtest, points 6 and 23)
+    if (objectTaken(a, opened)) continue;
+    // the runes of quest 3 are not there before the last gong rings, and the middle of the field of quest 1 stays bare (Tomb of Aldena 61/51 glowed with nothing to see)
+    if (a.kind === "rune") {
+      if (a.params.need !== "gongs") continue;
+      const gongs = gongsStruck(content, opened);
+      if (gongs.total === 0 || gongs.done < gongs.total) continue;
+    }
     const element = elementOf(a);
     const item = element !== null ? TRAP_OBJECT[element] : shownItem(a);
     const kind = item === null ? undefined : ITEM_LAMPS[item];
-    if (kind) out.push(lampSource(kind, cellCenterX(a.x), cellCenterZ(a.y)));
+    if (kind) out.push(lampSource(kind, cellCenterX(a.x), cellCenterZ(a.y), lampKeyOf(a)));
   }
   return out;
 }

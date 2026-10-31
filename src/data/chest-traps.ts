@@ -20,6 +20,11 @@ export function dodgeChance(luck: number, level: number): number {
   return Math.min(1, Math.max(0, luck / (DODGE_STEP * tier)));
 }
 
+/** The damage of a trap for a hero of this level: the damage of the place times 1 + level / 10, so 1.4 for level 4 and 2.0 for level 10 (36th playtest). */
+export function trapDamageFor(damage: number, level: number): number {
+  return damage <= 0 ? 0 : Math.max(1, Math.round(damage * (1 + level / 10)));
+}
+
 export interface TrapHero {
   name: string;
   female: boolean;
@@ -82,12 +87,17 @@ const LINES: Record<ChestTrapElement, ElementLines> = {
  * such pile in five has a rat in it: the same trap mechanic as the unlocked chests (a hero chosen by chance, a dodge by luck), but the damage is always physical.
  */
 export const BONE_PILE = 70;
+/** Storage equipment (old item 13, 36th playtest) is searched like a pile of bones: the same chance of a find, the same rat. */
+export const STORAGE_EQUIPMENT = 13;
+/** The decorations that hide something one time in five. */
+export const SEARCHABLE_DECOR: readonly number[] = [BONE_PILE, STORAGE_EQUIPMENT];
 export const BONES_FIND_CHANCE = 200; // permille
 /** The `trapped` value of a bone pile's rat, in place of an element. */
 export const RAT_TRAP = "physical";
 
 /** The first sentence of the rat: it jumps out of the bones, whether it hits or not. */
-export function ratOpening(hero: TrapHero, rng: Rng): string {
+export function ratOpening(hero: TrapHero, rng: Rng, item: number = BONE_PILE): string {
+  if (item === STORAGE_EQUIPMENT) return fill(pick(rng, ["As {hero} rummages through the sacks, a fat rat shoots out of the pile.", "The moment {hero} lifts a lid of the crates, a rat leaps out from between the straw.", "When {hero} drags a sack aside, a hungry rat darts out from behind it."]), hero);
   return fill(pick(rng, ["As {hero} rummages through the bones, a fat rat shoots out of the pile.", "The moment {hero} pokes into the bones, a rat leaps out of a skull.", "When {hero} turns over a rib, a hungry rat darts out from under it."]), hero);
 }
 

@@ -876,7 +876,7 @@ describe("action handlers", () => {
     const party = createDefaultParty();
     const hurt = resolveAction(act("trap", { trap: "spring", damage: 5 }, "m#trap:0"), ctxFor(party));
     expect(hurt.effects.some((e) => e.type === "damage")).toBe(true);
-    expect(party.characters.reduce((s, c) => s + (c.health - c.hp), 0)).toBe(5);
+    expect(party.characters.reduce((s, c) => s + (c.health - c.hp), 0)).toBe(6); // 5 times 1.1 for a hero of level 1 (36th playtest, point 25)
     const gold = party.gold;
     const steal = resolveAction(act("trap", { trap: "steal_gold", damage: 0 }, "m#trap:1"), ctxFor(party));
     expect(party.gold).toBeLessThan(gold);

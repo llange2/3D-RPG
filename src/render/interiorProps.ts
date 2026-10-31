@@ -33,7 +33,11 @@ export const OWN_MODELS: Record<number, { model: string; scale: number }> = {
 export const WALL_HUNG: ReadonlySet<number> = new Set(WALL_HUNG_ITEMS);
 
 /** Old items whose model has its working side (the lectern's sloping top) where the others have their back: turned by this many degrees on top of the rule above. */
-const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180 };
+const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180, 13: 180 }; // (13, the storage equipment, showed its back to the room: 36th playtest, point 10)
+
+/** The stone coffins (old items 127 and 128) and the turns they get on top of the wall rule: 90 or 135 degrees, clockwise or against it. */
+const SARCOPHAGI: ReadonlySet<number> = new Set([127, 128]);
+const SARCOPHAGUS_TURNS: readonly number[] = [90, 135, -90, -135];
 
 /** The kinds of action whose `item` param is an old item they stand on their cell as (a statue, a gong, a lever, a head, a rune on the floor). */
 const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal", "rune", "qportal", "chalice", "tube"]);
@@ -85,6 +89,8 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   // the cell, emblem to the room. The half circle moved the cloth to the room side, 2.85 units from the wall and with its emblem to the wall (21st playtest, point 7).
   if (isGlbItem(item) && !OWN_MODELS[item] && !WALL_HUNG.has(item)) bearing += 180;
   bearing += FRONT_TURN[item] ?? 0;
+  // a sarcophagus does not stand squared to the wall: it is turned a quarter or three eighths of a circle, one way or the other (36th playtest, point 14; the cell decides, so it stays put)
+  if (SARCOPHAGI.has(item)) bearing += SARCOPHAGUS_TURNS[(a.x * 7 + a.y * 13) % SARCOPHAGUS_TURNS.length]!;
   // a pulled lever has turned half a circle, so that its handle lies on the other side (the campaign turns its levers the same way)
   if (a.kind === "lever" && leverPulled(a, opened)) bearing += 180;
   const own = OWN_MODELS[item];

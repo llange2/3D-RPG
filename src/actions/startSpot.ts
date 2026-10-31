@@ -5,7 +5,7 @@ import type { MapContent } from "./types";
 const SIDES: Facing[] = ["N", "E", "S", "W"];
 
 /**
- * Where the party appears when a portal brings it to a town: on a free street cell next to the portal, looking at it. Falls back to the way in
+ * Where the party appears when a portal brings it to a town: on a free street cell next to the portal, looking away from it, the portal behind the party. Falls back to the way in
  * when the town has no portal or it has no free neighbour.
  */
 export function portalStart(map: InteriorMap, content: MapContent): { x: number; y: number; facing: Facing } {
@@ -16,7 +16,8 @@ export function portalStart(map: InteriorMap, content: MapContent): { x: number;
     const x = portal.x + FACING_DELTA[f].dx;
     const y = portal.y + FACING_DELTA[f].dy;
     if (x < 0 || y < 0 || x >= map.width || y >= map.height || map.cells[y * map.width + x] !== CELL.FLOOR || taken.has(y * map.width + x)) continue;
-    return { x, y, facing: ({ N: "S", S: "N", E: "W", W: "E" } as const)[f] };
+    // looking away from the portal: it stands behind the party (36th playtest, point 17)
+    return { x, y, facing: f };
   }
   return map.spawn;
 }

@@ -15,6 +15,8 @@ import type { World } from "../world/world";
 export const SKULL_MISER_MET = "skullmiser:met";
 export const lockSeenFlag = (poiId: string): string => `lock:${poiId}`;
 export const reachedFlag = (poiId: string): string => `reached:${poiId}`;
+/** A thing the heroes have found out in a place (the words of a statue, what a hero heard in his mind): the text rides in the flag, so the save format stays as it is. */
+export const clueFlag = (poiId: string, text: string): string => `clue:${poiId}|${text}`;
 
 export interface QuestLogInput {
   world: World;
@@ -27,6 +29,8 @@ export interface QuestLogInput {
 export interface QuestLogView {
   open: string[];
   done: string[];
+  /** The mouse-over of a line of `open` or `done`: what the heroes have found out for that quest (36th playtest). Absent when nothing was found out. */
+  notes?: Record<string, string>;
 }
 
 const at = (poi: Poi): string => `${poi.x}/${poi.y}`;
@@ -66,6 +70,7 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
   const open: string[] = [];
   const done: string[] = [];
   const pois = world.allPois();
+  const notes: Record<string, string> = {};
 
   // the Skull Miser
   const handed = number(opened, "skulls=");
@@ -117,8 +122,10 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     }
     const boss = MONSTERS[ref.look.boss]?.name ?? "boss";
     const lines = DUNGEON_LINES[ref.quest as QuestId];
-    if (reached) done.push(lines.done(poi.name, boss));
-    else open.push(lines.open(poi.name, at(poi), boss));
+    const line = reached ? lines.done(poi.name, boss) : lines.open(poi.name, at(poi), boss);
+    (reached ? done : open).push(line);
+    const clues = [...opened].filter((k) => k.startsWith(`clue:${poi.id}|`)).map((k) => k.slice(`clue:${poi.id}|`.length));
+    if (clues.length > 0) notes[line] = clues.join("\n");
   }
-  return { open, done };
+  return { open, done, ...(Object.keys(notes).length > 0 ? { notes } : {}) };
 }

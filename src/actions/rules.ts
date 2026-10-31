@@ -8,7 +8,7 @@ import { placeVaults } from "./vaults";
 import { hideSpells } from "./spellScrolls";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
 import { chestLock, hasOrdinaryLock } from "../data/locks";
-import { BONES_FIND_CHANCE, BONE_PILE, CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS, RAT_TRAP } from "../data/chest-traps";
+import { BONES_FIND_CHANCE, CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS, RAT_TRAP, SEARCHABLE_DECOR } from "../data/chest-traps";
 import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
 import { allowedIn, isFunctional } from "../data/item-rules";
@@ -229,10 +229,14 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   };
 
   // the runes of the maze bar some of its loops: they throw the party to another place of the dungeon
+  // (36th playtest: the party lands beside a room, not in its middle, where the monsters of the room stand; only a dungeon without such a cell throws it into a middle, and the
+  // group of that middle is dropped, see `landings` below)
   const farCells = (x: number, y: number): { x: number; y: number }[] => {
-    const out: { x: number; y: number }[] = [];
-    for (const a of anchors.byKind.roomCenter) if (Math.abs(a.x - x) + Math.abs(a.y - y) > 14 && a.depth >= 0) out.push(a);
-    return out;
+    const centres = anchors.byKind.roomCenter;
+    const nearCentre = (a: { x: number; y: number }): boolean => centres.some((c) => Math.abs(c.x - a.x) <= 1 && Math.abs(c.y - a.y) <= 1);
+    const far = (list: readonly Anchor[]): Anchor[] => list.filter((a) => Math.abs(a.x - x) + Math.abs(a.y - y) > 14 && a.depth >= 0);
+    const aside = far(anchors.byKind.roomEdge).filter((a) => !nearCentre(a) && map.cells[idx(a.x, a.y)] === CELL.FLOOR);
+    return aside.length > 0 ? aside : far(centres);
   };
   (map.dungeon?.barriers ?? []).forEach((c, i) => {
     const rng = new Rng(derive(mapSeed, "barrier", i));
@@ -288,6 +292,11 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
         }
       : null;
   const quest: QuestResult = questEnv ? placeQuest(questEnv) : {};
+
+  // the cells where a rune, a wrong answer or a portal sets the party down: no group of monsters starts on one of them (36th playtest, point 4; the game moves a monster that
+  // wandered there since)
+  const landings = new Set<number>();
+  for (const act of actions) if ((act.kind === "teleporter" || act.kind === "riddle" || act.kind === "qportal") && (act.params.tx !== 0 || act.params.ty !== 0) && act.params.tx !== undefined) landings.add(idx(Number(act.params.tx), Number(act.params.ty)));
 
   // the Crow's perch is not an action but it is there: its cell is taken, and solid while the Crow sits on it
   for (const site of map.sites ?? []) {
@@ -372,7 +381,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       }
       // a pile of bones hides something one time in five (35th playtest): a few coins, now and then an item, and in one such pile of five a rat (the trap mechanic of the unlocked
       // chests, physical damage); the party finds it when it steps on the pile, which stays a decoration it can walk over
-      if (kind === "decor" && Number(params.item) === BONE_PILE) {
+      if (kind === "decor" && SEARCHABLE_DECOR.includes(Number(params.item))) {
         const boneRng = new Rng(derive(mapSeed, rule.id, i, "bones"));
         if (boneRng.chance(BONES_FIND_CHANCE)) {
           Object.assign(params, { find: 1, level: tier, gold: Math.max(1, tier * 15 + boneRng.range(3, 40)), items: boneRng.chance(300) ? 1 : 0 });
@@ -419,8 +428,17 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
           const themeNames = Object.keys(map.theme.monsterThemes).filter(hasLandMonster);
           monsterIds[0] = pickMonster(local, themeNames[local.int(themeNames.length)] ?? "humanoid", Math.min(5, tier + (tier >= 2 ? 1 : 0))).id;
         }
-        spawns.push({ uid, x: a.x, y: a.y, monsterIds, boss });
-        occupied.add(idx(a.x, a.y));
+        // the party may land on this cell: the group starts on a free cell beside it (never dropped: a boss must stay)
+        let sx = a.x;
+        let sy = a.y;
+        if (landings.has(idx(sx, sy))) {
+          const beside = (Object.keys(FACING_DELTA) as (keyof typeof FACING_DELTA)[]).map((f) => ({ x: a.x + FACING_DELTA[f].dx, y: a.y + FACING_DELTA[f].dy })).find((c) => map.cells[idx(c.x, c.y)] === CELL.FLOOR && !occupied.has(idx(c.x, c.y)) && !landings.has(idx(c.x, c.y)) && !blockedCells.has(idx(c.x, c.y)));
+          if (!beside) return;
+          sx = beside.x;
+          sy = beside.y;
+        }
+        spawns.push({ uid, x: sx, y: sy, monsterIds, boss });
+        occupied.add(idx(sx, sy));
         return;
       }
 

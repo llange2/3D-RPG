@@ -13,9 +13,10 @@ import { buildMinimap } from "./build-minimap";
 import { buildPlaceholderIcons } from "./build-placeholder-icons";
 import { buildItemIcons } from "./build-item-icons";
 import { buildSpellIcons } from "./build-spell-icons";
-import { OLD, OUT, ensureDir, mb, pool, upToDate } from "./lib";
+import { OLD, OUT, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
 
 const TEX = join(OLD, "textures");
+const SOURCES = join(ROOT, "tools", "assets", "sources");
 
 async function toWebp(src: string, out: string, size: number | null, quality = 82, fit: "cover" | "inside" = "inside"): Promise<number> {
   if (upToDate(out, src)) return statSync(out).size;
@@ -29,7 +30,7 @@ async function toWebp(src: string, out: string, size: number | null, quality = 8
 // ---------------------------------------------------------------- world textures
 
 /** Wall, floor, ceiling and door textures of the interior themes; 512 px is plenty at first-person distance. */
-const WORLD_TEXTURES = [
+export const WORLD_TEXTURES = [
   "tex_dungeon_wall", "tex_dungeon_wall_cracked", "tex_dungeon_floor", "tex_dungeon_ceiling", "tex_dungeon_door", "tex_dungeon_door2",
   "tex_fortress_wall", "tex_fortress_floor", "tex_fortress_floor_gate", "tex_fortress_pillar", "tex_fortress_door",
   "tex_city_wall", "tex_city_columns", "tex_city_floor", "tex_city_floor_gate", "tex_city_door",
@@ -78,6 +79,15 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
 
   // the 38 symbols of the map become one sheet (`ui/minimap.webp`), see build-minimap.ts
   add("ui", (await buildMinimap()).bytes);
+
+  // the blank button of the user's (459 x 214, `sources/ui`): the "Select" button of the spell window writes its label on it
+  const buttonSrc = join(SOURCES, "ui", "button_blank2a.png");
+  const buttonOut = join(OUT, "ui", "button_blank.webp");
+  if (!upToDate(buttonOut, buttonSrc)) {
+    ensureDir(buttonOut);
+    await sharp(buttonSrc).webp({ quality: 92, effort: 5 }).toFile(buttonOut);
+  }
+  add("ui", statSync(buttonOut).size);
 
   const effects = ["tex_acid_hit", "tex_fire_hit", "tex_ice_hit", "tex_magic_hit", "tex_physical_hit", "tex_compass", "tex_denied", "tex_gui_levitate", "tex_gui_protect_acid", "tex_gui_protect_fire", "tex_gui_protect_ice", "tex_gui_protect_magic", "gui_health", "gui_mana", "frame", "scroll", "scroll_wide", "cursor", "gui", "gui_mm"];
   await pool(effects, 6, async (name) => {

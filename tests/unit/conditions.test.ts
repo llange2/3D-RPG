@@ -185,7 +185,7 @@ describe("timed conditions (the old GameTimer events)", () => {
     advanceTime(party, 30); // half an hour left
     expect(conditionTitle(c, party.minutes)).toBe("Dies in <1 hour");
     addCondition(c, "Drunk", party.minutes);
-    expect(conditionTitle(c, party.minutes)).toBe("Poisoned, Drunk\nDies in <1 hour");
+    expect(conditionTitle(c, party.minutes)).toBe("Poisoned: Dies in <1 hour\nDrunk");
     expect(conditionClass(c)).toBe("cond-bad");
     expect(deathNote(8 * HOUR + 59)).toBe("Dies in >8 hours");
   });

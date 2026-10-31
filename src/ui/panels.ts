@@ -2,13 +2,14 @@ import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables
 import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
 import { bonusLines, combineItems, isTwoHanded, makeItem, weaponHands, type Hands } from "../sim/items";
-import { SPELL_GRID, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
+import { SPELL_GRID, castBlock, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type BoonKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
 import { portraitImage } from "./avatarFx";
+import { plateButton } from "./buttonArt";
 import { assetPath, clear, h } from "./dom";
-import { conditionClass, conditionTitle } from "./conditionInfo";
+import { conditionClass, conditionTitle, shownCondition } from "./conditionInfo";
 import { thousands } from "../core/format";
 import type { Option, UI } from "./ui";
 
@@ -328,7 +329,7 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
           ...RESISTANCES.flatMap(([key, bonus, label]) => [h("div", { text: label }), h("div", { class: "v", text: `${c[key] + itemBonus(c, bonus) + (c.mods?.boon?.[bonus as BoonKey] ?? 0)}%` })]),
           h("div", { text: "Experience" }), h("div", { class: "v", text: thousands(c.xp) }),
           h("div", { text: "Next level" }), h("div", { class: "v", text: need > 0 ? `${thousands(need)} xp more` : "ready to train" }),
-          h("div", { text: "Condition" }), h("div", { class: `v ${conditionClass(c)}`, text: worstCondition(c), title: conditionTitle(c, party.minutes) }),
+          h("div", { text: "Condition" }), h("div", { class: `v ${conditionClass(c, party.minutes)}`, text: shownCondition(c, party.minutes), title: conditionTitle(c, party.minutes) }),
         ),
       );
       const equip = h("div", { class: "equip-grid" }, ...EQUIP_LAYOUT.map((e) => slotEl(bag, e.slot, e.label)));
@@ -495,6 +496,77 @@ export function quickCastOption(party: Party, quick: QuickCast): Option<SpellCho
     disabled: quick.block !== null,
     apart: true,
   };
+}
+
+/** The spell every hero's column shows before anybody has cast anything: Light. */
+const LIGHT_SPELL = 6;
+
+/**
+ * "Who casts?" (36th playtest, point 5): the portraits of the heroes with magical abilities side by side, under each the blue bar of the spell points as wide as the portrait,
+ * the picture of the spell cast last (greyed out when this hero cannot cast it now; Light while nothing has been cast) and a "Select" button on the user's plate.
+ * A click on the picture repeats that spell with this hero. Resolves with the hero and whether the last spell is to be repeated, or null.
+ */
+export async function pickCaster(ui: UI, party: Party, heroes: number[], aimed: boolean, sound?: (id: number) => void): Promise<{ who: number; repeat: boolean } | null> {
+  await preloadSpellIcons();
+  const last = party.lastCast?.spellId ?? LIGHT_SPELL;
+  return ui.modal<{ who: number; repeat: boolean } | null>(
+    (close) =>
+      h(
+        "div",
+        { class: "parchment caster-pick" },
+        h("h2", { text: "Who casts?" }),
+        h(
+          "div",
+          { class: "caster-row" },
+          ...heroes.map((i) => {
+            const c = party.characters[i]!;
+            const block = castBlock(party, i, last, aimed);
+            const spell = SPELLS[last];
+            const icon = h(
+              "button",
+              {
+                class: `caster-spell${block ? " off" : ""}`,
+                title: `${spell?.title ?? "Spell"}${spell ? ` (${spell.mana} SP)` : ""}${party.lastCast ? " - the spell cast last" : ""}`,
+                onclick: () => (block ? sound?.(9014) : close({ who: i, repeat: true })),
+              },
+              spellPlate(last),
+              isPlaceholderIcon(last) ? h("span", { class: "spell-caption", text: spell?.title ?? "" }) : null,
+            );
+            return h(
+              "div",
+              { class: "caster-col" },
+              portraitImage(c, "portrait caster-portrait"),
+              h("div", { class: "bar sp", title: `${c.sp} / ${c.mana} spell points` }, h("i", { style: `width:${c.mana > 0 ? Math.max(0, Math.min(100, Math.round((c.sp * 100) / c.mana))) : 0}%` })),
+              icon,
+              plateButton("Select", 110, () => close({ who: i, repeat: false })),
+            );
+          }),
+        ),
+        h("div", { class: "buttons" }, h("button", { class: "btn", text: "Back", onclick: () => close(null) })),
+      ),
+    { dismissWith: null },
+  );
+}
+
+/** The portraits of the heroes as buttons (36th playtest, point 15): the pick of who drinks from a chalice, a well or a barrel. No names, no bars; the name is the mouse-over. */
+export function pickHeroPortrait(ui: UI, party: Party, question: string, canPick: (c: Character) => boolean): Promise<number | null> {
+  return ui.modal<number | null>(
+    (close) =>
+      h(
+        "div",
+        { class: "parchment hero-pick" },
+        question ? h("p", { text: question }) : null,
+        h(
+          "div",
+          { class: "caster-row" },
+          ...party.characters.map((c, i) =>
+            h("button", { class: `hero-btn${canPick(c) ? "" : " off"}`, title: c.name, onclick: () => canPick(c) && close(i) }, portraitImage(c, "portrait caster-portrait")),
+          ),
+        ),
+        h("div", { class: "buttons" }, h("button", { class: "btn", text: "Back", onclick: () => close(null) })),
+      ),
+    { dismissWith: null },
+  );
 }
 
 /**

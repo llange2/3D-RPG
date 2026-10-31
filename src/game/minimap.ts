@@ -251,7 +251,7 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
     const dy = myw - my;
     if (Math.abs(dx) > half || Math.abs(dy) > half) continue;
     // a monster on ground the party has not seen would show what lies behind a mountain or a wood
-    // Detect Monster shows them wherever they are; Wizard's Eye shows the ground, not who stands on it
+    // Detect Monster and Wizard's Eye show them wherever they are
     if (!detect && !explored.hasOverworld(m.x, m.y)) continue;
     if (icons) icons.drawSymbol(ctx, "pos2", (dx + half) * s + s * 0.1, (dy + half) * s + s * 0.1, s * 0.8);
     else ctx.fillRect((dx + half) * s + s * 0.2, (dy + half) * s + s * 0.2, s * 0.6, s * 0.6);
@@ -274,6 +274,9 @@ function party(ctx: CanvasRenderingContext2D, cx: number, cy: number, facing: Fa
   icons.drawSymbol(ctx, "pos1", -cell / 2, -cell / 2, cell);
   ctx.restore();
 }
+
+/** Levers, stone heads and gongs are used again and again (their uid in the set only says which way they stand): their question mark never greys out (36th playtest, point 12). */
+const FLIPPING: ReadonlySet<string> = new Set(["lever", "head", "gong"]);
 
 /** A trap the Crow gave away: a diamond in this colour on the floor, so that it cannot be taken for a chest or a door. */
 const TRAP_COLOR = "#ff9a2a";
@@ -339,7 +342,7 @@ export function knownContent(content: MapContent, opened: ReadonlySet<string>, e
 
 /**
  * Draws an interior. `traps` (keys `x,y`) are the traps to mark: the map hides them unless the party has Wizard's Eye and the Crow
- * (see `Game.trapsShown`). `eye`: Wizard's Eye is on, the whole map shows (not the monsters: `detect`, Detect Monster, shows those wherever they are). `icons`: the symbols of the old game; without them the map is coloured squares.
+ * (see `Game.trapsShown`). `eye`: Wizard's Eye is on, the whole map shows. `detect`: Wizard's Eye or Detect Monster, monsters show wherever they are (the game hands over only the monsters in the viewing cone otherwise, `Game.mappedMonsters`). `icons`: the symbols of the old game; without them the map is coloured squares.
  */
 export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, content: MapContent, explored: Explored, opened: Set<string>, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, traps: ReadonlySet<string> = new Set(), view?: MapView, icons?: MinimapIcons | null, eye = false, detect = false): void {
   const ctx = canvas.getContext("2d")!;
@@ -359,7 +362,7 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
   for (const a of content.actions) {
     const symbol = actionSymbol(a, opened);
     // a wall that can be broken is a wall: it keeps its brick picture (the party with the Perceptive talent learns it from the pointer)
-    if (symbol && a.kind !== "breakable_wall") symbolAt.set(`${a.x},${a.y}`, { symbol, used: opened.has(a.uid) && symbol !== "door_open" });
+    if (symbol && a.kind !== "breakable_wall") symbolAt.set(`${a.x},${a.y}`, { symbol, used: opened.has(a.uid) && symbol !== "door_open" && !FLIPPING.has(a.kind) });
     if (a.kind === "legacy") {
       const color = a.legacy ? LEGACY_COLOR[a.legacy.id] : undefined;
       if (color) legacyColor.set(`${a.x},${a.y}`, color);

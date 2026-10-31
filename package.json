@@ -18,6 +18,7 @@
     "assets:textures": "tsx tools/assets/build-textures.ts",
     "assets:models": "tsx tools/assets/build-models.ts",
     "assets:originals": "tsx tools/assets/build-models.ts --original",
+    "assets:hd": "tsx tools/assets/build-hd-textures.ts",
     "assets:audio": "tsx tools/assets/build-audio.ts",
     "assets:build": "tsx tools/assets/build.ts",
     "golden:update": "tsx tools/dev/update-golden.ts",

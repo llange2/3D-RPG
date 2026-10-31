@@ -75,6 +75,9 @@ const QUEST_MODELS: ReadonlySet<string> = new Set(Object.values(QUEST_PROP).map(
 /** The 3D dungeon floor as bright as the flat one at the same torch distance (measured: at 3 it came out 1.75 times brighter). */
 const FLOOR_BOOST = 1.7;
 
+/** How much of its own texture the town portal gives off, on top of the light that falls on it. */
+const PORTAL_SHINE = 0.45;
+
 /** Opacity of the see-through attack effects (the old game gave the fireball 0.7 and the poison cloud 0.3). */
 const PROJECTILE_ALPHA: Record<string, number> = { proj_fire: 0.85, proj_poison: 0.6 };
 
@@ -197,6 +200,12 @@ export class PropRenderer {
             std.emissiveColor = Color3.White();
             std.diffuseTexture.level = QUEST_GLOW; // a little over the painted colour: the dark keys (blue, black) must still read from three cells away
           } else std.emissiveColor = std.diffuseColor; // a model painted by its material colour, not by a texture
+        }
+        // the town portal (item 3) glows from within (36th playtest, point 16): its blue light reached three cells, but the stone of the frame stayed dark. The painted
+        // texture also shines on its own, so it reads from afar and under the torch alike
+        if (key === "ci_3" && std.diffuseTexture) {
+          std.emissiveTexture = std.diffuseTexture;
+          std.emissiveColor = new Color3(PORTAL_SHINE, PORTAL_SHINE, PORTAL_SHINE);
         }
         mesh.material = std;
         // the strip of the town's columns (720 x 5360) is drawn twice as wide as the column is round: squeezed to half its width (the user's wish)
