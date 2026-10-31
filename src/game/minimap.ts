@@ -4,6 +4,7 @@ import { CELL, type Facing, type InteriorMap } from "../interiors/types";
 import { MAP_ITEMS, talentInfo } from "../data/tables";
 import { BIOME, DECO, GROUND, poiBounds, wrapDelta, type Poi, type TileInfo } from "../world/types";
 import type { World } from "../world/world";
+import { landmarkBoon, landmarkName } from "./landmarkBoons";
 import { placeGroundOf } from "./minimapIcons";
 import type { DrawingName, GroundName, MinimapIcons, PlaceGround, PlaceName, SymbolName } from "./minimapIcons";
 import type { Explored } from "./state";
@@ -117,6 +118,8 @@ export interface MapEvent {
   x: number;
   y: number;
   label: string;
+  /** The event is over for the party (the talent of a caravan is bought): the map draws it grey. */
+  done?: boolean;
 }
 
 /** The painted symbol of each kind of place: a cave and a dungeon entrance share one, a pyramid is a dungeon of size 3. */
@@ -157,7 +160,7 @@ function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t
       return;
     default:
       if (t.deco === DECO.TREE) icons.drawGround(ctx, ground, t.biome === BIOME.DESERT ? "palms" : "trees", x, y, w);
-      else if (t.deco === DECO.LANDMARK) icons.drawSymbol(ctx, "info", x, y, w);
+      // (a landmark is plain ground here: only the magic ones are marked, with the symbol of an event, by `drawOverworldMap`)
       else icons.drawGround(ctx, ground, undefined, x, y, w);
   }
 }
@@ -193,6 +196,8 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
       const t = world.tile(x, y);
       if (icons) {
         drawOverworldTile(ctx, icons, t, (dx + half) * s, (dy + half) * s, Math.ceil(s));
+        // a well, fountain or stone head with a boon is something to meet; the plain ones (and the huts) are no event
+        if (t.deco === DECO.LANDMARK && landmarkBoon(world, x, y)) icons.drawPlace(ctx, "event", placeGroundAt(world, x, y), (dx + half) * s, (dy + half) * s, Math.ceil(s));
         if (t.poiId && !places.has(t.poiId)) {
           const poi = world.poiById(t.poiId);
           if (poi) places.set(t.poiId, poi);
@@ -200,6 +205,13 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
       } else {
         ctx.fillStyle = tileColor(t);
         ctx.fillRect((dx + half) * s, (dy + half) * s, Math.ceil(s), Math.ceil(s));
+        if (t.deco === DECO.LANDMARK && landmarkBoon(world, x, y)) {
+          ctx.fillStyle = "#ffd54a";
+          ctx.font = `bold ${Math.ceil(s)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("?", (dx + half) * s + s / 2, (dy + half) * s + s / 2);
+        }
       }
     }
   }
@@ -222,9 +234,9 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
     if (!revealAll && !explored.hasOverworld(ev.x, ev.y)) continue;
     const left = (dx + half) * s;
     const top = (dy + half) * s;
-    if (icons) icons.drawPlace(ctx, "event", placeGroundAt(world, ev.x, ev.y), left, top, Math.ceil(s));
+    if (icons) icons.drawPlace(ctx, "event", placeGroundAt(world, ev.x, ev.y), left, top, Math.ceil(s), Math.ceil(s), ev.done === true);
     else {
-      ctx.fillStyle = "#ffd54a";
+      ctx.fillStyle = ev.done ? "#777" : "#ffd54a";
       ctx.font = `bold ${Math.ceil(s)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -284,9 +296,10 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "service": return typeof a.params.service === "string" ? (SERVICE_SYMBOL[a.params.service] ?? "inn") : "inn";
     case "talent": case "work": case "king": case "skullmiser": return "persona";
     case "portal": return "teleporter_city";
-    case "lore": return typeof a.params.persona === "number" ? "persona" : null;
+    // a person is a person; a statue or computer that tells a part of a riddle (quest 4, 6, the castles, the spaceship) is something to find (35th playtest)
+    case "lore": return typeof a.params.persona === "number" ? "persona" : typeof a.params.item === "number" && typeof a.params.text === "string" ? "event" : null;
     case "shrine": case "fountain": return "event";
-    case "riddle": case "gong": case "lever": case "head": case "chalice": case "machine": return "info";
+    case "riddle": case "gong": case "lever": case "head": case "chalice": case "machine": return "event";
     case "qportal": return "teleporter_city";
     default: return null;
   }
@@ -451,8 +464,7 @@ const MONSTER_COLOR = "#ff3a2a";
 export const OVERWORLD_LEGEND: LegendEntry[] = [
   { color: BIOME_COLOR[BIOME.MEADOW]!, label: "Meadow", icon: { ground: "grass" } },
   { color: "#1f4a1c", label: "Trees", icon: { ground: "grass", drawing: "trees" } },
-  { color: "#a07a4a", label: "Landmark (well, stone head)", icon: { symbol: "info" } },
-  { color: "#ffd54a", label: "Something to meet (mascot, monster hut, caravan)", icon: { place: "event", ground: "meadow" } },
+  { color: "#ffd54a", label: "Something to meet (mascot, monster hut, caravan, magic well, fountain or stone head)", icon: { place: "event", ground: "meadow" } },
   { color: BIOME_COLOR[BIOME.DESERT]!, label: "Desert (palms)", icon: { ground: "desert", drawing: "palms" } },
   { color: BIOME_COLOR[BIOME.SNOW]!, label: "Snow", icon: { ground: "snow" } },
   { color: BIOME_COLOR[BIOME.SWAMP]!, label: "Swamp", icon: { ground: "swamp" } },
@@ -481,7 +493,7 @@ const INTERIOR_LEGEND: (LegendEntry & { when: (map: InteriorMap, content: MapCon
   { color: "#4a4238", label: "Ground that cannot be entered", icon: { symbol: "unknown" }, when: (m) => m.cells.includes(CELL.LOW) },
   { color: "#7ed0ff", label: "Way out or way to another place", icon: { symbol: "exit" }, when: () => true },
   { color: "#7ed0ff", label: "Portal to the other towns", icon: { symbol: "teleporter_city" }, when: (_, c) => c.actions.some((a) => a.kind === "portal") },
-  { color: "#ffd54a", label: "Chest, fountain or something to find", icon: { symbol: "event" }, when: (_, c) => c.actions.some((a) => a.kind === "treasure" || a.kind === "fountain" || LEGACY_COLOR[a.legacy?.id ?? -1] === "#ffd54a") },
+  { color: "#ffd54a", label: "Chest, fountain, statue or something to find", icon: { symbol: "event" }, when: (_, c) => c.actions.some((a) => a.kind === "treasure" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || a.kind === "head" || a.kind === "chalice" || a.kind === "machine" || (a.kind === "lore" && typeof a.params.item === "number" && typeof a.params.text === "string") || LEGACY_COLOR[a.legacy?.id ?? -1] === "#ffd54a") },
   { color: "#c9884a", label: "Door or gate", icon: { symbol: "door" }, when: (_, c) => c.actions.some((a) => a.kind === "door" || LEGACY_COLOR[a.legacy?.id ?? -1] === "#c9884a") },
   ...(["inn", "training", "tavern", "smith", "temple", "bank", "guild"] as const).map((service, i) => ({
     color: "#ffb0ff",
@@ -565,7 +577,7 @@ export function describeOverworldTile(world: World, explored: Explored, x: numbe
     case GROUND.LAVA_POOL: return "Lava";
   }
   if (t.deco === 1) return "Trees";
-  if (t.deco === 5) return "Well, hut or other landmark";
+  if (t.deco === DECO.LANDMARK) return landmarkName(world, x, y);
   if (t.dirt) return "Dirt";
   return ["Meadow", "Forest floor", "Desert", "Snow", "Swamp", "Dirt", "Shore"][t.biome] ?? "Open ground";
 }
@@ -598,6 +610,11 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "gong": return `Gong${used}`;
         case "lever": return "Lever";
         case "head": return "Stone head";
+        case "lore":
+          if (typeof a.params.persona === "number") return "Person";
+          // a statue or computer that tells a part of a riddle
+          if (typeof a.params.item === "number" && typeof a.params.text === "string") return MAP_ITEMS[a.params.item]?.name.trim() || "Statue";
+          break;
         case "chalice": return `Chalice${used}`;
         case "rune": return "Magic runes";
         case "machine": return "Machine of the Quatloo coins";

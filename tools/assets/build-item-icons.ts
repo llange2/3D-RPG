@@ -30,7 +30,8 @@ export async function buildItemIcons(): Promise<{ files: number; bytes: number }
   const sheetOut = join(OUT, "ui", "items.webp");
   const registerOut = join(OUT, "ui", "items.json");
   const names = readdirSync(TEX)
-    .filter((n) => n.startsWith("item_") && /\.(png|jpg)$/.test(n))
+    // (the quest items without a prefix of their own too: the Quatloo coin, the pearl and the artifacts have `quest_*.png`, and a coin in the backpack showed no picture, 35th playtest)
+    .filter((n) => (n.startsWith("item_") || n.startsWith("quest_")) && /\.(png|jpg)$/.test(n))
     .sort();
   const sources = names.map((n) => join(TEX, n));
   if (upToDate(sheetOut, ...sources, import.meta.filename) && upToDate(registerOut, ...sources, import.meta.filename)) return { files: 2, bytes: statSync(sheetOut).size + statSync(registerOut).size };

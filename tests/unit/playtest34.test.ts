@@ -3,7 +3,7 @@ import { buildMapContent, validateContent } from "../../src/actions";
 import { resolveAction, type ActionContext, type Effect } from "../../src/actions/handlers";
 import type { ActionInstance, MapContent } from "../../src/actions/types";
 import { CHEST_TRAP_CHANCE, dodgeChance } from "../../src/data/chest-traps";
-import { BOOKSHELVES, SPELL_COPIES, spellTier, spellsOfTier } from "../../src/data/spell-loot";
+import { BOOKSHELVES, SPELL_COPIES, isStartingSpell, spellTier, spellsOfTier } from "../../src/data/spell-loot";
 import { CONSTANTS, SPELLS } from "../../src/data/tables";
 import { generateInterior, planDungeon } from "../../src/interiors";
 import { createDefaultParty } from "../../src/sim/party";
@@ -31,7 +31,9 @@ describe("34th playtest: spell scrolls as loot", () => {
   it("sorts every spell into a level of places by its spell level (1-5, 6-10, 11-15, 16-20, from 21)", () => {
     expect([1, 5, 6, 10, 11, 15, 16, 20, 21, 25].map(spellTier)).toEqual([1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
     const all = [1, 2, 3, 4, 5].flatMap(spellsOfTier);
-    expect(all.length).toBe(Object.keys(SPELLS).length);
+    // (35th playtest: the spells every hero of a school starts with are no scrolls, nobody could learn them)
+    expect(all.length).toBe(Object.keys(SPELLS).length - Object.values(SPELLS).filter((s) => isStartingSpell(s.id)).length);
+    expect(all.some((id) => isStartingSpell(id))).toBe(false);
     expect(new Set(all).size).toBe(all.length);
   });
 
@@ -49,10 +51,10 @@ describe("34th playtest: spell scrolls as loot", () => {
         const tiers = new Set(holders(world).filter((p) => world.dungeonRef(p.id)?.klass !== "C").map((p) => p.tier));
         for (const spell of Object.values(SPELLS)) {
           const at = where.get(spell.id) ?? [];
-          expect(at.length, `${seed} ${size}: spell ${spell.id}`).toBe(SPELL_COPIES);
+          expect(at.length, `${seed} ${size}: spell ${spell.id}`).toBe(isStartingSpell(spell.id) ? 0 : SPELL_COPIES);
           // its own level, if the world has places of that level (a small world can lack one: the nearest level lends its places)
           if (tiers.has(spellTier(spell.level))) for (const poi of at) expect(poi.tier, `${seed} ${size}: spell ${spell.id} in ${poi.id}`).toBe(spellTier(spell.level));
-          if (holders(world).filter((p) => p.tier === spellTier(spell.level)).length > 2) expect(new Set(at.map((p) => p.id)).size, `${seed} ${size}: spell ${spell.id}`).toBe(SPELL_COPIES);
+          if (at.length > 0 && holders(world).filter((p) => p.tier === spellTier(spell.level)).length > 2) expect(new Set(at.map((p) => p.id)).size, `${seed} ${size}: spell ${spell.id}`).toBe(SPELL_COPIES);
         }
       }
     });
@@ -84,7 +86,7 @@ describe("34th playtest: spell scrolls as loot", () => {
       checked++;
     }
     expect(checked).toBeGreaterThan(20);
-    for (const spell of Object.values(SPELLS)) expect(found.get(spell.id) ?? 0, `spell ${spell.id}`).toBe(SPELL_COPIES);
+    for (const spell of Object.values(SPELLS)) expect(found.get(spell.id) ?? 0, `spell ${spell.id}`).toBe(isStartingSpell(spell.id) ? 0 : SPELL_COPIES);
     expect(shelves).toBeGreaterThan(0);
   });
 

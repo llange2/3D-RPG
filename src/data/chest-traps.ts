@@ -77,6 +77,30 @@ const LINES: Record<ChestTrapElement, ElementLines> = {
   },
 };
 
+/**
+ * The bone pile (old item 70, 35th playtest): a pile of bones that the party can walk over. One in five hides something (a few coins, now and then an item), and one
+ * such pile in five has a rat in it: the same trap mechanic as the unlocked chests (a hero chosen by chance, a dodge by luck), but the damage is always physical.
+ */
+export const BONE_PILE = 70;
+export const BONES_FIND_CHANCE = 200; // permille
+/** The `trapped` value of a bone pile's rat, in place of an element. */
+export const RAT_TRAP = "physical";
+
+/** The first sentence of the rat: it jumps out of the bones, whether it hits or not. */
+export function ratOpening(hero: TrapHero, rng: Rng): string {
+  return fill(pick(rng, ["As {hero} rummages through the bones, a fat rat shoots out of the pile.", "The moment {hero} pokes into the bones, a rat leaps out of a skull.", "When {hero} turns over a rib, a hungry rat darts out from under it."]), hero);
+}
+
+/** The second sentence when the rat bites. */
+export function ratHit(hero: TrapHero, damage: number, rng: Rng): string {
+  return fill(pick(rng, ["It bites {hero} in {his} hand and deals {n} damage.", "The rat sinks its teeth into {hero's} leg and deals {n} damage.", "{hero} gets bitten in the finger and takes {n} damage."]), hero, damage);
+}
+
+/** The second sentence when luck saves the hero: the rat tries, and misses. */
+export function ratMiss(hero: TrapHero, rng: Rng): string {
+  return fill(pick(rng, ["{hero} was lucky, as the rat's teeth snap shut on thin air.", "The rat tries to bite {hero}, but {he} pulls {his} hand back just in time.", "{hero} jumps aside, and the rat scurries away squeaking."]), hero);
+}
+
 /** The first sentence of the trap, the same whether it hits or not. */
 export function trapOpening(chest: number, element: ChestTrapElement, hero: TrapHero, rng: Rng): string {
   return fill(`${opening(chest, rng)} ${pick(rng, LINES[element].rises)}`, hero);

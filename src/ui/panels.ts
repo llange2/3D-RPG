@@ -5,7 +5,7 @@ import { bonusLines, combineItems, isTwoHanded, makeItem, weaponHands, type Hand
 import { SPELL_GRID, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
-import { BAG_SLOTS, type Attribute, type BonusKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
+import { BAG_SLOTS, type Attribute, type BonusKey, type BoonKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
 import { portraitImage } from "./avatarFx";
 import { assetPath, clear, h } from "./dom";
 import { conditionClass, conditionTitle } from "./conditionInfo";
@@ -155,6 +155,7 @@ interface BagOwner {
  * for the mascot (with its own bag when it is the Donkey). Click to select, click a target slot to move or equip.
  */
 export function openInventory(ui: UI, party: Party, start: CharacterView, hooks: InventoryHooks): Promise<void> {
+  let removeKeys = (): void => undefined;
   return ui.panel((close, root) => {
     let view: CharacterView = typeof start === "number" ? Math.max(0, Math.min(start, party.characters.length - 1)) : start;
     let selected: string | null = null; // slot of the selected item in the bag that is on screen
@@ -324,7 +325,7 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
           ...attrRows,
           h("div", { text: "Armor" }), h("div", { class: "v", text: String(armor(c) + adj.bonusArmor) }),
           h("div", { text: "Melee damage" }), h("div", { class: "v", text: dmax > 0 ? `${dmin}-${dmax}` : "bare hands" }),
-          ...RESISTANCES.flatMap(([key, bonus, label]) => [h("div", { text: label }), h("div", { class: "v", text: `${c[key] + itemBonus(c, bonus)}%` })]),
+          ...RESISTANCES.flatMap(([key, bonus, label]) => [h("div", { text: label }), h("div", { class: "v", text: `${c[key] + itemBonus(c, bonus) + (c.mods?.boon?.[bonus as BoonKey] ?? 0)}%` })]),
           h("div", { text: "Experience" }), h("div", { class: "v", text: thousands(c.xp) }),
           h("div", { text: "Next level" }), h("div", { class: "v", text: need > 0 ? `${thousands(need)} xp more` : "ready to train" }),
           h("div", { text: "Condition" }), h("div", { class: `v ${conditionClass(c)}`, text: worstCondition(c), title: conditionTitle(c, party.minutes) }),
@@ -440,8 +441,24 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       render();
     };
 
+    // the keys that open the screen also switch inside it (35th playtest): 1 to 4 the heroes, 5 the mascot, T the party's talents
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const n = Number(e.key);
+      let next: CharacterView | null = null;
+      if (e.key.length === 1 && n >= 1 && n <= party.characters.length) next = n - 1;
+      else if (e.key === "5") next = "mascot";
+      else if (e.key === "t" || e.key === "T") next = "perks";
+      if (next === null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (next !== view) go(next);
+    };
+    document.addEventListener("keydown", onKey, true);
+    removeKeys = () => document.removeEventListener("keydown", onKey, true);
+
     render();
-  });
+  }).finally(() => removeKeys());
 }
 
 export interface SpellChoice {

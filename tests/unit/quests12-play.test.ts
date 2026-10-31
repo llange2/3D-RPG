@@ -86,7 +86,9 @@ describe("quest 3: the gongs", () => {
     expect(opensEnd(use(rune))).toBe(false);
     gongs.forEach((g, i) => {
       const out = use(g);
-      expect(out.consumed).toBe(true);
+      // (a gong is struck again and again since the 35th playtest: it is done by its uid in the set, not by being consumed)
+      expect(out.consumed).toBe(false);
+      expect(out.state?.add).toContain(g.uid);
       expect(out.effects.some((e) => e.type === "ambush")).toBe(true);
       if (i < gongs.length - 1) expect(opensEnd(use(rune))).toBe(false);
     });

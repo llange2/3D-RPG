@@ -161,6 +161,11 @@ export interface DungeonRef {
    * gives way, or `isolated` (a pocket of its own that only a teleport reaches). `cx`/`cy` is its middle.
    */
   endRoom?: { x: number; y: number; w: number; h: number; cx: number; cy: number; seal?: { x: number; y: number }; isolated: boolean };
+  /**
+   * The treasure chambers behind brittle walls (35th playtest): 0 to 3 small pockets of rock, each with a wall cell (`seal`) that looks like any other wall and gives way for a party
+   * with the Perceptive talent. The chest in it (twice the loot of an ordinary one) and, one time in ten, points of an attribute or a resistance are placed by `actions/vaults.ts`.
+   */
+  vaults?: { x: number; y: number; w: number; h: number; cx: number; cy: number; seal: { x: number; y: number } }[];
   /** Cells where a rune bars the way (the maze of dungeon_3): the party is thrown to another place, but the maze is whole without them. */
   barriers?: { x: number; y: number }[];
   /** The room the layout set aside for the quest: the entrance room of quest 1 (the field of statues) or the hall of quest 2 (the row of heads). */

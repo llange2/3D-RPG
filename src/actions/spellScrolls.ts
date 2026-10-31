@@ -14,7 +14,9 @@ export function hideSpells(map: InteriorMap, actions: ActionInstance[], spells: 
   const machines = map.dungeon?.machines;
   const inRoom = (a: ActionInstance, r?: { x: number; y: number; w: number; h: number }) => !!r && a.x >= r.x && a.y >= r.y && a.x < r.x + r.w && a.y < r.y + r.h;
   const holds = (a: ActionInstance): boolean => a.kind === "treasure" && typeof a.params.quest !== "string" && a.params.bonus === undefined && a.params.lock === undefined;
-  let containers = actions.filter((a) => holds(a) && !inRoom(a, end) && !inRoom(a, machines) && (!onlyAlarm || a.params.warn === "alarm"));
+  // (the treasure chambers behind brittle walls hold none: a scroll that only a party with the Perceptive talent can reach would be lost to the others)
+  const vaults = map.dungeon?.vaults ?? [];
+  let containers = actions.filter((a) => holds(a) && !inRoom(a, end) && !inRoom(a, machines) && !vaults.some((v) => inRoom(a, v)) && (!onlyAlarm || a.params.warn === "alarm"));
   if (containers.length === 0 && !onlyAlarm) containers = actions.filter((a) => holds(a) && inRoom(a, end));
   if (containers.length === 0) return;
   const rng = new Rng(derive(seed, "hide-spells"));

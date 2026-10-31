@@ -111,5 +111,8 @@
  * 33 = thievery locks: an ordinary chest carries a `difficulty` by tier (1 / 9 / 23 / 42 / 83, `data/locks.ts`), the chests of the castle too, and the king's chests ask 2 / 13 / 33 / 60 / 119 instead of tier + 1.
  * 34 = 34th playtest: every spell lies exactly twice in the world as a scroll (`planSpellLoot`, `scrolls` on the containers of caves, dungeons and castles of the spell's level), the
  * bookshelves (items 75 and 97) are containers, a chest without a lock springs a trap one time in five (`trapped`, `trapDamage`, `trapLevel`), the end rooms hand out no random scrolls any more.
+ * 35 = 35th playtest: 0 to 3 treasure chambers behind brittle walls in every cave and dungeon (`DungeonRef.vaults`, `carveVaults`, `actions/vaults.ts`: a chest with twice the loot, one time in
+ * ten points of an attribute or a resistance of the level below), a pile of bones hides something one time in five (`find`, a rat one time in five of those), the maze (dungeon_3) has ten
+ * more groups of monsters (`MAZE_GROUPS`), Pandora's box is no starting spell and no scroll of a starting spell lies in the world (`isStartingSpell`).
  */
-export const GEN_VERSION = 34;
+export const GEN_VERSION = 35;

@@ -53,6 +53,13 @@ export function computeAnchors(map: InteriorMap, topo: Topology): AnchorSet {
     for (let y = end.y - 1; y <= end.y + end.h; y++) for (let x = end.x - 1; x <= end.x + end.w; x++) protectedCells.add(idx(x, y));
   }
 
+  // so is a treasure chamber behind a brittle wall (35th playtest), and the cell in front of its wall where the party stands to bump it (the generator keeps it away from the middle of a room)
+  for (const v of map.dungeon?.vaults ?? []) {
+    for (let y = v.y - 1; y <= v.y + v.h; y++) for (let x = v.x - 1; x <= v.x + v.w; x++) protectedCells.add(idx(x, y));
+    const inside = { x: Math.min(v.x + v.w - 1, Math.max(v.x, v.seal.x)), y: Math.min(v.y + v.h - 1, Math.max(v.y, v.seal.y)) };
+    protectedCells.add(idx(v.seal.x + (v.seal.x - inside.x), v.seal.y + (v.seal.y - inside.y)));
+  }
+
   // so is the room of the machines of the Quatloo coins
   const machines = map.dungeon?.machines;
   if (machines) {

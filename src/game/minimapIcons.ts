@@ -126,9 +126,20 @@ export class MinimapIcons {
   }
 
   /** Draws a painted tile of a place (or the question mark of an event) on `ground` into a rectangle; a place of 2 x 2 tiles is one symbol over four. */
-  drawPlace(ctx: CanvasRenderingContext2D, name: PlaceName, ground: PlaceGround, x: number, y: number, w: number, h = w): void {
+  drawPlace(ctx: CanvasRenderingContext2D, name: PlaceName, ground: PlaceGround, x: number, y: number, w: number, h = w, dimmed = false): void {
     const at = this.source(`${name}:${ground}`);
+    if (!dimmed) {
+      ctx.drawImage(this.sheet, at.x, at.y, this.cell, this.cell, x, y, w, h);
+      return;
+    }
+    // something that has done its work (a talent the party has bought) is drawn grey and faint
+    const filter = ctx.filter;
+    const alpha = ctx.globalAlpha;
+    ctx.filter = "grayscale(1)";
+    ctx.globalAlpha = alpha * 0.55;
     ctx.drawImage(this.sheet, at.x, at.y, this.cell, this.cell, x, y, w, h);
+    ctx.filter = filter;
+    ctx.globalAlpha = alpha;
   }
 
   /** A symbol, a painted place or a ground as a small picture for the legend (a data URL). */

@@ -47,6 +47,8 @@ export function analyzeTopology(map: InteriorMap): Topology {
   // so is the end room of a quest: behind its seal, or (a pocket in the rock that a teleport reaches) a second place the search starts from
   const end = map.dungeon?.endRoom;
   if (end?.seal) hidden.add(end.seal.y * w + end.seal.x);
+  // and the treasure chambers behind brittle walls
+  for (const v of map.dungeon?.vaults ?? []) hidden.add(v.seal.y * w + v.seal.x);
   const start = map.spawn.y * w + map.spawn.x;
   depth[start] = 0;
   queue[tail++] = start;
