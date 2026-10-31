@@ -835,6 +835,8 @@ export class Game {
     const def = monsterById(m.defId);
     const p = this.worldPos(m.x, m.y);
     if (this.mode === "overworld" && def.terrain === "water") p.y = -0.7;
+    // on the 3D ground the plateau of the tile lies above the plane: a land monster stands on it, not in it (Wild Fungus sank while it bobbed)
+    else if (this.mode === "overworld") p.y += groundPropLift();
     return p;
   }
 
@@ -1011,7 +1013,9 @@ export class Game {
     const piles = this.lootHere().filter((p) => !this.lootHeld.has(this.lootKey(p.x, p.y)));
     const shown = piles.map((p) => {
       const at = this.nearestTo(p.x, p.y);
-      return { key: this.lootKey(p.x, p.y), ...this.worldPos(at.x, at.y) };
+      const w = this.worldPos(at.x, at.y);
+      // a pile lies on the 3D ground like any prop (`groundPropLift`), not in it
+      return { key: this.lootKey(p.x, p.y), ...w, y: w.y + (this.mode === "overworld" ? groundPropLift() : 0) };
     });
     this.props.setInstances(
       this.lootOwner,
@@ -3749,8 +3753,8 @@ export class Game {
         { label: "Save game", value: "save" },
         { label: "Load game", value: "load" },
         { label: "Copy seed link", value: "link" },
-        { label: "Options", value: "options", note: "graphics, sound" },
-        ...(DEBUG_MENU ? [{ label: "Debug", value: "debug", note: "cheats for testing" }] : []),
+        { label: "Options", value: "options" },
+        ...(DEBUG_MENU ? [{ label: "Debug", value: "debug" }] : []),
         { label: "Back to title", value: "title" },
       ]);
       if (choice === "debug") {
@@ -3791,9 +3795,9 @@ export class Game {
       const choice = await this.ui.choose("Debug", "Cheats for testing. God mode ends with the game, the rest stays.", [
         { label: `God mode: ${cheats.god ? "on" : "off"}`, value: "god", note: "no damage, endless food" },
         { label: `+${DEBUG_LEVELS} Levels`, value: "levels", note: "each hero" },
-        { label: "+100k Gold", value: "gold" },
+        { label: "+100k Gold", value: "gold", note: "for the party" },
         { label: "All spells", value: "spells", note: "of each hero's school" },
-        { label: "All talents", value: "talents" },
+        { label: "All talents", value: "talents", note: "for each hero" },
         { label: "Reveal map", value: "map", note: this.mode === "overworld" ? (this.state.campaign ? "150 tiles around" : "the whole world") : "this level" },
         { label: "Identify", value: "identify", note: this.mode === "overworld" ? "the nearest place" : "this place" },
         ...(this.state.campaign ? [] : [{ label: "Teleport to Level", value: "teleport", note: "any town, cave, dungeon or castle" }]),
@@ -4013,6 +4017,14 @@ export class Game {
       this.caravanShown = "";
       this.hutShown = "";
       this.mascotShown = "";
+      if (this.mode === "overworld") {
+        // monsters and loot stand on the ground too: put them at the new height
+        for (const m of this.enc.monsters) {
+          const p = this.monsterWorld(m);
+          this.monsters.place(m.uid, p.x, p.y, p.z);
+        }
+        this.renderLoot();
+      }
       if (this.chunks && this.mode === "overworld") {
         this.chunks.rebuild();
         this.chunks.update(this.player.tx, this.player.ty);

@@ -15,7 +15,7 @@ import { equipmentModel } from "../data/equipment";
 import { MONSTERS } from "../data/tables";
 import { assetUrl, type MonsterModelInfo, type StaticModelInfo } from "./assets";
 import { GRIP_TWEAK, GRIP_Y, holdInHand, type Hand } from "./equipment";
-import { floatY } from "./itemProps";
+import { FLOAT_AMPLITUDE, floatY } from "./itemProps";
 import { toStandardMaterial } from "./props";
 
 const ATTACK_NAMES = ["Charged_Upward_Slash", "Left_Slash", "Axe_Spin_Attack", "Archery_Shot_1", "mage_soell_cast_3", "mage_soell_cast_4", "Charged_Spell_Cast_1", "Sweeping_Kick"];
@@ -459,7 +459,8 @@ export class MonsterRenderer {
           this.playIdle(v);
         }
       } else if (!v.animated && v.dying === null && !v.phased) {
-        v.holder.position.y = v.to.y + floatY(this.time, v.bobSeed);
+        // one that stands on the ground rises from it and sinks back onto it; only a flyer swings around its height (else the feet went into the floor, Wild Fungus on the 3D ground)
+        v.holder.position.y = v.to.y + floatY(this.time, v.bobSeed) + (v.hovers ? 0 : FLOAT_AMPLITUDE);
       }
       if (v.attackUntil > 0 && this.time > v.attackUntil && v.dying === null && !v.phased) {
         v.attackUntil = 0;
