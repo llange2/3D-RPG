@@ -215,6 +215,7 @@ export class UI {
       if (e.kind === "protection" && e.element) icons.set(protectionEffect(e.element), `Protection from ${e.element}`);
       else if (e.kind === "levitate") icons.set("gui_levitate", "Levitate");
       else if (e.kind === "power_shield") icons.set("gui_power_shield", "Power Shield: a tenth less damage");
+      else if (e.kind === "wizard_eye") icons.set("gui_wizard_eye", "Wizard's Eye: the whole map and every monster show");
     }
     this.status.replaceChildren(...[...icons].map(([name, title]) => h("img", { src: assetPath(`ui/tex_${name}.webp`), title, alt: title })));
   }

@@ -8,7 +8,7 @@ import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
 import { attr, canAct, canBeHealed, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
-import { addCondition } from "../sim/conditions";
+import { addCondition, removeCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
 import { activeCharacters, addXp, carriedItems, freeSlots, giveItem, grantTalent, hasEffect, protectionLevel, takeOne } from "../sim/party";
 import type { Attribute, Character, Condition, Item, Party } from "../sim/types";
@@ -79,6 +79,56 @@ export interface ActionContext {
   tier: number;
   /** True when a fountain was already used today. */
   usedToday?: boolean;
+  /** Where a brittle wall lies from the party's point of view, for its question (the party may stand beside it after a jump, not only before it). */
+  wallSide?: WallSide;
+}
+
+export type WallSide = "front" | "side" | "behind";
+
+/** What the healing fountain of a first-tier town cures besides the hit points and the mana (38th playtest, point 5). */
+export const FOUNTAIN_CURES: readonly Condition[] = ["Poisoned", "Diseased", "Crazy", "Unconscious", "Sleeping", "Weak"];
+/** The highest level of a hero the fountain still helps ("Heal the weak"). */
+export const FOUNTAIN_MAX_LEVEL = 10;
+
+/**
+ * The healing fountain: every hero up to level 10 who is hurt, out of mana or afflicted gets everything back, once a day. The stronger ones
+ * get nothing, and the fountain says why. A drink that helped nobody does not count for the day, so the party can come back when somebody needs it.
+ */
+function healingFountain(party: Party, effects: Effect[]): ActionOutcome {
+  const strong: string[] = [];
+  const healed: string[] = [];
+  for (const [i, c] of party.characters.entries()) {
+    if (!canBeHealed(c)) continue;
+    if (c.level > FOUNTAIN_MAX_LEVEL) {
+      strong.push(c.name);
+      continue;
+    }
+    const cures = FOUNTAIN_CURES.filter((cond) => c.conditions.includes(cond));
+    if (c.hp >= c.health && c.sp >= c.mana && cures.length === 0) continue;
+    const gained = healHp(c, c.health);
+    c.sp = Math.max(c.sp, c.mana);
+    for (const cond of cures) removeCondition(c, cond);
+    healed.push(c.name);
+    effects.push({ type: "heal", character: i, amount: gained });
+  }
+  const plaque = "The plaque on the fountain, 'Heal the weak', hints that you have become too powerful to benefit from it.";
+  if (healed.length === 0 && strong.length > 0) {
+    effects.push({ type: "text", text: `You drink the water in anticipation of healing, but nothing happens. ${plaque}` });
+    return { effects, consumed: false };
+  }
+  const refreshed = "You drink the cool water. The party feels refreshed.";
+  if (healed.length === 0) {
+    effects.push({ type: "text", text: "The water is cool and clear, but nobody needs it right now." });
+    return { effects, consumed: false };
+  }
+  effects.push({ type: "text", text: strong.length > 0 ? `${refreshed} ${strong.join(" and ")}, however, feel nothing: the plaque on the fountain, 'Heal the weak', hints that they have become too powerful to benefit from it.` : refreshed });
+  return { effects, consumed: false, usedToday: true };
+}
+
+/** The old question of the brittle wall (`TEXTS[1]`, "The wall in front of you looks brittle.") with the wall where it really is. */
+export function brittleQuestion(side: WallSide | undefined): string {
+  const where = side === "side" ? "next to you" : side === "behind" ? "behind you" : "in front of you";
+  return TEXTS[1]!.replace("in front of you", where);
 }
 
 export interface ActionOutcome {
@@ -750,6 +800,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         effects.push({ type: "text", text: "The basin is dry. It fills again with the next dawn." });
         return { effects, consumed: false };
       }
+      if (p.full === true) return healingFountain(party, effects);
       const amount = Number(p.heal ?? 1);
       let healed = 0;
       for (const [i, c] of party.characters.entries()) {
@@ -767,7 +818,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       // it looks like any other wall: only a party with the Perceptive talent sees that it is brittle (the old action 8), and then it
       // is the player's choice to break it, as in the old game
       if (!party.talents.includes("talent_perceptive")) return { effects, consumed: false };
-      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Brittle wall", question: TEXTS[1]! }], consumed: false };
+      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Brittle wall", question: brittleQuestion(ctx.wallSide) }], consumed: false };
       if (ctx.answer === null) return { effects, consumed: false };
       effects.push({ type: "wall", state: "broken" }, { type: "text", text: "The wall crumbles. A hidden passage opens!" });
       return { effects, consumed: true };

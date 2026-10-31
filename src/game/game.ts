@@ -7,7 +7,7 @@ import { crossesSlab, slabBetween, stepFacing, type SlabMap } from "../campaign/
 import { CAMPAIGN_START, facingOfRotation, mapSlugOf, type TrapKind } from "../campaign/types";
 import { CampaignView } from "../render/campaignView";
 import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, heapGone, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, validateContent } from "../actions";
-import { resolveAction, type ActionContext, type Effect } from "../actions/handlers";
+import { resolveAction, type ActionContext, type Effect, type WallSide } from "../actions/handlers";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { AudioManager } from "../audio/audio";
 import { LAYER, Rng, rngFor, seedFromString } from "../core/rng";
@@ -228,7 +228,12 @@ const RAFT_SIGHT_START = (1.7 - RAFT_DECK) / (Math.tan(0.575) * RAFT_FREE_VIEW);
 const RAFT_AHEAD = RAFT_SIGHT_START - RAFT_LENGTH * (0.5 - RAFT_VISIBLE);
 
 const TORCH = { range: 13.5, intensity: 1.26 };
-const TORCH_LIT = { range: 25, intensity: 1.465 };
+/**
+ * With the Light spell the reach stays (25 units, the user's wish) and the party stands in daylight (38th playtest, point 6): a point light at head height meets the
+ * floor at a slant (at one cell away the light on the floor is only half of the light's own strength), so for the floor and the walls next to the party to be as bright as under the
+ * sun the light has to be about twice as strong as the old 1.465; it still falls off linearly to nothing at the old limit.
+ */
+const TORCH_LIT = { range: 25, intensity: 2.7 };
 /**
  * Map objects of the campaign that give light (their item numbers): where the old game only drew them, they light their
  * surroundings here, about one cell around (`LAMP_RANGE` is set in the engine), the others (`render/lamps.ts`, which also lights the
@@ -1160,6 +1165,7 @@ export class Game {
       const place = this.world.poiAtEntrance(x, y);
       if (place) await this.promptEnterPoi(place.id);
     }
+    if (this.mode === "interior" && !this.enc.battleMode) await this.noticeBrittleWall(x, y);
   }
 
   /** A step takes ten minutes in the open country (the overworld and the campaign's outside map), one in towns, castles, dungeons and caves. */
@@ -1951,6 +1957,30 @@ export class Game {
     return last !== undefined && this.state.steps - last < TRAP_RELOAD_STEPS;
   }
 
+  /** Is the wall cell before, beside or behind the party? */
+  private wallSide(x: number, y: number): WallSide {
+    const ahead = FACING_DELTA[this.player.facing];
+    const dx = x - this.player.tx;
+    const dy = y - this.player.ty;
+    if (dx === ahead.dx && dy === ahead.dy) return "front";
+    return dx === -ahead.dx && dy === -ahead.dy ? "behind" : "side";
+  }
+
+  /**
+   * A party with the Perceptive talent that comes to stand beside a brittle wall (a step, a jump, a teleport) notices it and is asked whether to break it, as the old
+   * game asked when its cell was entered (38th playtest, point 8). Bumping into the wall asks as well (`onBlocked`).
+   */
+  private async noticeBrittleWall(x: number, y: number): Promise<void> {
+    const rt = this.interior;
+    if (!rt || rt.campaign || this.over || this.busy || !this.state.party.talents.includes("talent_perceptive")) return;
+    for (const d of Object.values(FACING_DELTA)) {
+      const a = rt.actionAt.get(this.cellIndex(x + d.dx, y + d.dy));
+      if (a?.kind !== "breakable_wall" || this.state.broken.has(a.uid)) continue;
+      await this.useAction(a);
+      return;
+    }
+  }
+
   private async useAction(a: ActionInstance): Promise<void> {
     if (isSpent(a, this.state.opened)) return;
     // an object the party can walk over says what it is the first time only (every step over a bone pile would be a line in the log)
@@ -1972,7 +2002,7 @@ export class Game {
     this.busy = true;
     // a fountain works once a day: the day it was used is part of the key, so nothing else has to be saved or reset
     const usedKey = `${a.uid}@${Math.floor(this.state.party.minutes / MINUTES_PER_DAY)}`;
-    const ctx = { ...this.actionContext(), content: this.interior?.content, opened: this.state.opened, attempt: this.state.steps * 7 + this.state.opened.size, usedToday: this.state.opened.has(usedKey) };
+    const ctx = { ...this.actionContext(), content: this.interior?.content, opened: this.state.opened, attempt: this.state.steps * 7 + this.state.opened.size, usedToday: this.state.opened.has(usedKey), ...(a.kind === "breakable_wall" ? { wallSide: this.wallSide(a.x, a.y) } : {}) };
     let outcome = resolveAction(a, ctx);
     // a statue asks its question; the answer is the player's, and the statue decides on it
     const ask = outcome.effects.find((e) => e.type === "ask");
@@ -2012,7 +2042,8 @@ export class Game {
       this.interiorView.refreshObjects();
       // (a gong rings with its own sound: the `sound` effect)
       // (a lever that turns a stone head, and the head that is turned by hand, grind like stone, 36th playtest, points 12 and 22)
-      const turnsStone = a.kind === "head" || (a.kind === "lever" && !!this.interior?.content.actions.some((h) => h.kind === "head" && h.uid === a.params.target));
+      // (every lever of quest 1 grinds, also the four that move no statue: their target is empty, 38th playtest, point 3)
+      const turnsStone = a.kind === "head" || (a.kind === "lever" && !!this.interior?.content.actions.some((h) => h.kind === "head"));
       if (a.kind !== "gong") this.audio.play(turnsStone ? 9050 : a.kind === "lever" ? 9034 : 9014, turnsStone ? 0.9 : 0.6);
     }
     if (opening) {
@@ -3845,7 +3876,15 @@ export class Game {
       this.ui.toast(`No place within ${IDENTIFY_RADIUS} tiles`);
       return;
     }
-    const [title = "", ...rest] = identifyLines(poi, planDungeon(this.world, poi), this.world.castleSpellsOf(poi.id));
+    // the brittle walls are in the content of the map: the party's own while it stands inside, else the map is generated once more (it is a pure function of the seed)
+    let actions: readonly ActionInstance[];
+    if (this.mode === "interior" && this.interior && this.interior.poi.id === poi.id) actions = this.interior.content.actions;
+    else {
+      const map = generateInterior(this.world, poi, 0);
+      actions = buildMapContent(this.world, poi, map).actions;
+    }
+    const secrets = actions.filter((a) => a.kind === "breakable_wall").map((a) => ({ x: a.x, y: a.y, broken: this.state.broken.has(a.uid) }));
+    const [title = "", ...rest] = identifyLines(poi, planDungeon(this.world, poi), this.world.castleSpellsOf(poi.id), secrets);
     await this.ui.message(rest.join("\n"), title);
   }
 

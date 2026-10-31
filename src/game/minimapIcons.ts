@@ -43,10 +43,22 @@ const PLACE_GROUND: Record<GroundName, PlaceGround> = {
 };
 export const placeGroundOf = (ground: GroundName): PlaceGround => PLACE_GROUND[ground];
 
+/**
+ * On the big map a cell narrower than this is drawn without the dark edge of its tile. The big map is a canvas of 640 px that the style sheet shows at about 82 %, so 20 px
+ * are about 16 px on the screen, the size of a cell of the small map beside the cards (which keeps its grid: `gridMin` 0).
+ */
+export const BIG_MAP_GRID_MIN = 20;
+/** Width of the dark edge of a tile of the sheet, in pixels of a 48 px cell (measured: dark up to the third pixel from the top and left, from the 45th on at the bottom and right). */
+const EDGE_PX = 4;
+/** The symbols that are floor, wall or water rather than an object. */
+const TERRAIN_SYMBOLS: ReadonlySet<SymbolName> = new Set<SymbolName>(["wall", "floor", "water", "unknown"]);
+
 export class MinimapIcons {
   /** Side of one symbol on the sheet, in pixels. */
   readonly cell: number;
   private readonly tiles = new Map<string, HTMLCanvasElement>();
+  /** Cells narrower than this lose the dark edge of their tile (0: never). Set by each map before it draws: the big map zoomed out wants it, the small one does not. */
+  gridMin = 0;
 
   private constructor(
     private readonly sheet: HTMLImageElement,
@@ -111,9 +123,40 @@ export class MinimapIcons {
     return tile;
   }
 
+  /**
+   * The dark edge of every terrain tile on the sheet (about 3 of 48 px) is a fine grid when a cell is 16 px or more, but zoomed out it becomes
+   * black lines that swamp the picture (38th playtest, point 1). Like a map that drops detail with its scale, a cell below `gridMin` px is
+   * drawn without it: its tile is the one without the edge (`trimmed`) and the tiles run into each other.
+   */
+  private trims(w: number): boolean {
+    return w < this.gridMin;
+  }
+
+  /**
+   * A tile without its dark edge, as a canvas of its own (made once). Drawing only the inside of the full tile is not enough: a picture drawn much smaller than it is
+   * is filtered from smaller copies of the whole picture, which still carry the edge in.
+   */
+  private trimmed(key: string, from: CanvasImageSource, sx: number, sy: number): HTMLCanvasElement {
+    const id = `trim:${key}`;
+    let tile = this.tiles.get(id);
+    if (tile) return tile;
+    const e = Math.round((EDGE_PX * this.cell) / 48);
+    const n = this.cell - 2 * e;
+    tile = document.createElement("canvas");
+    tile.width = n;
+    tile.height = n;
+    tile.getContext("2d")!.drawImage(from, sx + e, sy + e, n, n, 0, 0, n, n);
+    this.tiles.set(id, tile);
+    return tile;
+  }
+
   /** Draws a ground tile (with its drawing) into the square at `x, y` of side `w`. */
   drawGround(ctx: CanvasRenderingContext2D, name: GroundName, drawing: DrawingName | undefined, x: number, y: number, w: number): void {
-    ctx.drawImage(this.ground(name, drawing), x, y, w, w);
+    const tile = this.ground(name, drawing);
+    // (whole pixels only: a tile at a fractional position is blended with the dark background along its edges, which is a grid of thin lines of its own)
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    ctx.drawImage(this.trims(w) ? this.trimmed(`${name}+${drawing ?? ""}`, tile, 0, 0) : tile, x0, y0, Math.ceil(x + w) - x0, Math.ceil(y + w) - y0);
   }
 
   /** Draws a symbol of the sheet into a rectangle (a place of 3 x 3 tiles is one symbol over three tiles). */
@@ -121,7 +164,14 @@ export class MinimapIcons {
     const at = this.source(name);
     const old = ctx.globalAlpha;
     ctx.globalAlpha = old * alpha;
-    ctx.drawImage(this.sheet, at.x, at.y, this.cell, this.cell, x, y, w, h);
+    // (only the terrain tiles lose their edge; the framed symbols of objects keep it, they are what the eye looks for on a zoomed-out map)
+    if (TERRAIN_SYMBOLS.has(name)) {
+      const x0 = Math.floor(x);
+      const y0 = Math.floor(y);
+      const into = [x0, y0, Math.ceil(x + w) - x0, Math.ceil(y + h) - y0] as const;
+      if (this.trims(w)) ctx.drawImage(this.trimmed(name, this.sheet, at.x, at.y), ...into);
+      else ctx.drawImage(this.sheet, at.x, at.y, this.cell, this.cell, ...into);
+    } else ctx.drawImage(this.sheet, at.x, at.y, this.cell, this.cell, x, y, w, h);
     ctx.globalAlpha = old;
   }
 

@@ -15,11 +15,12 @@ const spellLine = (spells: readonly number[]): string => `Spell scrolls: ${spell
  * there, which trap and quest it has and how it takes part in the key chain. Plain lines of text; `dungeon` is null for towns and
  * castles, which have no theme of the old maps.
  */
-export function identifyLines(poi: Poi, dungeon: DungeonRef | null, castleSpells: readonly number[] = []): string[] {
+export function identifyLines(poi: Poi, dungeon: DungeonRef | null, castleSpells: readonly number[] = [], secrets: readonly Secret[] = []): string[] {
   const lines = [`${poi.name}`, `${poi.kind}, tier ${poi.tier}, id ${poi.id}`];
   if (!dungeon) {
     lines.push("", "No quest: a town or castle is not a cave or dungeon.");
     if (poi.kind === "castle") lines.push(spellLine(castleSpells));
+    lines.push(secretLine(secrets));
     return lines;
   }
   const theme = dungeon.look;
@@ -28,7 +29,8 @@ export function identifyLines(poi: Poi, dungeon: DungeonRef | null, castleSpells
     `Quest: ${dungeon.quest === "spaceship" ? dungeon.quest : `${dungeon.quest} (${QUESTS[dungeon.quest].name})`}, layout ${dungeon.layout}`,
     `Class: ${CLASS_TEXT[dungeon.klass]}`,
     `Inhabitants: ${theme.inhabitants}`,
-    `Monsters: ${theme.monsters.map(monsterName).join(", ")}; boss ${monsterName(theme.boss)}`,
+    // only quest 5 has a real boss (the monster sheet's "Boss for"); elsewhere the strongest monster of the place guards the room that is deepest in
+    `Monsters: ${theme.monsters.map(monsterName).join(", ")}; ${dungeon.quest === "quest_5" ? "boss" : "guard of the deepest room"} ${monsterName(theme.boss)}`,
     `Trap: ${theme.trap}${theme.trapElement ? ` (${theme.trapElement})` : ""}`,
     `Entrance asks for: ${dungeon.requires ?? "nothing"}`,
     `End room holds: ${dungeon.gives.length > 0 ? dungeon.gives.join(", ") : "no key or key card"}${dungeon.orbs > 0 ? `, ${dungeon.orbs} orbs of ultimate power` : ""}`,
@@ -36,5 +38,19 @@ export function identifyLines(poi: Poi, dungeon: DungeonRef | null, castleSpells
   lines.push(spellLine(dungeon.spells));
   if (dungeon.section !== undefined) lines.push(`Opens section ${dungeon.section + 1} of the spaceship`);
   if (dungeon.endRoom) lines.push(`End room: ${dungeon.endRoom.w} x ${dungeon.endRoom.h} cells at ${dungeon.endRoom.x}/${dungeon.endRoom.y}${dungeon.endRoom.isolated ? ", reached by teleport" : ""}`);
+  lines.push(secretLine(secrets));
   return lines;
+}
+
+/** A brittle wall of the place (a secret): the cell of the wall in the map and whether the party has broken it already. */
+export interface Secret {
+  x: number;
+  y: number;
+  broken: boolean;
+}
+
+/** The secrets of a place, as cell coordinates of its map (the cell of the wall itself). */
+function secretLine(secrets: readonly Secret[]): string {
+  if (secrets.length === 0) return "Secrets (brittle walls): none";
+  return `Secrets (brittle walls): ${secrets.map((s) => `${s.x}/${s.y}${s.broken ? " (broken)" : ""}`).join(", ")}`;
 }

@@ -96,7 +96,8 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     // refills at dawn: the game layer remembers the day it was used (see Game.useAction), so the save needs no counter
     persistence: "repeat",
     minimap: "tex_mm_persona",
-    params: loose({ heal: z.number().int().min(1) }),
+    // `full`: the healing fountain of a first-tier town (everything back up to level 10); without it `heal` hit points, as the campaign's fountains give
+    params: loose({ heal: z.number().int().min(1).optional(), full: z.boolean().optional() }),
   },
   decor: {
     kind: "decor",
