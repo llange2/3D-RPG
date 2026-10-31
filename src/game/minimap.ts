@@ -464,7 +464,7 @@ const MONSTER_COLOR = "#ff3a2a";
 export const OVERWORLD_LEGEND: LegendEntry[] = [
   { color: BIOME_COLOR[BIOME.MEADOW]!, label: "Meadow", icon: { ground: "grass" } },
   { color: "#1f4a1c", label: "Trees", icon: { ground: "grass", drawing: "trees" } },
-  { color: "#ffd54a", label: "Something to meet (mascot, monster hut, caravan, magic well, fountain or stone head)", icon: { place: "event", ground: "meadow" } },
+  { color: "#ffd54a", label: "Something to meet (mascot, monster hut, caravan, well, fountain or stone head with a boon)", icon: { place: "event", ground: "meadow" } },
   { color: BIOME_COLOR[BIOME.DESERT]!, label: "Desert (palms)", icon: { ground: "desert", drawing: "palms" } },
   { color: BIOME_COLOR[BIOME.SNOW]!, label: "Snow", icon: { ground: "snow" } },
   { color: BIOME_COLOR[BIOME.SWAMP]!, label: "Swamp", icon: { ground: "swamp" } },
