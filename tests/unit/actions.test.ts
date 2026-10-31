@@ -149,9 +149,9 @@ describe("rule engine", () => {
       const map = generateInterior(world, poi);
       const content = buildMapContent(world, poi, map);
       const plan = blueprintFor(poi.tier);
-      // one fountain heals where the old town has fountains (Fountain Head, Baywatch), none in the others
+      // one fountain heals, in the towns of the first tier only (38th playtest); the fountains of the others are decoration
       const fountains = content.actions.filter((a) => a.kind === "fountain");
-      expect(fountains, `town #${i}`).toHaveLength(plan.decor.some((d) => d.item === 2 || d.item === 89) ? 1 : 0);
+      expect(fountains, `town #${i}`).toHaveLength(poi.tier === 1 && plan.decor.some((d) => d.item === 2 || d.item === 89) ? 1 : 0);
       // the people of the old town who sell talents are all there, and the guild's apprentice (the fourth town gets one of its own), nobody else
       const sellers = content.actions.filter((a) => a.kind === "talent");
       const expected = plan.talents.map((t) => t.talent);
@@ -172,6 +172,7 @@ describe("rule engine", () => {
 
   it("lets a fountain heal the hurt once a day and says so when it is dry", () => {
     const party = createDefaultParty();
+    // (a fountain with `heal` is the campaign's: it gives hit points; the healing fountain of the generated towns has `full`, see playtest38.test.ts)
     const fountain = { uid: "t#fountain:0", kind: "fountain" as const, x: 1, y: 1, params: { heal: 12 } };
     const ctx = { party, rootSeed: world.rootSeed, monsterThemes: { beast: 1 }, tier: 1 };
     const first = party.characters[0]!;

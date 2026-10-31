@@ -36,6 +36,8 @@ describe("pictures over a portrait", () => {
       ...["fire", "ice", "acid", "magic", "physical"].map(hitEffect),
       ...(["acid", "fire", "ice", "magic"] as const).map(protectionEffect),
       "gui_levitate",
+      "gui_power_shield",
+      "gui_wizard_eye",
     ];
     for (const name of all) expect(existsSync(join(UI, `tex_${name}.webp`)), name).toBe(true);
   });

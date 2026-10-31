@@ -226,18 +226,24 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
     // a real chest always holds something; storage equipment and gravestones were chests of the old towns, here they may be just scenery
     if (at) sites.push({ kind: isFunctional(c.item) ? "chest" : "loose", x: at[0], y: at[1], item: c.item });
   }
-  // one fountain heals (the one nearest the middle of the town), the others are decoration
-  const middle = { x: (width - 1) / 2, y: (height - 1) / 2 };
-  const fountains = plan.decor.filter((d) => d.item === 2 || d.item === 89).map((d) => ({ d, at: place(d.x, d.y) }));
-  fountains.sort((p, q) => Math.hypot(p.at[0] - middle.x, p.at[1] - middle.y) - Math.hypot(q.at[0] - middle.x, q.at[1] - middle.y));
+  // the fountain that heals is a random one of the town's fountains (38th playtest, point 5: it stood in the same part of every town before), and only the towns of the
+  // first tier have one; the other fountains, and all of them in the higher towns, are decoration
+  const fountains = plan.decor.filter((d) => d.item === 2 || d.item === 89);
+  const healer = ctx.tier === 1 && fountains.length > 0 ? rng.int(fountains.length) : -1;
   /** The scenery of the old plan: it may stand in a street of one cell, which no object may now (see below). */
   const planDecor: TownSite[] = [];
-  for (const [i, f] of fountains.entries()) {
-    const at = claim(f.d.x, f.d.y);
+  let healing = false;
+  // (the picked one first; if its cell is not free, the next one takes its place, so that a first-tier town always has its healing fountain)
+  const order = healer < 0 ? fountains : [...fountains.slice(healer), ...fountains.slice(0, healer)];
+  for (const f of order) {
+    const at = claim(f.x, f.y);
     if (!at) continue;
-    const site: TownSite = { kind: i === 0 ? "fountain" : "decor", x: at[0], y: at[1], item: f.d.item };
+    const heals: boolean = healer >= 0 && !healing;
+    healing ||= heals;
+    const site: TownSite = { kind: heals ? "fountain" : "decor", x: at[0], y: at[1], item: f.item };
     sites.push(site);
-    if (i > 0) planDecor.push(site);
+    // (a random fountain may stand in a street of one cell, where no object may stand: it moves like the scenery does, and keeps its healing)
+    planDecor.push(site);
   }
   for (const d of plan.decor) {
     if (d.item === 2 || d.item === 89) continue;
@@ -395,9 +401,15 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
   // piece moves to the nearest cell that is none, or is left out when there is no room (the plan's people, chests and fountains stay where they are)
   for (const d of planDecor) {
     const here = at(d.x, d.y);
-    if (!splitsRing((cx, cy) => b.isFloor(cx, cy) && !blockers.has(at(cx, cy)) && !objects.has(at(cx, cy)), d.x, d.y)) continue;
     blockers.delete(here);
     used.delete(here);
+    // (the healing fountain is a real object like a chest: it must keep the streets reachable and stay out of a shop's way, which the rules check once more; the scenery only has to leave a passage open)
+    const stays = d.kind === "fountain" ? fits(d.x, d.y) : !splitsRing((cx, cy) => b.isFloor(cx, cy) && !blockers.has(at(cx, cy)) && !objects.has(at(cx, cy)), d.x, d.y);
+    if (stays) {
+      blockers.add(here);
+      used.add(here);
+      continue;
+    }
     const spot = spots()
       .filter(([x, y]) => fits(x, y))
       .sort((p, q) => Math.abs(p[0] - d.x) + Math.abs(p[1] - d.y) - (Math.abs(q[0] - d.x) + Math.abs(q[1] - d.y)))[0];

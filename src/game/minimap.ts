@@ -5,7 +5,7 @@ import { MAP_ITEMS, talentInfo } from "../data/tables";
 import { BIOME, DECO, GROUND, poiBounds, wrapDelta, type Poi, type TileInfo } from "../world/types";
 import type { World } from "../world/world";
 import { landmarkBoon, landmarkName } from "./landmarkBoons";
-import { placeGroundOf } from "./minimapIcons";
+import { BIG_MAP_GRID_MIN, placeGroundOf } from "./minimapIcons";
 import type { DrawingName, GroundName, MinimapIcons, PlaceGround, PlaceName, SymbolName } from "./minimapIcons";
 import type { Explored } from "./state";
 
@@ -175,6 +175,7 @@ export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explor
   const s = canvas.width / cells;
   const half = Math.floor(cells / 2);
   const once = view !== undefined;
+  if (icons) icons.gridMin = once ? BIG_MAP_GRID_MIN : 0;
   if (once) {
     px = world.wrapX(px);
     py = world.wrapY(py);
@@ -350,6 +351,7 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
   const half = Math.floor(cells / 2);
   const mx = view?.x ?? px;
   const my = view?.y ?? py;
+  if (icons) icons.gridMin = view ? BIG_MAP_GRID_MIN : 0;
   const key = `in:${map.key}`;
   content = knownContent(content, opened, eye);
   ctx.fillStyle = "#0a0705";

@@ -119,5 +119,7 @@
  * beside a room rather than in its middle.
  * 37 = 36th playtest, follow-up: no object is placed on a cell where a rune or a wrong answer sets the party down (the targets are reserved).
  * 38 = 37th playtest: a wild group above level 1 keeps `STRONG_KEEP_OFF` (12) tiles from Starthaven and the start (another island of level 4 can lie a few tiles off the first town on a small world).
+ * 39 = 38th playtest: only the towns of the first tier have a healing fountain, and it is a random one of the town's fountains (it was the one nearest the middle); the fountain action
+ * carries `full` (everything back up to level 10) instead of `heal`.
  */
-export const GEN_VERSION = 38;
+export const GEN_VERSION = 39;
