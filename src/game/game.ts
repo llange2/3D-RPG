@@ -1259,7 +1259,7 @@ export class Game {
         }
         this.ui.log(`There is no way in on this side of the ${poi.kind === "dungeon" && poi.size === 3 ? "pyramid" : poi.kind}. Its entrance is elsewhere.`, "info");
       } else if (this.world.tile(x, y).deco === DECO.LANDMARK) {
-        // a well, a hut, a stone head: everything the party bumps into says what it is (trees and mountains are the exception); about a third of the wells, fountains and stone heads are magic
+        // a well, a hut, a stone head: everything the party bumps into says what it is (trees and mountains are the exception); about a third of the fountains and stone heads are magic (a plain well never is)
         const boon = landmarkBoon(this.world, x, y);
         if (boon) await this.useBoon(x, y, boon);
         else this.ui.log(propLine(landmarkItemAt(this.world.wrapX(x), this.world.wrapY(y)), `${this.world.wrapX(x)},${this.world.wrapY(y)}`), "info");
@@ -1302,7 +1302,7 @@ export class Game {
 
 
   /**
-   * A magic well, fountain or stone head of the open land (`landmarkBoon`): once a day it raises one attribute or resistance of the whole party for twelve hours.
+   * A magic fountain or stone head of the open land (`landmarkBoon`): once a day it raises one attribute or resistance of the whole party for twelve hours.
    * The day it was used is part of the key, like the fountains of the places (`useAction`), so the save needs nothing new.
    */
   private async useBoon(x: number, y: number, boon: LandmarkBoon): Promise<void> {

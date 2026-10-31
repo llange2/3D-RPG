@@ -173,10 +173,11 @@ describe("35th playtest, point 12: boons of wells, fountains and stone heads", (
   const { width, height } = WORLD_SIZES.large;
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (big.tile(x, y).deco === DECO.LANDMARK) landmarks.push({ x, y });
 
-  it("makes about one of three wells, fountains and stone heads magic, by the seed and the tile alone", () => {
+  it("makes about one of three fountains and stone heads magic, by the seed and the tile alone, and never a plain well", () => {
     expect(landmarks.length).toBeGreaterThan(50);
-    const holders = landmarks.filter((l) => ["Well", "Fountain", "Giant stone head"].some((n) => landmarkName(big, l.x, l.y).startsWith(n)));
-    expect(holders.length).toBeGreaterThan(25);
+    const holders = landmarks.filter((l) => ["Fountain", "Giant stone head"].some((n) => landmarkName(big, l.x, l.y).startsWith(n)));
+    expect(holders.length).toBeGreaterThan(12);
+    for (const l of landmarks.filter((x) => landmarkName(big, x.x, x.y).startsWith("Well"))) expect(landmarkBoon(big, l.x, l.y), `${l.x},${l.y}`).toBeNull();
     const magic = holders.filter((l) => landmarkBoon(big, l.x, l.y) !== null);
     expect(magic.length / holders.length).toBeGreaterThan(1 / BOON_ONE_IN - 0.17);
     expect(magic.length / holders.length).toBeLessThan(1 / BOON_ONE_IN + 0.17);
@@ -200,7 +201,8 @@ describe("35th playtest, point 12: boons of wells, fountains and stone heads", (
       seen.add(boon.stat);
       expect(boon.amount, `${l.x},${l.y}`).toBe(boonAmount(big.tierAt(l.x, l.y), boon.stat));
     }
-    expect(seen.size).toBeGreaterThanOrEqual(8);
+    // (fountains and stone heads are rare, a large world has a dozen magic ones)
+    expect(seen.size).toBeGreaterThanOrEqual(3);
   });
 
   it("raises a stat of the whole party for twelve hours, does not add up, and goes with its time", () => {

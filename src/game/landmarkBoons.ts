@@ -8,7 +8,7 @@ import { DECO } from "../world/types";
 import type { World } from "../world/world";
 
 /**
- * Which wells, fountains and giant stone heads of the open land are magic (35th playtest): about one in three. A pure function of the world seed and the tile, so the map, the
+ * Which fountains and giant stone heads of the open land are magic (the plain well is not, 35th playtest) (35th playtest): about one in three. A pure function of the world seed and the tile, so the map, the
  * game and the tests agree, and no save has to remember it. The level of the land decides the points (`boonAmount`: +5 on level 1 up to +25 on level 5, twice that in percent for a resistance).
  */
 export interface LandmarkBoon {
@@ -26,7 +26,7 @@ export function landmarkName(world: World, x: number, y: number): string {
 
 const STATS: readonly BoonKey[] = [...ATTRIBUTES, "res_fire", "res_ice", "res_acid", "res_magic"];
 
-/** Out of three wells, fountains and stone heads, one is magic. */
+/** Out of three fountains and stone heads, one is magic. */
 export const BOON_ONE_IN = 3;
 
 export function landmarkBoon(world: World, x: number, y: number): LandmarkBoon | null {
