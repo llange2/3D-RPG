@@ -119,9 +119,10 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
   gong: {
     kind: "gong",
     legacyIds: [],
-    // each gong sounds once and calls monsters (the old action 40 with the spawn action 9034)
+    // each gong calls monsters the first time it is struck (the old action 40 with the spawn action 9034); it keeps its place in the set of used uids by its own state
+    // and may be struck again for the sound (35th playtest), so it is no "once" action
     trigger: "interact",
-    persistence: "once",
+    persistence: "repeat",
     minimap: "tex_mm_event",
     params: loose({ item: z.number().int().min(1), group: z.number().int().min(1), monsters: z.string() }),
   },

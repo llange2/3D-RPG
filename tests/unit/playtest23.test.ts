@@ -116,7 +116,9 @@ describe("23rd playtest, point 5: the item pictures are one sheet", () => {
     expect(names.length).toBe(sheet.cells);
     expect(new Set(Object.values(sheet.cellOf)).size).toBe(sheet.cells);
     expect(Math.max(...Object.values(sheet.cellOf))).toBeLessThan(sheet.cells);
-    expect(names.every((n) => n.startsWith("item_"))).toBe(true);
+    // (the quest items without a prefix of their own are in the sheet too, 35th playtest: the Quatloo coin showed no picture in the backpack)
+    expect(names.every((n) => n.startsWith("item_") || n.startsWith("quest_"))).toBe(true);
+    expect(names).toContain("quest_quatloo_coin");
     // the plain pictures a hero starts with are in it
     for (const n of ["item_1h_broad_sword_copper", "item_ring_1", "item_shield_wood"]) expect(names, n).toContain(n);
   });

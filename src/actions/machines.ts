@@ -95,7 +95,9 @@ export function hideInChests(map: InteriorMap, actions: ActionInstance[], coins:
   const end = map.dungeon?.endRoom;
   const machines = map.dungeon?.machines;
   const inRoom = (a: ActionInstance, r?: { x: number; y: number; w: number; h: number }) => !!r && a.x >= r.x && a.y >= r.y && a.x < r.x + r.w && a.y < r.y + r.h;
-  const chests = actions.filter((a) => a.kind === "treasure" && typeof a.params.quest !== "string" && a.params.lock === undefined && !inRoom(a, end) && !inRoom(a, machines) && (!onlyAlarm || a.params.warn === "alarm"));
+  // (nor in a treasure chamber behind a brittle wall: a coin or a skull that only a party with the Perceptive talent can reach would be lost to the others)
+  const vaults = map.dungeon?.vaults ?? [];
+  const chests = actions.filter((a) => a.kind === "treasure" && typeof a.params.quest !== "string" && a.params.lock === undefined && !inRoom(a, end) && !inRoom(a, machines) && !vaults.some((v) => inRoom(a, v)) && (!onlyAlarm || a.params.warn === "alarm"));
   if (chests.length === 0) return;
   const rng = new Rng(derive(seed, "hide-in-chests"));
   const order = rng.shuffle(chests);

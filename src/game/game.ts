@@ -16,7 +16,7 @@ import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { BLACK_CARD, ORB, ORBS_FOR_KING, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
-import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS } from "../data/tables";
+import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { CELL, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
@@ -36,7 +36,7 @@ import { PropRenderer } from "../render/props";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
-import { LANDMARK_MODELS, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
+import { LANDMARK_MODELS, groundPropLift, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, itemModelKey, itemProp } from "../render/itemProps";
@@ -79,9 +79,14 @@ import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
 import { BIRD_PERCH, BLUE_MUSHROOM, MASCOT_ASK, MASCOT_ITEM, isSolidSpotItem, mascotSpotItem } from "../data/mascots";
 import { propLine } from "../data/prop-texts";
+import { BOON_SPENT, boonText } from "../data/boon-texts";
+import { BOON_HOURS, applyBoon } from "../sim/boons";
+import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
+import { SKULL_MISER_MET, lockSeenFlag, reachedFlag, worldQuestLog } from "./questLog";
 import { overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
+import { cursorStepped, setCursorFade } from "../ui/cursor";
 import { h } from "../ui/dom";
 import { thousands } from "../core/format";
 import { UI, randomSeed, type HudInfo, type Option } from "../ui/ui";
@@ -134,6 +139,9 @@ type PartyAttackEvent = Extract<CombatEvent, { type: "party_attack" }>;
 /** Said when a spell that would carry the party away is cast in melee, and when the party tries to step away from it. */
 const IN_MELEE_SPELL = "That spell cannot be cast during a fight: the party cannot leave its field while monsters are next to it.";
 const IN_MELEE_STEP = "The party cannot step away from a fight: monsters are next to it.";
+/** How many open quests of the generated world the short list beside the minimap shows. */
+const HUD_QUESTS = 3;
+const HUD_QUEST_CHARS = 42;
 
 /** What a spell that did not work says, by reason (the rest read "The spell fizzles (reason)"). */
 const FIZZLE_TEXT: Partial<Record<FizzleReason, (caster: string) => string>> = {
@@ -319,6 +327,7 @@ export class Game {
     this.audio.setMusicVolume(this.settings.music ? MUSIC_VOLUME : 0);
     this.audio.sfxVolume = this.settings.sfx ? SFX_VOLUME : 0;
     setAnimatedTown(this.settings.animatedTown);
+    setCursorFade(this.settings.fadeCursor);
     this.textures = new TextureCache(this.r.scene);
     this.terrain = new TerrainMaterials(this.r.scene, this.textures);
     this.flatTiles = await this.loadFlatTiles();
@@ -1118,6 +1127,7 @@ export class Game {
   private async onArrived(x: number, y: number): Promise<void> {
     const s = this.state;
     s.steps++;
+    cursorStepped();
     this.syncSurroundings();
     // a levitating party does not walk: the wind takes the place of the footsteps
     if (hasEffect(s.party, "levitate")) this.audio.windStep(0.6);
@@ -1127,6 +1137,7 @@ export class Game {
     this.interiorView.focus(x, y);
     s.at = this.campaignLocation() ?? (this.mode === "interior" && s.at.mode === "interior" ? { ...s.at, x, y, facing: this.player.facing } : { mode: "overworld", x, y, facing: this.player.facing });
     this.markExplored();
+    this.noteEndRoom(x, y);
     this.updateAmbient();
     this.collectLoot(x, y);
 
@@ -1248,8 +1259,10 @@ export class Game {
         }
         this.ui.log(`There is no way in on this side of the ${poi.kind === "dungeon" && poi.size === 3 ? "pyramid" : poi.kind}. Its entrance is elsewhere.`, "info");
       } else if (this.world.tile(x, y).deco === DECO.LANDMARK) {
-        // a well, a hut, a stone head: everything the party bumps into says what it is (trees and mountains are the exception)
-        this.ui.log(propLine(landmarkItemAt(x, y), `${x},${y}`), "info");
+        // a well, a hut, a stone head: everything the party bumps into says what it is (trees and mountains are the exception); about a third of the wells, fountains and stone heads are magic
+        const boon = landmarkBoon(this.world, x, y);
+        if (boon) await this.useBoon(x, y, boon);
+        else this.ui.log(propLine(landmarkItemAt(this.world.wrapX(x), this.world.wrapY(y)), `${this.world.wrapX(x)},${this.world.wrapY(y)}`), "info");
       } else if (this.world.tile(x, y).ground === GROUND.SHALLOW) {
         this.ui.log("The water is too deep to wade through. Someone who can swim could cross it.", "info");
       } else if (this.world.tile(x, y).ground === GROUND.WATER) {
@@ -1287,6 +1300,28 @@ export class Game {
     this.audio.play(9014, 0.35);
   }
 
+
+  /**
+   * A magic well, fountain or stone head of the open land (`landmarkBoon`): once a day it raises one attribute or resistance of the whole party for twelve hours.
+   * The day it was used is part of the key, like the fountains of the places (`useAction`), so the save needs nothing new.
+   */
+  private async useBoon(x: number, y: number, boon: LandmarkBoon): Promise<void> {
+    const day = Math.floor(this.state.party.minutes / MINUTES_PER_DAY);
+    const used = `boon:${this.world.wrapX(x)},${this.world.wrapY(y)}@${day}`;
+    if (this.state.opened.has(used)) {
+      this.audio.play(9014, 0.35);
+      this.ui.log(BOON_SPENT[boon.source], "info");
+      return;
+    }
+    this.passTime(ACTION_MINUTES);
+    // the keys of the days before are of no use any more
+    for (const k of [...this.state.opened]) if (k.startsWith("boon:") && !k.endsWith(`@${day}`)) this.state.opened.delete(k);
+    this.state.opened.add(used);
+    applyBoon(this.state.party, boon.stat, boon.amount);
+    this.audio.play(9032);
+    this.ui.log(boonText(boon.source, boon.pick, boon.stat, boon.amount, BOON_HOURS), "good");
+    this.refresh();
+  }
 
   /**
    * What happens when the party bumps into a map object that has no action of its own. Fountains work like the ones in
@@ -1575,21 +1610,33 @@ export class Game {
     this.refresh();
   }
 
-  private async openQuestLog(): Promise<void> {
+  /** The quests as the log shows them: the campaign keeps its own list, the generated world's is read from its plan and the flags in the save (`game/questLog.ts`). */
+  private questLogView(): { open: string[]; done: string[] } {
     const progress = this.state.campaign?.progress;
-    if (!progress || this.ui.modalOpen) return;
-    const active = Object.keys(progress.quests.active);
-    const done = Object.keys(progress.quests.completed);
+    if (progress) return { open: Object.keys(progress.quests.active).map(tidy), done: Object.keys(progress.quests.completed).map(tidy) };
+    const carried = carriedItems(this.state.party);
+    return worldQuestLog({ world: this.world, opened: this.state.opened, visited: this.state.visited, carried: (type) => carried.filter((i) => i.type === type).length });
+  }
+
+  private async openQuestLog(): Promise<void> {
+    if (this.ui.modalOpen) return;
+    const view = this.questLogView();
+    const campaign = !!this.state.campaign;
     await this.ui.panel((close, root) => {
       const list = (title: string, names: string[], empty: string): HTMLElement => {
         const box = document.createElement("div");
         box.append(Object.assign(document.createElement("h3"), { textContent: title }));
         if (names.length === 0) box.append(Object.assign(document.createElement("p"), { textContent: empty, className: "small" }));
-        for (const n of names) box.append(Object.assign(document.createElement("p"), { textContent: tidy(n) }));
+        for (const n of names) box.append(Object.assign(document.createElement("p"), { textContent: n }));
         return box;
       };
       const button = Object.assign(document.createElement("button"), { className: "btn close", textContent: "Close (Esc)", onclick: close });
-      root.append(button, Object.assign(document.createElement("h2"), { textContent: "Quests" }), list("Open", active, "No open quests. Talk to the people of the maps."), list("Completed", done, "Nothing completed yet."));
+      root.append(
+        button,
+        Object.assign(document.createElement("h2"), { textContent: "Quests" }),
+        list("Open", view.open, campaign ? "No open quests. Talk to the people of the maps." : "No open quests yet. Enter the caves and dungeons, talk to the people of the towns."),
+        list("Completed", view.done, "Nothing completed yet."),
+      );
     });
   }
 
@@ -1648,7 +1695,7 @@ export class Game {
       const bearing = (Math.atan2(s.faceX - s.x, s.y - s.faceY) * 180) / Math.PI;
       const inst = itemProp(shown, (bearing + 360) % 360, w.x, w.z, this.staticInfo);
       if (!inst) continue;
-      inst.y += w.y;
+      inst.y += w.y + (this.mode === "overworld" ? groundPropLift() : 0);
       list.push(inst);
     }
     this.props.setInstances("mascots", list);
@@ -1691,7 +1738,7 @@ export class Game {
       const w = this.worldPos(this.player.tx + wrapDelta(this.player.tx, h.x, this.world.width), this.player.ty + wrapDelta(this.player.ty, h.y, this.world.height));
       const inst = itemProp(this.hutBurnt(h) ? BURNT_HUT_ITEM : HUT_ITEM, ((h.monster * 7) % 4) * 90, w.x, w.z, this.staticInfo);
       if (!inst) continue;
-      inst.y += w.y;
+      inst.y += w.y + groundPropLift();
       list.push(inst);
     }
     this.props.setInstances("huts", list);
@@ -1822,7 +1869,7 @@ export class Game {
       const bearing = (Math.atan2(s.faceX - s.x, s.y - s.faceY) * 180) / Math.PI;
       const inst = itemProp(CARAVAN_ITEM, (bearing + 360) % 360, w.x, w.z, this.staticInfo);
       if (!inst) continue;
-      inst.y += w.y;
+      inst.y += w.y + groundPropLift();
       list.push(inst);
     }
     this.props.setInstances("caravans", list);
@@ -1884,13 +1931,16 @@ export class Game {
       const name = QUEST_ITEMS.find((q) => q.type === need)?.name ?? need;
       const text = need.endsWith("_keycard") ? `A slot in the wall of the pyramid waits for a ${name}.` : `The way in is barred by a heavy lock. It needs the ${name}.`;
       this.audio.play(9014, 0.5);
+      // the quest log lists the key to find from now on
+      this.state.opened.add(lockSeenFlag(poi.id));
       await this.ui.message(text, poi.name);
       this.player.locked = false;
+      this.refresh();
       return;
     }
-    const blurb = plan && !this.state.visited.has(poi.id) ? `\n${plan.look.blurb}` : "";
+    // (the quest and layout of the place are no longer written here: "Riddle (dungeon_3)" gave the quest away; Debug > Identify names them)
     const first = this.state.visited.has(poi.id) ? "" : `\nLevel ${poi.tier} ${kind === "town" ? "settlement" : "danger"}.`;
-    const yes = await this.ui.confirm(poi.name, `Enter the ${kind} of ${poi.name}?${first}${blurb}`, "Enter", "Stay outside");
+    const yes = await this.ui.confirm(poi.name, `Enter the ${kind} of ${poi.name}?${first}`, "Enter", "Stay outside");
     this.player.locked = false;
     if (yes) await this.openInterior(poi);
   }
@@ -1977,14 +2027,15 @@ export class Game {
       for (const k of outcome.state.add) this.state.opened.add(k);
       this.syncQuestBlocks();
       this.interiorView.refreshObjects();
-      this.audio.play(a.kind === "lever" ? 9034 : 9014, 0.6);
+      // (a gong rings with its own sound: the `sound` effect)
+      if (a.kind !== "gong") this.audio.play(a.kind === "lever" ? 9034 : 9014, 0.6);
     }
     if (opening) {
       this.audio.play(9007);
       this.interiorView.openPit(a.uid);
     }
     // the key or key card in its chest is gone from the map once it is taken; the runes of the gongs appear with the last gong
-    if ((a.kind === "treasure" && outcome.consumed && typeof a.params.quest === "string") || (a.kind === "gong" && outcome.consumed)) this.interiorView.refreshObjects();
+    if ((a.kind === "treasure" && outcome.consumed && typeof a.params.quest === "string") || (a.kind === "gong" && outcome.state)) this.interiorView.refreshObjects();
     // an emptied heap of treasure leaves its cell, which the party may then walk over
     if (this.interior && !this.interior.campaign && heapGone(a, this.state.opened)) {
       this.interior.blocked.delete(a.y * this.interior.map.width + a.x);
@@ -2099,6 +2150,9 @@ export class Game {
           ui.log(`${this.state.party.characters[e.character]!.name} is ${e.condition.toLowerCase()}!`, "bad");
           break;
         case "pick":
+          break;
+        case "sound":
+          this.audio.play(e.id);
           break;
         case "defeat":
           await this.gameOver();
@@ -2237,6 +2291,8 @@ export class Game {
     const opened = this.state.opened;
     const handed = Number([...opened].find((k) => k.startsWith("skulls="))?.split("=")[1] ?? 0);
     const skulls = carriedItems(party).filter((i) => i.type === SKULL).length;
+    // the quest log lists the Skull Miser from now on
+    opened.add(SKULL_MISER_MET);
     this.player.locked = true;
     if (skulls === 0) {
       await this.ui.message(handed >= SKULLS_FOR_RING ? "The Skull Miser rubs his hands. \"More silver skulls? Bring them, bring them. I pay well, though I have no more rings to give.\"" : `The Skull Miser rubs his hands. \"Silver skulls! I buy silver skulls, a thousand gold and a thousand experience for each. Bring me ${SKULLS_FOR_RING} of them and there is a ring in it for you.\"${handed > 0 ? ` You have brought ${handed} so far.` : ""}`, this.interior?.poi.name ?? "");
@@ -2278,6 +2334,8 @@ export class Game {
     if (end.seal && rt.map.cells[end.seal.y * rt.map.width + end.seal.x] !== CELL.FLOOR) {
       rt.map.cells[end.seal.y * rt.map.width + end.seal.x] = CELL.FLOOR;
       this.interiorView.refresh(rt.map);
+      // the wall goes down into the floor as long as the sound of the stone lasts (it used to stand until the next step)
+      this.interiorView.sinkWall(end.seal.x, end.seal.y, this.audio.durationOf(9050, 1.6));
       this.audio.play(9050);
       this.ui.log("A wall slides aside with a grinding of stone.", "good");
     }
@@ -2363,7 +2421,24 @@ export class Game {
     this.interiorView.focus(x, y);
     this.audio.play(9041);
     this.markExplored();
+    this.noteEndRoom(x, y);
     this.minimapDirty = true;
+  }
+
+  /**
+   * The party stands in the end room of a cave or dungeon: the quest of the place is done (the quest log moves it to "Completed", the map ticks the place off). The flag is
+   * `reached:<place id>` in the saved set, so a save from before the log only gets it with the next visit to the end room.
+   */
+  private noteEndRoom(x: number, y: number): void {
+    const rt = this.interior;
+    const end = rt?.map.dungeon?.endRoom;
+    if (!rt || rt.campaign || !end || x < end.x || y < end.y || x >= end.x + end.w || y >= end.y + end.h) return;
+    const flag = reachedFlag(rt.poi.id);
+    if (this.state.opened.has(flag)) return;
+    this.state.opened.add(flag);
+    this.ui.log(`Quest completed: you have reached the end of ${rt.poi.name}. See the quest log (J).`, "good");
+    this.audio.play(9018);
+    this.refresh();
   }
 
   /** The cells that the heads of a ring block follow the levers: set them again from the state in the save. */
@@ -3411,7 +3486,20 @@ export class Game {
     const traps = this.trapsShown();
     const eye = this.eyeOn();
     const events = interior ? [] : this.overworldEvents();
+    // only a party with the Cartographer talent has a map to read (35th playtest): the big map stays black, the minimap beside the cards is there for everybody. The campaign keeps its old rules.
+    const blank = !this.state.campaign && !this.state.party.talents.includes("talent_cartographer");
     const draw = () => {
+      if (blank) {
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#0a0705";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#8a7a5a";
+        ctx.font = "20px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ["Nobody in the party knows how to draw a map.", "The cartographer of a town teaches it:", "the talent \"Cartographer\"."].forEach((line, i) => ctx.fillText(line, canvas.width / 2, canvas.height / 2 + (i - 1) * 30));
+        return;
+      }
       if (interior) {
         drawInteriorMap(canvas, interior.map, interior.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, traps, view, this.minimapIcons, eye);
       } else {
@@ -3424,7 +3512,7 @@ export class Game {
       draw();
     };
     draw();
-    const legend = interior ? interiorLegend(interior.map, interior.content, traps.size > 0, this.state.opened, eye) : OVERWORLD_LEGEND;
+    const legend = blank ? [] : interior ? interiorLegend(interior.map, interior.content, traps.size > 0, this.state.opened, eye) : OVERWORLD_LEGEND;
     let removeKeys = () => undefined as void;
     await this.ui.panel((close, root) => {
       const tip = h("div", { class: "map-tip hud-hide" });
@@ -3446,6 +3534,10 @@ export class Game {
           }
         }
         const { x: cx, y: cy } = cellAt(view, fx, fy);
+        if (blank) {
+          tip.classList.add("hud-hide");
+          return;
+        }
         // beyond the edge of the outside map there is nothing: the world is shown once
         if (!interior && (cx < 0 || cy < 0 || cx >= this.world.width || cy >= this.world.height)) {
           tip.classList.add("hud-hide");
@@ -3459,6 +3551,9 @@ export class Game {
         tip.classList.toggle("hud-hide", !!drag || (!text && !atParty));
         if (drag || (!text && !atParty)) return;
         tip.textContent = `${atParty ? "You are here" : text}  (${cx}, ${cy})`;
+        // a cave or dungeon whose end room the party has reached gets a green tick after its position (35th playtest)
+        const placeId = interior ? null : this.world.tile(cx, cy).poiId;
+        if (placeId && this.state.opened.has(reachedFlag(placeId))) tip.append(h("span", { class: "map-tick", text: " ✔", style: "color:#6fdc6f;font-weight:bold" }));
         const box = root.getBoundingClientRect();
         tip.style.left = `${e.clientX - box.left + 14}px`;
         tip.style.top = `${e.clientY - box.top + 14}px`;
@@ -3716,6 +3811,7 @@ export class Game {
         { label: () => `Distance: ${VIEW_NAMES[draft.viewDistance]}`, flip: () => (draft.viewDistance = VIEW_DISTANCES[(VIEW_DISTANCES.indexOf(draft.viewDistance) + 1) % VIEW_DISTANCES.length]!) },
         { label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
         { label: () => `Animated town scenes: ${onOff(draft.animatedTown)}`, flip: () => (draft.animatedTown = !draft.animatedTown) },
+        { label: () => `Fade out cursor, if unused: ${onOff(draft.fadeCursor)}`, flip: () => (draft.fadeCursor = !draft.fadeCursor) },
         { label: () => `Show FPS: ${onOff(draft.showFps)}`, flip: () => (draft.showFps = !draft.showFps) },
         { label: () => `Music: ${onOff(draft.music)}`, flip: () => (draft.music = !draft.music) },
         { label: () => `Sound effects: ${onOff(draft.sfx)}`, flip: () => (draft.sfx = !draft.sfx) },
@@ -3736,6 +3832,10 @@ export class Game {
     if (next.floorModel !== before.floorModel) {
       this.interiorView.setModelFloor(next.floorModel);
       this.applyGround();
+      // the caravans, huts and mascots stand a little higher on the 3D ground than on the flat one: draw them again
+      this.caravanShown = "";
+      this.hutShown = "";
+      this.mascotShown = "";
       if (this.chunks && this.mode === "overworld") {
         this.chunks.rebuild();
         this.chunks.update(this.player.tx, this.player.ty);
@@ -3760,6 +3860,7 @@ export class Game {
     }
     if (next.resolution !== before.resolution) this.r.setResolution(next.resolution);
     setAnimatedTown(next.animatedTown);
+    setCursorFade(next.fadeCursor);
     if (!next.showFps) this.ui.setFps(null);
     this.audio.setMusicVolume(next.music ? MUSIC_VOLUME : 0);
     this.audio.sfxVolume = next.sfx ? SFX_VOLUME : 0;
@@ -3893,6 +3994,16 @@ export class Game {
     this.minimapDirty = true;
   }
 
+  /** The short list beside the minimap: the campaign shows all its open quests, the generated world the first few (the whole log is one click or J away) and nothing before the first one. */
+  private hudQuests(): HudInfo["quests"] {
+    if (this.state.campaign) return { open: Object.keys(this.state.campaign.progress.quests.active).map(tidy), done: Object.keys(this.state.campaign.progress.quests.completed).length };
+    const view = this.questLogView();
+    if (view.open.length === 0 && view.done.length === 0) return null;
+    // (the lines are cut short: the panel is narrow and sits above the buttons; the full text is in the log)
+    const shown = view.open.slice(0, HUD_QUESTS).map((q) => (q.length > HUD_QUEST_CHARS ? `${q.slice(0, HUD_QUEST_CHARS - 1).trimEnd()}…` : q));
+    return { open: view.open.length > shown.length ? [...shown, `... and ${view.open.length - shown.length} more (J)`] : shown, done: view.done.length };
+  }
+
   private hudInfo(): HudInfo {
     const rt = this.interior;
     const tile = this.mode === "overworld" ? this.world.tile(this.player.tx, this.player.ty) : null;
@@ -3905,7 +4016,7 @@ export class Game {
       y: this.mode === "overworld" ? this.world.wrapY(this.player.ty) : this.player.ty,
       battle: this.enc.battleMode,
       attacker: battleActor(this.state.party, this.enc),
-      quests: this.state.campaign ? { open: Object.keys(this.state.campaign.progress.quests.active).map(tidy), done: Object.keys(this.state.campaign.progress.quests.completed).length } : null,
+      quests: this.hudQuests(),
       mascot: this.state.party.mascot,
       alarm: this.dangerNear(),
     };
@@ -3978,7 +4089,7 @@ export class Game {
   }
 
   /** Every caravan of the world (fixed by the seed), for the maps. */
-  private caravanSites: { world: World; list: MapEvent[] } | null = null;
+  private caravanSites: { world: World; list: (MapEvent & { talent: string })[] } | null = null;
 
   /**
    * What the maps mark with a question mark on the open land: the mascots still waiting (the one in the party is gone from its place), the Monster Huts
@@ -3987,11 +4098,12 @@ export class Game {
   private overworldEvents(): MapEvent[] {
     if (!this.state) return [];
     if (this.caravanSites?.world !== this.world) {
-      const list: MapEvent[] = [];
-      for (const poi of this.world.allPois()) for (const c of caravansOf(this.world, poi)) list.push({ x: c.x, y: c.y, label: "Caravan (talent trader)" });
+      const list: (MapEvent & { talent: string })[] = [];
+      for (const poi of this.world.allPois()) for (const c of caravansOf(this.world, poi)) list.push({ x: c.x, y: c.y, label: "Caravan (talent trader)", talent: c.talent });
       this.caravanSites = { world: this.world, list };
     }
-    const out = [...this.caravanSites.list];
+    // a caravan whose talent the party has bought has nothing left to sell: its question mark is grey
+    const out: MapEvent[] = this.caravanSites.list.map(({ talent, ...ev }) => (this.state.party.talents.includes(talent) ? { ...ev, label: `Caravan (${talentInfo(talent).name}: bought)`, done: true } : ev));
     for (const s of this.mode === "overworld" ? this.mascotSpots() : []) if (s.mascot !== this.state.party.mascot) out.push({ x: s.x, y: s.y, label: "Mascot" });
     for (const h of hutIndex(this.world).huts) if (!this.hutBurnt(h)) out.push({ x: h.x, y: h.y, label: "Monster Hut" });
     return out;

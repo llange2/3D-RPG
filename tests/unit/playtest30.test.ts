@@ -51,6 +51,8 @@ describe("30th playtest", () => {
         if (map.cells[i] !== map.cells[map.spawn.y * w + map.spawn.x] || seen[i]) continue;
         const [x, y] = [i % w, Math.floor(i / w)];
         if (end && x >= end.x && y >= end.y && x < end.x + end.w && y < end.y + end.h) continue;
+        // (nor the treasure chambers behind brittle walls, 35th playtest: they open when the wall is broken)
+        if (map.dungeon?.vaults?.some((v) => x >= v.x && y >= v.y && x < v.x + v.w && y < v.y + v.h)) continue;
         unreached++;
       }
       expect(unreached, `#${variant}`).toBe(0);

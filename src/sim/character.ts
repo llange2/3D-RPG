@@ -150,7 +150,7 @@ export function conditionAdjusted(c: Character): Record<Attribute, number> & { b
 /** Attribute including equipment. `base = true` uses the unmodified value, false the condition-adjusted one. */
 export function attr(c: Character, a: Attribute, base = true): number {
   const value = base ? c[a] : conditionAdjusted(c)[a];
-  const total = value + itemBonus(c, ATTR_BONUS_KEY[a]);
+  const total = value + itemBonus(c, ATTR_BONUS_KEY[a]) + (c.mods?.boon?.[a] ?? 0);
   // Stone Skin halves the speed (see `fightSpeed`); the sheet shows it
   return a === "spd" && !base && c.mods?.stoneSkin ? Math.max(1, Math.trunc(total / 2)) : total;
 }
@@ -160,7 +160,7 @@ const RESISTANCE_BONUS = { fire: "res_fire", ice: "res_ice", acid: "res_acid", m
 
 /** Resistance in percent against an element: the hero's own value plus what the worn items add. */
 export function resistance(c: Character, element: keyof typeof RESISTANCE_FIELD): number {
-  return c[RESISTANCE_FIELD[element]] + itemBonus(c, RESISTANCE_BONUS[element]);
+  return c[RESISTANCE_FIELD[element]] + itemBonus(c, RESISTANCE_BONUS[element]) + (c.mods?.boon?.[RESISTANCE_BONUS[element]] ?? 0);
 }
 
 /** Armor of the worn items; Rage halves it, Stone Skin adds to what is left. */

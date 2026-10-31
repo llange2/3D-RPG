@@ -13,7 +13,7 @@ import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/
 import type { StaticModelInfo, TextureCache } from "./assets";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
-import { CELL_SIZE, cellCenterX, cellCenterZ, meshInterior, modelFloorCells, wallHeightOf } from "./interiorMesher";
+import { CELL_SIZE, cellCenterX, cellCenterZ, cellX, cellZ, meshInterior, modelFloorCells, wallHeightOf } from "./interiorMesher";
 import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
@@ -419,6 +419,13 @@ export class InteriorView {
     this.mesh = mesh;
     this.multi = multi;
     this.pushFloor(true);
+    // the models of a cave's rock and of the round corners are chosen from the cells: a changed map (a wall that gave way) shows them again at once, not with the next step
+    if (this.floorFocus) {
+      this.caveShown = null;
+      this.roundShown = null;
+      this.pushCaveWalls(this.floorFocus.x, this.floorFocus.y);
+      this.pushRoundCorners(this.floorFocus.x, this.floorFocus.y);
+    }
   }
 
   /** Shows the layout of a changed map (campaign maps change when walls break, doors open or blocks move). */
@@ -670,7 +677,86 @@ export class InteriorView {
     this.props.flush();
   }
 
+  /** Wall cells that are sinking into the floor right now (`sinkWall`): the way to stop each of them. */
+  private sinking = new Set<() => void>();
+
+  /**
+   * A wall cell that gives way (the seal of an end room): the map beneath is open already, the wall itself goes down into the floor over `seconds`, as long as
+   * the sound of the stone (35th playtest: the wall used to stand there until the next step). A cave's rock is a model, every other wall a piece of the wall mesh,
+   * so the piece that sinks is a box with the wall's texture or the rock model itself.
+   */
+  sinkWall(x: number, y: number, seconds: number): void {
+    const map = this.map;
+    if (!map || seconds <= 0) return;
+    const h = wallHeightOf(map);
+    const cx = cellCenterX(x);
+    const cz = cellCenterZ(y);
+    const scene = this.r.scene;
+    const owner = `${this.owner}:sink`;
+    let box: Mesh | null = null;
+    if (!this.caveModels) {
+      // the four faces with the texture of the wall once over the whole height, as `meshInterior` draws them (a stock box laid the picture on its side), and a cap for when the top sinks below the eyes
+      const x0 = cellX(x);
+      const x1 = x0 + CELL_SIZE;
+      const z1 = cellZ(y);
+      const z0 = z1 - CELL_SIZE;
+      const positions: number[] = [];
+      const normals: number[] = [];
+      const uvs: number[] = [];
+      const indices: number[] = [];
+      const face = (n: [number, number, number], bl: [number, number], br: [number, number]): void => {
+        const base = positions.length / 3;
+        positions.push(bl[0], 0, bl[1], bl[0], h, bl[1], br[0], h, br[1], br[0], 0, br[1]);
+        for (let k = 0; k < 4; k++) normals.push(...n);
+        uvs.push(0, 0, 0, 1, 1, 1, 1, 0);
+        indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
+      };
+      face([0, 0, -1], [x0, z0], [x1, z0]);
+      face([0, 0, 1], [x1, z1], [x0, z1]);
+      face([1, 0, 0], [x1, z0], [x1, z1]);
+      face([-1, 0, 0], [x0, z1], [x0, z0]);
+      const cap = positions.length / 3;
+      positions.push(x0, h, z1, x1, h, z1, x1, h, z0, x0, h, z0);
+      for (let k = 0; k < 4; k++) normals.push(0, 1, 0);
+      uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
+      indices.push(cap, cap + 2, cap + 1, cap, cap + 3, cap + 2);
+      box = new Mesh(`sinking-wall:${x},${y}`, scene);
+      const data = new VertexData();
+      data.positions = positions;
+      data.normals = normals;
+      data.uvs = uvs;
+      data.indices = indices;
+      data.applyToMesh(box, false);
+      box.material = this.material("wall", map);
+      box.isPickable = false;
+    }
+    const rotY = (((hash2(0x3a, x, y) >>> 8) % 4) * Math.PI) / 2;
+    const started = performance.now();
+    const stop = (): void => {
+      scene.onBeforeRenderObservable.remove(observer);
+      box?.dispose(false, false);
+      if (!box) {
+        this.props.removeOwner(owner);
+        this.props.flush();
+      }
+      this.sinking.delete(stop);
+    };
+    const observer = scene.onBeforeRenderObservable.add(() => {
+      const t = Math.min(1, (performance.now() - started) / (seconds * 1000));
+      // the stone starts slowly, as if it had to break loose
+      const drop = h * (t * t * (3 - 2 * t));
+      if (box) box.position.y = -drop;
+      else {
+        this.props.setInstances(owner, [{ model: CAVE_WALL, x: cx, y: 1.5 - drop, z: cz, rotY, scale: 1.75, atOrigin: true }]);
+        this.props.flush();
+      }
+      if (t >= 1) stop();
+    });
+    this.sinking.add(stop);
+  }
+
   dispose(): void {
+    for (const stop of [...this.sinking]) stop();
     this.props.setReference(null);
     if (this.owner) {
       this.props.removeOwner(this.owner);

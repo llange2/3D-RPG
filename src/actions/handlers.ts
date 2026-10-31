@@ -2,7 +2,7 @@ import { thousands } from "../core/format";
 import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
 import { loreLine } from "../data/lore";
 import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, propLine } from "../data/prop-texts";
-import { dodgeChance, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
+import { BONE_PILE, RAT_TRAP, dodgeChance, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
 import { isBookshelf } from "../data/spell-loot";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
@@ -58,6 +58,8 @@ export type Effect =
   | { type: "ending" }
   /** A hero got a condition from a chalice. */
   | { type: "condition"; character: number; condition: Condition }
+  /** A sound of the old table (`audio/sound-table.ts`) the object makes, apart from what its other effects play. */
+  | { type: "sound"; id: number }
   | { type: "defeat" };
 
 export interface ActionContext {
@@ -88,6 +90,9 @@ export interface ActionOutcome {
   /** Changes to the set of used-up actions that are not "this action is done": levers and heads keep their position there. */
   state?: { add: string[]; remove: string[] };
 }
+
+/** The gong of the old game (`gong.mp3`), sound 9048 of the sound table. */
+export const GONG_SOUND = 9048;
 
 /** What the job master pays and how long the work takes (old action 19, "Work a week for 100 gold": the old code advances ten days). */
 export const WORK_GOLD = 100;
@@ -179,6 +184,28 @@ function springChestTrap(action: ActionInstance, ctx: ActionContext, effects: Ef
   return hit.defeated;
 }
 
+/**
+ * The rat in a pile of bones: the trap mechanic of the unlocked chests with physical damage (armor counts, no resistance). A hero chosen by chance is bitten unless luck gets them
+ * out of the way; then the rat only tries. Returns true when the bite killed the last hero standing.
+ */
+function springRatTrap(action: ActionInstance, ctx: ActionContext, effects: Effect[]): boolean {
+  const { party } = ctx;
+  const rng = actionRng(ctx, `${action.uid}@trap`);
+  const target = randomActive(party, rng);
+  if (target === null) return false;
+  const victim = party.characters[target]!;
+  const hero: TrapHero = { name: victim.name, female: CONSTANTS.CHARACTER_FEMALE.includes(victim.avatar) };
+  effects.push({ type: "text", text: ratOpening(hero, rng), tone: "bad" });
+  if (rng.float() < dodgeChance(attr(victim, "lck"), Number(action.params.trapLevel ?? ctx.tier))) {
+    effects.push({ type: "text", text: ratMiss(hero, rng), tone: "good" });
+    return false;
+  }
+  const amount = Math.max(1, Number(action.params.trapDamage ?? 1));
+  const hit = applyHit(party, target, amount, null, rng);
+  effects.push({ type: "text", text: ratHit(hero, amount, rng), tone: "bad" }, { type: "damage", character: target, amount, damageType: "physical", conditions: hit.conditions });
+  return hit.defeated;
+}
+
 function randomActive(party: Party, rng: Rng): number | null {
   const active = activeCharacters(party);
   return active.length === 0 ? null : active[rng.int(active.length)]!;
@@ -226,47 +253,91 @@ export function resistanceRecipient(party: Party, element: (typeof ELEMENTS)[num
  * (`rewardsOf` in `endRoom.ts`). The object is the action's `item`; it only changes the words, who gets the points is decided by the party in every case.
  */
 interface Vessel {
-  hint: (attr: string, amount: number) => string;
+  /** What the party sees: the colour and a clue (the hint does not name the attribute, 35th playtest). */
+  hint: (look: Look) => string;
+  /** The question that goes with it in the dialog, after the hint. */
   pick: string;
   done: (name: string, attr: string, amount: number) => string;
 }
+
+/** How a gift of attribute points looks: the colour of the stuff, and one thing in it that gives the attribute away to anyone who thinks about it. */
+interface Look {
+  colour: string;
+  clue: string;
+}
+const ATTRIBUTE_LOOKS: Readonly<Record<Attribute, Look>> = {
+  str: { colour: "rust-red", clue: "a small bull's horn" },
+  int: { colour: "pale blue", clue: "tiny glowing letters" },
+  per: { colour: "rose-pink", clue: "a little golden mask" },
+  end: { colour: "dark green", clue: "a knotty piece of oak root" },
+  spd: { colour: "silvery white", clue: "a hummingbird's feather" },
+  acc: { colour: "steel-grey", clue: "a tiny silver arrowhead" },
+  lck: { colour: "yellow", clue: "four-leaf clovers" },
+};
 const CHALICE_VESSEL: Vessel = {
-  hint: (attr, amount) => `The liquid in the chalice glows in the colour of ${attr}. Whoever drinks it gains ${amount} points.`,
-  pick: "Which character shall drink from the chalice?",
+  hint: (l) => `You see a chalice filled with a thick, ${l.colour} liquid. You can make out ${l.clue} floating in the brew.`,
+  pick: "Who wants to drink from it?",
   done: (name, attr, amount) => `${name} drinks and is filled with strength: ${attr} +${amount}.`,
 };
 const WELL_VESSEL: Vessel = {
-  hint: (attr, amount) => `The water of the well glows in the colour of ${attr}. Whoever drinks from it gains ${amount} points.`,
-  pick: "Which character shall drink from the well?",
+  hint: (l) => `You see a well that is filled to the brim with a thick, ${l.colour} liquid. You can make out ${l.clue} deep down in the water.`,
+  pick: "Who wants to drink from the well?",
   done: (name, attr, amount) => `${name} drinks from the well and is filled with strength: ${attr} +${amount}.`,
 };
 const VESSELS: Readonly<Record<number, Vessel>> = {
   37: WELL_VESSEL,
   88: WELL_VESSEL,
   5: {
-    hint: (attr, amount) => `The barrel is filled to the brim with a brew that glows in the colour of ${attr}. Whoever drinks it gains ${amount} points.`,
-    pick: "Which character shall drink from the barrel?",
+    hint: (l) => `You lift the lid of the barrel. It is filled to the brim with a thick, ${l.colour} brew. You can make out ${l.clue} floating in it.`,
+    pick: "Who wants to drink from the barrel?",
     done: (name, attr, amount) => `${name} drinks from the barrel and is filled with strength: ${attr} +${amount}.`,
   },
   117: {
-    hint: (attr, amount) => `The crystals hum in the colour of ${attr}. Whoever touches them gains ${amount} points.`,
-    pick: "Which character shall touch the crystals?",
+    hint: (l) => `You see crystals that glow in a ${l.colour} light. You can make out ${l.clue} caught inside them.`,
+    pick: "Who wants to touch the crystals?",
     done: (name, attr, amount) => `${name} touches the crystals and is filled with strength: ${attr} +${amount}.`,
   },
 };
 const vesselOf = (p: ActionInstance["params"]): Vessel => VESSELS[Number(p.item ?? p.chest)] ?? CHALICE_VESSEL;
 
-/** What a chalice with a `bonus` holds: a level, points of one attribute or experience. `hint` is what the party sees before it chooses who drinks. */
-export type ChaliceGift = { kind: "level"; amount: number; hint: string } | { kind: "attr"; attribute: Attribute; amount: number; hint: string } | { kind: "xp"; amount: number; hint: string };
+/**
+ * What a chalice with a `bonus` holds: a level, points of one attribute or experience. `hint` is what the party sees before it chooses who drinks: a look at the stuff, never
+ * the name of the attribute (35th playtest); `question` is hint and question in one, for the dialog that asks who gets it.
+ */
+export type ChaliceGift =
+  | { kind: "level"; amount: number; hint: string; question: string }
+  | { kind: "attr"; attribute: Attribute; amount: number; hint: string; question: string }
+  | { kind: "res"; element: (typeof ELEMENTS)[number]; amount: number; hint: string; question: string }
+  | { kind: "xp"; amount: number; hint: string; question: string };
+
+/** How a gift of resistance looks (a treasure chamber behind a brittle wall can hold one, 35th playtest). */
+const RESISTANCE_LOOKS: Readonly<Record<(typeof ELEMENTS)[number], Look>> = {
+  fire: { colour: "fiery orange", clue: "glowing embers" },
+  ice: { colour: "milky blue-white", clue: "tiny snowflakes" },
+  acid: { colour: "sickly green", clue: "a few bubbling bones" },
+  magic: { colour: "shimmering violet", clue: "small drifting sparks" },
+};
 
 export function chaliceGift(p: ActionInstance["params"]): ChaliceGift {
   const amount = Math.max(1, Number(p.amount ?? 1));
+  if (p.bonus === "res") {
+    const element = p.element as (typeof ELEMENTS)[number];
+    const vessel = vesselOf(p);
+    const hint = vessel.hint(RESISTANCE_LOOKS[element]);
+    return { kind: "res", element, amount, hint, question: `${hint} ${vessel.pick}` };
+  }
   if (p.bonus === "attr") {
     const attribute = p.attr as Attribute;
-    return { kind: "attr", attribute, amount, hint: vesselOf(p).hint(attribute.toUpperCase(), amount) };
+    const vessel = vesselOf(p);
+    const hint = vessel.hint(ATTRIBUTE_LOOKS[attribute]);
+    return { kind: "attr", attribute, amount, hint, question: `${hint} ${vessel.pick}` };
   }
-  if (p.bonus === "xp") return { kind: "xp", amount, hint: "The liquid in the chalice shimmers with old wisdom. Only one of you can drink it." };
-  return { kind: "level", amount, hint: "The liquid in the chalice gleams like liquid gold. Only one of you can drink it." };
+  if (p.bonus === "xp") {
+    const hint = "You see a chalice filled with a deep violet liquid. Old, yellowed scrolls seem to dissolve in it, and a faint murmur of voices rises from the brew.";
+    return { kind: "xp", amount, hint, question: `${hint} Only one of you can drink it. Who wants to?` };
+  }
+  const hint = "You see a chalice filled with a liquid that gleams like molten gold. Tiny stars rise in it like bubbles.";
+  return { kind: "level", amount, hint, question: `${hint} Only one of you can drink it. Who wants to?` };
 }
 
 /** The tries a mini-quest statue has used: every wrong answer leaves `<uid>@try<n>` in the set. */
@@ -396,13 +467,22 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "gong": {
+      // the gong asks first, rings with its own sound, and may be struck again after the first time (a gong that is done is `<uid>` in the set, as before: saves keep working)
+      const struck = (ctx.opened ?? NONE).has(action.uid);
+      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Gong", question: struck ? "Strike the gong again?" : "A huge bronze gong hangs in a stone frame, a mallet beside it. Do you want to strike the gong?", yes: "Strike it", no: "Leave" }], consumed: false };
+      if (ctx.answer === null) return { effects, consumed: false };
+      effects.push({ type: "sound", id: GONG_SOUND });
+      if (struck) {
+        effects.push({ type: "text", text: "Although you have struck the gong hard, nothing seems to have happened." });
+        return { effects, consumed: false };
+      }
       const gongs = gongsStruck(ctx.content ?? EMPTY, ctx.opened ?? NONE);
       const last = gongs.done + 1 >= gongs.total;
       effects.push({ type: "text", text: last ? "The last gong sounds. The air hums. Magic runes flare up in the middle of this place." : `The gong booms (${gongs.done + 1} of ${gongs.total}). Something answers from the dark.` });
       const ids = String(p.monsters ?? "").split(",").filter((s) => s !== "").map(Number);
       const group = Number(p.group ?? 1);
       if (ids.length > 0) effects.push({ type: "ambush", monsterIds: Array.from({ length: group }, () => ids[rng.int(ids.length)]!) });
-      return { effects, consumed: true };
+      return { effects, consumed: false, state: { add: [action.uid], remove: [] } };
     }
 
     case "lever": {
@@ -452,13 +532,17 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       if (typeof p.bonus === "string") {
         if (p.lock === "code" && !(ctx.opened ?? NONE).has(String(p.requires))) return { effects: [{ type: "text", text: "The chalice is sealed. A message on the nearest terminal says it opens for whoever knows the word." }], consumed: false };
         const gift = chaliceGift(p);
-        if (ctx.hero === undefined) return { effects: [{ type: "text", text: gift.hint }, { type: "pick", question: gift.kind === "attr" ? vesselOf(p).pick : "Which character shall drink from the chalice?" }], consumed: false };
+        // the look of the stuff is part of the question, so that it stays on the screen while the player decides
+        if (ctx.hero === undefined) return { effects: [{ type: "pick", question: gift.question }], consumed: false };
         if (ctx.hero === null) return { effects, consumed: false };
         const drinker = party.characters[ctx.hero];
         if (!drinker || !canAct(drinker)) return { effects, consumed: false };
         if (gift.kind === "level") {
           levelUp(drinker, party.talents, gift.amount, party.mascot);
           effects.push({ type: "text", text: `${drinker.name} drinks. A surge of experience runs through ${drinker.name}: ${gift.amount === 1 ? "a level" : `${gift.amount} levels`} gained.` });
+        } else if (gift.kind === "res") {
+          drinker[RESISTANCE_FIELD[gift.element]] += gift.amount;
+          effects.push({ type: "text", text: `${drinker.name} drinks and feels protected: ${gift.element} resistance +${gift.amount}%.` }, { type: "resistance", character: ctx.hero, element: gift.element, amount: gift.amount });
         } else if (gift.kind === "attr") {
           drinker[gift.attribute] += gift.amount;
           effects.push({ type: "text", text: vesselOf(p).done(drinker.name, gift.attribute.toUpperCase(), gift.amount) }, { type: "attribute", character: ctx.hero, attribute: gift.attribute, amount: gift.amount });
@@ -511,7 +595,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       const text = String(p.text);
       const hasCoin = carriedItems(party).some((i) => i.type === "quest_quatloo_coin");
       if (!hasCoin) return { effects: [{ type: "text", text: `${text} There is a small slot, but you don't have any items which fit inside.` }], consumed: false };
-      if (ctx.hero === undefined) return { effects: [{ type: "text", text }, { type: "pick", question: "The Quatloo coin you found fits exactly into the slot. Which character shall put it in?" }], consumed: false };
+      if (ctx.hero === undefined) return { effects: [{ type: "pick", question: `${text} The Quatloo coin you found fits exactly into the slot. Who wants to put it in?` }], consumed: false };
       if (ctx.hero === null) return { effects, consumed: false };
       const hero = party.characters[ctx.hero];
       if (!hero || !takeOne(party, "quest_quatloo_coin")) return { effects, consumed: false };
@@ -724,9 +808,16 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       return { effects, consumed: false };
     }
 
-    case "decor":
+    case "decor": {
       effects.push({ type: "text", text: propLine(Number(p.item), action.uid) });
+      // a pile of bones that hides something (one in five, fixed by the generator): the party finds it the first time it steps on the pile (the game asks a decoration once)
+      if (Number(p.item) === BONE_PILE && p.find === 1) {
+        const struck = p.trapped === RAT_TRAP && springRatTrap(action, ctx, effects);
+        payOut(p, rng, party, effects);
+        if (struck) effects.push({ type: "defeat" });
+      }
       return { effects, consumed: false };
+    }
 
     case "legacy":
       // campaign actions are resolved by src/campaign/engine.ts, which needs prompts and map changes

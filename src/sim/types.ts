@@ -120,10 +120,17 @@ export interface CharacterMods {
   rage?: number;
   /** Dimensional Rift: monster turns left. The hero cannot act and nothing can hit them. */
   rift?: number;
+  /** Temporary points on an attribute or a resistance (a well, fountain or stone head of the open land, `sim/boons.ts`); each key goes with its `TimedEffect` of kind `boon`. */
+  boon?: Partial<Record<BoonKey, number>>;
 }
 
+/** What a boon of the open land raises: an attribute, or a resistance in percent. */
+export type BoonKey = Attribute | "res_fire" | "res_ice" | "res_acid" | "res_magic";
+
 export interface TimedEffect {
-  kind: "light" | "levitate" | "walk_on_water" | "protection" | "blessed" | "wizard_eye" | "stone_skin" | "rage" | "power_shield" | "detect_monster";
+  kind: "light" | "levitate" | "walk_on_water" | "protection" | "blessed" | "wizard_eye" | "stone_skin" | "rage" | "power_shield" | "detect_monster" | "boon";
+  /** The attribute or resistance a `boon` raises. */
+  stat?: BoonKey;
   /** Game minute at which the effect ends. */
   until: number;
   /** Walk on Water ran out while the party was in deep water: it holds until the party leaves it (`advanceTime`). */

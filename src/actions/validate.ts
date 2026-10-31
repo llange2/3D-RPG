@@ -190,6 +190,7 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
   const hidden = new Set<number>(content.actions.filter((a) => a.uid.includes("#vault_wall:") || a.uid.includes("#brittle:")).map((a) => idx(a.x, a.y)));
   const end = map.dungeon?.endRoom;
   if (end?.seal) hidden.add(idx(end.seal.x, end.seal.y));
+  for (const v of map.dungeon?.vaults ?? []) hidden.add(idx(v.seal.x, v.seal.y));
   const seen = new Uint8Array(map.width * map.height);
   const queue: number[] = [idx(map.spawn.x, map.spawn.y)];
   seen[queue[0]!] = 1;

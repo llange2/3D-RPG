@@ -186,6 +186,14 @@ export class AudioManager {
     );
   }
 
+  /** How long the sound lasts in seconds, once its file is decoded; `fallback` before that (or without Web Audio). For things that move as long as a sound plays. */
+  durationOf(id: number, fallback: number): number {
+    const entry = SOUNDS[id];
+    if (!entry) return fallback;
+    const name = filesOf(entry)[0]!;
+    return this.buffers.get(name)?.duration ?? fallback;
+  }
+
   /** Plays a sound effect by its old id (e.g. 9016 = melee hit). */
   play(id: number, volume = 1): void {
     this.requests++;

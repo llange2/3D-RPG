@@ -48,7 +48,11 @@ describe("33rd playtest", () => {
     const ctx: ActionContext = { party, rootSeed, monsterThemes: { beast: 1 }, tier: 1 };
     const asked = resolveAction(barrel, ctx);
     expect(asked.consumed).toBe(false);
-    expect(asked.effects).toContainEqual({ type: "pick", question: "Which character shall drink from the barrel?" });
+    // (35th playtest: the question carries a look at the brew instead of the name of the attribute, and the dialog keeps it on the screen)
+    const pick = asked.effects.find((e) => e.type === "pick");
+    expect(pick?.type === "pick" ? pick.question : "").toContain("Who wants to drink from the barrel?");
+    expect(pick?.type === "pick" ? pick.question : "").toContain("rust-red");
+    expect(pick?.type === "pick" ? pick.question : "").not.toMatch(/strength|\bSTR\b/i);
     const drunk = resolveAction(barrel, { ...ctx, hero: 2 });
     expect(drunk.consumed).toBe(true);
     expect(party.characters[2]!.str).toBe(before + 5);

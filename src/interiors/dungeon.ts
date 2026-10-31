@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { Builder, extraEdges, primEdges, rectsOverlap, type BuildContext, type Rect } from "./builder";
-import { carveEndRoomFor, carveMachineRoom } from "./endRoom";
+import { carveEndRoomFor, carveMachineRoom, carveVaults } from "./endRoom";
 import { longestCorridor } from "./topology";
 import { CELL, type DungeonRef, type InteriorMap } from "./types";
 
@@ -73,8 +73,10 @@ function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): InteriorMap {
   const endRoom = wantsRoom ? carveEndRoomFor(b, rng, spawn, quest === "quest_1" || quest === "quest_3", plan.endNear, ctx.dungeon?.orbs) : null;
   // Seth Squirm and the machines of the Quatloo coins: a room behind a door
   const machines = ctx.dungeon?.seth ? carveMachineRoom(b, rng, spawn) : null;
+  // 0 to 3 treasure chambers behind brittle walls (35th playtest)
+  const vaults = wantsRoom ? carveVaults(b, rng, spawn, rng.range(0, 3), [...(hall ? [hall] : []), ...(quest === "quest_1" ? [r0] : []), ...(machines ? [machines] : [])]) : [];
   const entrance = quest === "quest_1" ? { hall: { ...r0 } } : hall ? { hall: { ...hall } } : {};
-  const dungeon: DungeonRef | undefined = ctx.dungeon ? { ...ctx.dungeon, ...entrance, ...(endRoom ? { endRoom } : {}), ...(machines ? { machines } : {}), ...(plan.barriers ? { barriers: plan.barriers } : {}) } : undefined;
+  const dungeon: DungeonRef | undefined = ctx.dungeon ? { ...ctx.dungeon, ...entrance, ...(endRoom ? { endRoom } : {}), ...(machines ? { machines } : {}), ...(vaults.length > 0 ? { vaults } : {}), ...(plan.barriers ? { barriers: plan.barriers } : {}) } : undefined;
   return b.finish("dungeon", { ...ctx, dungeon }, exit, spawn);
 }
 

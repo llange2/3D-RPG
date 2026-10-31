@@ -52,11 +52,12 @@ function carve(b: Builder, x: number, y: number, w: number, h: number): void {
  * Carves the end room of `w` x `h` cells (a sealed one lies with its short side along the way in). Returns null if the rock has no room for it, which
  * the caller treats as a generator failure (it retries or enlarges the map).
  */
-export function carveEndRoom(b: Builder, rng: Rng, spawn: { x: number; y: number }, isolated: boolean, w = 5, h = 4, within?: { x: number; y: number; w: number; h: number }): EndRoom | null {
+export function carveEndRoom(b: Builder, rng: Rng, spawn: { x: number; y: number }, isolated: boolean, w = 5, h = 4, within?: { x: number; y: number; w: number; h: number }, scatter = false, avoid?: (x: number, y: number) => boolean): EndRoom | null {
   const depth = depthFrom(b, spawn.x, spawn.y);
   let best: { room: EndRoom; score: number } | null = null;
   const take = (room: EndRoom, score: number) => {
-    const jittered = score * 8 + rng.int(8);
+    // (a treasure chamber goes anywhere there is rock, the end room as far from the way in as it can)
+    const jittered = scatter ? rng.int(100000) : score * 8 + rng.int(8);
     if (!best || jittered > best.score) best = { room, score: jittered };
   };
 
@@ -70,12 +71,16 @@ export function carveEndRoom(b: Builder, rng: Rng, spawn: { x: number; y: number
       }
     }
   } else {
-    for (let i = 0; i < b.cells.length; i++) {
+    // a treasure chamber takes the first place that fits in a random order of the floor (the end room looks at all of them for the farthest)
+    const cells = Array.from({ length: b.cells.length }, (_, i) => i);
+    const order = scatter ? rng.shuffle(cells.filter((i) => depth[i]! >= 3)) : cells;
+    search: for (const i of order) {
       if (depth[i]! < 3) continue;
       const fx = i % b.width;
       const fy = (i - fx) / b.width;
       // a quest whose wall is the one of a hall (the row of heads) asks for a seal in that hall
       if (within && (fx < within.x || fy < within.y || fx >= within.x + within.w || fy >= within.y + within.h)) continue;
+      if (avoid?.(fx, fy)) continue;
       for (const f of Object.keys(FACING_DELTA) as Facing[]) {
         const { dx, dy } = FACING_DELTA[f];
         const sx = fx + dx;
@@ -90,6 +95,7 @@ export function carveEndRoom(b: Builder, rng: Rng, spawn: { x: number; y: number
         // the rock round the room, with the seal as the one cell of it that touches the way in
         if (!solidBlock(b, rx, ry, rw, rh, 1)) continue;
         take({ x: rx, y: ry, w: rw, h: rh, cx: rx + (rw >> 1), cy: ry + (rh >> 1), seal: { x: sx, y: sy }, isolated: false }, depth[i]!);
+        if (scatter) break search;
       }
     }
   }
@@ -111,6 +117,53 @@ export function carveMachineRoom(b: Builder, rng: Rng, spawn: { x: number; y: nu
   const front = { x: room.seal.x + (room.seal.x - inside.x), y: room.seal.y + (room.seal.y - inside.y) };
   b.set(room.seal.x, room.seal.y, CELL.FLOOR);
   return { x: room.x, y: room.y, w: room.w, h: room.h, cx: room.cx, cy: room.cy, door: room.seal, front };
+}
+
+/** The middle of every room the builder has marked (`makeRoom` takes the cell at half the width and height of the room's rectangle). */
+function roomCentres(b: Builder): { x: number; y: number }[] {
+  const box = new Map<number, { x0: number; y0: number; x1: number; y1: number }>();
+  for (let i = 0; i < b.roomOf.length; i++) {
+    const id = b.roomOf[i]!;
+    if (id < 0) continue;
+    const x = i % b.width;
+    const y = (i - x) / b.width;
+    const r = box.get(id);
+    if (!r) box.set(id, { x0: x, y0: y, x1: x, y1: y });
+    else {
+      r.x0 = Math.min(r.x0, x);
+      r.y0 = Math.min(r.y0, y);
+      r.x1 = Math.max(r.x1, x);
+      r.y1 = Math.max(r.y1, y);
+    }
+  }
+  return [...box.values()].map((r) => ({ x: r.x0 + Math.floor((r.x1 - r.x0 + 1) / 2), y: r.y0 + Math.floor((r.y1 - r.y0 + 1) / 2) }));
+}
+
+/** The sizes of a treasure chamber behind a brittle wall (the long side along the way in), tried in this order. */
+const VAULT_SIZES: readonly (readonly [number, number])[] = [[3, 2], [2, 2], [3, 1]];
+
+/**
+ * Carves up to `count` small treasure chambers behind brittle walls (35th playtest) into the rock that is left, anywhere in it: a pocket whose only way in is one wall cell next to
+ * a floor cell, like a sealed end room but small. A place without rock for one gets fewer (a maze, whose walls are one cell thick, gets none).
+ */
+export function carveVaults(b: Builder, rng: Rng, spawn: { x: number; y: number }, count: number, keepClear: readonly { x: number; y: number; w: number; h: number }[] = [], roomMiddles?: readonly { x: number; y: number }[]): NonNullable<DungeonRef["vaults"]> {
+  const out: NonNullable<DungeonRef["vaults"]> = [];
+  if (count <= 0) return out;
+  // the cell in front of the brittle wall is where the party stands: not in the middle of a room (the monsters of the room stand there), not in the hall or the entrance field of a quest
+  // (a cave's chambers are no rectangles: the caller names their middles)
+  const centres = roomMiddles ?? roomCentres(b);
+  const avoid = (x: number, y: number): boolean =>
+    centres.some((c) => Math.abs(c.x - x) <= 1 && Math.abs(c.y - y) <= 1) || keepClear.some((r) => x >= r.x - 1 && y >= r.y - 1 && x <= r.x + r.w && y <= r.y + r.h);
+  for (let n = 0; n < count; n++) {
+    let room: EndRoom | null = null;
+    for (const [w, h] of VAULT_SIZES) {
+      room = carveEndRoom(b, rng, spawn, false, w, h, undefined, true, avoid);
+      if (room?.seal) break;
+    }
+    if (!room?.seal) break;
+    out.push({ x: room.x, y: room.y, w: room.w, h: room.h, cx: room.cx, cy: room.cy, seal: room.seal });
+  }
+  return out;
 }
 
 const SIZES: readonly (readonly [number, number])[] = [[5, 4], [4, 4], [4, 3], [3, 3]];

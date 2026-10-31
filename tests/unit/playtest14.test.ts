@@ -23,7 +23,8 @@ describe("options (fourteenth playtest, points 1, 2 and 6)", () => {
 
   it("keeps what is stored and ignores values it does not know", () => {
     const s = parseSettings(JSON.stringify({ floorModel: false, viewDistance: "close", resolution: "low", showFps: true, music: false, sfx: false, animatedTown: true, junk: 1 }));
-    expect(s).toEqual({ floorModel: false, viewDistance: "close", resolution: "low", showFps: true, music: false, sfx: false, animatedTown: true });
+    // (the cursor fades by default, 35th playtest: an older stored setting without the field gets the default)
+    expect(s).toEqual({ floorModel: false, viewDistance: "close", resolution: "low", showFps: true, music: false, sfx: false, animatedTown: true, fadeCursor: true });
     expect(parseSettings(JSON.stringify({ viewDistance: "sideways", resolution: "huge", showFps: "yes" }))).toEqual(DEFAULT_SETTINGS);
   });
 

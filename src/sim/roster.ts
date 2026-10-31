@@ -1,5 +1,7 @@
 import type { Rng } from "../core/rng";
+import { isStartingSpell } from "../data/spell-loot";
 import { BASE_CLASS, CONSTANTS, SPELLS } from "../data/tables";
+import { dropBoons } from "./boons";
 import { bornAtStart, createCharacter, recalcValues, removeCondition } from "./character";
 import { equipRecruit } from "./party";
 import { SPELL_SCHOOL } from "./spells";
@@ -69,7 +71,7 @@ export function startingSpells(cls: ClassName): number[] {
   const type = SPELL_SCHOOL[cls];
   if (!type) return [];
   return Object.values(SPELLS)
-    .filter((s) => s.level === 1 && s.type.includes(type))
+    .filter((s) => isStartingSpell(s.id) && s.type.includes(type))
     .map((s) => s.id)
     .sort((a, b) => a - b);
 }
@@ -109,6 +111,7 @@ export function carriesQuestItem(c: Character): boolean {
 function leave(party: Party, slot: number): Character {
   const c = party.characters[slot]!;
   removeCondition(c, "Blessed");
+  dropBoons(party, slot);
   party.effects = party.effects.filter((e) => !(e.kind === "blessed" && e.character === slot));
   return c;
 }

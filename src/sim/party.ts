@@ -1,6 +1,7 @@
 import { Rng, seedFromString } from "../core/rng";
 import { TALENTS } from "../data/tables";
 import { canAct, createCharacter, emptyInventory, isAlive, recalcValues, removeCondition, swapSlots } from "./character";
+import { endBoon } from "./boons";
 import { seedConditionTimers, tickConditions, type ConditionEvent } from "./conditions";
 import { generateItem } from "./items";
 import { BAG_SLOTS, type Character, type ClassName, type Item, type Party, type TimedEffect } from "./types";
@@ -22,8 +23,8 @@ export function createDefaultParty(): Party {
   const characters: Character[] = [
     createCharacter({ name: "Maximus", classType: "Knight", raceType: "Orc", avatar: "character21", attrs: { str: 21, int: 8, per: 12, end: 20, spd: 16, acc: 14, lck: 10 } }),
     createCharacter({ name: "Elrin", classType: "Ninja", raceType: "Dwarf", avatar: "character16", attrs: { str: 16, int: 12, per: 11, end: 15, spd: 20, acc: 20, lck: 19 } }),
-    createCharacter({ name: "Ralvar", classType: "Archer", raceType: "Human", avatar: "character05", attrs: { str: 15, int: 20, per: 11, end: 14, spd: 13, acc: 20, lck: 12 }, spells: [1, 2, 3, 6] }),
-    createCharacter({ name: "Lyneth", classType: "Druid", raceType: "Gnome", avatar: "character12", attrs: { str: 8, int: 19, per: 20, end: 18, spd: 14, acc: 10, lck: 13 }, spells: [1, 2, 3, 4, 6] }),
+    createCharacter({ name: "Ralvar", classType: "Archer", raceType: "Human", avatar: "character05", attrs: { str: 15, int: 20, per: 11, end: 14, spd: 13, acc: 20, lck: 12 }, spells: [1, 3, 6] }),
+    createCharacter({ name: "Lyneth", classType: "Druid", raceType: "Gnome", avatar: "character12", attrs: { str: 8, int: 19, per: 20, end: 18, spd: 14, acc: 10, lck: 13 }, spells: [1, 3, 4, 6] }),
   ];
   // the two heroes of the old game who wait in the inn from the start
   const reserve: Character[] = [
@@ -243,6 +244,7 @@ export function advanceTime(party: Party, minutes: number): TimePassed {
     if (e.kind === "blessed" && hero) removeCondition(hero, "Blessed");
     if (e.kind === "stone_skin" && hero?.mods) delete hero.mods.stoneSkin;
     if (e.kind === "rage" && hero?.mods) delete hero.mods.rage;
+    if (e.kind === "boon" && e.character !== undefined) endBoon(party, e.character, e.stat);
   }
   return { daysPassed, expired, conditions: tickConditions(party) };
 }

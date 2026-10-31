@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { Builder, neighbours4, type BuildContext } from "./builder";
-import { carveEndRoomFor } from "./endRoom";
+import { carveEndRoomFor, carveVaults } from "./endRoom";
 import { CELL, type InteriorMap, type Room } from "./types";
 
 // Halved in both directions on the user's request (fifteenth playtest: the caves were 80 x 80 and took too long to cross); the walkable area and the chamber count follow
@@ -48,7 +48,9 @@ function generateCaveOnce(rng: Rng, ctx: BuildContext): InteriorMap {
   // the end room: quest 3 teleports the party into it, the others seal it (a cave without room for a sealed one gets a pocket that a teleport reaches)
   const quest = ctx.dungeon?.quest;
   const endRoom = ctx.dungeon ? carveEndRoomFor(b, rng, spawn, quest === "quest_3", undefined, ctx.dungeon.orbs) : null;
-  const dungeon = ctx.dungeon ? { ...ctx.dungeon, ...(endRoom ? { endRoom } : {}) } : undefined;
+  // 0 to 3 treasure chambers behind brittle walls (35th playtest)
+  const vaults = ctx.dungeon ? carveVaults(b, rng, spawn, rng.range(0, 3), [], chambers.map((c) => ({ x: c.cx, y: c.cy }))) : [];
+  const dungeon = ctx.dungeon ? { ...ctx.dungeon, ...(endRoom ? { endRoom } : {}), ...(vaults.length > 0 ? { vaults } : {}) } : undefined;
   return { ...b.finish("cave", { ...ctx, dungeon }, exit, spawn), rooms, roomOf: b.roomOf };
 }
 

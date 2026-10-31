@@ -199,6 +199,15 @@ const GROUND_TILES: Partial<Record<string, PropSpec>> = {
 let flatTiles: FlatTileSet | null = null;
 
 /**
+ * In the 3D ground mode the plateau of a ground tile lies a hair above the plane (`slabLift`, up to 0.02) and its lumps and tufts reach out of it, so a model that stands on the ground
+ * with its lower edge at height 0 (the wheels of the rustic caravan, a hut, a well, a mascot's place) sank a little into it (35th playtest). The flat mode paints the ground at height 0.
+ */
+export const GROUND_PROP_LIFT = 0.06;
+
+/** How much higher than the flat ground the things that stand on the ground of the overworld are put: the ground mode decides. */
+export const groundPropLift = (): number => (flatTiles === null && usesTileModels() ? GROUND_PROP_LIFT : 0);
+
+/**
  * Graphics mode "flat": the ground is the painted tiles of `terrain/flat` laid on the corners of the map tiles instead of one textured quad
  * per tile with the old ground models (`gnd_*`) on top. Null switches back to the models. Set before the first chunk and rebuild the chunks
  * after a change (`ChunkManager.rebuild`).
@@ -360,7 +369,7 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
         props.push({
           model: spec.model,
           x: wx + ox,
-          y: base + (flatTiles && asTile && hasOwnSlab(spec.model) ? FLAT_SLAB_SINK : 0),
+          y: base + (flatTiles && asTile && hasOwnSlab(spec.model) ? FLAT_SLAB_SINK : 0) + (tile.deco === DECO.LANDMARK ? groundPropLift() : 0),
           z: wz + oz,
           // trees stand in steps of 90 degrees in every mode (also on the old flat ground), small things turn freely
           rotY: (asTile || tile.deco === DECO.TREE ? ((hh >>> 12) % 4) * 90 : (hh >>> 12) % 360) * (Math.PI / 180),

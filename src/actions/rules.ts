@@ -4,10 +4,11 @@ import { buildCastleContent } from "./castle";
 import { buildShowcaseContent } from "./showcase";
 import { buildSpaceshipContent } from "./spaceship";
 import { hideInChests, placeMachines } from "./machines";
+import { placeVaults } from "./vaults";
 import { hideSpells } from "./spellScrolls";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
 import { chestLock, hasOrdinaryLock } from "../data/locks";
-import { CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS } from "../data/chest-traps";
+import { BONES_FIND_CHANCE, BONE_PILE, CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS, RAT_TRAP } from "../data/chest-traps";
 import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
 import { allowedIn, isFunctional } from "../data/item-rules";
@@ -22,6 +23,9 @@ import { finishQuest, placeQuest, type QuestEnv, type QuestResult } from "./ques
 import { ACTION_DEFS, SERVICES, blocksCell } from "./registry";
 import { evalExpr, resolveParam, type ExprVars } from "./expr";
 import type { ActionInstance, ActionKind, Anchor, MapContent, ParamValue, Rule, RuleSet, SpawnPoint } from "./types";
+
+/** Groups of monsters that wander the passages of a maze (`dungeon_3`) on top of the one group in the middle of each of its rooms. */
+export const MAZE_GROUPS = 10;
 
 /** The old barrel (item 5): a container, never plain decoration. */
 const BARREL = 5;
@@ -110,6 +114,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   const hiddenWalls = new Set<number>((map.sites ?? []).filter((s) => (s.kind === "vault_way" && s.how === "wall") || s.kind === "brittle").map((s) => idx(s.x, s.y)));
   const endRoom = map.dungeon?.endRoom;
   if (endRoom?.seal) hiddenWalls.add(idx(endRoom.seal.x, endRoom.seal.y));
+  for (const v of map.dungeon?.vaults ?? []) hiddenWalls.add(idx(v.seal.x, v.seal.y));
   const seen = new Uint8Array(map.width * map.height);
   const queue = new Int32Array(map.width * map.height);
   const reachableCount = (): number => {
@@ -305,6 +310,9 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // the layouts bring their own say about doors: dungeon_2 shuts every way at its beginning and its end, dungeon_3 (the maze) has no doors at all
   const layout = map.dungeon?.layout;
   const ruleList = rules.rules.flatMap((r): Rule[] => (r.id !== "door" ? [r] : layout === "dungeon_3" ? [] : layout === "dungeon_2" ? [{ ...r, count: { chance: 1000 }, when: undefined }] : [r]));
+  // the maze has some 1800 cells of floor but only six rooms, and the rules put one group in the middle of a room: it stood nearly empty (35th playtest, "Pit of Morena"). Ten more groups
+  // wander its passages, which makes about three times the monsters; the other layouts have their rooms for the monsters
+  if (layout === "dungeon_3" && dt) ruleList.push({ id: "monsters_maze", kind: "spawn", anchor: "corridor", when: { minDepth: 80 }, count: { perMap: [MAZE_GROUPS, MAZE_GROUPS] }, params: { boss: false, group: "=1+rand(0,tier)" } });
 
   for (const rule of ruleList) {
     if (rule.when?.theme && !dt) continue;
@@ -361,6 +369,15 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
         kind = "treasure";
         Object.assign(params, { chest: Number(params.item), level: 1, items: 0, gold: 0 });
         delete params.item;
+      }
+      // a pile of bones hides something one time in five (35th playtest): a few coins, now and then an item, and in one such pile of five a rat (the trap mechanic of the unlocked
+      // chests, physical damage); the party finds it when it steps on the pile, which stays a decoration it can walk over
+      if (kind === "decor" && Number(params.item) === BONE_PILE) {
+        const boneRng = new Rng(derive(mapSeed, rule.id, i, "bones"));
+        if (boneRng.chance(BONES_FIND_CHANCE)) {
+          Object.assign(params, { find: 1, level: tier, gold: Math.max(1, tier * 15 + boneRng.range(3, 40)), items: boneRng.chance(300) ? 1 : 0 });
+          if (boneRng.chance(CHEST_TRAP_CHANCE)) Object.assign(params, { trapped: RAT_TRAP, trapDamage: Math.max(1, Math.ceil(Number(resolveParam(TRAP_DAMAGE.generic ?? 0, vars, boneRng)) / 2)), trapLevel: tier });
+        }
       }
       // an ordinary chest is locked (a simple check for the best thief of the party); barrels and the like are not
       if (kind === "treasure" && hasOrdinaryLock(params)) params.difficulty = chestLock(baseTier);
@@ -427,6 +444,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
 
   // the end room: what the plan put there (keys, key cards, orbs) and the rewards of its level
   if (questEnv && map.dungeon?.endRoom) finishQuest(questEnv);
+  // the treasure chambers behind brittle walls (35th playtest)
+  if (questEnv && map.dungeon?.vaults) placeVaults(questEnv);
   // Seth Squirm and the machines, the Quatloo coins and silver skulls in the ordinary chests (ue_quest_1 and ue_quest_2)
   if (questEnv) placeMachines(questEnv);
   if (map.dungeon) hideInChests(map, actions, map.dungeon.coins, map.dungeon.skulls, mapSeed);
