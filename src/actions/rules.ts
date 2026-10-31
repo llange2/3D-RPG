@@ -236,7 +236,12 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     const nearCentre = (a: { x: number; y: number }): boolean => centres.some((c) => Math.abs(c.x - a.x) <= 1 && Math.abs(c.y - a.y) <= 1);
     const far = (list: readonly Anchor[]): Anchor[] => list.filter((a) => Math.abs(a.x - x) + Math.abs(a.y - y) > 14 && a.depth >= 0);
     const aside = far(anchors.byKind.roomEdge).filter((a) => !nearCentre(a) && map.cells[idx(a.x, a.y)] === CELL.FLOOR);
-    return aside.length > 0 ? aside : far(centres);
+    if (aside.length > 0) return aside;
+    // no cell beside a room that is far enough: the cell next to a room's middle (never the middle itself, where the group of the room and the decoration of a hall stand)
+    return far(centres).map((c) => {
+      const next = (Object.keys(FACING_DELTA) as (keyof typeof FACING_DELTA)[]).map((f) => ({ x: c.x + FACING_DELTA[f].dx, y: c.y + FACING_DELTA[f].dy })).find((n) => map.cells[idx(n.x, n.y)] === CELL.FLOOR);
+      return next ? { ...c, x: next.x, y: next.y } : c;
+    });
   };
   (map.dungeon?.barriers ?? []).forEach((c, i) => {
     const rng = new Rng(derive(mapSeed, "barrier", i));
@@ -244,6 +249,9 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     const to = far.length > 0 ? far[rng.int(far.length)]! : { x: map.spawn.x, y: map.spawn.y };
     actions.push({ uid: `${map.key}#barrier:${i}`, kind: "teleporter", x: c.x, y: c.y, params: { item: 73, tx: to.x, ty: to.y } });
     occupied.add(idx(c.x, c.y));
+    // the party is set down on the target: no object may stand there (36th playtest, point 4)
+    // (a room's middle is where its monsters stand: that case is the last resort, and the group there steps aside instead, see `landings`)
+    if (!anchors.byKind.roomCenter.some((r) => r.x === to.x && r.y === to.y)) occupied.add(idx(to.x, to.y));
   });
 
   // The puzzle of the theme comes first: it reserves its hall and its cells before the ordinary rules fill the place.

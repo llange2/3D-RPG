@@ -169,6 +169,13 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
     if (!isExit && spawnZone(a.x, a.y)) issues.push(`${a.uid} (${a.kind}) is inside the spawn zone`);
   }
 
+  // the party is set down on these cells by a rune, a wrong answer or a portal: never inside an object either
+  for (const j of content.actions) {
+    if ((j.kind !== "teleporter" && j.kind !== "riddle" && j.kind !== "qportal") || j.params.tx === undefined || (j.params.tx === 0 && j.params.ty === 0)) continue;
+    const inside = content.actions.find((o) => o !== j && o.x === j.params.tx && o.y === j.params.ty && blocksCell(o));
+    if (inside) issues.push(`${j.uid} sets the party down inside ${inside.uid} (${inside.kind})`);
+  }
+
   for (const s of content.spawns) {
     note(s.uid, s.x, s.y, false);
     if (spawnZone(s.x, s.y)) issues.push(`${s.uid} spawns inside the spawn zone`);

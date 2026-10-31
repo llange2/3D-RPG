@@ -2,7 +2,7 @@ import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables
 import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
 import { bonusLines, combineItems, isTwoHanded, makeItem, weaponHands, type Hands } from "../sim/items";
-import { SPELL_GRID, castBlock, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
+import { SPELL_GRID, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type BoonKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
@@ -508,7 +508,6 @@ const LIGHT_SPELL = 6;
  */
 export async function pickCaster(ui: UI, party: Party, heroes: number[], aimed: boolean, sound?: (id: number) => void): Promise<{ who: number; repeat: boolean } | null> {
   await preloadSpellIcons();
-  const last = party.lastCast?.spellId ?? LIGHT_SPELL;
   return ui.modal<{ who: number; repeat: boolean } | null>(
     (close) =>
       h(
@@ -520,13 +519,16 @@ export async function pickCaster(ui: UI, party: Party, heroes: number[], aimed: 
           { class: "caster-row" },
           ...heroes.map((i) => {
             const c = party.characters[i]!;
+            // each hero has a last spell of their own (the old game's `last_spell`): Light until they have cast one
+            const own = lastCastOf(party, i);
+            const last = own?.spellId ?? LIGHT_SPELL;
             const block = castBlock(party, i, last, aimed);
             const spell = SPELLS[last];
             const icon = h(
               "button",
               {
                 class: `caster-spell${block ? " off" : ""}`,
-                title: `${spell?.title ?? "Spell"}${spell ? ` (${spell.mana} SP)` : ""}${party.lastCast ? " - the spell cast last" : ""}`,
+                title: `${spell?.title ?? "Spell"}${spell ? ` (${spell.mana} SP)` : ""}${own ? " - the spell cast last" : ""}`,
                 onclick: () => (block ? sound?.(9014) : close({ who: i, repeat: true })),
               },
               spellPlate(last),

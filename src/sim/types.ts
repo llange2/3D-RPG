@@ -154,8 +154,10 @@ export interface LastCast {
 
 export interface Party {
   characters: Character[];
-  /** Absent in older saves and until the first spell is cast. */
+  /** The spell cast last by anybody. Absent in older saves and until the first spell is cast; the per-hero spells are `lastCasts` (a save from before them has only this one). */
   lastCast?: LastCast;
+  /** The spell each hero cast last, by name (the old game kept a `last_spell` per hero; 36th playtest, point 5). */
+  lastCasts?: Record<string, LastCast>;
   gold: number;
   bankGold: number;
   food: number;
