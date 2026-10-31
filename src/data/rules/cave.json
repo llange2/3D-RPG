@@ -68,7 +68,6 @@
       "when": { "excludeEntranceRoom": true, "minRoomSize": 40 },
       "count": { "perMap": [0, 1] },
       "params": { "pool": "cave", "line": "=rand(0,19)" }
-    },
-    { "id": "breakable", "kind": "breakable_wall", "anchor": "wallBetween", "count": { "perMap": [0, 2] } }
+    }
   ]
 }

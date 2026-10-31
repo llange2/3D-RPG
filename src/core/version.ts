@@ -121,5 +121,7 @@
  * 38 = 37th playtest: a wild group above level 1 keeps `STRONG_KEEP_OFF` (12) tiles from Starthaven and the start (another island of level 4 can lie a few tiles off the first town on a small world).
  * 39 = 38th playtest: only the towns of the first tier have a healing fountain, and it is a random one of the town's fountains (it was the one nearest the middle); the fountain action
  * carries `full` (everything back up to level 10) instead of `heal`.
+ * 40 = 39th playtest: brittle walls only lead to secrets (the treasure chambers of caves and dungeons, the vault of a castle, the hidden quarter of a town): the rule `breakable`
+ * (anchor `wallBetween`) is gone from all four rule sets, it put walls between two parts of a place that the party reaches anyway (Pit of Ula, seed kelp-hold-768).
  */
-export const GEN_VERSION = 39;
+export const GEN_VERSION = 40;

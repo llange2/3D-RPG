@@ -73,7 +73,6 @@
         { "weight": 1, "params": { "item": 34 } }
       ]
     },
-    { "id": "breakable", "kind": "breakable_wall", "anchor": "wallBetween", "count": { "perMap": [1, 3] } },
     { "id": "brittle", "kind": "breakable_wall", "anchor": "brittleSite", "count": { "chance": 1000 } }
   ]
 }

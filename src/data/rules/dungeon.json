@@ -94,7 +94,6 @@
       "when": { "excludeEntranceRoom": true, "minRoomSize": 12 },
       "count": { "perMap": [1, 2] },
       "params": { "pool": "dungeon", "line": "=rand(0,19)" }
-    },
-    { "id": "breakable", "kind": "breakable_wall", "anchor": "wallBetween", "count": { "perMap": [1, 3] } }
+    }
   ]
 }
