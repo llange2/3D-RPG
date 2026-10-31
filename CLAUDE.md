@@ -76,7 +76,7 @@ betretbaren Orten plus die 34 handgebauten Kampagnenkarten des Altspiels. Alles 
 ## Vor dem Abschluss einer Änderung
 ```
 npm run typecheck
-npm test            # 851 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
+npm test            # 853 Tests, ca. 40 bis 100 s (Zeitgrenze 30 s je Test in vitest.config.ts; bei Last reißen trotzdem Zeitmessungen wie der Chunk-Test, ohne dass ein Fehler vorliegt)
 npm run check:chrome   # nur bei Generatoränderungen, braucht laufenden Dev-Server (npm run dev) und Chrome
 npm run check:render   # nur bei Rendering-Änderungen (Monster, Innenräume, Materialien), gleiche Voraussetzungen
 npm run check:effects -- <Ordner>   # nur bei Änderungen an Kampf-Darstellung, Zauberbildern, Zeiger (Screenshots in <Ordner>)
@@ -190,4 +190,4 @@ Beim Clean-up zur Finalisierung des Spiels **diese Fragen dem Nutzer stellen, ni
 - **Pandora's box ist kein Startzauber** und es gibt keine Rollen von Startzaubern (`isStartingSpell`); der Hinweis an Kelchen, Brunnen, Fässern und Kristallen nennt nie das Attribut, nur Farbe und Zeichen (`ATTRIBUTE_LOOKS`) und steht in der Frage des Auswahlfensters.
 - **Die Endraumwand sinkt** (`InteriorView.sinkWall`) so lang wie der Ton 9050; `buildMesh` setzt Felsmodelle und runde Ecken neu. Der Mauszeiger blendet nach 5 Schritten ohne Mausbewegung in 1 s aus (`Settings.fadeCursor`, `ui/cursor.ts`). Dinge auf dem Boden der Überwelt stehen im 3D-Modus `GROUND_PROP_LIFT` höher (`groundPropLift`).
 - **36. Playtest** (`docs/HANDOVER.md`, „Die sechsundzwanzig Punkte des 36. Playtests“): Objekte kehren den Rücken einer **echten Wand** zu (`faceOpen` `wallBehind`); kein Monster startet auf einer Landezelle und `Game.evictMonsters` schiebt eines, das dort steht (Sprünge); Fallenschaden mal `1 + Stufe / 10` (`trapDamageFor`); Leuchten gehören zum Objekt (`crystalLamps(content, opened)`); Texturen „normal/high“ (`hd/tex`, `npm run assets:hd`, Wechsel lädt neu); Quest 1 nie im Labyrinth (Dokument 1.3). **Nie `sed -i` auf CRLF-Dateien** (entfernt die Zeilenenden).
-- **`GEN_VERSION` 36** (war 35); `tests` 851.
+- **`GEN_VERSION` 37** (war 36); `tests` 853. **Der zuletzt gesprochene Zauber ist je Held** (`Party.lastCasts`, `lastCastOf`, `noteCast`, `quickCastOf`). **Die Gruppe landet nie in einem Objekt:** Landezellen sind reserviert, `validate.ts` prüft sie, `Game.landingCell` weicht aus.

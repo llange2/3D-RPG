@@ -441,6 +441,28 @@ export function quickCast(party: Party, aimed: boolean, turn: number | null = nu
   return { caster, spellId: last.spellId, target: last.target, element: last.element, block: castBlock(party, caster, last.spellId, aimed, turn) };
 }
 
+/** The spell this hero cast last: the one of their own, not the party's (a save from before the per-hero spells knows only the party's last, which belongs to its caster). */
+export function lastCastOf(party: Party, hero: number): LastCast | null {
+  const name = party.characters[hero]?.name;
+  if (name === undefined) return null;
+  return party.lastCasts?.[name] ?? (party.lastCast?.caster === name ? party.lastCast : null);
+}
+
+/** Writes down that a hero cast a spell: it is their last, and the party's. */
+export function noteCast(party: Party, hero: number, cast: Omit<LastCast, "caster">): void {
+  const name = party.characters[hero]!.name;
+  const last: LastCast = { caster: name, ...cast };
+  party.lastCast = last;
+  (party.lastCasts ??= {})[name] = last;
+}
+
+/** The quick-cast entry of this hero's own last spell, or null when they have cast nothing yet. */
+export function quickCastOf(party: Party, hero: number, aimed: boolean, turn: number | null = null): QuickCast | null {
+  const last = lastCastOf(party, hero);
+  if (!last) return null;
+  return { caster: hero, spellId: last.spellId, target: last.target, element: last.element, block: castBlock(party, hero, last.spellId, aimed, turn) };
+}
+
 /** Why this hero cannot cast this spell right now (the spell menu greys it out), or null: not known, cannot act, no spell points, an attack with nothing to aim at. */
 export function castBlock(party: Party, caster: number, spellId: number, aimed: boolean, turn: number | null = null): QuickCastBlock | null {
   const spell = SPELLS[spellId];

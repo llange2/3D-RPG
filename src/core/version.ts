@@ -117,5 +117,6 @@
  * 36 = 36th playtest: storage equipment (item 13) is searched like a pile of bones; quest 1 is never built in the maze (quest document 1.3); the heads in the corners of the field of
  * quest 1 look diagonally outward (`bearing`); no group of monsters starts on a cell where a rune, a wrong answer or a portal sets the party down, and the runes of the maze set it down
  * beside a room rather than in its middle.
+ * 37 = 36th playtest, follow-up: no object is placed on a cell where a rune or a wrong answer sets the party down (the targets are reserved).
  */
-export const GEN_VERSION = 36;
+export const GEN_VERSION = 37;

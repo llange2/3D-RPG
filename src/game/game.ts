@@ -51,7 +51,7 @@ import {
   type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
-import { RIFT_TURNS, SPELL_AGING, castSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, quickCast, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
+import { RIFT_TURNS, SPELL_AGING, castSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, lastCastOf, noteCast, quickCastOf, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
 import { canCombine, combine, combineGroups, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
 import { pickGateSpot, safeCells, type Spot } from "./spellSites";
 import { pickFromBackpack } from "../ui/itemSpells";
@@ -2440,6 +2440,30 @@ export class Game {
     if (step.defeated) void this.gameOver();
   }
 
+  /** The cell the party can be set down on: the one asked for, or the nearest floor cell that no object blocks. */
+  private landingCell(x: number, y: number): { x: number; y: number } {
+    const rt = this.interior;
+    if (!rt || rt.campaign) return { x, y };
+    const { map, blocked } = rt;
+    const standable = (cx: number, cy: number): boolean => cx >= 0 && cy >= 0 && cx < map.width && cy < map.height && map.cells[cy * map.width + cx] === CELL.FLOOR && !blocked.has(cy * map.width + cx) && !this.isClosedDoor(cx, cy);
+    if (standable(x, y)) return { x, y };
+    const seen = new Set<string>([`${x},${y}`]);
+    const queue: [number, number][] = [[x, y]];
+    for (let head = 0; head < queue.length && head < 400; head++) {
+      const [qx, qy] = queue[head]!;
+      for (const d of Object.values(FACING_DELTA)) {
+        const nx = qx + d.dx;
+        const ny = qy + d.dy;
+        if (seen.has(`${nx},${ny}`)) continue;
+        seen.add(`${nx},${ny}`);
+        if (standable(nx, ny)) return { x: nx, y: ny };
+        // (the search goes over floor only, so it never lands behind a wall)
+        if (nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && map.cells[ny * map.width + nx] === CELL.FLOOR) queue.push([nx, ny]);
+      }
+    }
+    return { x, y };
+  }
+
   /**
    * The party is about to land on a cell: a monster that stands there (it wandered onto the spot after the place was generated) is pushed to the nearest free cell, so
    * that the party never appears inside a monster (36th playtest, point 4).
@@ -2481,6 +2505,8 @@ export class Game {
   private jumpTo(x: number, y: number): void {
     const rt = this.interior;
     if (!rt) return;
+    // never into an object (a chest, a statue, a closed door): the nearest cell the party can stand on takes its place (36th playtest, point 4)
+    ({ x, y } = this.landingCell(x, y));
     this.evictMonsters(x, y);
     const p = this.worldPos(x, y);
     this.player.place(x, y, this.player.facing, p.x, p.z);
@@ -3230,8 +3256,6 @@ export class Game {
     if (this.busy || this.over || this.inFlight()) return;
     const party = this.state.party;
     const caster = this.enc.battleMode && this.enc.attacker !== null && canAct(party.characters[this.enc.attacker]!) ? this.enc.attacker : null;
-    // the bottom entry of the menus repeats the last spell: in a fight only its caster may use it, and an attack spell needs a target in sight
-    const quick = quickCast(party, this.focusMonster() !== null, caster);
     let who = caster;
     let pick: SpellChoice | null = null;
     if (who === null) {
@@ -3246,13 +3270,14 @@ export class Game {
         if (choice === null) return;
         who = choice.who;
         if (choice.repeat) {
-          pick = await askSpellDetails(this.ui, party, party.lastCast?.spellId ?? 6);
+          pick = await askSpellDetails(this.ui, party, lastCastOf(party, who)?.spellId ?? 6);
           if (!pick) return;
         }
       }
     }
     this.busy = true;
-    pick ??= await pickSpell(this.ui, party, who, quick, (id) => this.audio.play(id));
+    // the bottom entry of the menu repeats the last spell of this hero: in a fight only on their turn, and an attack spell needs a target in sight
+    pick ??= await pickSpell(this.ui, party, who, quickCastOf(party, who, this.focusMonster() !== null, caster), (id) => this.audio.play(id));
     if (!pick) {
       this.busy = false;
       return;
@@ -3265,7 +3290,7 @@ export class Game {
       this.busy = false;
       return;
     }
-    party.lastCast = { caster: party.characters[who]!.name, spellId: pick.spellId, target: pick.target, element: pick.element };
+    noteCast(party, who, { spellId: pick.spellId, target: pick.target, element: pick.element });
     this.syncSurroundings();
     const result = castSpell(party, who, pick.spellId, this.combatRng(), { ...pick, here: this.locationNow(), town: this.inTown(), battle: this.enc.battleMode });
     const c = party.characters[who]!;

@@ -179,6 +179,7 @@ function placeMinis(env: QuestEnv, rng: Rng): void {
     if (kind === 1) {
       statue.params.tx = target!.x;
       statue.params.ty = target!.y;
+      env.reserve(target!.x, target!.y); // the party lands here: nothing is placed on it later (36th playtest, point 4)
     }
     // a penalty that could not be built is a milder one, and the reward follows
     if (kind !== fail) {
