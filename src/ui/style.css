@@ -139,6 +139,9 @@ html.loading-on #game-cursor { display: none; }
 .parchment .opt.off { opacity: 0.45; cursor: default; }
 .parchment .opt.sep { margin-top: 12px; border-style: dashed; }
 .parchment .opt .note { opacity: 0.75; font-size: 15px; }
+/* the settings windows keep one size whatever the rows say ("3D" or "flat", "Quality: Low" or "Custom"): the width of the widest row, so the scroll does not jump while a slider is moved */
+.parchment.settings { width: min(600px, 94vw); }
+.parchment.settings .list { min-width: 0; }
 .parchment .opt.slider { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; cursor: default; }
 .parchment .opt.slider > span:first-child { flex-basis: 100%; }
 .parchment .opt.slider input[type=range] { flex: 1 1 100%; margin: 0 6px; accent-color: #7a4b00; cursor: pointer; }

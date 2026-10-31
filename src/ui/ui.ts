@@ -428,7 +428,7 @@ export class UI {
         );
         return h(
           "div",
-          { class: "parchment" },
+          { class: "parchment settings" },
           h("h2", { text: title }),
           list,
           h(
