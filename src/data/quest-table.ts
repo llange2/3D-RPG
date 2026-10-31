@@ -97,7 +97,7 @@ export const ORBS_FOR_KING = 11;
 /** Keys and key cards a single end room may hold, by world size (document: "0 bis 3 je nach Weltgröße"). */
 export const MAX_ITEMS_PER_ROOM: Readonly<Record<string, number>> = { small: 1, default: 2, large: 3, huge: 3 };
 
-/** Gold, spells and the like in an end room of a level (document, table "Loot"): the ranges the generator draws from. */
+/** Gold, treasure and the like in an end room of a level (document, table "Loot"): the ranges the generator draws from. Spells are no part of it since the 34th playtest: they lie in the containers of the places (`planSpellLoot`), exactly twice in the world. */
 export interface EndLoot {
   gold: [number, number];
   /** Attribute points in packages of `package` points: [min, max] packages; null for none. */
@@ -105,15 +105,14 @@ export interface EndLoot {
   /** Levels the party gains: [min, max]; null for none. */
   levelUps: [number, number] | null;
   treasure: [number, number];
-  spells: [number, number];
 }
 
 export const END_LOOT: Readonly<Record<number, EndLoot>> = {
-  1: { gold: [5_000, 10_000], attributes: { packages: [1, 2], package: 5 }, levelUps: null, treasure: [5, 10], spells: [0, 2] },
-  2: { gold: [10_000, 50_000], attributes: { packages: [1, 2], package: 10 }, levelUps: null, treasure: [5, 10], spells: [0, 2] },
-  3: { gold: [50_000, 200_000], attributes: { packages: [1, 2], package: 20 }, levelUps: null, treasure: [5, 10], spells: [0, 2] },
-  4: { gold: [200_000, 1_000_000], attributes: null, levelUps: [1, 3], treasure: [5, 10], spells: [0, 2] },
-  5: { gold: [1_000_000, 4_000_000], attributes: null, levelUps: null, treasure: [5, 10], spells: [0, 2] },
+  1: { gold: [5_000, 10_000], attributes: { packages: [1, 2], package: 5 }, levelUps: null, treasure: [5, 10] },
+  2: { gold: [10_000, 50_000], attributes: { packages: [1, 2], package: 10 }, levelUps: null, treasure: [5, 10] },
+  3: { gold: [50_000, 200_000], attributes: { packages: [1, 2], package: 20 }, levelUps: null, treasure: [5, 10] },
+  4: { gold: [200_000, 1_000_000], attributes: null, levelUps: [1, 3], treasure: [5, 10] },
+  5: { gold: [1_000_000, 4_000_000], attributes: null, levelUps: null, treasure: [5, 10] },
 };
 
 /** Monster counts scale with the size of the world (document, "Goldene Regeln"); the XP of a single monster scale the other way, so that the sum stays. */

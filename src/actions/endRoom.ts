@@ -9,7 +9,7 @@ import type { ActionInstance, ParamValue } from "./types";
 
 /**
  * What lies in the end room (quest document 1.2, "End-Räume"): the keys, key cards and orbs the plan puts there, each in a chest of its own that
- * shows the quest item, and 2 to 4 more rewards drawn from the table of its level (gold, attribute points, treasure, spells, levels). A room that
+ * shows the quest item, and 2 to 4 more rewards drawn from the table of its level (gold, attribute points, treasure, levels; the spell scrolls lie in the containers of the place). A room that
  * the party is teleported into also holds the portal back to the entrance.
  */
 
@@ -48,8 +48,6 @@ function rewardsOf(level: number, rng: Rng, fits: (item: number) => boolean): Re
     out.push({ name: "levels", kind: "chalice", parts: Array.from({ length: ups }, () => ({ item: 86, bonus: "level", amount: 1 })) });
   }
   out.push({ name: "treasure", kind: "treasure", parts: [{ level: lv, gold: 0, items: rng.range(t.treasure[0], t.treasure[1]) }] });
-  const spells = rng.range(t.spells[0], t.spells[1]);
-  if (spells > 0) out.push({ name: "spells", kind: "treasure", parts: [{ level: lv, gold: 0, items: 0, spells, spellLevel: level }] });
   return out;
 }
 

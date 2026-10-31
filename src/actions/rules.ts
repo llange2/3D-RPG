@@ -4,8 +4,11 @@ import { buildCastleContent } from "./castle";
 import { buildShowcaseContent } from "./showcase";
 import { buildSpaceshipContent } from "./spaceship";
 import { hideInChests, placeMachines } from "./machines";
+import { hideSpells } from "./spellScrolls";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
 import { chestLock, hasOrdinaryLock } from "../data/locks";
+import { CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS } from "../data/chest-traps";
+import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
@@ -353,8 +356,24 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
         delete params.item;
         Object.assign(params, { chest: BARREL, level: 1, items: 0, gold: local.chance(500) ? Math.max(1, tier * 12 + local.range(3, 30)) : 0 });
       }
+      // a bookshelf is a container as well (34th playtest): searched once, it may hold a spell scroll; it is never plain decoration
+      if (kind === "decor" && isBookshelf(params.item)) {
+        kind = "treasure";
+        Object.assign(params, { chest: Number(params.item), level: 1, items: 0, gold: 0 });
+        delete params.item;
+      }
       // an ordinary chest is locked (a simple check for the best thief of the party); barrels and the like are not
       if (kind === "treasure" && hasOrdinaryLock(params)) params.difficulty = chestLock(baseTier);
+      // a chest that is not locked springs a trap one time in five (not a bookshelf, not a chest of a quest or of the king): the element and the damage are fixed here, who is hit is decided when it is opened
+      else if (kind === "treasure" && params.quest === undefined && params.bonus === undefined && params.lock === undefined && params.warn === undefined && !isBookshelf(params.chest)) {
+        const trapRng = new Rng(derive(mapSeed, rule.id, i, "chest-trap"));
+        if (trapRng.chance(CHEST_TRAP_CHANCE)) {
+          const elements = map.kind === "cave" ? CHEST_TRAP_ELEMENTS.filter((e) => e !== "ice") : CHEST_TRAP_ELEMENTS;
+          params.trapped = elements[trapRng.int(elements.length)]!;
+          params.trapDamage = resolveParam(TRAP_DAMAGE.generic ?? 0, vars, trapRng);
+          params.trapLevel = tier;
+        }
+      }
 
       // what a prop does depends on the old item it shows, so whether it blocks is known only now
       const blocking = blocksCell({ kind, params }) && rule.anchor !== "vaultChest";
@@ -411,6 +430,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // Seth Squirm and the machines, the Quatloo coins and silver skulls in the ordinary chests (ue_quest_1 and ue_quest_2)
   if (questEnv) placeMachines(questEnv);
   if (map.dungeon) hideInChests(map, actions, map.dungeon.coins, map.dungeon.skulls, mapSeed);
+  // and the spell scrolls the plan of the world assigned to this place (34th playtest)
+  if (map.dungeon) hideSpells(map, actions, map.dungeon.spells, mapSeed);
 
   quest.finish?.();
 
@@ -428,7 +449,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
  * reads as a bug), and nothing that must be of use (the user's object list: a barrel is the one exception, it becomes a container).
  */
 export function plainProps(t: DungeonTheme): number[] {
-  return t.props.filter((p) => p !== t.chest && p !== t.shrine && (!isFunctional(p) || p === BARREL));
+  return t.props.filter((p) => p !== t.chest && p !== t.shrine && (!isFunctional(p) || p === BARREL || BOOKSHELVES.includes(p)));
 }
 
 /** What a theme sets on the actions of its place: its one kind of trap, the objects that hold loot, shrines and props, and the monsters of an ambush. */

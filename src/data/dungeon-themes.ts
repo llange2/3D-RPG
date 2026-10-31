@@ -7,6 +7,7 @@ import type { Rng } from "../core/rng";
 import type { PoiKind } from "../world/types";
 import { allowedIn, isFunctional, type Place } from "./item-rules";
 import { BOSS_PAIRS, type MonsterGroup, type QuestId } from "./quest-table";
+import { BOOKSHELVES } from "./spell-loot";
 import { MONSTERS, MONSTER_IDS, monsterGroup, walksOnLand } from "./tables";
 
 export { CARD_COLORS, KEY_COLORS, QUEST_PROP, cardType, keyType, type CardColor, type KeyColor } from "./quest-table";
@@ -139,7 +140,8 @@ export function buildLook(
   const chest = rng.shuffle(CHESTS.filter(fits))[0] ?? 1;
   const shrines = SHRINES.filter(fits);
   const shrine = shrines.length > 0 && rng.chance(700) ? shrines[rng.int(shrines.length)]! : null;
-  const props = (kind === "cave" ? CAVE_DECOR : DUNGEON_DECOR).filter((i) => fits(i) && !isFunctional(i) && i !== chest && i !== shrine);
+  // (a bookshelf is a container, but it stands as a prop: `generateContent` makes a container of it)
+  const props = (kind === "cave" ? CAVE_DECOR : DUNGEON_DECOR).filter((i) => fits(i) && (!isFunctional(i) || BOOKSHELVES.includes(i)) && i !== chest && i !== shrine);
   // a dungeon has one kind of trap or none; a cave only the puddles of acid, lava and magic flames
   const traps: [ThemeTrap, number][] = kind === "cave" ? [["none", 3], ["generic", 4]] : [["guillotine", 2], ["spring", 2], ["pit", 2], ["generic", 2], ["none", 1]];
   const trap = traps[rng.weightedIndex(traps.map(([, w]) => w))]![0];

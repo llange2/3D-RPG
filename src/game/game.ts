@@ -2003,13 +2003,13 @@ export class Game {
       switch (e.type) {
         case "text":
           if (a.kind === "lore") await ui.message(e.text, rt?.poi.name ?? "");
-          else ui.log(e.text, a.kind === "trap" ? "bad" : "info");
+          else ui.log(e.text, e.tone ?? (a.kind === "trap" ? "bad" : "info"));
           break;
         case "gold":
           if (e.amount > 0) ui.log(`You find ${thousands(e.amount)} gold.`, "loot");
           break;
         case "item":
-          ui.log(e.stored ? `You find ${e.item.name.trim()}.` : `You find ${e.item.name.trim()}, but every backpack is full. It stays behind.`, e.stored ? "loot" : "bad");
+          ui.log(e.stored ? `You find ${e.item.type === "spell" ? "the spell scroll " : ""}${e.item.name.trim()}.` : `You find ${e.item.name.trim()}, but every backpack is full. It stays behind.`, e.stored ? "loot" : "bad");
           if (!e.stored) this.dropLoot(this.player.tx, this.player.ty, 0, [e.item]);
           break;
         case "damage":
@@ -2018,7 +2018,8 @@ export class Game {
           ui.hurtFlash();
           // stepping onto the cell has started the blade or the spears already (`onStepStarted`); the pit made its noise when it opened
           if (trapKindOf(a) && !this.interiorView.trapJustSprung(a.uid)) this.fireTrap(a);
-          if (!isLastingTrap(a)) this.audio.play(a.params.trap === "generic" ? (ATTACK_SOUND[e.damageType] ?? 9029) : (TRAP_SOUND[String(a.params.trap)] ?? 9016));
+          // (the trap of a chest that was not locked throws its element, like the generic trap)
+          if (!isLastingTrap(a)) this.audio.play(a.params.trap === "generic" || a.kind === "treasure" ? (ATTACK_SOUND[e.damageType] ?? 9029) : (TRAP_SOUND[String(a.params.trap)] ?? 9016));
           this.audio.play(this.painSound(e.character), 0.8);
           if (e.conditions.length) ui.log(`${this.state.party.characters[e.character]!.name} is ${e.conditions.join(" and ").toLowerCase()}!`, "bad");
           break;
@@ -3674,7 +3675,7 @@ export class Game {
       this.ui.toast(`No place within ${IDENTIFY_RADIUS} tiles`);
       return;
     }
-    const [title = "", ...rest] = identifyLines(poi, planDungeon(this.world, poi));
+    const [title = "", ...rest] = identifyLines(poi, planDungeon(this.world, poi), this.world.castleSpellsOf(poi.id));
     await this.ui.message(rest.join("\n"), title);
   }
 

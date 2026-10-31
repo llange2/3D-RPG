@@ -4,6 +4,7 @@ import { letterHints } from "../data/letter-hints";
 import { chestLock, kingChestLock } from "../data/locks";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { hideInChests } from "./machines";
+import { hideSpells } from "./spellScrolls";
 import { pickWord, wordById } from "./questGen";
 import type { ActionInstance, Anchor, MapContent } from "./types";
 
@@ -150,5 +151,6 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
   // the banners of its kind along the walls of the keep
   for (const c of bannerCells(map, taken, BANNER_SPACING)) banner(c.x, c.y, c.facing);
   hideInChests(map, actions, castle.coins, 0, seed, true);
+  hideSpells(map, actions, castle.spells, seed, true);
   return { mapKey: map.key, tier, actions, spawns: [] };
 }

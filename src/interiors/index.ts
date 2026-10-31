@@ -44,7 +44,7 @@ export function generateInterior(world: World, poi: Poi, floor = 0): InteriorMap
     case "castle": {
       // good, neutral or evil: the plan of the world says (a castle that is no part of it, a hand-made one in a test, draws from its own stream)
       const alignment = world.castleAlignment(poi.id) ?? pickAlignment(rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "alignment"), poi.biome === BIOME.LAVA);
-      return generateCastle(rng, ctx, alignment, SIZE_SCALE[world.size] ?? 1, poi.tier === 2 || poi.tier === 3 ? COINS_PER_CASTLE : 0, world.castleWord(poi.id) ?? 0);
+      return generateCastle(rng, ctx, alignment, SIZE_SCALE[world.size] ?? 1, poi.tier === 2 || poi.tier === 3 ? COINS_PER_CASTLE : 0, world.castleWord(poi.id) ?? 0, world.castleSpellsOf(poi.id));
     }
     case "town":
       return generateTown(rng, ctx);
