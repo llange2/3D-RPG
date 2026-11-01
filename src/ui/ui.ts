@@ -66,6 +66,8 @@ export class UI {
   private readonly cardsEl: HTMLElement;
   private readonly mascotEl: HTMLElement;
   private mascotShown = "";
+  /** The crow's clip, made once at the start so that it is loaded before the first alarm (it showed a black avatar until the file had arrived). */
+  private readonly crowClip: HTMLVideoElement = Object.assign(h("video", { class: "portrait", src: assetPath("ui/npc01_active.webm") }), { poster: assetPath("icons/portraits/npc01.webp"), loop: true, muted: true, playsInline: true, preload: "auto" });
   private readonly info: HTMLElement;
   private readonly compass: HTMLElement;
   private readonly logEl: HTMLElement;
@@ -98,6 +100,7 @@ export class UI {
   constructor() {
     this.root = h("div");
     this.root.id = "ui";
+    this.crowClip.load();
     this.cardsEl = h("div", { class: "cards" });
     this.mascotEl = h("div", { class: "card mascot-card", onclick: () => this.onMascot() });
     this.partyBar = h("div", { class: "party-bar" }, this.cardsEl, this.mascotEl);
@@ -190,13 +193,13 @@ export class UI {
     this.mascotShown = state;
     this.mascotEl.classList.toggle("alarm", alarm && name === "Crow");
     this.mascotEl.title = `${name} - click for the mascot page (5)`;
-    const picture =
-      name === "Crow" && alarm
-        ? Object.assign(h("video", { class: "portrait", src: assetPath("ui/npc01_active.webm") }), { autoplay: true, loop: true, muted: true, playsInline: true })
-        : h("img", { class: "portrait", src: assetPath(`icons/portraits/${mascotPortrait(name)}.webp`), alt: name });
+    const picture = name === "Crow" && alarm ? this.crowClip : h("img", { class: "portrait", src: assetPath(`icons/portraits/${mascotPortrait(name)}.webp`), alt: name });
     this.mascotEl.replaceChildren(h("div", { class: "row" }, picture, h("div", {}, h("div", { class: "name", text: name }), h("div", { class: "cls", text: "Mascot" }))));
-    // a clip made by script does not start by itself in every browser
-    if (picture instanceof HTMLVideoElement) void picture.play().catch(() => undefined);
+    // the clip is the one made at the start (loaded, with the still picture as poster): it only has to run from the beginning
+    if (picture === this.crowClip) {
+      picture.currentTime = 0;
+      void picture.play().catch(() => undefined);
+    } else this.crowClip.pause();
   }
 
   private renderQuests(quests: HudInfo["quests"]): void {

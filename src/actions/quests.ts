@@ -71,6 +71,24 @@ export function gongsStruck(content: MapContent, opened: ReadonlySet<string>): {
   return { done: gongs.filter((a) => opened.has(a.uid)).length, total: gongs.length };
 }
 
+/**
+ * The gong that sounded last, once all of them have (40th playtest, point 6): the runes of quest 3 lie round it. `opened` keeps the order things were added in (a
+ * save writes it as a list and reads it back in the same order), and a gong is added only by its first strike, so the last gong in the set is the last one struck.
+ */
+export function finalGong(content: MapContent, opened: ReadonlySet<string>): string | null {
+  const gongs = new Set(content.actions.filter((a) => a.kind === "gong").map((a) => a.uid));
+  if (gongs.size === 0 || ![...gongs].every((uid) => opened.has(uid))) return null;
+  let last: string | null = null;
+  for (const key of opened) if (gongs.has(key)) last = key;
+  return last;
+}
+
+/** Whether a rune of quest 3 is there: all gongs have sounded and the rune lies round the one that came last (a rune without `after` belongs to no gong and shows for any). */
+export function gongRuneActive(a: Pick<ActionInstance, "params">, content: MapContent, opened: ReadonlySet<string>): boolean {
+  const last = finalGong(content, opened);
+  return last !== null && (a.params.after === undefined || a.params.after === last);
+}
+
 /** An answer counts when it matches ignoring case, spaces and a leading article ("a gold coin" is "gold coin"). */
 export function sameAnswer(given: string, expected: string): boolean {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/^(a|an|the) /, "").replace(/\s+/g, " ").trim();

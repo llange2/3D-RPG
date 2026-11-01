@@ -123,5 +123,7 @@
  * carries `full` (everything back up to level 10) instead of `heal`.
  * 40 = 39th playtest: brittle walls only lead to secrets (the treasure chambers of caves and dungeons, the vault of a castle, the hidden quarter of a town): the rule `breakable`
  * (anchor `wallBetween`) is gone from all four rule sets, it put walls between two parts of a place that the party reaches anyway (Pit of Ula, seed kelp-hold-768).
+ * 41 = 40th playtest: the runes of quest 3 lie within three steps of the gong that sounds last (every gong has runes of its own, `placeRunes`, `finalGong`) instead of in the middle of the place;
+ * the riddle list has no more anachronisms (telephone, piano, keyboard, postage stamp, tea, envelope, pencil, ...) and 18 riddles of the Middle Ages in their place.
  */
-export const GEN_VERSION = 40;
+export const GEN_VERSION = 41;

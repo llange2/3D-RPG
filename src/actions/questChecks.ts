@@ -75,7 +75,8 @@ export function questIssues(map: InteriorMap, content: MapContent): string[] {
     case "quest_3": {
       const gongs = of("gong");
       if (gongs.length !== 4 && gongs.length !== 5) issues.push(`${key}: ${gongs.length} gongs`);
-      if (!of("rune").some((a) => a.params.need === "gongs")) issues.push(`${key}: no runes for the gongs`);
+      // whichever gong sounds last, runes lie round it (40th playtest, point 6)
+      for (const g of gongs) if (!of("rune").some((a) => a.params.need === "gongs" && a.params.after === g.uid)) issues.push(`${g.uid}: no runes for the case that it sounds last`);
       for (const g of gongs) {
         const n = Number(g.params.group);
         if (!(n >= 2)) issues.push(`${g.uid}: calls ${n} monsters`);

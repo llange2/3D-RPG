@@ -10,10 +10,11 @@ import { attr, canAct, canBeHealed, healHp, itemBonus, levelUp, thieveryRoll } f
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
 import { addCondition, removeCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
+import { recordThievery, type LockKind } from "../sim/thieveryLog";
 import { activeCharacters, addXp, carriedItems, freeSlots, giveItem, grantTalent, hasEffect, protectionLevel, takeOne } from "../sim/party";
 import type { Attribute, Character, Condition, Item, Party } from "../sim/types";
 import type { ActionInstance, MapContent } from "./types";
-import { FACING_NAMES, gongsStruck, headFacing, moanSolved, ringSolved, rotationSolved, sameAnswer, turnHead } from "./quests";
+import { FACING_NAMES, gongRuneActive, gongsStruck, headFacing, moanSolved, ringSolved, rotationSolved, sameAnswer, turnHead } from "./quests";
 import { answerMatches } from "../data/riddles";
 import { trapElementOf, type ServiceKind } from "./registry";
 
@@ -160,6 +161,11 @@ export function actionRng(ctx: Pick<ActionContext, "rootSeed" | "attempt">, uid:
 
 const EMPTY: MapContent = { mapKey: "", tier: 1, actions: [], spawns: [] };
 const NONE: ReadonlySet<string> = new Set();
+
+/** TEMPORARY (40th playtest, point 7, `sim/thieveryLog.ts`): notes one lock attempt of the heroes who were able to roll. */
+function logLock(party: Party, kind: LockKind, tier: number, difficulty: number, best: number): void {
+  recordThievery(party, activeCharacters(party), kind, tier, difficulty, best);
+}
 
 /** The gold and the items of a chest or a riddle's reward: `gold`, `items` generated at `level`. */
 function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Effect[]): void {
@@ -433,6 +439,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         }
         let best = 0;
         for (const i of activeCharacters(party)) best = Math.max(best, thieveryRoll(party.characters[i]!, rng));
+        logLock(party, "king chest", ctx.tier, Number(p.difficulty ?? 2), best);
         if (best < Number(p.difficulty ?? 2)) return { effects: [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }], consumed: false };
       }
       // an ordinary chest has a simple lock (`data/locks.ts`): the best thief of the party picks it. The roll has a stream of its own, so the loot below stays what it was;
@@ -448,6 +455,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
             picker = i;
           }
         }
+        // an alarm chest asks first and is resolved a second time with the answer: the same roll, noted once
+        if (p.warn !== "alarm" || ctx.answer === undefined) logLock(party, "chest", ctx.tier, Number(p.difficulty), best);
         if (best < Number(p.difficulty)) return { effects: [{ type: "text", text: "The chest is locked, and nobody in your party can pick the lock yet. Try again in a few steps." }], consumed: false };
         effects.push({ type: "text", text: `${party.characters[picker]!.name} picks the lock.` });
       }
@@ -529,7 +538,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       }
       const gongs = gongsStruck(ctx.content ?? EMPTY, ctx.opened ?? NONE);
       const last = gongs.done + 1 >= gongs.total;
-      effects.push({ type: "text", text: last ? "The last gong sounds. The air hums. Magic runes flare up in the middle of this place." : `The gong booms (${gongs.done + 1} of ${gongs.total}). Something answers from the dark.` });
+      effects.push({ type: "text", text: last ? "The last gong sounds. The air hums. Magic runes flare up on the floor close by." : `The gong booms (${gongs.done + 1} of ${gongs.total}). Something answers from the dark.` });
       const ids = String(p.monsters ?? "").split(",").filter((s) => s !== "").map(Number);
       const group = Number(p.group ?? 1);
       if (ids.length > 0) effects.push({ type: "ambush", monsterIds: Array.from({ length: group }, () => ids[rng.int(ids.length)]!) });
@@ -619,8 +628,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       // quest 1 (the middle of the field) and quest 3 (the runes the last gong calls up): only the solved quest takes the party to the end room
       const content = ctx.content ?? EMPTY;
       const opened = ctx.opened ?? NONE;
-      const gongs = gongsStruck(content, opened);
-      const ready = p.need === "moan" ? moanSolved(content, opened) : gongs.total > 0 && gongs.done >= gongs.total;
+      const ready = p.need === "moan" ? moanSolved(content, opened) : gongRuneActive(action, content, opened);
       if (!ready) return { effects, consumed: false };
       effects.push({ type: "text", text: "The runes flare up. The floor falls away, and a strange light takes you." }, { type: "endroom" });
       return { effects, consumed: false };
@@ -685,6 +693,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       const difficulty = Number(p.difficulty ?? 1);
       let best = 0;
       for (const i of activeCharacters(party)) best = Math.max(best, thieveryRoll(party.characters[i]!, rng));
+      logLock(party, "door", ctx.tier, difficulty, best);
       if (best >= difficulty) {
         effects.push({ type: "door", state: "unlocked" });
         return { effects, consumed: true };

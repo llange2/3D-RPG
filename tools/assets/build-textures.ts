@@ -110,8 +110,10 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   const town = await listFiles(TEX, (n) => n.startsWith("town_") && /\.jpg$/.test(n));
   await pool(town, 4, async (n) => add("screens", await toWebp(join(TEX, n), join(OUT, "ui", "town", `${n.replace(/\.jpg$/, "")}.webp`), 1024, 78)));
 
-  const npc = await listFiles(TEX, (n) => /^npc\d+.*\.(png|jpg)$/.test(n));
+  // the Donkey's big picture is the user's (`sources/ui/donkey.jpg`, 1024 x 1024), not the old npc03_full
+  const npc = await listFiles(TEX, (n) => /^npc\d+.*\.(png|jpg)$/.test(n) && !/^npc03_full\./.test(n));
   await pool(npc, 4, async (n) => add("icons portraits", await toWebp(join(TEX, n), join(OUT, "icons", "portraits", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 256, 85)));
+  add("icons portraits", await toWebp(join(SOURCES, "ui", "donkey.jpg"), join(OUT, "icons", "portraits", "npc03_full.webp"), 512, 85));
 
   // sky: the old 8192x2048 cloud image becomes a 2048x512 layer
   const sky = join(TEX, "Sky01.jpg");
