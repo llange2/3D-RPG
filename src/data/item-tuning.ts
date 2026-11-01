@@ -2,10 +2,10 @@ import ITEM_MODELS_RAW from "./item-models.json";
 
 /**
  * Corrections of the user's to the sizes of the old items (`item-models.json` is generated from the old code and stays as it is). Factors on the
- * height of the model: the Rustic caravan (item 26) stands at 75 % of its old height, then 15 % higher again (41st playtest, point 3: 0.75 x 1.15), and the cave entrance (item 42)
- * is 10 % higher than the old game drew it (point 4).
+ * height of the model: the Rustic caravan (item 26) stands at 75 % of its old height, then 15 % higher again (41st playtest, point 3: 0.75 x 1.15). The cave entrance (item 42) is as high as the old game drew it
+ * (a 10 % increase in the 41st playtest was taken back: it was too high).
  */
-export const HEIGHT_FACTOR: Readonly<Record<string, number>> = { "26": 0.75 * 1.15, "42": 1.1 };
+export const HEIGHT_FACTOR: Readonly<Record<string, number>> = { "26": 0.75 * 1.15 };
 
 /** Factors on the width and depth of the model: the Rustic caravan is 85 % as wide as the old game drew it. */
 export const WIDTH_FACTOR: Readonly<Record<string, number>> = { "26": 0.85 };

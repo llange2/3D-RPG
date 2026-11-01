@@ -204,12 +204,6 @@ let flatTiles: FlatTileSet | null = null;
  */
 export const GROUND_PROP_LIFT = 0.06;
 
-/**
- * Places that stand higher on the 3D ground than `GROUND_PROP_LIFT` would put them (41st playtest, point 4): the foot of the cave entrance is a low, wide rock, and the grass of the
- * ground tile reached through its floor and covered the mouth. The flat ground mode needs no lift.
- */
-const POI_GROUND_LIFT: Partial<Record<string, number>> = { cave: 0.25 };
-
 /** How much higher than the flat ground the things that stand on the ground of the overworld are put: the ground mode decides. */
 export const groundPropLift = (): number => (flatTiles === null && usesTileModels() ? GROUND_PROP_LIFT : 0);
 
@@ -351,12 +345,21 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
     g.tri(ids[0], ids[3], ids[2]);
   };
 
+  // a cave entrance always stands on dirt (41st playtest, follow-up): the tufts of a grass tile reached through its low rock; the user's wish, whatever the climate. Only the 3D ground
+  // draws it (the painted flat ground has no tile for dirt beside a road and grass at a corner)
+  const onDirt = new Set<string>();
+  for (const poi of world.poisInRect(x0, y0, x0 + CHUNK_SIZE - 1, y0 + CHUNK_SIZE - 1)) {
+    if (poi.kind !== "cave") continue;
+    const b = poiBounds(poi);
+    for (let y = b.y0; y < b.y0 + poi.size; y++) for (let x = b.x0; x < b.x0 + poi.size; x++) onDirt.add(`${x},${y}`);
+  }
+
   for (let ly = 0; ly < CHUNK_SIZE; ly++) {
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       const tile = tileAt(lx, ly);
       const tx = x0 + lx;
       const ty = y0 + ly;
-      const material = groundMaterial(tile);
+      const material = onDirt.has(`${tx},${ty}`) ?"lava_ground" : groundMaterial(tile);
       if (!flatTiles) addGroundQuad(lx, ly, tile, tx, ty, material);
 
       // objects on the tile
@@ -497,5 +500,5 @@ function poiProp(poi: Poi, ch: (i: number, j: number) => number, x0: number, y0:
   const b = poiBounds(poi);
   const s = poi.size;
   const scaleXYZ: [number, number, number] = [spec.scaleXYZ[0] * s, spec.scaleXYZ[1] * s, spec.scaleXYZ[2] * s];
-  return { model: spec.model, x: tileToWorldX(b.x0) + (s * TILE_SIZE) / 2, y: base + (flatTiles === null && usesTileModels() ? (POI_GROUND_LIFT[poi.kind] ?? 0) : 0), z: tileToWorldZ(b.y0) - (s * TILE_SIZE) / 2, rotY, scale: spec.scale * s, scaleXYZ };
+  return { model: spec.model, x: tileToWorldX(b.x0) + (s * TILE_SIZE) / 2, y: base, z: tileToWorldZ(b.y0) - (s * TILE_SIZE) / 2, rotY, scale: spec.scale * s, scaleXYZ };
 }
