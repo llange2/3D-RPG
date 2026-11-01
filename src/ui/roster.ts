@@ -1,12 +1,11 @@
 import { Rng, seedFromString } from "../core/rng";
-import { TEXTS, flowText } from "../data/tables";
+import { BASE_RACE, TEXTS, flowText, type RaceDef } from "../data/tables";
 import { armor } from "../sim/character";
 import {
   AVATAR_COUNT, CLASSES, MAX_NAME_LENGTH, MAX_RESERVE, addRecruit, avatarKey, classRequirement, dismissMember, hasLockpicker, isEligible, randomName, raceOfAvatar, rollAttributes, swapMember,
   type RosterResult,
 } from "../sim/roster";
-import type { Attribute, Character, ClassName, Party, RaceName } from "../sim/types";
-import { assetPath, clear, h } from "./dom";
+import type { Attribute, Character, ClassName, Party, RaceName } from "../sim/types";import { assetPath, clear, h } from "./dom";
 import type { UI } from "./ui";
 
 export interface RosterHooks {
@@ -31,7 +30,27 @@ const ATTRIBUTES: [Attribute, string][] = [
 const CLASS_TEXT: Record<ClassName, number> = { Knight: 93, Paladin: 94, Wizard: 95, Thief: 96, Barbarian: 97, Archer: 98, Cleric: 99, Ninja: 100, Druid: 101, Ranger: 102 };
 const RACE_TEXT: Record<RaceName, number> = { Human: 88, Elf: 89, Gnome: 90, Dwarf: 91, Orc: 92 };
 
-const NO_LOCKPICKER = "You have created a group without a Thief/Ninja. You might face challenges cracking some locks in the game.";
+/** What a race adds to a hero (`BASE_RACE`): the lines beside the portrait, in this order. */
+const RACE_BONUSES: [keyof RaceDef, string][] = [
+  ["base_hp", "Health per level"],
+  ["base_mana", "Spell points per level"],
+  ["res_fire", "Fire resistance"],
+  ["res_ice", "Ice resistance"],
+  ["res_acid", "Acid resistance"],
+  ["res_magic", "Magic resistance"],
+  ["thievery", "Thievery"],
+];
+
+/**
+ * A text that never changes the height of its box (41st playtest, point 1): every text that may stand there is laid in the same grid cell, the others hidden, so the cell
+ * is as high as the longest. Used for the class and the race, whose descriptions differ in length, so the window keeps its size whatever is picked.
+ */
+function steady(candidates: readonly string[], shown: string) {
+  const all = [...new Set([...candidates, shown])];
+  return h("div", { class: "small steady" }, ...all.map((t) => h("div", { class: t === shown ? "" : "ghost", text: t })));
+}
+
+const NO_LOCKPICKER ="You have created a group without a Thief/Ninja. You might face challenges cracking some locks in the game.";
 
 const REFUSAL: Record<Exclude<RosterResult, { ok: true }>["reason"], string> = {
   no_reserve: "Nobody is waiting in the inn to take the place. Create a hero first.",
@@ -164,19 +183,24 @@ export function openRoster(ui: UI, party: Party, hooks: RosterHooks): Promise<vo
             h("h3", { text: "The party" }),
             ...party.characters.map(memberRow),
             h("h3", { text: `Waiting in the inn (${party.reserve.length} of ${MAX_RESERVE})` }),
-            party.reserve.length === 0
-              ? h("div", { class: "small", text: "Nobody. Create a hero on the right." })
-              : h("div", { class: "waiting" }, ...party.reserve.map((c) => h("div", { class: "small", text: `${c.name}, ${c.raceType} ${c.classType}, level ${c.level}` }))),
+            // (a box of one size, empty or full: the window does not grow with the inn)
+            h(
+              "div",
+              { class: "waiting" },
+              ...(party.reserve.length === 0
+                ? [h("div", { class: "small", text: "Nobody. Create a hero on the right." })]
+                : party.reserve.map((c) => h("div", { class: "small", text: `${c.name}, ${c.raceType} ${c.classType}, level ${c.level}` }))),
+            ),
           ),
           h(
             "div",
             { class: "sheet" },
             h("h3", { text: "A new hero" }),
-            h("div", { class: "attrs" }, ...attrRows),
-            h("div", { class: "row-btns" }, h("button", { class: "btn", text: "Roll again", onclick: reroll })),
+            // (two columns of attributes and the button in the empty eighth place: the whole window fits a screen of 800 px with every race)
+            h("div", { class: "attrs two" }, ...attrRows, h("button", { class: "btn roll", text: "Roll again", onclick: reroll })),
             h("h3", { text: chosen ? `Class: ${chosen}` : "Class: none yet" }),
             h("div", { class: "classes" }, ...classButtons),
-            h("div", { class: "small", text: chosen ? flowText(TEXTS[CLASS_TEXT[chosen]]!) : classHint() }),
+            steady([...CLASSES.map((c) => flowText(TEXTS[CLASS_TEXT[c]]!)), classHint(CLASSES)], chosen ? flowText(TEXTS[CLASS_TEXT[chosen]]!) : classHint(CLASSES.filter((c) => isEligible(c, attrs)))),
             h("h3", { text: `Race: ${race}` }),
             h(
               "div",
@@ -184,8 +208,9 @@ export function openRoster(ui: UI, party: Party, hooks: RosterHooks): Promise<vo
               h("button", { class: "btn", text: "◀", onclick: () => ((avatar = avatar > 1 ? avatar - 1 : AVATAR_COUNT), hooks.sound(9001), render()) }),
               h("img", { class: "portrait", src: assetPath(`icons/portraits/${avatarKey(avatar)}.webp`), alt: "" }),
               h("button", { class: "btn", text: "▶", onclick: () => ((avatar = avatar < AVATAR_COUNT ? avatar + 1 : 1), hooks.sound(9001), render()) }),
+              h("div", { class: "attrs race-bonus" }, ...raceRows(race)),
             ),
-            h("div", { class: "small", text: flowText(TEXTS[RACE_TEXT[race]]!) }),
+            steady(Object.values(RACE_TEXT).map((id) => flowText(TEXTS[id]!)), flowText(TEXTS[RACE_TEXT[race]]!)),
             h("h3", { text: "Name" }),
             h("div", { class: "namerow" }, nameInput, h("button", { class: "btn", text: "Another name", onclick: () => ((name = randomName(rng)), hooks.sound(9002), render()) })),
             h("div", { class: "row-btns" }, saveButton),
@@ -194,9 +219,15 @@ export function openRoster(ui: UI, party: Party, hooks: RosterHooks): Promise<vo
       );
     };
 
-    /** Which classes the current roll allows, for the empty state. */
-    const classHint = (): string => {
-      const open = CLASSES.filter((c) => isEligible(c, attrs));
+    /** The race's bonuses as rows of the attribute grid: label and value, green above zero, red below. */
+    const raceRows = (race: RaceName) =>
+      RACE_BONUSES.flatMap(([key, label]) => {
+        const v = BASE_RACE[race]![key];
+        return [h("div", { text: label }), h("div", { class: `v${v > 0 ? " up" : v < 0 ? " down" : ""}`, text: v > 0 ? `+${v}` : String(v) })];
+      });
+
+    /** Which classes the given roll allows, for the empty state. */
+    const classHint = (open: readonly ClassName[]): string => {
       if (open.length === 0) return "No class accepts these attributes. Roll again.";
       return `The attributes allow: ${open.map((c) => c.toLowerCase()).join(", ")}. Pick one.`;
     };

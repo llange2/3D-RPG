@@ -630,7 +630,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       const opened = ctx.opened ?? NONE;
       const ready = p.need === "moan" ? moanSolved(content, opened) : gongRuneActive(action, content, opened);
       if (!ready) return { effects, consumed: false };
-      effects.push({ type: "text", text: "The runes flare up. The floor falls away, and a strange light takes you." }, { type: "endroom" });
+      // (what happens next is told by the game once it knows the kind of end room: the floor falls away only for a pocket in the rock, a sealed room just opens its wall)
+      effects.push({ type: "text", text: "The runes flare up." }, { type: "endroom" });
       return { effects, consumed: false };
     }
 

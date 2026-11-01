@@ -286,6 +286,9 @@ export function withdraw(party: Party, amount: number): number {
 
 // ------------------------------------------------------------------ training, guild
 
+/** Game minutes a hero spends at the training grounds for one level (41st playtest, point 6): "Train all" takes this per hero, so eight hours for a party of four. */
+export const TRAINING_MINUTES = 120;
+
 export function trainingCost(c: Character, party: Party): number {
   // BALANCE v4: 10 × level² per hero (the formula of the user's source list); LEGACY (balance v4): 250 × level
   const base = isV4() ? c.level * c.level * RULES.v4.trainingPerLevelSquared : c.level * RULES.legacy.trainingPerLevel;

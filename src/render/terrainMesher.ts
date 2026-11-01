@@ -204,6 +204,12 @@ let flatTiles: FlatTileSet | null = null;
  */
 export const GROUND_PROP_LIFT = 0.06;
 
+/**
+ * Places that stand higher on the 3D ground than `GROUND_PROP_LIFT` would put them (41st playtest, point 4): the foot of the cave entrance is a low, wide rock, and the grass of the
+ * ground tile reached through its floor and covered the mouth. The flat ground mode needs no lift.
+ */
+const POI_GROUND_LIFT: Partial<Record<string, number>> = { cave: 0.25 };
+
 /** How much higher than the flat ground the things that stand on the ground of the overworld are put: the ground mode decides. */
 export const groundPropLift = (): number => (flatTiles === null && usesTileModels() ? GROUND_PROP_LIFT : 0);
 
@@ -491,5 +497,5 @@ function poiProp(poi: Poi, ch: (i: number, j: number) => number, x0: number, y0:
   const b = poiBounds(poi);
   const s = poi.size;
   const scaleXYZ: [number, number, number] = [spec.scaleXYZ[0] * s, spec.scaleXYZ[1] * s, spec.scaleXYZ[2] * s];
-  return { model: spec.model, x: tileToWorldX(b.x0) + (s * TILE_SIZE) / 2, y: base, z: tileToWorldZ(b.y0) - (s * TILE_SIZE) / 2, rotY, scale: spec.scale * s, scaleXYZ };
+  return { model: spec.model, x: tileToWorldX(b.x0) + (s * TILE_SIZE) / 2, y: base + (flatTiles === null && usesTileModels() ? (POI_GROUND_LIFT[poi.kind] ?? 0) : 0), z: tileToWorldZ(b.y0) - (s * TILE_SIZE) / 2, rotY, scale: spec.scale * s, scaleXYZ };
 }

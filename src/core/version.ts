@@ -125,5 +125,7 @@
  * (anchor `wallBetween`) is gone from all four rule sets, it put walls between two parts of a place that the party reaches anyway (Pit of Ula, seed kelp-hold-768).
  * 41 = 40th playtest: the runes of quest 3 lie within three steps of the gong that sounds last (every gong has runes of its own, `placeRunes`, `finalGong`) instead of in the middle of the place;
  * the riddle list has no more anachronisms (telephone, piano, keyboard, postage stamp, tea, envelope, pencil, ...) and 18 riddles of the Middle Ages in their place.
+ * 42 = 41st playtest: the Skull Miser leaves the cells of the town plan alone (he took the cartographer's cell of Starthaven) and every seller of the plan gets a place; the quest objects follow the passage rule;
+ * a quest that teleports (1, 3) tries a pocket in every size before a sealed end room (the Grotto of Wilana had a sealed one, so the runes teleported nobody).
  */
-export const GEN_VERSION = 41;
+export const GEN_VERSION = 42;

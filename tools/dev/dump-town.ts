@@ -29,6 +29,8 @@ for (let y = 0; y < map.height; y++) {
 }
 const letter: Record<string, string> = { service: "S", door: "D", treasure: "T", decor: "d", lore: "l", fountain: "F", talent: "t", portal: "P", work: "w", transfer: "X", breakable_wall: "B", trap: "^" };
 for (const a of content.actions) grid[a.y]![a.x] = letter[a.kind] ?? "a";
+for (const a of content.actions) if (!letter[a.kind]) console.log("other", a.kind, a.x, a.y, JSON.stringify(a.params ?? {}).slice(0, 120));
+for (const a of content.actions) if (a.kind === "talent") console.log("talent", a.x, a.y, JSON.stringify(a.params ?? {}).slice(0, 80));
 grid[map.exit.y]![map.exit.x] = "E";
 console.log(grid.map((r) => r.join("")).join("\n"));
 for (const l of map.lots) console.log("lot", l.door.x, l.door.y, l.door.facing);
