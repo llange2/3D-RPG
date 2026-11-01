@@ -1,5 +1,6 @@
 import { Rng, derive, type SeedState } from "../core/rng";
 import { allowedIn } from "../data/item-rules";
+import { PEARL } from "../data/quest-table";
 import { placeOf } from "../interiors/place";
 import type { InteriorMap } from "../interiors/types";
 import type { QuestEnv } from "./questGen";
@@ -89,8 +90,8 @@ export function placeMachines(env: QuestEnv): void {
  * alarm of the castle's king stays as it is). One item to a chest, as many chests as there are items; a place with fewer chests than items keeps the rest
  * in the chests that are there (a chest takes several).
  */
-export function hideInChests(map: InteriorMap, actions: ActionInstance[], coins: number, skulls: number, seed: SeedState, onlyAlarm = false): void {
-  const items: string[] = [...Array.from({ length: coins }, () => "quest_quatloo_coin"), ...Array.from({ length: skulls }, () => "quest_silver_skull")];
+export function hideInChests(map: InteriorMap, actions: ActionInstance[], coins: number, skulls: number, seed: SeedState, onlyAlarm = false, pearls = 0): void {
+  const items: string[] = [...Array.from({ length: coins }, () => "quest_quatloo_coin"), ...Array.from({ length: skulls }, () => "quest_silver_skull"), ...Array.from({ length: pearls }, () => PEARL)];
   if (items.length === 0) return;
   const end = map.dungeon?.endRoom;
   const machines = map.dungeon?.machines;

@@ -68,6 +68,12 @@ export const ORB = "quest_orb";
 export const SKULL = "quest_silver_skull";
 export const SKULLS_FOR_RING = 5;
 export const COIN = "quest_quatloo_coin";
+/** The Pearl of Youth and Beauty (ue_quest_4, quest document 1.4): 20 of them lie in the places of level 3 and 4, the pirate queen pays for them. */
+export const PEARL = "quest_pearl_of_youth";
+export const PEARLS_IN_WORLD = 20;
+/** The pirate queen's reward for every pearl: experience for each hero and gold for the party. */
+export const PEARL_XP = 100_000;
+export const PEARL_GOLD = 50_000;
 
 /** The old items that show a quest item on the map (the key and key card models); the rest are drawn as the place's chest. */
 export const QUEST_PROP: Readonly<Record<string, number>> = {

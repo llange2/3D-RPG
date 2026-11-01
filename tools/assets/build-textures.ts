@@ -115,6 +115,9 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   await pool(npc, 4, async (n) => add("icons portraits", await toWebp(join(TEX, n), join(OUT, "icons", "portraits", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 256, 85)));
   add("icons portraits", await toWebp(join(SOURCES, "ui", "donkey.jpg"), join(OUT, "icons", "portraits", "npc03_full.webp"), 512, 85));
 
+  // the Pirate Queen (ue_quest_4, quest document 1.4): the user's painting, shown in the dialogue with the pirate ship
+  add("icons portraits", await toWebp(join(SOURCES, "ui", "pirate_queen.png"), join(OUT, "icons", "portraits", "pirate_queen.webp"), 512, 85));
+
   // sky: the old 8192x2048 cloud image becomes a 2048x512 layer
   const sky = join(TEX, "Sky01.jpg");
   const skyOut = join(OUT, "ui", "sky01.webp");

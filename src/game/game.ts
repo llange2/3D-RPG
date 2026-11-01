@@ -15,14 +15,14 @@ import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
-import { BLACK_CARD, ORB, ORBS_FOR_KING, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
+import { BLACK_CARD, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
 import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
 import { ChunkManager } from "../render/chunkManager";
-import { LAMP_RANGE, VIEW_DISTANCES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
+import { LAMP_RANGE, VIEW_DISTANCES, VIEW_TILES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
 import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
@@ -73,11 +73,13 @@ import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
 import { sellerParams } from "../data/talent-sellers";
 import { CARAVAN_ITEM, caravansIn, caravansOf, type CaravanSpot } from "../world/caravans";
 import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, hutXpPercent, slotDistance, slotKey, type HutSpot } from "../world/huts";
+import { PIRATE_RETURN_MINUTES, pirateDistance, pirateHome, pirateSail } from "../world/pirate";
+import { PirateShip } from "../render/pirateShip";
 import { hutScene } from "../data/hut-texts";
 import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { readSettings, writeSettings, type Settings } from "./settings";
-import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
+import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
 import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
@@ -653,7 +655,7 @@ export class Game {
       },
       water: (x, y) => {
         const g = this.world.tile(x, y).ground;
-        return (g === GROUND.WATER || g === GROUND.SHALLOW) && !this.enteredByParty(x, y);
+        return (g === GROUND.WATER || g === GROUND.SHALLOW) && !this.enteredByParty(x, y) && !this.pirateAt(x, y);
       },
       opaque: (x, y) => {
         const t = this.world.tile(x, y);
@@ -675,6 +677,7 @@ export class Game {
     if (this.mascotSpotAt(x, y)) return false;
     if (this.caravanAt(x, y)) return false;
     if (this.hutAt(x, y)) return false;
+    if (this.pirateAt(x, y)) return false;
     if (this.mode === "interior" && this.interior) {
       const { map, blocked } = this.interior;
       if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
@@ -1194,6 +1197,9 @@ export class Game {
     this.refresh();
     if (s.steps - this.lastAutosave >= 60) this.save("auto");
 
+    // the pirate ship sails (when it is in sight) and, next to a party on the raft, takes it aboard
+    if (this.mode === "overworld" && !this.over) await this.pirateTurn(x, y);
+
     // like the old outside map: the "enter" question comes on the tile in front of a place, the party never walks into it
     if (this.mode === "overworld" && !this.enc.battleMode && !this.over) {
       const place = this.world.poiAtEntrance(x, y);
@@ -1286,6 +1292,12 @@ export class Game {
     const m = this.monsterAt(x, y);
     if (m) {
       await this.attackMonster(m);
+      return;
+    }
+    // the pirate ship: on the raft the party is pulled aboard, anywhere else it is only a ship in the way
+    if (this.pirateAt(x, y)) {
+      if (this.onRaft()) await this.pirateMeeting();
+      else this.audio.play(9014, 0.35);
       return;
     }
     const spot = this.mascotSpotAt(x, y);
@@ -1895,6 +1907,131 @@ export class Game {
         }
       });
     }
+  }
+
+  // ---------------------------------------------------------------- the pirate ship (ue_quest_4, quest document 1.4)
+
+  private pirateShip: PirateShip | null = null;
+  /** The way the ship looks (radians, 0 is +z): the way it last sailed. */
+  private pirateYaw = 0;
+  private pirateInMeeting = false;
+
+  /** The party stands on its raft: in deep water, where the pirates reach it. */
+  private onRaft(): boolean {
+    return this.mode === "overworld" && this.world.tile(this.player.tx, this.player.ty).ground === GROUND.WATER;
+  }
+
+  /**
+   * The ship, if it is on the sea: before the party has come near it, it stands at its home (the middle of the largest ocean); a week after a meeting it is back there. Null while it is away
+   * (and in a world without an ocean).
+   */
+  private pirateHere(): PirateState | null {
+    const s = this.state;
+    const home = pirateHome(this.world);
+    if (!s || !home) return null;
+    if (s.pirate?.away !== undefined) {
+      if (s.party.minutes < s.pirate.away) return null;
+      s.pirate = { x: home.x, y: home.y };
+    }
+    return (s.pirate ??= { x: home.x, y: home.y });
+  }
+
+  private pirateAt(x: number, y: number): boolean {
+    if (this.mode !== "overworld" || !this.state) return false;
+    const ship = this.pirateHere();
+    return !!ship && ship.x === this.world.wrapX(x) && ship.y === this.world.wrapY(y);
+  }
+
+  /**
+   * One step of the party and the ship's answer: out of sight (farther than the view distance) it goes back to its home, in sight it sails `PIRATE_SPEED` fields towards the party over deep and
+   * shallow water, and next to a party on the raft it takes the party aboard (`pirateMeeting`).
+   */
+  private async pirateTurn(tx: number, ty: number): Promise<void> {
+    const ship = this.pirateHere();
+    const home = pirateHome(this.world);
+    if (!ship || !home || this.pirateInMeeting) return;
+    const party = { x: this.world.wrapX(tx), y: this.world.wrapY(ty) };
+    if (pirateDistance(this.world, ship, party) > VIEW_TILES[this.viewDistance]) {
+      if (ship.x !== home.x || ship.y !== home.y) this.state.pirate = { x: home.x, y: home.y };
+      return;
+    }
+    if (pirateDistance(this.world, ship, party) > 1) {
+      const taken = (x: number, y: number) => this.enc.monsters.some((m) => m.hp > 0 && this.world.wrapX(m.x) === x && this.world.wrapY(m.y) === y);
+      const to = pirateSail(this.world, ship, party, taken);
+      if (to.x !== ship.x || to.y !== ship.y) {
+        const dx = wrapDelta(ship.x, to.x, this.world.width);
+        const dy = wrapDelta(ship.y, to.y, this.world.height);
+        // the world's z axis runs against the tiles' y axis
+        this.pirateYaw = Math.atan2(dx, -dy);
+        this.state.pirate = { x: to.x, y: to.y };
+      }
+    } else if (this.pirateYaw === 0) {
+      this.pirateYaw = Math.atan2(wrapDelta(ship.x, party.x, this.world.width), -wrapDelta(ship.y, party.y, this.world.height));
+    }
+    const now = this.state.pirate!;
+    if (pirateDistance(this.world, now, party) <= 1 && this.onRaft()) await this.pirateMeeting();
+  }
+
+  /**
+   * The ship next to the party's raft: the pirate queen takes the party aboard (a dialogue with her portrait). A party without a Pearl of Youth and Beauty loses the gold it carries; with one it
+   * gives all its pearls and gets 50,000 gold for the party and 100,000 experience for every hero for each. The ship fades out in half a second and comes back a week later.
+   */
+  private async pirateMeeting(): Promise<void> {
+    if (this.pirateInMeeting || this.over) return;
+    this.pirateInMeeting = true;
+    const party = this.state.party;
+    const opened = this.state.opened;
+    this.player.locked = true;
+    const pearls = carriedItems(party).filter((i) => i.type === PEARL).length;
+    const aboard = "You are being pulled up onto the pirate ship, where the pirate queen already awaits you. 'What have we here? Some land rats on the sea? You know the drill, get their gold and throw them back!'";
+    const title = "The Pirate Queen";
+    if (pearls === 0) {
+      const lost = party.gold;
+      await this.ui.scene(title, `${aboard}\n\nAfter they have robbed you blank, you find yourself back on your float while the pirate ship disappears at the horizon.`, "pirate_queen");
+      party.gold = 0;
+      this.audio.play(9001);
+      this.ui.log(lost > 0 ? `The pirates take all your gold: ${thousands(lost)}.` : "The pirates find nothing to take.", "bad");
+    } else {
+      const gold = pearls * PEARL_GOLD;
+      const xp = pearls * PEARL_XP;
+      await this.ui.scene(
+        title,
+        `${aboard} While the pirates rummage through your belongings, she suddenly tells them to stop. Her face lightens up and even seems to get friendly, when she spots the Pearl of Youth and Beauty. 'Well, maybe you are useful after all. Bring me more of the pearls and I will reward you. But do not dare to show up empty handed.' She orders her men to bring you your gold and they leave you behind on your float.\n\nThe party receives ${thousands(gold)} gold and ${thousands(xp)} experience.`,
+        "pirate_queen",
+      );
+      takeItems(party, PEARL);
+      party.gold += gold;
+      addXp(party, xp);
+      const handed = Number([...opened].find((k) => k.startsWith("pearls="))?.split("=")[1] ?? 0);
+      for (const k of [...opened]) if (k.startsWith("pearls=")) opened.delete(k);
+      opened.add(`pearls=${handed + pearls}`);
+      this.audio.play(9001);
+      this.ui.log(`You give the pirate queen ${pearls} Pearl${pearls === 1 ? "" : "s"} of Youth and Beauty: ${thousands(gold)} gold and ${thousands(xp)} experience for everyone.`, "loot");
+      for (const c of party.characters) if (c.xp > 0 && xpReady(c)) this.ui.toast(`${c.name} can advance a level!`);
+    }
+    opened.add("pirate:met");
+    this.refresh();
+    // the ship fades out in half a second and is away for a week
+    await this.pirateShip?.fadeOut(0.5);
+    const home = pirateHome(this.world);
+    if (home) this.state.pirate = { x: home.x, y: home.y, away: party.minutes + PIRATE_RETURN_MINUTES };
+    this.player.locked = false;
+    this.pirateInMeeting = false;
+    this.save("auto");
+  }
+
+  /** Draws the ship (the copy of it that is nearest to the party) and takes it down inside a place or while it is away. */
+  private syncPirate(dt: number): void {
+    const ship = this.mode === "overworld" && this.state ? this.pirateHere() : null;
+    if (!ship) {
+      this.pirateShip?.hide();
+      return;
+    }
+    this.pirateShip ??= new PirateShip(this.r.scene);
+    const sx = this.player.tx + wrapDelta(this.player.tx, ship.x, this.world.width);
+    const sy = this.player.ty + wrapDelta(this.player.ty, ship.y, this.world.height);
+    this.pirateShip.place(tileCenterX(sx), tileCenterZ(sy), this.pirateYaw);
+    this.pirateShip.update(dt);
   }
 
   // ---------------------------------------------------------------- caravans
@@ -4472,6 +4609,7 @@ export class Game {
     this.syncCaravans();
     this.syncHuts();
     this.syncRaft();
+    this.syncPirate(dt);
     if (this.chunks) {
       this.chunks.update(this.player.tx, this.player.ty);
       this.chunks.tick(5);

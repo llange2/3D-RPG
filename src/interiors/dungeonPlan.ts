@@ -7,6 +7,7 @@ import {
   MAX_ITEMS_PER_ROOM,
   ORBS_IN_WORLD,
   ORBS_PER_SECTION,
+  PEARLS_IN_WORLD,
   QUESTS,
   SIZE_SCALE,
   SECTIONS,
@@ -182,7 +183,7 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     if (pyramidIds.has(poi.id)) {
       // (the same look for all five pyramids: behind each of them is the same level)
       const theme = buildLook(rngFor(rootSeed, LAYER.INTERIOR, "spaceship-look"), "dungeon", 5, "quest_6", "Spaceship", ["robot"], "C", "spaceship");
-      out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: [], coins: 0, skulls: 0, spells: [], scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
+      out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: [], coins: 0, skulls: 0, pearls: 0, spells: [], scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
       continue;
     }
     const quest = decks[kind].draw();
@@ -193,7 +194,7 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     const klass: DungeonClass = need ? "B" : "A";
     const name = `${def.name} (${layout})`;
     const theme = buildLook(look, kind, poi.tier, quest, name, def.groups as MonsterGroup[], klass, `${quest}/${layout}`, quest === "quest_5" ? bossPair(look, poi.tier) : undefined);
-    out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: miniIds, coins: 0, skulls: 0, spells: [], scale: SIZE_SCALE[size] ?? 1, ...(quest === "quest_6" ? { word: takeRiddle(WORD_RIDDLES) } : {}) });
+    out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: miniIds, coins: 0, skulls: 0, pearls: 0, spells: [], scale: SIZE_SCALE[size] ?? 1, ...(quest === "quest_6" ? { word: takeRiddle(WORD_RIDDLES) } : {}) });
   }
   distributeItems(rng, out, places, pois);
   // the spell scrolls: every spell twice in the world, in places of its level (the stream of the plan is not touched, the scrolls have their own)
@@ -212,6 +213,8 @@ export const COINS_IN_WORLD = 25;
 export const SKULLS_IN_WORLD = 15;
 /** Coins in the chests of a castle's yard, for each castle of level 2 and 3. */
 export const COINS_PER_CASTLE = 2;
+/** Pearls in the alarm chests of a castle of level 3 and 4. */
+export const PEARLS_PER_CASTLE = 1;
 
 function distributeItems(rng: Rng, refs: Map<string, DungeonRef>, places: readonly Poi[], all: readonly Poi[]): void {
   const spread = (holders: Poi[], total: number, cap: number, add: (p: Poi) => void): void => {
@@ -236,6 +239,12 @@ function distributeItems(rng: Rng, refs: Map<string, DungeonRef>, places: readon
   const seth = rng.shuffle(ordinary.filter((p) => p.kind === "dungeon" && p.tier === 2));
   const home = seth[0] ?? rng.shuffle(ordinary.filter((p) => p.kind === "dungeon" && p.tier <= 3))[0];
   if (home) refs.get(home.id)!.seth = true;
+  // the Pearls of Youth and Beauty (ue_quest_4, document 1.4): the castles of level 3 and 4 hold one each in their alarm chests, the rest lies in the caves and dungeons of
+  // level 3 and 4 (after the draws above, so that the coins, skulls and Seth stay where they were)
+  const pearlCastles = all.filter((p) => p.kind === "castle" && (p.tier === 3 || p.tier === 4)).length;
+  const deep = ordinary.filter((p) => p.tier === 3 || p.tier === 4);
+  const pearlsLeft = PEARLS_IN_WORLD - PEARLS_PER_CASTLE * pearlCastles;
+  spread(deep.length > 0 ? deep : ordinary, pearlsLeft, Math.max(2, Math.ceil(pearlsLeft / Math.max(1, deep.length))), (p) => void (refs.get(p.id)!.pearls += 1));
 }
 
 function rngPick<T>(rng: Rng, list: readonly T[]): T {
@@ -250,7 +259,7 @@ function standalone(world: World, poi: Poi): DungeonRef {
   const quest = quests[rng.int(quests.length)]!;
   const layout = rngPick(rng, layoutsFor(quest, kind));
   const theme = buildLook(rng, kind, poi.tier, quest, `${QUESTS[quest].name} (${layout})`, QUESTS[quest].groups as MonsterGroup[], "A", `${quest}/${layout}`, quest === "quest_5" ? bossPair(rng, poi.tier) : undefined);
-  return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: [], coins: 0, skulls: 0, spells: [], scale: 1, ...(quest === "quest_6" ? { word: WORD_RIDDLES[rng.int(WORD_RIDDLES.length)]! } : {}) };
+  return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: [], coins: 0, skulls: 0, pearls: 0, spells: [], scale: 1, ...(quest === "quest_6" ? { word: WORD_RIDDLES[rng.int(WORD_RIDDLES.length)]! } : {}) };
 }
 
 /** The plan of a cave or dungeon, from the plan of the world; null for towns and castles. */
