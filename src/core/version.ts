@@ -130,5 +130,7 @@
  * 43 = 42nd playtest: the riddle of the bulette is replaced by one of snow (#319); the end room of quest 2 lies next to the hall or is a pocket in the rock that runes in the hall lead to (it was sealed far away in the
  * maze of the Catacombs of Kela); a shop never stands on a street that goes on, it is dug into the house wall as a niche (the smith of Quinudale).
  * 44 = 43rd playtest: the ordinary monsters of a cave or dungeon are of the place's own level only (`pickMonsters`): the level 2 Cave of Aldoa let Vampire Bats and Wild Fungus of level 1 out of its gongs.
+ * 45 = thievery locks grow with the level of the party (`data/locks.ts` `lockDifficulty`): `difficulty` of chests, king's chests and doors is only a marker (1, the doors' `=tier*2` is gone), a locked chest keeps a trap
+ * for a failed attempt (`lockTrap`, `trapDamage`, `trapLevel`, `actions/lockTrap.ts`).
  */
-export const GEN_VERSION = 44;
+export const GEN_VERSION = 45;

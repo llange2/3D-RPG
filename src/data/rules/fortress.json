@@ -10,7 +10,7 @@
       "count": { "chance": 820 },
       "variants": [
         { "weight": 68, "params": { "locked": false } },
-        { "weight": 32, "params": { "locked": true, "difficulty": "=tier*2+1" } }
+        { "weight": 32, "params": { "locked": true, "difficulty": 1 } }
       ]
     },
     { "id": "boss_guard", "kind": "spawn", "anchor": "bossRoom", "when": { "alignment": ["neutral", "evil"] }, "count": { "perMap": [1, 1] }, "params": { "boss": true, "group": "=3+rand(0,tier)" } },
@@ -84,7 +84,7 @@
     },
     { "id": "banner", "kind": "decor", "anchor": "roomEdge", "when": { "minRoomSize": 9 }, "count": { "perMap": [2, 4] } },
     { "id": "vault_gate", "kind": "door", "anchor": "vaultGate", "count": { "chance": 1000 }, "params": { "locked": false, "ask": true } },
-    { "id": "vault_door", "kind": "door", "anchor": "vaultDoor", "count": { "chance": 1000 }, "params": { "locked": true, "ask": true, "difficulty": "=tier*2+1" } },
+    { "id": "vault_door", "kind": "door", "anchor": "vaultDoor", "count": { "chance": 1000 }, "params": { "locked": true, "ask": true, "difficulty": 1 } },
     { "id": "vault_wall", "kind": "breakable_wall", "anchor": "vaultWall", "count": { "chance": 1000 } },
     {
       "id": "vault_chest",

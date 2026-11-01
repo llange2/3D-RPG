@@ -1,14 +1,15 @@
+import type { LockKind } from "../data/locks";
 import { thieverySkill } from "./character";
 import type { Party } from "./types";
 
 /**
- * TEMPORARY (40th playtest, point 7): a log of every lock the party tries, to read the real chance of the thievery roll off a playthrough (the aim is 80 % for an ordinary chest, see
+ * TEMPORARY (40th playtest, point 7): a log of every lock the party tries, to read the real chance of the thievery roll off a playthrough (the aim is about 70 % for the median ninja at an ordinary chest, see
  * `data/locks.ts`). Every attempt notes the heroes' skills, the exact chance this attempt had (the best of the heroes' rolls reaches the difficulty) and what came out. The sums at the
  * end of the lines are the figures to compare: "expected" is the average of the exact chances, "actual" the share of attempts that worked.
  * Remove it with its call sites (`handlers.ts` `logLock`, `Game.showThievery`) when the numbers are in; nothing else depends on it.
  */
 
-export type LockKind = "chest" | "king chest" | "door";
+export type { LockKind };
 
 export interface ThieveryEntry {
   kind: LockKind;

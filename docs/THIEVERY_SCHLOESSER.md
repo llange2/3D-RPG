@@ -1,30 +1,21 @@
 # Thievery und Schlösser
 
-Wann braucht eine Kiste einen Dieb, und wie schwer ist das Schloss? Dieses Dokument hält die Regeln, die Werte und ihre Herleitung fest. Die Werte stehen im Spiel in `src/data/locks.ts`, die Herleitung rechnet `tools/balance/thievery.ts`.
+Wann braucht eine Kiste oder Tür einen Dieb, und wie schwer ist das Schloss? Dieses Dokument hält die Regeln, die Werte und ihre Herleitung fest. Die Formel steht im Spiel in `src/data/locks.ts`, die Herleitung rechnet `tools/balance/thievery.ts --lever`.
 
 ## 1. Regeln
 
-| Objekt | Probe | Schwierigkeit (`difficulty`) |
+| Objekt | Probe | Härte (`LOCK_HARDNESS`) |
 |---|---|---|
-| Gewöhnliche Tür, Gitter | keine | – |
-| Fass, Brunnen, Pool, Kelch, Kristalle (alles ohne Schloss) | keine (es kann die Frage geben, wer trinkt oder hineingeht, das bleibt wie es war) | – |
-| **Gewöhnliche Kiste** (`Chest`, `Noble chest`, `Iron chest`, `Sapphire chest`) | **einfache Probe**, gelingt einem Ninja beim Eintritt ins Tier zu 80 % | `CHEST_LOCK` |
-| **Königstruhe** der Burg (`lock: "code"`) | **schwere Probe**, gelingt einem Ninja beim Eintritt ins Tier zu 50 % | `KING_CHEST_LOCK` |
+| Gewöhnliche Tür | keine | – |
+| **Verschlossene Tür** (22 % der Dungeon-Türen, 32 % der Burgtüren, die Tresortür der Burg) | **leichte Probe**, dem Median-Ninja gelingt sie zu etwa 90 % | 0,39 (`door`) |
+| Gitter, Fass, Brunnen, Pool, Kelch, Kristalle (alles ohne Schloss) | keine (es kann die Frage geben, wer trinkt oder hineingeht, das bleibt wie es war) | – |
+| **Gewöhnliche Kiste** (`Chest`, `Noble chest`, `Iron chest`, `Sapphire chest`) | **Probe**, dem Median-Ninja gelingt sie zu etwa 70 %, dem Dieb zu etwa 90 % | 0,52 (`chest`) |
+| **Königstruhe** der Burg (`lock: "code"`) | **schwere Probe**, dem Median-Ninja gelingt sie zu etwa 35 %, dem Dieb zu etwa 60 % | 0,76 (`king chest`) |
 | Kisten der Quests (Schlüssel, Key Card, Orb), Kisten der Endräume, Schatzhaufen | keine, ihr Schloss ist die Quest | – |
 
 Die Kisten in den Nischen der Burg (Alarm) tragen das Schloss der gewöhnlichen Kisten. Das Schloss kommt vor dem Alarm: wer es nicht knackt, löst ihn auch nicht aus.
 
-### Die Werte (nach Tier = Level des Dungeons, der Burg, der Stadt)
-
-| Tier | Gewöhnliche Kiste | Königstruhe |
-|---|---|---|
-| L1 | 1 | – (2) |
-| L2 | 9 | 13 |
-| L3 | 23 | 33 |
-| L4 | 42 | 60 |
-| L5 | 83 | – (119) |
-
-Burgen gibt es nur auf Orten der Stufen 2 bis 4. Die Werte in Klammern stehen nur der Vollständigkeit halber in der Tabelle.
+**Ein Fehlschlag kostet etwas.** Bei jeder misslungenen Probe an einer Kiste oder Königstruhe löst der Versuchende mit **20 %** (`LOCK_FUMBLE_CHANCE`) die Falle der Kiste aus. Sie ist ein Feuer-, Eis- (nicht in Höhlen), Säure- oder Magiefall und läuft wie die Falle einer unverschlossenen Kiste (`springChestTrap`: Ausweichen über Glück, Elementarschutz, `trapDamageFor` mit der Heldenstufe). Die Kiste bleibt dabei zu, die Beute ändert sich nicht. Türen kennen keinen Fallenwurf. Vorher hieß ein Fehlschlag nur „nach ein paar Schritten nochmal“, ein 50-%-Schloss war also nur eine kleine Verzögerung.
 
 ## 2. Wie die Probe rechnet
 
@@ -37,48 +28,69 @@ Wurf  = gleichverteilt zwischen floor(Skill / 3) und Skill
 
 Glück und Genauigkeit zählen mit Ausrüstung (`attr`). Thievery ist die Summe aus Klasse und Rasse und wächst nicht mit der Stufe (Dieb 30, Ninja 15, alle anderen 0; Elf und Zwerg +10, Gnom +5, Mensch 0, Ork −10). Die Stufe geht linear ein.
 
-Die Probe zählt den **besten Wurf aller aktiven Helden** (`handlers.ts`, Fall `treasure`). Der Wurf der Schlösser hat einen eigenen Zufallsstrom (`<uid>@lock`), die Beute der Kiste ändert sich also nicht. Die Versuchsnummer ist `state.steps * 7 + opened.size`: ein Fehlschlag gilt, bis die Gruppe einen Schritt gemacht hat, danach würfelt sie neu. Die Meldung sagt das („Try again in a few steps“).
+Die Probe zählt den **besten Wurf aller aktiven Helden** (`pickLock` in `handlers.ts`, Fall `treasure` und `door`). Der Wurf der Schlösser hat einen eigenen Zufallsstrom (`<uid>@lock`), die Beute der Kiste ändert sich also nicht. Die Versuchsnummer ist `state.steps * 7 + opened.size`: ein Fehlschlag gilt, bis die Gruppe einen Schritt gemacht hat, danach würfelt sie neu.
 
-Nicht-Diebe haben trotzdem einen Skill: Glück und Genauigkeit stecken in jedem Helden. Ein Ranger hat auf gleicher Stufe etwa 55 % des Skills eines Diebs. Den Abstand machen die Schwellen: bei der schweren Probe liegt der Ranger bei 2 bis 6 %, der Ninja bei etwa 50 %, der Dieb bei etwa 75 %.
+Die Chance eines Helden mit dem Skill S gegen die Schwierigkeit D ist `1,5 × (1 − D / S)` (zwischen 0 und 1). Nicht-Diebe haben trotzdem einen Skill: Glück und Genauigkeit stecken in jedem Helden, ein Ranger hat auf gleicher Stufe etwa 55 % des Skills eines Ninjas, ein Dieb etwa 130 %.
 
-## 3. Herleitung (Simulator)
+## 3. Die Schwierigkeit wächst mit der Stufe (Stufenhebel)
 
-Aufruf: `npx tsx tools/balance/thievery.ts --anchor=entry --ref=ninja --hardref=ninja`
+**Warum.** Der Skill wächst mit der Stufe, die Schwierigkeit war je Tier fest (1 / 9 / 23 / 42 / 83, geeicht auf die Stufe beim Eintritt ins Tier). Im Tier wächst der Skill des Ninjas aber um das 1,7- bis 2,1-fache, und der Wurf liegt zwischen `Skill / 3` und `Skill`: ab der Mitte des Tiers lag `Skill / 3` über der Schwierigkeit, die Chance war genau 100 %. Das Log des 40. Playtests (`.ignore/thief.jpg`): Ninja Stufe 10, Skill 52, Schloss 9, elf Versuche, elf Erfolge, der beste Wurf zwischen 20 und 51; auch die Türen (4 und 6, aus `=tier*2`) gingen immer auf.
 
-* **Formel**: dieselbe wie `thieveryRoll`; die Chance rechnet der Simulator exakt und prüft sie gegen die echte Funktion (200 Helden mit 20 000 Würfen, größte Abweichung im Rauschen).
+**Wie.** Wie die Falle (`trapDamageFor`) rechnet das Schloss erst bei der Probe aus der Stufe der Gruppe. Der Generator legt nur fest, *dass* ein Schloss da ist (`difficulty` = 1, eine Marke) und welche Falle es für einen Fehlschlag hat (`lockTrap`, `trapDamage`, `trapLevel`):
+
+```
+L          = Ø Stufe der aktiven Helden, geklemmt auf TIER_ENTRY[tier] .. TIER_EXIT[tier]
+refSkill   = L × (3,8 + 0,055 × L)             // Skill des Median-Ninjas, Anpassung an den Simulator
+ease       = min(1, 0,2 + 0,2 × L)             // Stufe 1 / 2 / 3: 0,4 / 0,6 / 0,8, ab Stufe 4: 1
+Schwierigkeit = max(1, round(Härte × refSkill × ease))
+```
+
+* **Innerhalb eines Tiers bleibt die Chance gleich** (Ninja 67 bis 76 % an der Kiste, vorher 80 % → 100 %).
+* **Das Tier zählt weiter**: Tiers sind die Stufenbänder des Kampfsimulators (`TIER_ENTRY` 1 / 5 / 11 / 19 / 33, `TIER_EXIT` 4 / 10 / 18 / 32 / 50). Wer unter dem Eintritt ankommt, bekommt das Schloss der Eintrittsstufe und scheitert öfter. Wer das Tier überwachsen hat, findet das Schloss des Austritts und damit leichter.
+* **Stufen 1 bis 3 sind leichter** (`lockEase`): Kisten der Stufe 1 haben Schwierigkeit 1, der Held mit einem Skill von 1 bis 4 öffnet sie fast immer (Median-Ninja 100 %, Gruppe ohne Dieb/Ninja 96 %); auf Stufe 3 sind es 89 % und 63 %.
+* **Gruppenstufe** ist der Durchschnitt der Stufen der Helden, die handeln können (`lockPartyLevel`). Ein Neuling in einer erfahrenen Gruppe verschiebt sie kaum, und es gibt keinen Zirkelbezug (der beste Wurf bestimmt die Schwierigkeit nicht).
+
+## 4. Herleitung (Simulator)
+
+Aufruf: `npx tsx tools/balance/thievery.ts --lever [--chest=0.7 --king=0.35 --door=0.9]` (ohne `--lever` rechnet das Werkzeug wie früher die Tier-Tabellen aus; die Zahlen daraus gelten im Spiel nicht mehr).
+
+* **Formel**: dieselbe wie `thieveryRoll`; die Chance rechnet der Simulator exakt und prüft sie gegen die echte Funktion (200 Helden mit 20 000 Würfen).
 * **Helden**: alle zehn Klassen und fünf Rassen mit den Startattributen des Kampfsimulators (`hero.ts`), Attribute wachsen linear auf 40 bei Stufe 50 (Hinweis des Nutzers), typische Ausrüstung des Tiers (Ringe mit Glück und Genauigkeit zählen), zwölf Ausrüstungswürfe gemittelt.
-* **Stufen je Tier** (die Entwurfsbänder des Kampfsimulators, `KAMPF_BALANCE.md` 4.1): L1 1 bis 4, L2 5 bis 10, L3 11 bis 18, L4 19 bis 32, L5 33 bis 50. Der Anker der Probe ist der Eintritt (Stufe 1 / 5 / 11 / 19 / 33). `--anchor=mid` setzt sie in die Bandmitte.
-* **Bezugsheld** (Entscheidung des Nutzers): ein Held mit Thievery 20, der Median der Ninjas (Gnom-Ninja, Klasse 15 + Rasse 5). Die Schwierigkeit ist die höchste ganze Zahl, bei der er beim Eintritt ins Tier die einfache Probe zu mindestens 80 % und die schwere zu mindestens 50 % schafft.
-* **Profile zum Vergleich**: Min (Ork-Druide, Thievery −10), Kein Dieb (Median, Gnom-Ranger, +5), Ninja (+20), Dieb (Median, Gnom-Dieb, +35), Max (Zwergen-Dieb, +40) und drei Gruppen (ohne Dieb/Ninja, mit Ninja, mit Dieb).
+* **Stufen je Tier** (Entwurfsbänder, `KAMPF_BALANCE.md` 4.1): L1 1 bis 4, L2 5 bis 10, L3 11 bis 18, L4 19 bis 32, L5 33 bis 50.
+* **`refSkill` gegen den Median-Ninja** (Gnom-Ninja, Thievery 20): höchstens 7 % Abweichung ab Stufe 3 (`tests/unit/thievery.test.ts` prüft 8 %).
+* **Härte**: das Werkzeug sucht je Art die Härte, bei der die Chance des Median-Ninjas, gemittelt über alle Stufen ab 4, am nächsten am Ziel liegt: 0,52 für 70 % (Kiste), 0,76 für 35 % (Königstruhe), 0,39 für 90 % (Tür) (Entscheidung des Nutzers: „Ninja ~70 %, Dieb ~90 %“).
+* **Profile zum Vergleich**: Min (Ork-Druide), Kein Dieb (Gnom-Ranger), Ninja, Dieb, Max (Zwergen-Dieb) und drei Gruppen (ohne Dieb/Ninja, mit Ninja, mit Dieb).
 
-### Erfolgschance beim Eintritt ins Tier / in der Bandmitte / am Bandende
+### Erfolgschance bei Stufe Eintritt / Mitte / Austritt des Tiers
 
-Einfache Probe (gewöhnliche Kiste), je Tier L1 bis L5:
+Gewöhnliche Kiste (Härte 0,52), L1 bis L5:
 
 | Wer | L1 | L2 | L3 | L4 | L5 |
 |---|---|---|---|---|---|
-| Min (Ork-Druide) | 50 / 50 / 58 % | 0 / 0 / 7 % | 0 / 0 / 7 % | 2 / 17 / 56 % | 5 / 37 / 69 % |
-| Kein Dieb (Gnom-Ranger) | 53 / 100 / 100 % | 27 / 77 / 92 % | 31 / 69 / 85 % | 40 / 78 / 97 % | 47 / 78 / 95 % |
-| Ninja (Gnom) | 100 / 100 / 100 % | 82 / 100 / 100 % | 81 / 99 / 100 % | 80 / 100 / 100 % | 80 / 99 / 100 % |
-| Dieb (Gnom) | 100 % | 100 % | 97 / 100 / 100 % | 98 / 100 / 100 % | 97 / 100 / 100 % |
-| Gruppe ohne Dieb/Ninja | 96 / 100 / 100 % | 67 / 99 / 100 % | 60 / 95 / 100 % | 70 / 99 / 100 % | 83 / 99 / 100 % |
+| Kein Dieb (Gnom-Ranger) | 53 / 24 / 4 % | 10 / 12 / 12 % | 21 / 25 / 25 % | 25 / 30 / 34 % | 31 / 36 / 40 % |
+| Ninja (Gnom) | 100 / 89 / 76 % | 69 / 72 / 72 % | 75 / 76 / 74 % | 71 / 70 / 68 % | 70 / 68 / 67 % |
+| Dieb (Gnom) | 100 / 100 / 94 % | 91 / 92 / 91 % | 92 / 91 / 90 % | 91 / 89 / 87 % | 89 / 87 / 85 % |
+| Gruppe ohne Dieb/Ninja | 96 / 63 / 44 % | 38 / 41 / 45 % | 47 / 51 / 51 % | 46 / 53 / 61 % | 63 / 70 / 74 % |
+| Gruppe mit Ninja | 100 / 95 / 87 % | 79 / 82 / 83 % | 86 / 87 / 86 % | 83 / 84 / 86 % | 86 / 87 / 88 % |
 
-Schwere Probe (Königstruhe), L2 bis L4:
+Königstruhe (Härte 0,76):
 
 | Wer | L2 | L3 | L4 |
 |---|---|---|---|
-| Min (Ork-Druide) | 0 / 0 / 0 % | 0 / 0 / 0 % | 0 / 3 / 20 % |
-| Kein Dieb (Gnom-Ranger) | 2 / 48 / 70 % | 4 / 35 / 58 % | 3 / 48 / 75 % |
-| Ninja (Gnom) | 56 / 93 / 100 % | 53 / 82 / 93 % | 51 / 82 / 97 % |
-| Dieb (Gnom) | 81 / 100 / 100 % | 75 / 96 / 100 % | 76 / 98 / 100 % |
-| Gruppe ohne Dieb/Ninja | 16 / 85 / 97 % | 6 / 64 / 90 % | 12 / 81 / 98 % |
+| Kein Dieb (Gnom-Ranger) | 0 % | 1 bis 2 % | 0 % |
+| Ninja (Gnom) | 43 / 40 / 39 % | 41 / 41 / 39 % | 35 / 34 / 32 % |
+| Dieb (Gnom) | 71 / 67 / 67 % | 66 / 64 / 63 % | 64 / 62 / 59 % |
+| Gruppe ohne Dieb/Ninja | 2 % | 1 % | 1 bis 2 % |
 
-Man sieht zwei Dinge:
+Tür (Härte 0,39): Ninja 88 bis 93 %, Dieb 100 %, Gruppe ohne Dieb/Ninja 80 bis 95 %.
 
-1. **Innerhalb eines Tiers wächst die Chance stark**, weil der Skill linear mit der Stufe steigt. Beim Eintritt ist die Probe knapp, in der Bandmitte für Ninja und Dieb fast sicher.
-2. **Ohne Dieb und Ninja scheitert man an den Schlössern**, vor allem ein einzelner Held mit schlechten Werten. Das fängt das Spiel nicht über die Formel ab, sondern über die Warnung in der Charaktererstellung.
+Man sieht drei Dinge:
 
-## 4. Warnung bei der Charaktererstellung
+1. **Die Chance bleibt innerhalb eines Tiers fast gleich**, der Ninja scheitert in jedem Tier an etwa jeder dritten Kiste.
+2. **Ohne Dieb und Ninja scheitern Königstruhen praktisch immer, gewöhnliche Kisten etwa zur Hälfte.** Das fängt das Spiel über die Warnung in der Charaktererstellung ab. Mit 20 % Falle bei jedem Fehlschlag ist das jetzt spürbar.
+3. **Nur auf den ersten Stufen ist es leicht**: Stufe 1 und 2 gelingt fast jeder Gruppe jede Kiste (Schwierigkeit 1 bzw. 2), danach kommt der Wert des Tiers.
+
+## 5. Warnung bei der Charaktererstellung
 
 Das Buch der Helden (`openRoster`, `src/ui/roster.ts`) fragt beim Verlassen („Close“ oder Esc), wenn die Gruppe weder Dieb noch Ninja hat (`hasLockpicker`, `src/sim/roster.ts`; gemeint ist jede Klasse mit Thievery über 0):
 
@@ -86,20 +98,23 @@ Das Buch der Helden (`openRoster`, `src/ui/roster.ts`) fragt beim Verlassen („
 
 Mit „Accept“ geht der Dialog zu, mit „Back“ bleibt er offen. Der Dialog erscheint bei jedem Verlassen, solange die Gruppe so zusammengesetzt ist.
 
-## 5. Wo es im Code liegt
+## 6. Wo es im Code liegt
 
 | Was | Wo |
 |---|---|
-| Werte | `src/data/locks.ts` (`CHEST_LOCK`, `KING_CHEST_LOCK`, `chestLock`, `kingChestLock`, `hasOrdinaryLock`) |
-| Schloss auf gewöhnliche Kisten setzen | `src/actions/rules.ts` (nach dem Fass-Fall, Parameter `difficulty`) |
+| Formel und Härten | `src/data/locks.ts` (`lockDifficulty`, `LOCK_HARDNESS`, `refSkill`, `lockEase`, `lockLevel`, `TIER_ENTRY`, `TIER_EXIT`, `LOCK_FUMBLE_CHANCE`, `hasOrdinaryLock`) |
+| Schloss und Falle auf gewöhnliche Kisten setzen | `src/actions/rules.ts` (nach dem Fass-Fall, Parameter `difficulty` = 1 und `lockTrap`) |
 | Burg: Königstruhen und Nischenkisten | `src/actions/castle.ts` |
-| Probe | `src/actions/handlers.ts`, Fall `treasure` |
+| Fallendaten für Fehlschläge | `src/actions/lockTrap.ts` (`lockTrapParams`, eigener Zufallsstrom `lock-trap`) |
+| Probe, Fehlschlag, Türen | `src/actions/handlers.ts` (`lockPartyLevel`, `pickLock`, `fumbleLock`, `springChestTrap` mit Parameter `fumbled`; Fälle `treasure` und `door`) |
+| Texte des Fehlschlags | `src/data/chest-traps.ts` (`trapOpening` mit `fumbled`) |
+| Türen im Regelwerk | `src/data/rules/dungeon.json`, `fortress.json` (`difficulty` 1, nur die Marke) |
 | Warnung | `src/ui/roster.ts`, `UI.panel(…, { canDismiss })` in `src/ui/ui.ts` |
-| Herleitung | `tools/balance/thievery.ts` (`tools/balance/README.md`) |
-| Test | `tests/unit/thievery.test.ts` (rechnet beide Tabellen mit dem Simulator nach) |
+| Herleitung | `tools/balance/thievery.ts --lever` (`tools/balance/README.md`) |
+| Test | `tests/unit/thievery.test.ts` (Zielchancen, Gleichbleiben im Tier, Stufen 1 bis 3, Türen, Falle bei Fehlschlag, Log-Ninja) |
 
 Die Kampagne behält ihre eigenen Truhen (`min_thievery`, Wurf des gewählten Helden, Falle unter dem halben Wert); sie ist von den Werten oben nicht betroffen.
 
-## 6. Werte ändern
+## 7. Werte ändern
 
-Ändern sich Ausrüstung, Attribute oder die Formel der Probe, schlägt der erste Test von `thievery.test.ts` fehl. Dann `npx tsx tools/balance/thievery.ts --anchor=entry --ref=ninja --hardref=ninja` laufen lassen, Abschnitt 5 („Vorschlag“) in `locks.ts` übernehmen, `GEN_VERSION` erhöhen und `npm run golden:update` ausführen. Andere Entscheidungen gehen über Schalter: `--anchor=mid|exit|mean` (Stufe, für die das Ziel gilt), `--ref=` und `--hardref=` (Bezugsheld: `min`, `nothief`, `ninja`, `thief`, `max`, `party:nothief|ninja|thief`), `--easy=` und `--hard=` (Ziele), `--growth=none` (kein Attributwachstum).
+Ändern sich Ausrüstung, Attribute oder die Formel der Probe, schlägt der erste Test von `thievery.test.ts` (Zielchancen) oder der Test zu `refSkill` fehl. Dann `npx tsx tools/balance/thievery.ts --lever` laufen lassen, den Abschnitt „Härte“ in `LOCK_HARDNESS` übernehmen und gegebenenfalls `refSkill` nachfitten (Tabelle „refSkill gegen den Skill des Median-Ninjas“). Eine geänderte Härte oder `refSkill` ändert nur die Probe zur Spielzeit (kein Generatorwert hängt daran, `GEN_VERSION` bleibt); eine geänderte Falle (`lockTrap`, `LOCK_FUMBLE_CHANCE` ist Spielzeit, die Falle selbst Generator) braucht `GEN_VERSION` und `golden:update`.

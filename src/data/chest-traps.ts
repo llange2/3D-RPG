@@ -111,9 +111,10 @@ export function ratMiss(hero: TrapHero, rng: Rng): string {
   return fill(pick(rng, ["{hero} was lucky, as the rat's teeth snap shut on thin air.", "The rat tries to bite {hero}, but {he} pulls {his} hand back just in time.", "{hero} jumps aside, and the rat scurries away squeaking."]), hero);
 }
 
-/** The first sentence of the trap, the same whether it hits or not. */
-export function trapOpening(chest: number, element: ChestTrapElement, hero: TrapHero, rng: Rng): string {
-  return fill(`${opening(chest, rng)} ${pick(rng, LINES[element].rises)}`, hero);
+/** The first sentence of the trap, the same whether it hits or not. `fumbled`: the hero failed to pick the lock of the chest and set the trap off, the chest does not open. */
+export function trapOpening(chest: number, element: ChestTrapElement, hero: TrapHero, rng: Rng, fumbled = false): string {
+  const start = fumbled ? pick(rng, ["As {hero's} pick slips in the lock of the chest", "When {hero} turns the pick the wrong way in the lock", "The moment {hero} forces the lock of the chest"]) : opening(chest, rng);
+  return fill(`${start} ${pick(rng, LINES[element].rises)}`, hero);
 }
 
 /** The second sentence when the trap hits the hero for `damage`. */
