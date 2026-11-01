@@ -265,6 +265,14 @@ function fillRing(rng: Rng, item: Item, level: number): Item {
   return item;
 }
 
+/** The talent that lets a hero wield obsidian weapons and wear obsidian armor. */
+export const ARMS_MASTER = "talent_arms_master";
+
+/** Whether wearing the item takes the Arms Master talent: obsidian weapons, armor and equipment (rings, scrolls and quest items are no such gear). */
+export function needsArmsMaster(item: Item): boolean {
+  return !item.quest && item.material >= MAX_MATERIAL && itemKind(item) !== null;
+}
+
 /** A new ring of exactly this level with affixes of its own (Combine and Transform Ring). */
 export function generateRing(rng: Rng, level: number): Item {
   return fillRing(rng, makeItem({ name: "empty", type: "undefined" }), Math.max(1, Math.min(MAX_RING_LEVEL, level)));

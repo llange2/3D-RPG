@@ -92,9 +92,10 @@ export function monstersOfGroups(groups: readonly MonsterGroup[]): number[] {
 }
 
 /**
- * Up to three ordinary monsters of the groups for a tier: the ones of the tier's own level and the one below (a place keeps to its level), or
- * the weakest of the groups if all of them are above it, and the boss: the strongest that is at most one level above the tier (not above the
- * tier at all on tier 1, so a new party can win).
+ * Up to three ordinary monsters of the groups for a tier: only the ones of the tier's own level (43rd playtest, point 1: a level 2 cave let the
+ * Vampire Bat of level 1 out of its gongs; every group has at least three monsters on every level), or, should a group ever lack them, those up to
+ * the tier, or the weakest of the groups if all of them are above it. And the boss: the strongest that is at most one level above the tier (not
+ * above the tier at all on tier 1, so a new party can win).
  */
 export function pickMonsters(rng: Rng, groups: readonly MonsterGroup[], tier: number): { monsters: number[]; boss: number } {
   const pool = monstersOfGroups(groups);
@@ -103,8 +104,8 @@ export function pickMonsters(rng: Rng, groups: readonly MonsterGroup[], tier: nu
     const weakest = Math.min(...pool.map(levelOf));
     fit = pool.filter((id) => levelOf(id) === weakest);
   }
-  const near = fit.filter((id) => levelOf(id) >= tier - 1);
-  const candidates = near.length >= 2 ? near : fit;
+  const own = fit.filter((id) => levelOf(id) === tier);
+  const candidates = own.length >= 2 ? own : fit;
   const monsters = rng.shuffle([...candidates]).slice(0, 3);
   const limit = Math.min(5, tier + (tier >= 2 ? 1 : 0));
   const strong = pool.filter((id) => levelOf(id) <= limit);

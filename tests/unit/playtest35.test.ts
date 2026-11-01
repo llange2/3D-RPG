@@ -367,7 +367,7 @@ describe("35th playtest, point 2 and 11: the quest log of the generated world", 
   it("follows a cave or dungeon from the first visit to its end room: open, then done with the words of the quest", () => {
     const cave = free.find((p) => p.kind === "cave")!;
     expect(worldQuestLog(input([], [cave.id])).open).toEqual([`Explore the scary ${cave.name} at ${cave.x}/${cave.y}.`]);
-    expect(worldQuestLog(input([reachedFlag(cave.id)], [cave.id]))).toEqual({ open: [], done: [`Explored the scary ${cave.name}.`] });
+    expect(worldQuestLog(input([reachedFlag(cave.id)], [cave.id]))).toEqual({ open: [], done: [`Explored the scary ${cave.name}.`], places: [cave.name] });
     const boss = w.allPois().find((p) => p.kind === "dungeon" && w.dungeonRef(p.id)?.quest === "quest_5");
     if (boss) {
       const open = worldQuestLog(input([], [boss.id])).open.find((q) => q.includes(boss.name))!;

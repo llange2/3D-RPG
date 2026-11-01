@@ -1,7 +1,7 @@
 import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
-import { bonusLines, combineItems, isTwoHanded, makeItem, weaponHands, type Hands } from "../sim/items";
+import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
 import { SPELL_GRID, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
@@ -51,8 +51,7 @@ const HANDS_LABEL: Record<Hands, string> = { one: "One-handed weapon", two: "Two
 function rightClickHint(c: Character, item: Item, worn: boolean, allowed: boolean): string | null {
   if (worn) return "Right-click to unequip";
   if (item.type === "spell") return learnBlock(c, item.spellId) === null ? "Right-click to use" : null;
-  if (!allowed || item.quest) return null;
-  return equipTarget(c.inventory, item) ? "Right-click to equip" : null;
+  if (!allowed || item.quest) return null;  return equipTarget(c.inventory, item) ? "Right-click to equip" : null;
 }
 
 /** What an empty equipment slot holds, for the comparison in the tooltip. */
@@ -61,13 +60,15 @@ const NOTHING: Item = makeItem({ name: "", type: "combined" });
 /**
  * Details of an item. `c` is the hero looking at it (class limits, scroll hints), or null for the Donkey's bag. `replaced` is what the
  * hero would take off by putting this item on: each value then shows the change in brackets, green when it gets better, red when worse.
- * `worn` is set for an item on the equipment slots (a right click takes it off).
+ * `worn` is set for an item on the equipment slots (a right click takes it off). `talents` are the party's: obsidian gear needs the Arms Master.
  */
-export function itemTooltip(c: Character | null, item: Item | null, replaced: Item | null = null, worn = false): HTMLElement {
+export function itemTooltip(c: Character | null, item: Item | null, replaced: Item | null = null, worn = false, talents: readonly string[] = [ARMS_MASTER]): HTMLElement {
   if (!item) return h("div", { class: "tooltip", text: "Select an item to see its details." });
   const allowed = !c || (BASE_CLASS[c.classType]?.valid_items ?? []).includes(item.type) || item.quest || item.type === "spell";
+  // only a hero whose class could wear it is told about the talent (a Wizard cannot use a sword of any material)
+  const untrained = !!c && allowed && !worn && !talents.includes(ARMS_MASTER) && needsArmsMaster(item);
   const lines = bonusLines(item, replaced);
-  const hint = c ? rightClickHint(c, item, worn, allowed) : null;
+  const hint = c ? rightClickHint(c, item, worn, allowed && !untrained) : null;
   const hands = weaponHands(item);
   const shieldBlocked = c && !worn && item.type === "shield" && allowed && c.inventory.left_hand && isTwoHanded(c.inventory.left_hand);
   return h(
@@ -82,6 +83,7 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     h("div", { class: `bonus-lines${lines.length > 6 ? " many" : ""}` }, ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null))),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
     c && !allowed ? h("div", { class: "small", style: "color:#e8745f", text: `A ${c.classType} cannot use this.` }) : null,
+    untrained ? h("div", { class: "small", style: "color:#e8745f", text: "Requires Arms Master talent to equip" }) : null,
     shieldBlocked ? h("div", { class: "small", style: "color:#e8745f", text: "Not with a two-handed weapon in the weapon hand." }) : null,
     c ? scrollNote(c, item) : null,
   );
@@ -176,6 +178,10 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       render();
     };
     const classAllows = (bag: BagOwner, item: Item): boolean => !bag.hero || (BASE_CLASS[bag.hero.classType]?.valid_items ?? []).includes(item.type);
+    /** Obsidian gear takes the Arms Master talent, which belongs to the whole party; only asked once the class allows the item. */
+    const lacksArmsMaster = (bag: BagOwner, item: Item): boolean => !!bag.hero && !party.talents.includes(ARMS_MASTER) && needsArmsMaster(item);
+    const cannotWear = (bag: BagOwner, item: Item): string | null =>
+      !classAllows(bag, item) ? `${bag.hero!.name} (${bag.hero!.classType}) cannot use ${item.name.trim()}.` : lacksArmsMaster(bag, item) ? `${bag.hero!.name} needs the Arms Master talent to equip ${item.name.trim()}.` : null;
 
     const tabs = () =>
       h(
@@ -227,8 +233,8 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
         const it = (slot ? bag.inventory[slot] : null) ?? null;
         // a hero compares what lies in the backpack with what would come off (a two-hander takes the shield off too), if the class may wear it
         // an empty slot compares against nothing, so the full bonus shows as the change
-        const replaced = it && slot?.startsWith("slot") && bag.hero && classAllows(bag, it) && equipTarget(bag.inventory, it) ? combineItems(replacedItems(bag.inventory, it)) ?? NOTHING : null;
-        tip.replaceChildren(itemTooltip(bag.hero, it, replaced, !!slot && !slot.startsWith("slot")));
+        const replaced = it && slot?.startsWith("slot") && bag.hero && !cannotWear(bag, it) && equipTarget(bag.inventory, it) ? combineItems(replacedItems(bag.inventory, it)) ?? NOTHING : null;
+        tip.replaceChildren(itemTooltip(bag.hero, it, replaced, !!slot && !slot.startsWith("slot"), party.talents));
       };
       show();
       tipUpdaters.push(show);
@@ -242,7 +248,7 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
     const slotEl = (bag: BagOwner, slot: string, label?: string) => {
       const item = bag.inventory[slot];
       const sel = selected ? bag.inventory[selected] : null;
-      const ok = !!sel && selected !== slot && !slot.startsWith("slot") && canEquip(bag.inventory, sel, slot) && classAllows(bag, sel);
+      const ok = !!sel && selected !== slot && !slot.startsWith("slot") && canEquip(bag.inventory, sel, slot) && !cannotWear(bag, sel);
       const el = h(
         "div",
         {
@@ -364,8 +370,9 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
         return;
       }
       const item = bag.inventory[selected]!;
-      if (!slot.startsWith("slot") && !classAllows(bag, item)) {
-        hooks.log(`${bag.hero!.name} (${bag.hero!.classType}) cannot use ${item.name.trim()}.`, "bad");
+      const refusal = slot.startsWith("slot") ? null : cannotWear(bag, item);
+      if (refusal) {
+        hooks.log(refusal, "bad");
       } else {
         const shield = slot === "left_hand" ? bag.inventory.right_hand : null;
         const moved = equipSlots(bag.inventory, selected, slot);
@@ -412,7 +419,8 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
         // the Donkey's bag has no equipment, and a hero only wears what the class may use
         if (!bag.hero) return;
         if (item.type === "spell") return void readScroll(slot, item);
-        if (!classAllows(bag, item)) return hooks.log(`${bag.hero.name} (${bag.hero.classType}) cannot use ${item.name.trim()}.`, "bad");
+        const refusal = cannotWear(bag, item);
+        if (refusal) return hooks.log(refusal, "bad");
         const target = equipTarget(bag.inventory, item);
         if (!target) return hooks.log(item.type === "shield" && bag.inventory.left_hand && isTwoHanded(bag.inventory.left_hand) ? "A two-handed weapon leaves no hand for a shield." : "Nothing to equip that into.", "bad");
         const shield = target === "left_hand" ? bag.inventory.right_hand : null;

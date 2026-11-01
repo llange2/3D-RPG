@@ -270,14 +270,35 @@ export function monsterGroup(id: number): string {
 export function isUndead(id: number): boolean {
   return monsterGroup(id) === "undead";
 }
-export const TALENTS = TALENTS_RAW as unknown as Record<string, { name: number; description: number; price: number; recalc_attribute_values?: boolean }>;
+type TalentDef = { name: number; description: number; price: number; recalc_attribute_values?: boolean };
+
+/**
+ * Changes of the new game to the old talent table (`raw/TALENTS.json` is generated, so they live here): the Arms Master now costs
+ * 10'000 (obsidian is the best material), and the Body Builder adds hit points, which means every hero is worked out again when it is bought.
+ */
+const TALENT_CHANGES: Record<string, Partial<TalentDef>> = {
+  talent_arms_master: { price: 10_000 },
+  talent_body_builder: { recalc_attribute_values: true },
+};
+export const TALENTS: Record<string, TalentDef> = Object.fromEntries(
+  Object.entries(TALENTS_RAW as unknown as Record<string, TalentDef>).map(([id, t]) => [id, { ...t, ...TALENT_CHANGES[id] }]),
+);
+
+/** Names and descriptions of talents whose old text no longer says what they do (the Pathfinder spotted hidden items, now it travels faster). */
+const TALENT_TEXTS: Record<string, { name: string; description: string }> = {
+  talent_cave_explorer: { name: "Cave Explorer", description: "Knows how to find the way through caves." },
+  talent_pathfinder: { name: "Pathfinder", description: "Pathfinding will help you to travel faster: in the open country a step takes 7 minutes instead of 10." },
+  talent_arms_master: { name: "Arms master", description: "Allows the heroes to wield obsidian weapons and wear obsidian armor." },
+  talent_body_builder: { name: "Body Builder", description: "Increases your health points: every hero gets 1 more for each character level." },
+};
 
 /**
  * Name and description of a talent as the player reads them. `talent_cave_explorer` points at the texts of the Prayer
  * Master in the old table (copy and paste slip, the game has no text of its own for it), so it would be listed twice.
  */
 export function talentInfo(id: string): { name: string; description: string } {
-  if (id === "talent_cave_explorer") return { name: "Cave Explorer", description: "Knows how to find the way through caves." };
+  const own = TALENT_TEXTS[id];
+  if (own) return own;
   const t = TALENTS[id];
   return { name: t ? textsRaw[t.name] ?? id : id, description: t ? flowText(textsRaw[t.description] ?? "") : "" };
 }
