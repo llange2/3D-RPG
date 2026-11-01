@@ -78,6 +78,9 @@ const FLOOR_BOOST = 1.7;
 /** How much of its own texture the town portal gives off, on top of the light that falls on it. */
 const PORTAL_SHINE = 0.45;
 
+/** How much of its own texture the Magical Orb mascot gives off, on top of the light that falls on it (more than the portal: the ball is small and has to read as the source of its glow). */
+const ORB_SHINE = 0.75;
+
 /** Opacity of the see-through attack effects (the old game gave the fireball 0.7 and the poison cloud 0.3). */
 const PROJECTILE_ALPHA: Record<string, number> = { proj_fire: 0.85, proj_poison: 0.6 };
 
@@ -206,6 +209,11 @@ export class PropRenderer {
         if (key === "ci_3" && std.diffuseTexture) {
           std.emissiveTexture = std.diffuseTexture;
           std.emissiveColor = new Color3(PORTAL_SHINE, PORTAL_SHINE, PORTAL_SHINE);
+        }
+        // the Magical Orb mascot (item 10) shines through its own texture: its gold lamp sits at the height of the ball, so the light came from below and left the top dark
+        if (key === "ci_10" && std.diffuseTexture) {
+          std.emissiveTexture = std.diffuseTexture;
+          std.emissiveColor = new Color3(ORB_SHINE, ORB_SHINE, ORB_SHINE);
         }
         mesh.material = std;
         // the strip of the town's columns (720 x 5360) is drawn twice as wide as the column is round: squeezed to half its width (the user's wish)
