@@ -148,6 +148,8 @@ export interface DungeonRef {
   /** Quatloo coins (ue_quest_1) and silver skulls (ue_quest_2) hidden in the ordinary chests of the place. */
   coins: number;
   skulls: number;
+  /** Pearls of Youth and Beauty (ue_quest_4) hidden in the ordinary chests of the place (levels 3 and 4 only). */
+  pearls: number;
   /** The spells whose scrolls lie in the containers of this place (`planSpellLoot`, 34th playtest): every spell twice in the world, in places of its own level. */
   spells: number[];
   /** Seth Squirm and the machines of the Quatloo coins stand in this place (one dungeon of level 2 in the world). */
@@ -179,6 +181,8 @@ export interface CastleLayout {
   scale: number;
   /** Quatloo coins hidden in the alarm chests. */
   coins: number;
+  /** Pearls of Youth and Beauty hidden in the alarm chests (castles of level 3 and 4). */
+  pearls: number;
   /** The spells whose scrolls lie in the alarm chests (`planSpellLoot`). */
   spells: number[];
   /** The riddle (number in the list of the world) whose four-letter answer the statues of the keep spell. */

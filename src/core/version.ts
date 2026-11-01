@@ -132,5 +132,7 @@
  * 44 = 43rd playtest: the ordinary monsters of a cave or dungeon are of the place's own level only (`pickMonsters`): the level 2 Cave of Aldoa let Vampire Bats and Wild Fungus of level 1 out of its gongs.
  * 45 = thievery locks grow with the level of the party (`data/locks.ts` `lockDifficulty`): `difficulty` of chests, king's chests and doors is only a marker (1, the doors' `=tier*2` is gone), a locked chest keeps a trap
  * for a failed attempt (`lockTrap`, `trapDamage`, `trapLevel`, `actions/lockTrap.ts`).
+ * 46 = ue_quest_4 (quest document 1.4, the Pirate Queen): 20 Pearls of Youth and Beauty hide in the ordinary chests of the caves and dungeons of level 3 and 4 and in the alarm chests of the castles of level 3 and 4
+ * (`DungeonRef.pearls`, `CastleLayout.pearls`).
  */
-export const GEN_VERSION = 45;
+export const GEN_VERSION = 46;

@@ -487,7 +487,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   if (questEnv && map.dungeon?.vaults) placeVaults(questEnv);
   // Seth Squirm and the machines, the Quatloo coins and silver skulls in the ordinary chests (ue_quest_1 and ue_quest_2)
   if (questEnv) placeMachines(questEnv);
-  if (map.dungeon) hideInChests(map, actions, map.dungeon.coins, map.dungeon.skulls, mapSeed);
+  if (map.dungeon) hideInChests(map, actions, map.dungeon.coins, map.dungeon.skulls, mapSeed, false, map.dungeon.pearls);
   // and the spell scrolls the plan of the world assigned to this place (34th playtest)
   if (map.dungeon) hideSpells(map, actions, map.dungeon.spells, mapSeed);
 

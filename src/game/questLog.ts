@@ -1,4 +1,4 @@
-import { ORBS_FOR_KING, SKULLS_FOR_RING, type QuestId } from "../data/quest-table";
+import { ORBS_FOR_KING, PEARL, PEARLS_IN_WORLD, SKULLS_FOR_RING, type QuestId } from "../data/quest-table";
 import { MONSTERS, QUEST_ITEMS } from "../data/tables";
 import type { Poi } from "../world/types";
 import type { World } from "../world/world";
@@ -7,12 +7,15 @@ import type { World } from "../world/world";
  * The quest log of the generated world (35th playtest): what the party has taken on in the places it knows, open and finished. Nothing here is stored on its own; it is read
  * from the world's plan and from the flags the game keeps in `state.opened` (saves from before the log have no flags and still show everything they can know):
  *  - the Skull Miser of the start town (`skulls=<n>` handed in, `skullmiser:met`),
+ *  - the pirate queen on the sea (`pearls=<n>` handed in, `pirate:met`),
  *  - the three kings and the orbs (`king:<alignment>=<n>`, `king:winner=<alignment>`; a castle counts once the party has been inside),
  *  - the places that ask for a key or a key card (`lock:<place id>` is set when the party stood before the locked way in),
  *  - the quest of every cave and dungeon the party has entered, finished once the party has reached its end room (`reached:<place id>`).
  */
 
 export const SKULL_MISER_MET = "skullmiser:met";
+/** The party has been aboard the pirate ship (`Game.pirateMeeting`); the pearls handed in are `pearls=<n>`. */
+export const PIRATE_MET = "pirate:met";
 export const lockSeenFlag = (poiId: string): string => `lock:${poiId}`;
 export const reachedFlag = (poiId: string): string => `reached:${poiId}`;
 /** A thing the heroes have found out in a place (the words of a statue, what a hero heard in his mind): the text rides in the flag, so the save format stays as it is. */
@@ -93,6 +96,14 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     const where = town ? `the Skull Miser in ${town.name}` : "the Skull Miser";
     if (handed >= SKULLS_FOR_RING) done.push(`Brought ${SKULLS_FOR_RING} silver skulls to ${where}.`);
     else open.push(`Bring ${SKULLS_FOR_RING} silver skulls to ${where}: ${handed}/${SKULLS_FOR_RING} handed in${carrying > 0 ? `, you carry ${carrying}` : ""}.`);
+  }
+
+  // the pirate queen (ue_quest_4): her ship sails the largest ocean; the party knows her once it has met her, or when it carries a pearl
+  const pearlsGiven = number(opened, "pearls=");
+  const pearlsCarried = input.carried(PEARL);
+  if (opened.has(PIRATE_MET) || pearlsGiven > 0 || pearlsCarried > 0) {
+    if (pearlsGiven >= PEARLS_IN_WORLD) done.push(`Brought all ${PEARLS_IN_WORLD} Pearls of Youth and Beauty to the pirate queen.`);
+    else open.push(`Bring Pearls of Youth and Beauty to the pirate queen, whose ship sails the largest ocean: ${pearlsGiven}/${PEARLS_IN_WORLD} handed in${pearlsCarried > 0 ? `, you carry ${pearlsCarried}` : ""}.`);
   }
 
   // the kings and the orbs

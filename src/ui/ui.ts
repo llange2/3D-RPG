@@ -350,6 +350,20 @@ export class UI {
     );
   }
 
+  /** Parchment dialog with a picture of the speaker above the text (the pirate queen, `icons/portraits/<picture>.webp`) and one button. */
+  scene(title: string, text: string, picture: string, button = "OK"): Promise<void> {
+    return this.modal<void>((close) =>
+      h(
+        "div",
+        { class: "parchment with-picture" },
+        h("h2", { text: title }),
+        h("img", { class: "speaker", src: assetPath(`icons/portraits/${picture}.webp`), alt: title }),
+        h("p", { text }),
+        h("div", { class: "buttons" }, h("button", { class: "btn primary", text: button, onclick: () => close(undefined as void) })),
+      ),
+    );
+  }
+
   confirm(title: string, text: string, yes = "Yes", no = "No"): Promise<boolean> {
     return this.ask(title, text, [{ label: yes, value: true, primary: true }, { label: no, value: false }], false);
   }

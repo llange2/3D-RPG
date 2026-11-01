@@ -99,6 +99,13 @@ export interface HutSlotState {
   died?: number;
 }
 
+/** Where the pirate ship is (canonical world coordinates), and, after a meeting with the party, the game minute at which it comes back (a week later). */
+export interface PirateState {
+  x: number;
+  y: number;
+  away?: number;
+}
+
 export interface GameState {
   seed: string;
   /** How big the world is: small, default, large or huge (the seed alone does not tell). */
@@ -118,6 +125,8 @@ export interface GameState {
    * defeated is replaced by the next generation) and the game minute its predecessor fell, while it is waiting for a new week.
    */
   hutSlots: Record<string, HutSlotState>;
+  /** The pirate ship of ue_quest_4; null until the party has come near it (it then stands at its home, `world/pirate.ts`). */
+  pirate: PirateState | null;
   /** dropped loot per map key (`ow` for the overworld, the interior key otherwise) */
   loot: Record<string, LootPile[]>;
   explored: Explored;
@@ -137,6 +146,7 @@ export function newGameState(seed: string, start: { x: number; y: number; facing
     broken: new Set(),
     killed: new Set(),
     hutSlots: {},
+    pirate: null,
     loot: {},
     explored: new Explored(spanOf(size)),
     visited: new Set(),
@@ -174,6 +184,8 @@ export interface SaveFile {
     killed: string[];
     /** Absent in saves from before the Monster Huts. */
     hutSlots?: Record<string, HutSlotState>;
+    /** Absent in saves from before the pirate ship. */
+    pirate?: PirateState | null;
     loot: Record<string, LootPile[]>;
     explored: Record<string, string>;
     visited: string[];
@@ -198,6 +210,7 @@ export function toSaveFile(state: GameState): SaveFile {
       broken: [...state.broken],
       killed: [...state.killed],
       hutSlots: state.hutSlots,
+      pirate: state.pirate,
       loot: state.loot,
       explored: state.explored.toJSON(),
       visited: [...state.visited],
@@ -220,6 +233,7 @@ export function fromSaveFile(file: SaveFile): GameState {
     broken: new Set(s.broken),
     killed: new Set(s.killed),
     hutSlots: s.hutSlots ?? {},
+    pirate: s.pirate ?? null,
     loot: s.loot,
     explored: Explored.fromJSON(s.explored, spanOf(size)),
     visited: new Set(s.visited),

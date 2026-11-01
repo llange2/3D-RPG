@@ -155,7 +155,7 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
   }
   // the banners of its kind along the walls of the keep
   for (const c of bannerCells(map, taken, BANNER_SPACING)) banner(c.x, c.y, c.facing);
-  hideInChests(map, actions, castle.coins, 0, seed, true);
+  hideInChests(map, actions, castle.coins, 0, seed, true, castle.pearls);
   hideSpells(map, actions, castle.spells, seed, true);
   return { mapKey: map.key, tier, actions, spawns: [] };
 }

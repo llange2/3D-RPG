@@ -1331,6 +1331,18 @@ Tests: `tests/unit/playtest43.test.ts`. Das Talent „Pathfinder“ spürt `Game
 
 Tests: `tests/unit/thievery.test.ts` (Zielchancen, Gleichbleiben im Tier, `refSkill`-Anpassung, Klemmen, Stufen 1 bis 3, Log-Ninja, Türen, Falle bei Fehlschlag, Generierung), `tests/unit/sim.test.ts` (zwei Türtests an die neue Probe angepasst).
 
+## Nachtrag: ue_quest_4, die Piratenkönigin (Quest-Dokument 1.4)
+
+`GEN_VERSION` 46, Zweig `worktree-ue_quest4_pirate_queen`, 935 Tests. Quelle `docs/quests_1.4.md` (Kopie des Dokuments mit den Ergänzungen des Nutzers: das Schiff kehrt **eine Woche** nach der Begegnung zurück und steht außer Sicht wieder an seiner Ausgangsposition; Fahrt auf tiefem **und** flachem Wasser, Begegnung nur auf dem Floß). Umsetzung und Zahlen: `docs/QUESTS_UMSETZUNG.md` Abschnitt 6.
+
+1. **Perlen** (`PEARL`, `PEARLS_IN_WORLD` 20 in `data/quest-table.ts`): in gewöhnlichen Truhen der Höhlen und Dungeons der Stufen 3 und 4 (`distributeItems` in `interiors/dungeonPlan.ts`, **nach** den Ziehungen für Münzen, Schädel und Seth, damit deren Orte gleich bleiben) und je eine in den Alarmtruhen der Burgen der Stufen 3 und 4. Das Bild der Perle gab es schon (`quest_pearl_of_youth`).
+2. **Das Schiff** ist reine Geometrie in `world/pirate.ts` (kein Zufall, kein `GEN_VERSION`-Anteil), die Spiellogik in `Game.pirateTurn` (nach jedem Schritt auf der Überwelt) und `Game.pirateMeeting`; es blockiert sein Feld (`canEnter`, `onBlocked`: Anstoßen auf dem Floß löst die Begegnung aus) und wird in `syncPirate` gezeichnet (nächste Kopie auf der Kugel). Beim Betreten eines Ortes ist es ausgeblendet.
+3. **Spielstand:** `GameState.pirate` (`{ x, y, away? }`, in `SaveFile.state.pirate` optional, alte Spielstände laden mit `null`). `away` ist die Spielminute der Rückkehr.
+4. **Dialog mit Bild:** `UI.scene(title, text, picture)` (Pergament mit Sprecherbild über dem Text, CSS `.parchment .speaker`); Quelle des Bildes `tools/assets/sources/ui/pirate_queen.png`, gebaut von `build-textures.ts` (`npm run assets:textures`).
+5. **Text:** wörtlich aus dem Dokument, nur „get there gold“ ist zu „get their gold“ berichtigt.
+6. **Prüfung:** `tests/unit/ue_quest4.test.ts` (20 Perlen in Stufe 3/4, Ausgangsposition, Fahrt, Speicherformat, Questbuch), `tools/dev/check-pirate.ts` (Browser: Schiff fährt, Dialog mit Bild, Raub, Perlen, Rückkehr nach einer Woche).
+7. **Offen:** das Schiffsmodell ist ein Platzhalter aus Quadern (`render/pirateShip.ts`); das Schiff hat noch kein Kartensymbol und keinen eigenen Ton.
+
 ## Lichtlinien über dem Boden (Showcase)
 
 Ein rein visuelles Werkzeug, **kein `GEN_VERSION`**: gerade Linien aus Licht mit farbigem Schein, an denen Lichtimpulse entlanglaufen. Bisher nur im Showcase (Esc > Debug > Teleport to Level); echte Einsatzorte (Gong zur Rune in Quest 3, Straßen und Lavaadern der Überwelt, Gänge des Raumschiffs) sind nicht entschieden.
