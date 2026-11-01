@@ -127,9 +127,10 @@ describe("twentieth playtest, point 9 and 14: the map", () => {
 
 describe("twentieth playtest, point 15: the rustic caravan is 75 % as high", () => {
   it("takes a quarter off the height of the old item 26 (its width is 85 % since the 24th playtest)", () => {
-    expect(HEIGHT_FACTOR["26"]).toBe(0.75);
+    // 41st playtest, point 3: 15 % higher again (0.75 x 1.15)
+    expect(HEIGHT_FACTOR["26"]).toBeCloseTo(0.75 * 1.15, 9);
     const tuned = tunedItemModels<{ scale3: [number, number, number] }>();
-    expect(tuned["26"]!.scale3[1]).toBeCloseTo(1.6 * 0.75, 6);
+    expect(tuned["26"]!.scale3[1]).toBeCloseTo(1.6 * 0.75 * 1.15, 6);
     expect(tuned["26"]!.scale3[0]).toBeCloseTo(1.3 * 0.85, 6);
     expect(tuned["25"]!.scale3).toEqual((tunedItemModels<{ scale3: [number, number, number] }>())["25"]!.scale3);
   });

@@ -290,6 +290,9 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
             if (map.cells[i] !== CELL.FLOOR || occupied.has(i) || anchors.protectedCells.has(i)) return false;
             const blocking = blocksCell(a);
             if (blocking && wouldDisconnect(i)) return false;
+            // the quest objects (a statue with a riddle, a gong, a lever) follow the user's rule for objects as well: none in a passage of one cell (41st playtest, point 5: the riddle statue of the
+            // Grotto of Wilana stood in the only way into a corridor, the rest of the cave was connected round it, so the check above passed)
+            if (isObject(a) && splitsPassage(a.x, a.y)) return false;
             actions.push(a);
             occupied.add(i);
             if (blocking) blockedCells.add(i);
@@ -316,7 +319,12 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // the Skull Miser is always in the start town (ue_quest_2), in a dead end
   if (map.kind === "town" && map.key.startsWith("p:0:0:0:")) {
     const doors = new Set(map.lots.map((l) => idx(l.door.x, l.door.y)));
-    const spot = anchors.byKind.deadEnd.find((a) => isFree(a, false) && !doors.has(idx(a.x, a.y)) && !wouldDisconnect(idx(a.x, a.y)));
+    // the people and objects of the town plan (`map.sites`) are placed by the rules further down: a dead end that one of them is waiting for is not free. The Skull Miser
+    // once took the cell of the cartographer, who then stood nowhere (41st playtest, seed north-ward-302)
+    const sited = new Set((map.sites ?? []).map((s) => idx(s.x, s.y)));
+    const fits = (a: Anchor): boolean => isFree(a, false) && !doors.has(idx(a.x, a.y)) && !sited.has(idx(a.x, a.y)) && !wouldDisconnect(idx(a.x, a.y));
+    // (a plan whose dead ends are all taken has the Skull Miser stand in any street where he blocks no passage: he is always in the start town)
+    const spot = anchors.byKind.deadEnd.find(fits) ?? Object.values(anchors.byKind).flat().find((a) => fits(a) && !splitsPassage(a.x, a.y));
     if (spot) {
       actions.push({ uid: `${map.key}#skullmiser:0`, kind: "skullmiser", x: spot.x, y: spot.y, params: { persona: 82 } });
       occupied.add(idx(spot.x, spot.y));

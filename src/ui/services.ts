@@ -4,7 +4,7 @@ import { SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
 import {
   buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, rumour, wordRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf,
-  templeCure, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, type GuildSchool,
+  templeCure, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
 import { isSpellImplemented, learnBlock } from "../sim/spells";
@@ -35,6 +35,8 @@ export interface ServiceContext {
   rumour?: () => string;
   /** Plays a sound of the old game (the book of heroes in the inn clicks, rolls dice and saves). */
   sound?: (id: number) => void;
+  /** Lets game time pass (training takes `TRAINING_MINUTES` per hero): spells and conditions that run out in that time are reported by the game. */
+  passTime?: (minutes: number) => void;
   /**
    * Wares the party has bought, as `shop:<poi>:<day>:<n>` (n = place in the day's stock). Saved with the game, so a sold item stays
    * gone when the party leaves and comes back; tomorrow the smith has new stock.
@@ -238,7 +240,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
 
     // -------------------------------------------------------------- training
     const training = () => {
-      root.append(...header(), h("p", { text: "Experience means nothing until it is drilled into the bones. Pay the trainers when a hero has earned the next level." }));
+      root.append(...header(), h("p", { text: `Experience means nothing until it is drilled into the bones. Pay the trainers when a hero has earned the next level. A level takes ${TRAINING_MINUTES / 60} hours of drill for each hero.` }));
       // one click for the whole party: the lowest level first, as far as the gold reaches
       const plan = trainAllPlan(party);
       const everyone = plan.who.length + plan.waiting.length;
@@ -246,12 +248,13 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
         root.append(h("div", { class: "row-btns" }, h("button", {
           class: "btn primary",
           text: `Train all (${plan.who.length} of ${everyone}, ${thousands(plan.cost)} gold)`,
-          title: "Trains every hero who can rise, beginning with the lowest level, as far as the gold lasts",
+          title: `Trains every hero who can rise, beginning with the lowest level, as far as the gold lasts. Takes ${TRAINING_MINUTES / 60} hours per hero.`,
           disabled: plan.who.length === 0,
           onclick: () => {
             const done = trainAll(party);
             for (const i of done.who) note(`${party.characters[i]!.name} reaches level ${party.characters[i]!.level}!`, "good");
             if (done.waiting.length > 0) note(`Not enough gold for ${done.waiting.map((i) => party.characters[i]!.name).join(", ")}.`, "bad");
+            if (done.who.length > 0) ctx.passTime?.(TRAINING_MINUTES * done.who.length);
             refresh();
           },
         })));
@@ -262,6 +265,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
         root.append(row(h("span", { html: `<b>${c.name}</b> - level ${c.level} - ${thousands(c.xp)} xp` }), need > 0 ? `needs ${thousands(need)} more xp` : `train for ${thousands(cost)} gold`, () => {
           const r = train(party, i);
           note(r.ok ? `${c.name} reaches level ${c.level}!` : r.reason === "gold" ? "Not enough gold." : "Not enough experience.", r.ok ? "good" : "bad");
+          if (r.ok) ctx.passTime?.(TRAINING_MINUTES);
           refresh();
         }, need > 0 || party.gold < cost || !isAlive(c)));
       });

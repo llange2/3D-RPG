@@ -422,10 +422,12 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
 
   // every town has the apprentice of its guild: four of the five old plans have one, the fourth town gets one in a dead end
   const guild = `guild_level_${Math.min(5, Math.max(1, ctx.tier))}`;
-  if (!sites.some((s) => s.kind === "talent" && s.talent === guild)) {
+  // (and every other seller of the plan, the cartographer of the first town above all, has a place even when his own cell was lost to a brittle wall or to the way in)
+  for (const talent of new Set([guild, ...plan.talents.map((t) => t.talent)])) {
+    if (sites.some((s) => s.kind === "talent" && s.talent === talent)) continue;
     const spot = spots().find(([x, y]) => fits(x, y));
     if (spot) {
-      sites.push({ kind: "talent", x: spot[0], y: spot[1], talent: guild });
+      sites.push({ kind: "talent", x: spot[0], y: spot[1], talent });
       take(spot[0], spot[1]);
     }
   }

@@ -1575,6 +1575,7 @@ export class Game {
       sound: (id) => this.audio.play(id),
       soldOut: this.state.opened,
       log: (t, k) => this.ui.log(t, k),
+      passTime: (minutes) => this.passTime(minutes),
       rumour: () => {
         const rng = new Rng(seedFromString(`${this.state.seed}:rumour:${this.state.steps}:${this.state.party.minutes}`));
         const intro = TEXTS[308 + rng.int(10)]!;
@@ -2389,7 +2390,10 @@ export class Game {
       this.audio.play(9050);
       this.ui.log("A wall slides aside with a grinding of stone.", "good");
     }
-    if (end.isolated) this.jumpTo(end.cx, end.cy);
+    if (end.isolated) {
+      this.ui.log("The floor falls away, and a strange light takes you.", "good");
+      this.jumpTo(end.cx, end.cy);
+    }
   }
 
   /**
@@ -2617,6 +2621,7 @@ export class Game {
       sound: (id) => this.audio.play(id),
       soldOut: this.state.opened,
       log: (t, k) => this.ui.log(t, k),
+      passTime: (minutes) => this.passTime(minutes),
       // the guild houses of the endless world only let members in; the membership is sold by the guild apprentice who stands in the streets of the town
       membershipFrom: "The guild's apprentice, a young person with a heavy book, stands somewhere in the streets of this town. They sell the membership.",
     });

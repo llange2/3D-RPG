@@ -167,6 +167,8 @@ export function carveVaults(b: Builder, rng: Rng, spawn: { x: number; y: number 
 }
 
 const SIZES: readonly (readonly [number, number])[] = [[5, 4], [4, 4], [4, 3], [3, 3]];
+/** Smallest pocket in the rock (cells) that `carveEndRoomFor` tries before it settles for a sealed room: 4 x 3 (the sizes are tried from the largest). */
+const POCKET_MIN_CELLS = 12;
 /** The rooms tried first for a place that holds three orbs or more. */
 const CROWDED: readonly (readonly [number, number])[] = [[7, 5], [6, 5]];
 
@@ -176,10 +178,16 @@ const CROWDED: readonly (readonly [number, number])[] = [[7, 5], [6, 5]];
  */
 export function carveEndRoomFor(b: Builder, rng: Rng, spawn: { x: number; y: number }, teleported: boolean, within?: { x: number; y: number; w: number; h: number }, orbs = 0): EndRoom | null {
   // every orb is a chest of its own (31st playtest): a small world puts up to seven orbs into one room, which then needs room for them
-  for (const [w, h] of orbs >= 3 ? [...CROWDED, ...SIZES] : SIZES) {
-    const order = teleported ? [true, false] : [false, true];
-    for (const isolated of order) {
-      const room = (!isolated && within ? carveEndRoom(b, rng, spawn, false, w, h, within) : null) ?? carveEndRoom(b, rng, spawn, isolated, w, h);
+  const sizes = orbs >= 3 ? [...CROWDED, ...SIZES] : SIZES;
+  const carve = (isolated: boolean, w: number, h: number): EndRoom | null => (!isolated && within ? carveEndRoom(b, rng, spawn, false, w, h, within) : null) ?? carveEndRoom(b, rng, spawn, isolated, w, h);
+  // a quest that teleports (the runes of quests 1 and 3) tries a pocket in every size before it settles for a sealed room: the rune says "a strange light takes you", and a sealed room
+  // only slid a wall aside without moving the party (41st playtest, point 7, Grotto of Wilana)
+  // (a pocket also holds the portal back, the quest items and a reward chest: the smallest size has no room for all of them, so it comes only when nothing else fits)
+  const passes: [boolean, number][] = teleported ? [[true, POCKET_MIN_CELLS], [false, 0], [true, 0]] : [[false, 0], [true, 0]];
+  for (const [isolated, least] of passes) {
+    for (const [w, h] of sizes) {
+      if (w * h < least) continue;
+      const room = carve(isolated, w, h);
       if (room) return room;
     }
   }
