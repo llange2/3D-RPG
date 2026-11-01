@@ -6,7 +6,7 @@ import type { CampaignMapModel } from "../campaign/model";
 import { crossesSlab, slabBetween, stepFacing, type SlabMap } from "../campaign/slabs";
 import { CAMPAIGN_START, facingOfRotation, mapSlugOf, type TrapKind } from "../campaign/types";
 import { CampaignView } from "../render/campaignView";
-import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, heapGone, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, validateContent } from "../actions";
+import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, heapGone, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, isVisibleTrap, validateContent } from "../actions";
 import { resolveAction, type ActionContext, type Effect, type WallSide } from "../actions/handlers";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { AudioManager } from "../audio/audio";
@@ -38,7 +38,7 @@ import { PropRenderer } from "../render/props";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
-import { LANDMARK_MODELS, groundPropLift, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
+import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, itemModelKey, itemProp } from "../render/itemProps";
@@ -66,6 +66,7 @@ import { World } from "../world/world";
 import { MinimapIcons } from "./minimapIcons";
 import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, type MapEvent, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend } from "./minimap";
 import { FACING_VEC, PlayerRig, type MoveDir } from "./player";
+import { downloadText, pickTextFile } from "./fileTransfer";
 import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode, teleportTargets } from "./debug";
 import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
@@ -76,12 +77,12 @@ import { hutScene } from "../data/hut-texts";
 import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { readSettings, writeSettings, type Settings } from "./settings";
-import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
+import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type SaveFile, type SaveSlot } from "./state";
 import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
 import { BIRD_PERCH, BLUE_MUSHROOM, MASCOT_ASK, MASCOT_ITEM, isSolidSpotItem, mascotSpotItem } from "../data/mascots";
-import { propLine } from "../data/prop-texts";
+import { emptyContainerLine, propLine } from "../data/prop-texts";
 import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
@@ -185,6 +186,8 @@ const CHEST_SOUND_GAP = 0.35;
 const STRAW_HUT = 45;
 /** The old items "Fountain" and "Mermaid fountain": a town stands several, only one of them heals, all of them splash (36th playtest). */
 const FOUNTAIN_ITEMS: readonly number[] = [2, 89];
+/** How many steps over open ground from the party an ambush may put its monsters. */
+const AMBUSH_REACH = 5;
 /** Monsters of an ambush or a spawn action fade in over this long (seconds). */
 const APPEAR_SECONDS = 0.3;
 /** A Monster Hut is drawn when it lies within this many tiles of the party (the farthest view is four chunks). */
@@ -1315,7 +1318,7 @@ export class Game {
         await this.useAction(a);
         return;
       }
-      if (a && a.kind === "treasure") this.ui.log("The chest is empty.", "info");
+      if (a && a.kind === "treasure") this.ui.log(emptyContainerLine(a.params.chest), "info");
     }
     this.audio.play(9014, 0.35);
   }
@@ -1758,7 +1761,8 @@ export class Game {
     for (const h of near) {
       // the globe: the copy of the hut that is nearest to the party
       const w = this.worldPos(this.player.tx + wrapDelta(this.player.tx, h.x, this.world.width), this.player.ty + wrapDelta(this.player.ty, h.y, this.world.height));
-      const inst = itemProp(this.hutBurnt(h) ? BURNT_HUT_ITEM : HUT_ITEM, ((h.monster * 7) % 4) * 90, w.x, w.z, this.staticInfo);
+      // the door to the road, or to open ground (42nd playtest, point 9)
+      const inst = itemProp(this.hutBurnt(h) ? BURNT_HUT_ITEM : HUT_ITEM, doorBearing((dx, dy) => this.world.tile(h.x + dx, h.y + dy), h.monster * 7), w.x, w.z, this.staticInfo);
       if (!inst) continue;
       inst.y += w.y + groundPropLift();
       list.push(inst);
@@ -2029,7 +2033,7 @@ export class Game {
       if (this.trapReloading(a.uid)) return;
       this.trapFired.set(a.uid, this.state.steps);
     }
-    // a trap that has gone off stays on the map (Wizard's Eye shows it even without the Crow)
+    // a trap that has gone off stays on the map and the minimap (without the Crow too)
     if (isTrapAction(a)) this.state.opened.add(`${a.uid}@fired`);
     this.busy = true;
     // a fountain works once a day: the day it was used is part of the key, so nothing else has to be saved or reset
@@ -2071,6 +2075,8 @@ export class Game {
       for (const k of outcome.state.remove) this.state.opened.delete(k);
       for (const k of outcome.state.add) this.state.opened.add(k);
       this.syncQuestBlocks();
+      // a head of quest 2 turns as long as the grinding of the stone lasts (42nd playtest, point 5)
+      if (a.kind === "head" && a.params.mode === "rotate") this.interiorView.startHeadTurn(a.uid, this.audio.durationOf(9050, 1.6));
       this.interiorView.refreshObjects();
       // (a gong rings with its own sound: the `sound` effect)
       // (a lever that turns a stone head, and the head that is turned by hand, grind like stone, 36th playtest, points 12 and 22)
@@ -2085,7 +2091,7 @@ export class Game {
     // the key or key card in its chest is gone from the map once it is taken; the runes of the gongs appear with the last gong
     if ((a.kind === "treasure" && outcome.consumed && typeof a.params.quest === "string") || (a.kind === "gong" && outcome.state)) this.interiorView.refreshObjects();
     // (and the glow of the key or the heap goes out with it; the runes light up with the last gong)
-    if (this.interior && !this.interior.campaign && (objectTaken(a, this.state.opened) || a.kind === "gong")) this.lamps = crystalLamps(this.interior.content, this.state.opened);
+    if (this.interior && !this.interior.campaign && (objectTaken(a, this.state.opened) || a.kind === "gong" || a.kind === "head")) this.lamps = crystalLamps(this.interior.content, this.state.opened);
     // an emptied heap of treasure leaves its cell, which the party may then walk over
     if (this.interior && !this.interior.campaign && heapGone(a, this.state.opened)) {
       this.interior.blocked.delete(a.y * this.interior.map.width + a.x);
@@ -2595,7 +2601,31 @@ export class Game {
     const { tx, ty, facing } = this.player;
     const view = this.gridView();
     const [dx, dy] = FACING_VEC[facing];
-    const placed = this.placeGroup(`ambush:${this.state.steps}:${tx},${ty}`, ids, tx + dx * 2, ty + dy * 2, (x, y) => view.walkable(x, y) && !(x === tx && y === ty));
+    // 42nd playtest, point 4: the monsters stand where the party can see and meet them. Two cells ahead may be a wall (a dead end, a statue in the
+    // way): the old search then put them on cells behind the walls, in another corridor, and nothing came. Now only cells that are connected to the party
+    // by open ground within a few steps count, the nearest to the cell ahead first (a monster behind the party is better than none).
+    const reach = new Set<string>();
+    const steps: [number, number, number][] = [[tx, ty, 0]];
+    for (let head = 0; head < steps.length; head++) {
+      const [x, y, d] = steps[head]!;
+      if (d >= AMBUSH_REACH) continue;
+      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const key = `${x + ox},${y + oy}`;
+        if (reach.has(key) || (x + ox === tx && y + oy === ty) || !view.walkable(x + ox, y + oy)) continue;
+        reach.add(key);
+        steps.push([x + ox, y + oy, d + 1]);
+      }
+    }
+    let ax = tx + dx * 2;
+    let ay = ty + dy * 2;
+    if (!reach.has(`${ax},${ay}`)) {
+      let best = Infinity;
+      for (const [x, y] of steps.slice(1)) {
+        const dist = Math.abs(x - ax) + Math.abs(y - ay);
+        if (dist < best) { best = dist; ax = x; ay = y; }
+      }
+    }
+    const placed = this.placeGroup(`ambush:${this.state.steps}:${tx},${ty}`, ids, ax, ay, (x, y) => reach.has(`${x},${y}`));
     this.audio.play(9044);
     this.ambushGrace = placed.length > 0;
     for (const m of placed) {
@@ -3622,11 +3652,12 @@ export class Game {
     const here = (): { x: number; y: number } => (interior ? { x: this.player.tx, y: this.player.ty } : { x: this.world.wrapX(this.player.tx), y: this.world.wrapY(this.player.ty) });
     // opens 25 cells across (the user's wish); zooming out is one wheel step away
     let view: MapViewport = { ...here(), cells: clampCells(MAP_OPEN_CELLS, limits) };
-    const monsters = this.mappedMonsters();
-    const detect = this.detectOn() || this.eyeOn();
+    // 42nd playtest, point 12: Wizard's Eye uncovers the minimap only; the big map is uncovered by walking, as ever (`eye` stays off here)
+    const monsters = this.mappedMonsters(false);
+    const detect = this.detectOn();
     // the game stands still while the map is open, so what the Crow sees is the same until it is closed
     const traps = this.trapsShown();
-    const eye = this.eyeOn();
+    const eye = false;
     const events = interior ? [] : this.overworldEvents();
     // only a party with the Cartographer talent has a map to read (35th playtest): the big map stays black, the minimap beside the cards is there for everybody. The campaign keeps its old rules.
     const blank = !this.state.campaign && !this.state.party.talents.includes("talent_cartographer");
@@ -3833,6 +3864,8 @@ export class Game {
         { label: "Reveal map", value: "map", note: this.mode === "overworld" ? (this.state.campaign ? "150 tiles around" : "the whole world") : "this level" },
         { label: "Identify", value: "identify", note: this.mode === "overworld" ? "the nearest place" : "this place" },
         ...(this.state.campaign ? [] : [{ label: "Teleport to Level", value: "teleport", note: "any town, cave, dungeon or castle" }]),
+        { label: "Export saves", value: "export", note: "all slots and this game, as one file" },
+        { label: "Import saves", value: "import", note: "from such a file or a single save" },
       ]);
       if (!choice) return false;
       this.audio.play(9001); // menu-selection, like every other menu click
@@ -3866,9 +3899,36 @@ export class Game {
         case "teleport":
           if (await this.teleportToLevel()) return true;
           break;
+        case "export":
+          this.exportSavesToFile();
+          break;
+        case "import":
+          await this.importSavesFromFile();
+          break;
       }
       this.refresh();
     }
+  }
+
+  /** Debug: the saves of this browser in one file (the game being played goes into the auto slot first), so that they can be looked at elsewhere. */
+  private exportSavesToFile(): void {
+    this.save("auto");
+    const bundle = exportSaves();
+    if (bundle.saves.length === 0) {
+      this.ui.toast("There is no save to export");
+      return;
+    }
+    downloadText(`mm3-saves-${bundle.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`, JSON.stringify(bundle));
+    this.ui.toast(`${bundle.saves.length} save${bundle.saves.length === 1 ? "" : "s"} exported`);
+  }
+
+  /** Debug: picks a file with saves (an export, or a single save) and writes them into their slots; "Load game" then opens them. */
+  private async importSavesFromFile(): Promise<void> {
+    const file = await pickTextFile();
+    if (!file) return;
+    const result = importSaves(file.text);
+    if (result.written.length > 0) this.ui.toast(`${result.written.length} save${result.written.length === 1 ? "" : "s"} imported: ${result.written.join(", ")}. Use Load game to play one.`);
+    if (result.skipped.length > 0) await this.ui.message(`Left out:\n${result.skipped.join("\n")}`, "Import saves");
   }
 
   /** Debug: a list of every place of the world with its level; the party appears at the entrance of the one picked, whatever key it asks for. True when the party went. */
@@ -4252,17 +4312,20 @@ export class Game {
   }
 
   /**
-   * The traps the map gives away while Wizard's Eye is on: with the Crow as the mascot every trap of the level, without it only the traps that
-   * have gone off (the old game showed them with the Crow alone). Keys are `x,y`.
+   * The traps the maps mark (42nd playtest, point 3): a trap that has gone off, a visible one the party has had in view (a blade, a puddle of
+   * acid or fire: `isVisibleTrap`, its cell is explored) and, with the Crow as the mascot, every trap. The maps draw only explored cells, so the Crow
+   * alone marks the traps of the explored part; with Wizard's Eye on as well the minimap, which then shows the whole level, marks all of them.
+   * Keys are `x,y`.
    */
   private trapsShown(): Set<string> {
     const out = new Set<string>();
     const rt = this.interior;
-    if (this.mode !== "interior" || !rt || !this.eyeOn()) return out;
+    if (this.mode !== "interior" || !rt) return out;
     const crow = this.state.party.mascot === "Crow";
+    const key = `in:${rt.map.key}`;
     for (const a of rt.content.actions) {
-      if (!isTrapAction(a) || isSpent(a, this.state.opened)) continue;
-      if (crow || this.state.opened.has(`${a.uid}@fired`)) out.add(`${a.x},${a.y}`);
+      if (!isTrapAction(a)) continue;
+      if (crow || this.state.opened.has(`${a.uid}@fired`) || (isVisibleTrap(a) && this.state.explored.has(key, a.y * rt.map.width + a.x))) out.add(`${a.x},${a.y}`);
     }
     return out;
   }
@@ -4285,9 +4348,9 @@ export class Game {
    * The monsters the maps may show (36th playtest): only the ones inside the viewing cone, where nothing hides them. Wizard's Eye and Detect Monster lift that
    * (Eye shows every monster of the level, Detect Monster the same, the maps then skip the ground check).
    */
-  private mappedMonsters(): { x: number; y: number }[] {
+  private mappedMonsters(withEye = true): { x: number; y: number }[] {
     const alive = this.enc.monsters.filter((m) => m.hp > 0).map((m) => ({ x: m.x, y: m.y }));
-    if (this.eyeOn() || this.detectOn() || alive.length === 0) return alive;
+    if ((withEye && this.eyeOn()) || this.detectOn() || alive.length === 0) return alive;
     const { tx, ty, facing } = this.player;
     const seen = new Set<string>();
     for (const [x, y] of visibleCells(this.gridView().opaque, tx, ty, facing, this.sightRadius())) seen.add(`${x},${y}`);

@@ -127,5 +127,7 @@
  * the riddle list has no more anachronisms (telephone, piano, keyboard, postage stamp, tea, envelope, pencil, ...) and 18 riddles of the Middle Ages in their place.
  * 42 = 41st playtest: the Skull Miser leaves the cells of the town plan alone (he took the cartographer's cell of Starthaven) and every seller of the plan gets a place; the quest objects follow the passage rule;
  * a quest that teleports (1, 3) tries a pocket in every size before a sealed end room (the Grotto of Wilana had a sealed one, so the runes teleported nobody).
+ * 43 = 42nd playtest: the riddle of the bulette is replaced by one of snow (#319); the end room of quest 2 lies next to the hall or is a pocket in the rock that runes in the hall lead to (it was sealed far away in the
+ * maze of the Catacombs of Kela); a shop never stands on a street that goes on, it is dug into the house wall as a niche (the smith of Quinudale).
  */
-export const GEN_VERSION = 42;
+export const GEN_VERSION = 43;

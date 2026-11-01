@@ -274,9 +274,39 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
       }
     }
   }
+  /**
+   * A shop never stands on a street that goes on (42nd playtest, point 11: the smith of Quinudale stood in the main street, and every walk along it entered the shop): where the
+   * cell has more than one way out, the shop is a niche dug into the house wall beside it, one cell deep with the door in the wall behind. Returns the niche's cell, or null if the
+   * walls round the cell leave no room for one.
+   */
+  const digNiche = (x: number, y: number): [number, number] | null => {
+    for (const side of rng.shuffle([...SIDES])) {
+      const d = FACING_DELTA[side];
+      const [wx, wy] = [x + d.dx, y + d.dy];
+      if (b.get(wx, wy) !== CELL.BUILDING || used.has(wy * width + wx) || nearStart(wx, wy)) continue;
+      if (brittle.some((w) => Math.abs(w.x - wx) <= 1 && Math.abs(w.y - wy) <= 1)) continue;
+      // the niche, the wall behind it and the cells beside both are wall (the street cell in front is the one way in); nothing else is close
+      const [bx, by] = [wx + d.dx, wy + d.dy];
+      if (!isWall(bx, by) || !wallGoesOn(bx, by, side) || !wallGoesOn(wx, wy, side)) continue;
+      if (SIDES.some((f) => f !== opposite(side) && b.isFloor(wx + FACING_DELTA[f].dx, wy + FACING_DELTA[f].dy))) continue;
+      if (shopCells.some(([sx, sy]) => Math.abs(sx - wx) + Math.abs(sy - wy) < 2) || sites.some((s) => Math.abs(s.x - wx) + Math.abs(s.y - wy) < 2)) continue;
+      b.set(wx, wy, CELL.FLOOR);
+      if (b.get(bx, by) === CELL.SOLID) b.set(bx, by, CELL.BUILDING);
+      lots.push({ id: lots.length, x: wx, y: wy, w: 1, h: 1, door: { x: wx, y: wy, facing: opposite(side) }, inline: true });
+      shopCells.push([wx, wy]);
+      used.add(wy * width + wx);
+      return [wx, wy];
+    }
+    return null;
+  };
   const addShop = (x: number, y: number, strict = true): boolean => {
     // a wall that gives way is never next to a shop's door (it would leave the door or the sign hanging)
     if (brittle.some((w) => Math.abs(w.x - x) <= 1 && Math.abs(w.y - y) <= 1)) return false;
+    if (open4(x, y) > 1) {
+      if (digNiche(x, y)) return true;
+      // (a plan whose walls leave no niche anywhere is given its shop in the street at the very end, so that every service has one)
+      if (strict) return false;
+    }
     const backs = SIDES.filter((s) => isWall(x + FACING_DELTA[s].dx, y + FACING_DELTA[s].dy) && (!strict || wallGoesOn(x + FACING_DELTA[s].dx, y + FACING_DELTA[s].dy, s)));
     if (backs.length === 0) return false;
     // a wall with a street in front of it (the cell opposite is open) is the better door; otherwise any wall will do

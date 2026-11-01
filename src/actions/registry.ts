@@ -269,6 +269,13 @@ const LEGACY_TRAPS: readonly number[] = [17, 23, 24, 30];
 /** Is this a trap, generated or from the campaign's maps? */
 export const isTrapAction = (a: { kind: ActionKind; legacy?: { id: number } }): boolean => a.kind === "trap" || (a.kind === "legacy" && !!a.legacy && LEGACY_TRAPS.includes(a.legacy.id));
 
+/**
+ * A trap that can be seen before it goes off (42nd playtest, point 3): the blade hangs over the cell, the puddles of fire, acid and magic lie on it.
+ * Spears and the pit are hidden until they go off, only the Crow finds those.
+ */
+export const isVisibleTrap = (a: { kind: ActionKind; params: Record<string, unknown>; legacy?: { id: number } }): boolean =>
+  a.kind === "trap" ? a.params.trap === "guillotine" || a.params.trap === "generic" : a.kind === "legacy" && !!a.legacy && (a.legacy.id === 24 || a.legacy.id === 30);
+
 /** A pit is a hole once it went off: the uid of an open pit is in the save's `opened` set, and it hurts every time. */
 export const isLastingTrap = (a: { kind: ActionKind; params: Record<string, unknown> }): boolean => a.kind === "trap" && a.params.trap === "pit";
 

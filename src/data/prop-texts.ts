@@ -4,6 +4,7 @@
  * Pure data: no DOM, no Babylon.
  */
 import { seedFromString } from "../core/rng";
+import { isBookshelf } from "./spell-loot";
 import { MAP_ITEMS } from "./tables";
 
 const PROP_LINES: Record<number, readonly string[]> = {
@@ -117,6 +118,12 @@ export const BARREL_COINS: readonly string[] = [
   "Somebody hid some coins in the barrel, in a boot. Why a boot, nobody knows.",
   "Between the staves a few coins have been wedged. A thrifty barrel!",
 ];
+
+/** What the log says of a container with nothing left in it (42nd playtest, point 10): a barrel is a barrel, not a chest. `chest` is the item of the container. */
+export function emptyContainerLine(chest: unknown): string {
+  const name = Number(chest) === 5 ? "barrel" : isBookshelf(chest) ? "bookshelf" : "chest";
+  return `The ${name} is empty.`;
+}
 
 /** A bookshelf is a container too (34th playtest): the party looks through the books and finds nothing, or a spell scroll between them. */
 export const BOOKSHELF_EMPTY: readonly string[] = [

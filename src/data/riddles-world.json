@@ -225,11 +225,6 @@
   "answer": "leg",
   "aliases": []
  },
- "49": {
-  "question": "The beast of the plains, it goes through the ground, constantly on the search for its next meal. While it hates the taste of dwarves and elves, it loves the taste of halfling.",
-  "answer": "bulette",
-  "aliases": []
- },
  "51": {
   "question": "In the world below, almost everything below has a heart as dark as their surroundings. This thing is the one exception, giving a light glow in the world of the Underdark.",
   "answer": "flumph",
@@ -1463,6 +1458,11 @@
  "318": {
   "question": "I give light on the way through the dungeon. One gust of wind and I am gone.",
   "answer": "torch",
+  "aliases": []
+ },
+ "319": {
+  "question": "I fall from the clouds in winter, soft and silent, and I cover the fields in white.",
+  "answer": "snow",
   "aliases": []
  }
 }

@@ -6,6 +6,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import { hash2 } from "../core/noise";
 import { QUEST_PROP } from "../data/quest-table";
+import { headFacing } from "../actions/quests";
 import { heapGone } from "../actions/registry";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { hasRoundWalls, roundCorners, ROUND_ITEM, type RoundCorner } from "../interiors/roundCorners";
@@ -457,11 +458,22 @@ export class InteriorView {
   /** Magic flames standing as objects (decoration, shrines): they float on the spot like static monsters. */
   private flames: PropInstance[] = [];
   private clock = 0;
+  /** Quest 2's heads (42nd playtest, point 5): the facing each was last drawn with, the turns to start at the next redraw (seconds) and the turns under way. */
+  private headFacings = new Map<string, number>();
+  private turnPending = new Map<string, number>();
+  private turning = new Map<string, { t: number; seconds: number; delta: number }>();
+  private turners: { uid: string; prop: PropInstance }[] = [];
+
+  /** The next redraw turns the head `uid` a quarter circle over `seconds` instead of setting it to its new facing at once. */
+  startHeadTurn(uid: string, seconds: number): void {
+    this.turnPending.set(uid, Math.max(0.2, seconds));
+  }
 
   private buildObjects(): void {
     const map = this.map!;
     let instances: PropInstance[] = [];
     this.spinners = [];
+    this.turners = [];
     this.wallLike = new Set(this.content!.actions.filter((a) => a.kind === "door" || (a.kind === "breakable_wall" && !this.brokenWalls.has(a.uid))).map((a) => a.y * map.width + a.x));
     this.objectCells = new Set(this.content!.actions.filter((a) => a.kind !== "service" && a.kind !== "trap" && a.kind !== "transfer" && a.kind !== "ambush" && !this.wallLike.has(a.y * map.width + a.x)).map((a) => a.y * map.width + a.x));
     for (const a of this.content!.actions) {
@@ -476,6 +488,19 @@ export class InteriorView {
       const themed = themedProp(a, x, z, (this.faceOpen(map, a, h >>> 8) * 180) / Math.PI, this.staticInfo, this.opened, this.content ?? undefined);
       // a head of the ring that is not there leaves its cell empty
       if (!themed && a.kind === "head") continue;
+      if (themed && a.kind === "head" && a.params.mode === "rotate") {
+        const facing = headFacing(a, this.opened);
+        const before = this.headFacings.get(a.uid);
+        this.headFacings.set(a.uid, facing);
+        const pending = this.turnPending.get(a.uid);
+        this.turnPending.delete(a.uid);
+        // always clockwise, a quarter at a time (`turnHead`): the way to the new facing is (new - old) mod 4 quarters
+        if (pending !== undefined && before !== undefined && before !== facing) this.turning.set(a.uid, { t: 0, seconds: pending, delta: (((facing - before + 4) % 4) * Math.PI) / 2 });
+        if (this.turning.has(a.uid)) {
+          this.turners.push({ uid: a.uid, prop: themed });
+          continue;
+        }
+      }
       if (themed) {
         (a.kind === "treasure" && typeof a.params.chest === "number" && SPINNING_ITEMS.has(a.params.chest) ? this.spinners : instances).push(themed);
         continue;
@@ -530,7 +555,17 @@ export class InteriorView {
     this.props.setInstances(this.owner, instances);
     this.pushSpinners();
     this.pushFlames();
+    this.pushTurners();
     this.props.flush();
+  }
+
+  /** The heads that are turning: they have an owner of their own, redrawn every frame with the angle still to go. */
+  private pushTurners(): void {
+    this.props.setInstances(`${this.owner}:turn`, this.turners.map(({ uid, prop }) => {
+      const turn = this.turning.get(uid)!;
+      const k = Math.min(1, turn.t / turn.seconds);
+      return { ...prop, rotY: prop.rotY - turn.delta * (1 - k * k * (3 - 2 * k)) };
+    }));
   }
 
   /** Keys and key cards turn slowly about their own axis; they have an owner of their own, redrawn every frame. */
@@ -673,6 +708,23 @@ export class InteriorView {
   update(dt: number): void {
     this.doors.update(dt);
     this.traps.update(dt);
+    if (this.turners.length > 0) {
+      let finished = false;
+      for (const { uid } of this.turners) {
+        const turn = this.turning.get(uid)!;
+        turn.t += dt;
+        if (turn.t >= turn.seconds) {
+          this.turning.delete(uid);
+          finished = true;
+        }
+      }
+      // the finished head goes back among the ordinary objects
+      if (finished) this.buildObjects();
+      else {
+        this.pushTurners();
+        this.props.flush();
+      }
+    }
     if (this.spinners.length === 0 && this.flames.length === 0) return;
     if (this.spinners.length > 0) {
       this.spin = (this.spin + dt * SPIN_SPEED) % (2 * Math.PI);
@@ -773,8 +825,13 @@ export class InteriorView {
       this.props.removeOwner(`${this.owner}:round`);
       this.props.removeOwner(`${this.owner}:spin`);
       this.props.removeOwner(`${this.owner}:float`);
+      this.props.removeOwner(`${this.owner}:turn`);
       this.props.removeOwner(`${this.owner}:gate`);
     }
+    this.headFacings.clear();
+    this.turnPending.clear();
+    this.turning.clear();
+    this.turners = [];
     this.spinners = [];
     this.flames = [];
     this.caveWalls = [];

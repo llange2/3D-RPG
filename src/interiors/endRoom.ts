@@ -179,7 +179,18 @@ const CROWDED: readonly (readonly [number, number])[] = [[7, 5], [6, 5]];
 export function carveEndRoomFor(b: Builder, rng: Rng, spawn: { x: number; y: number }, teleported: boolean, within?: { x: number; y: number; w: number; h: number }, orbs = 0): EndRoom | null {
   // every orb is a chest of its own (31st playtest): a small world puts up to seven orbs into one room, which then needs room for them
   const sizes = orbs >= 3 ? [...CROWDED, ...SIZES] : SIZES;
-  const carve = (isolated: boolean, w: number, h: number): EndRoom | null => (!isolated && within ? carveEndRoom(b, rng, spawn, false, w, h, within) : null) ?? carveEndRoom(b, rng, spawn, isolated, w, h);
+  // 42nd playtest, point 6: a quest that wants its end room next to the solution (the hall of quest 2) gets it there, or a pocket in the rock that runes in the hall lead to; a
+  // sealed room somewhere else in the maze opened far from everything the party had done (Catacombs of Kela). Only a place without rock for either takes the old last resort.
+  if (within) {
+    for (const [isolated, anywhere] of [[false, false], [true, true], [false, true]] as const) {
+      for (const [w, h] of sizes) {
+        const room = isolated || anywhere ? carveEndRoom(b, rng, spawn, isolated, w, h) : carveEndRoom(b, rng, spawn, false, w, h, within);
+        if (room) return room;
+      }
+    }
+    return null;
+  }
+  const carve =(isolated: boolean, w: number, h: number): EndRoom | null => (!isolated && within ? carveEndRoom(b, rng, spawn, false, w, h, within) : null) ?? carveEndRoom(b, rng, spawn, isolated, w, h);
   // a quest that teleports (the runes of quests 1 and 3) tries a pocket in every size before it settles for a sealed room: the rune says "a strange light takes you", and a sealed room
   // only slid a wall aside without moving the party (41st playtest, point 7, Grotto of Wilana)
   // (a pocket also holds the portal back, the quest items and a reward chest: the smallest size has no room for all of them, so it comes only when nothing else fits)

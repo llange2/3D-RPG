@@ -89,6 +89,16 @@ export function gongRuneActive(a: Pick<ActionInstance, "params">, content: MapCo
   return last !== null && (a.params.after === undefined || a.params.after === last);
 }
 
+/**
+ * Is the rune there and does it work? The runes of quest 1 lie in the middle of the field and work once it is right; those of quest 3 appear round the last gong; those of
+ * quest 2 (42nd playtest, point 6: its end room lies too far from the hall to be sealed next to it, so the right row calls up runes in the hall) appear when every head is right.
+ */
+export function runeActive(a: Pick<ActionInstance, "params">, content: MapContent, opened: ReadonlySet<string>): boolean {
+  if (a.params.need === "moan") return moanSolved(content, opened);
+  if (a.params.need === "heads") return rotationSolved(content, opened);
+  return gongRuneActive(a, content, opened);
+}
+
 /** An answer counts when it matches ignoring case, spaces and a leading article ("a gold coin" is "gold coin"). */
 export function sameAnswer(given: string, expected: string): boolean {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/^(a|an|the) /, "").replace(/\s+/g, " ").trim();

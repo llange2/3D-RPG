@@ -76,6 +76,8 @@ DROP = {
     187: "anachronism: the computer keyboard",
     188: "anachronism: the telephone",
     218: "anachronism: the password",
+    # 42nd playtest, point 2: a monster of a role-playing game, not a riddle the player can solve
+    49: "the answer 'bulette' is a game monster, not guessable",
 }
 
 # Added in their place (40th playtest, point 11): riddles of the Middle Ages, written for the game. One word each, not in the question.
@@ -98,6 +100,8 @@ ADD = {
     316: ("A knight speaks me once and keeps me longer than his life. The coward breaks me.", "oath", ["vow"]),
     317: ("I carry you into battle and need no sword, yet I wear iron shoes.", "horse", ["steed"]),
     318: ("I give light on the way through the dungeon. One gust of wind and I am gone.", "torch", []),
+    # 42nd playtest, point 2: replaces #49
+    319: ("I fall from the clouds in winter, soft and silent, and I cover the fields in white.", "snow", []),
 }
 
 # Fixed: the answer becomes one word; the old wording stays an accepted alias.
