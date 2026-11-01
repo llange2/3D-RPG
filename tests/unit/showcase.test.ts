@@ -4,6 +4,7 @@ import { PERSONAS } from "../../src/data/personas";
 import { MONSTERS } from "../../src/data/tables";
 import { generateInterior, SHOWCASE_ID, CELL } from "../../src/interiors";
 import { SHOWCASE_EXTRAS, showcaseItems } from "../../src/interiors/showcase";
+import { cellsOfLine } from "../../src/render/glowLineGeometry";
 import { INTERIOR_MODELS } from "../../src/render/interiorView";
 import { ITEM_LAMPS, MONSTER_LAMPS } from "../../src/render/lamps";
 import { World } from "../../src/world/world";
@@ -55,6 +56,20 @@ describe("the debug showcase", () => {
     const rest = INTERIOR_MODELS.filter((m) => !shownByItems.has(m) && !m.startsWith("obj_sign_"));
     expect(rest.sort()).toEqual(SHOWCASE_EXTRAS.map((e) => e.model).sort());
     expect(showcase.extras.map((e) => e.model).sort()).toEqual(SHOWCASE_EXTRAS.map((e) => e.model).sort());
+  });
+
+  it("lays its lines of light only on floor cells that hold nothing else", () => {
+    expect(showcase.lines.length).toBeGreaterThanOrEqual(4);
+    const taken = new Set([...showcase.monsters, ...showcase.personas, ...showcase.items, ...showcase.extras].map((c) => `${c.x},${c.y}`));
+    taken.add(`${map.exit.x},${map.exit.y}`);
+    taken.add(`${map.spawn.x},${map.spawn.y}`);
+    for (const line of showcase.lines) {
+      expect(line.color).toMatch(/^#[0-9a-f]{6}$/);
+      for (const c of cellsOfLine(line.points)) {
+        expect(map.cells[c.y * map.width + c.x], `${line.color} ${c.x},${c.y}`).toBe(CELL.FLOOR);
+        expect(taken.has(`${c.x},${c.y}`), `${line.color} ${c.x},${c.y} is taken`).toBe(false);
+      }
+    }
   });
 
   it("names only monsters that exist in its list of glowing ones", () => {

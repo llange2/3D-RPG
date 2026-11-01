@@ -3,7 +3,7 @@ import { tunedItemModels } from "../data/item-tuning";
 import { PERSONAS } from "../data/personas";
 import { MONSTERS } from "../data/tables";
 import { Builder } from "./builder";
-import type { InteriorMap, ShowcaseLayout } from "./types";
+import type { InteriorMap, LightLine, ShowcaseLayout } from "./types";
 
 /**
  * The debug showcase (Esc > Debug > Teleport to Level, the first entry): one dark dungeon hall in which every monster, every person and every object of the
@@ -64,11 +64,21 @@ export function generateShowcase(): InteriorMap {
   const small = slots(items.ordinary.length + SHOWCASE_EXTRAS.length, (y = big.next), PITCH, COLUMNS, 2);
   const height = small.next + 3;
 
+  // the lines of light lie in the free rows south of the last row of objects and along the west wall (objects stand on every second cell from x = 2)
+  const row = small.next - 4;
+  const lines: LightLine[] = [
+    { color: "#22d3ee", points: [{ x: 2, y: row + 1 }, { x: width - 4, y: row + 1 }] },
+    { color: "#e040fb", points: [{ x: 2, y: row + 3 }, { x: 9, y: row + 3 }, { x: 9, y: row + 2 }, { x: 13, y: row + 2 }] },
+    { color: "#ffb020", points: [{ x: 22, y: row + 2 }, { x: 16, y: row + 2 }, { x: 16, y: row + 3 }, { x: 23, y: row + 3 }] },
+    { color: "#4ade80", points: [{ x: 1, y: row + 5 }, { x: 1, y: row - 4 }] },
+  ];
+
   const layout: ShowcaseLayout = {
     personas: personas.map((persona, i) => ({ persona, ...people.cells[i]! })),
     monsters: monsters.map((defId, i) => ({ defId, ...beasts.cells[i]! })),
     items: [...items.landmarks.map((item, i) => ({ item, ...big.cells[i]! })), ...items.ordinary.map((item, i) => ({ item, ...small.cells[i]! }))],
     extras: SHOWCASE_EXTRAS.map((e, i) => ({ ...e, ...small.cells[items.ordinary.length + i]! })),
+    lines,
   };
 
   const b = new Builder(width, height);

@@ -196,6 +196,12 @@ export interface CastleLayout {
   keep: number[];
 }
 
+/** A straight line of light over the floor with a coloured glow (`render/glowLines.ts`): waypoint cells, each pair in one row or column, and the colour as `#rrggbb`. */
+export interface LightLine {
+  color: string;
+  points: { x: number; y: number }[];
+}
+
 /** Where everything stands in the debug showcase (`interiors/showcase.ts`). Cells are grid cells. */
 export interface ShowcaseLayout {
   /** Every monster of the table (`defId`) and every person (`persona`, the item number of the old game). */
@@ -204,6 +210,8 @@ export interface ShowcaseLayout {
   /** The old items that have a model (shown as decoration, `item`), and the models of the interior view that no item stands for. */
   items: { item: number; x: number; y: number }[];
   extras: { model: string; scale: number; x: number; y: number }[];
+  /** Lines of light over the floor, on cells that hold nothing else (the test of the showcase checks it). */
+  lines: LightLine[];
 }
 
 /** The spaceship under the pyramids (`interiors/spaceship.ts`): five sections side by side, the front one (0) is the control deck. */
