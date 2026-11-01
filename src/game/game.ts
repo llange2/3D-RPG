@@ -438,7 +438,7 @@ export class Game {
 
   /**
    * TEMPORARY (40th playtest, point 7, `sim/thieveryLog.ts`): every lock the party tries goes to the log of the game, to the console and to the browser storage (`mm3-thievery-log`),
-   * and `window.__thievery` hands over the entries and the sums, so the real chance of the thievery roll can be read off a playthrough (the aim is 80 % for an ordinary chest).
+   * and `window.__thievery` hands over the entries and the sums, so the real chance of the thievery roll can be read off a playthrough (the aim is about 70 % for the median ninja at an ordinary chest).
    */
   private watchThievery(): void {
     const pct = (n: number) => `${Math.round(n)}%`;

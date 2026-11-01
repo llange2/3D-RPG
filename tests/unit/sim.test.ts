@@ -853,19 +853,22 @@ describe("action handlers", () => {
   });
 
   it("lets a skilled thief pick a lock but keeps the door closed otherwise", () => {
+    // the number of a lock comes from the level of the party and the tier of the place (`data/locks.ts`): a party of level 1 opens a door of the first tier, not one of the fifth
     const party = createDefaultParty();
-    const easy = resolveAction(act("door", { locked: true, difficulty: 1 }, "m#door:0"), ctxFor(party));
+    const easy = resolveAction(act("door", { locked: true, difficulty: 1 }, "m#door:0"), { ...ctxFor(party), tier: 1 });
     expect(easy.effects[0]).toEqual({ type: "door", state: "unlocked" });
     expect(easy.consumed).toBe(true);
-    const hard = resolveAction(act("door", { locked: true, difficulty: 999 }, "m#door:1"), ctxFor(party));
+    const hard = resolveAction(act("door", { locked: true, difficulty: 1 }, "m#door:1"), { ...ctxFor(party), tier: 5 });
     expect(hard.effects[0]).toEqual({ type: "door", state: "locked" });
     expect(hard.consumed).toBe(false);
     expect(resolveAction(act("door", { locked: false }), ctxFor(party)).effects[0]).toEqual({ type: "door", state: "opened" });
   });
 
   it("rolls a different lock attempt each time but repeats the same attempt", () => {
+    // heroes of levels 5, 2, 5 and 5 in the second tier: the door asks 8, and the best of four rolls reaches it about every second time
     const party = createDefaultParty();
-    const door = act("door", { locked: true, difficulty: 4 }, "m#door:7");
+    party.characters.forEach((c, i) => (c.level = i === 1 ? 2 : 5));
+    const door = act("door", { locked: true, difficulty: 1 }, "m#door:7");
     const outcomes = Array.from({ length: 40 }, (_, i) => resolveAction(door, ctxFor(party, i)).consumed);
     expect(outcomes.some(Boolean)).toBe(true);
     expect(outcomes.some((o) => !o)).toBe(true);

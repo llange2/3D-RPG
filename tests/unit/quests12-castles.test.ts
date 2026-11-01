@@ -63,7 +63,7 @@ describe("the three castles (quest document 1.2, castle_1)", () => {
     const map = generateInterior(world, poi);
     const content = buildMapContent(world, poi, map);
     const party = createDefaultParty();
-    // the lock asks 13 to 60 (`data/locks.ts`), which a party of level 1 never reaches: the castles lie in tiers 2 to 4
+    // the lock of the king's chest grows with the level of the party (`data/locks.ts`) and a party of level 1 never reaches it: the castles lie in tiers 2 to 4
     for (const c of party.characters) c.level = 20;
     const opened = new Set<string>();
     let attempt = 0;

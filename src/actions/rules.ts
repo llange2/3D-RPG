@@ -7,7 +7,8 @@ import { hideInChests, placeMachines } from "./machines";
 import { placeVaults } from "./vaults";
 import { hideSpells } from "./spellScrolls";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
-import { chestLock, hasOrdinaryLock } from "../data/locks";
+import { hasOrdinaryLock } from "../data/locks";
+import { lockTrapParams } from "./lockTrap";
 import { BONES_FIND_CHANCE, CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS, RAT_TRAP, SEARCHABLE_DECOR } from "../data/chest-traps";
 import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
@@ -404,8 +405,12 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
           if (boneRng.chance(CHEST_TRAP_CHANCE)) Object.assign(params, { trapped: RAT_TRAP, trapDamage: Math.max(1, Math.ceil(Number(resolveParam(TRAP_DAMAGE.generic ?? 0, vars, boneRng)) / 2)), trapLevel: tier });
         }
       }
-      // an ordinary chest is locked (a simple check for the best thief of the party); barrels and the like are not
-      if (kind === "treasure" && hasOrdinaryLock(params)) params.difficulty = chestLock(baseTier);
+      // an ordinary chest is locked (a check for the best thief of the party, worked out from the party's level when it is tried, `data/locks.ts`; `difficulty` only marks the lock) and
+      // keeps a trap for a failed attempt (`lockTrap`, `actions/lockTrap.ts`); barrels and the like are not locked
+      if (kind === "treasure" && hasOrdinaryLock(params)) {
+        params.difficulty = 1;
+        Object.assign(params, lockTrapParams(new Rng(derive(mapSeed, rule.id, i, "lock-trap")), vars, map.kind === "cave"));
+      }
       // a chest that is not locked springs a trap one time in five (not a bookshelf, not a chest of a quest or of the king): the element and the damage are fixed here, who is hit is decided when it is opened
       else if (kind === "treasure" && params.quest === undefined && params.bonus === undefined && params.lock === undefined && params.warn === undefined && !isBookshelf(params.chest)) {
         const trapRng = new Rng(derive(mapSeed, rule.id, i, "chest-trap"));

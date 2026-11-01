@@ -4,6 +4,7 @@ import { loreLine } from "../data/lore";
 import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, emptyContainerLine, propLine } from "../data/prop-texts";
 import { RAT_TRAP, SEARCHABLE_DECOR, dodgeChance, trapDamageFor, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
 import { isBookshelf } from "../data/spell-loot";
+import { LOCK_FUMBLE_CHANCE, lockDifficulty } from "../data/locks";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
 import { attr, canAct, canBeHealed, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
@@ -214,17 +215,18 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
  * unless luck (luck / 20 on level 1, / 40 on level 2 and so on) gets them out of the way. Elemental protection can take all of the damage away, and the text says so.
  * The trap has a random stream of its own, so the loot of the chest stays what it was. Returns true when the hit killed the last hero standing.
  */
-function springChestTrap(action: ActionInstance, ctx: ActionContext, effects: Effect[]): boolean {
+function springChestTrap(action: ActionInstance, ctx: ActionContext, effects: Effect[], fumbled?: number): boolean {
   const { party } = ctx;
   const p = action.params;
-  const element = p.trapped as ChestTrapElement;
+  // a trap that waits for a failed attempt at the lock (`lockTrap`) hits the one who failed, the trap of an opened chest (`trapped`) a hero chosen by chance
+  const element = (fumbled === undefined ? p.trapped : p.lockTrap) as ChestTrapElement;
   const rng = actionRng(ctx, `${action.uid}@trap`);
-  const target = randomActive(party, rng);
+  const target = fumbled ?? randomActive(party, rng);
   if (target === null) return false;
   const victim = party.characters[target]!;
   const hero: TrapHero = { name: victim.name, female: CONSTANTS.CHARACTER_FEMALE.includes(victim.avatar) };
   const level = Number(p.trapLevel ?? ctx.tier);
-  effects.push({ type: "text", text: trapOpening(Number(p.chest), element, hero, rng), tone: "bad" });
+  effects.push({ type: "text", text: trapOpening(Number(p.chest), element, hero, rng, fumbled !== undefined), tone: "bad" });
   if (rng.float() < dodgeChance(attr(victim, "lck"), level)) {
     effects.push({ type: "text", text: trapMiss(element, hero, rng), tone: "good" });
     return false;
@@ -260,6 +262,32 @@ function springRatTrap(action: ActionInstance, ctx: ActionContext, effects: Effe
   const hit = applyHit(party, target, amount, null, rng);
   effects.push({ type: "text", text: ratHit(hero, amount, rng), tone: "bad" }, { type: "damage", character: target, amount, damageType: "physical", conditions: hit.conditions });
   return hit.defeated;
+}
+
+/** The level a lock is worked out for: the average level of the heroes who can act (`data/locks.ts`). */
+function lockPartyLevel(party: Party): number {
+  const active = activeCharacters(party);
+  return active.length === 0 ? 1 : Math.round(active.reduce((sum, i) => sum + party.characters[i]!.level, 0) / active.length);
+}
+
+/** The best roll of the heroes at a lock and who made it (-1 for nobody). The rolls come from `rng`, a stream of its own, never the one the loot is drawn from. */
+function pickLock(party: Party, rng: Rng): { best: number; picker: number } {
+  let best = -1;
+  let picker = -1;
+  for (const i of activeCharacters(party)) {
+    const roll = thieveryRoll(party.characters[i]!, rng);
+    if (roll > best) {
+      best = roll;
+      picker = i;
+    }
+  }
+  return { best, picker };
+}
+
+/** A failed attempt at the lock of a chest that keeps a trap for it: one time in five (`LOCK_FUMBLE_CHANCE`) the one who tried sets it off. Returns true when it killed the last hero standing. */
+function fumbleLock(action: ActionInstance, ctx: ActionContext, effects: Effect[], rng: Rng, picker: number): boolean {
+  if (picker < 0 || typeof action.params.lockTrap !== "string" || !rng.chance(LOCK_FUMBLE_CHANCE)) return false;
+  return springChestTrap(action, ctx, effects, picker);
 }
 
 function randomActive(party: Party, rng: Rng): number | null {
@@ -437,27 +465,30 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         if (!(ctx.opened ?? NONE).has(flag)) {
           return { effects: [{ type: "text", text: "As the seal breaks, a horn sounds through the castle. Heavy guards come running between the throne room and the gate!" }, { type: "guards", kind: "heavy" }], consumed: false, state: { add: [flag], remove: [] } };
         }
-        let best = 0;
-        for (const i of activeCharacters(party)) best = Math.max(best, thieveryRoll(party.characters[i]!, rng));
-        logLock(party, "king chest", ctx.tier, Number(p.difficulty ?? 2), best);
-        if (best < Number(p.difficulty ?? 2)) return { effects: [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }], consumed: false };
+        // the lock grows with the level of the party (`data/locks.ts`); the roll has a stream of its own, so the loot below stays what it was
+        const lockRng = actionRng(ctx, `${action.uid}@lock`);
+        const need = lockDifficulty("king chest", ctx.tier, lockPartyLevel(party));
+        const { best, picker } = pickLock(party, lockRng);
+        logLock(party, "king chest", ctx.tier, need, best);
+        if (best < need) {
+          const holds: Effect[] = [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }];
+          if (fumbleLock(action, ctx, holds, lockRng, picker)) holds.push({ type: "defeat" });
+          return { effects: holds, consumed: false };
+        }
       }
-      // an ordinary chest has a simple lock (`data/locks.ts`): the best thief of the party picks it. The roll has a stream of its own, so the loot below stays what it was;
-      // the attempt number changes with every step, so a failed party tries again after a few steps
+      // an ordinary chest has a lock (`data/locks.ts`): the best thief of the party picks it. The roll has a stream of its own, so the loot below stays what it was;
+      // the attempt number changes with every step, so a failed party tries again after a few steps. A failed attempt may set off the trap of the chest
       if (p.lock === undefined && Number(p.difficulty ?? 0) > 0) {
         const lockRng = actionRng(ctx, `${action.uid}@lock`);
-        let best = -1;
-        let picker = -1;
-        for (const i of activeCharacters(party)) {
-          const roll = thieveryRoll(party.characters[i]!, lockRng);
-          if (roll > best) {
-            best = roll;
-            picker = i;
-          }
-        }
+        const need = lockDifficulty("chest", ctx.tier, lockPartyLevel(party));
+        const { best, picker } = pickLock(party, lockRng);
         // an alarm chest asks first and is resolved a second time with the answer: the same roll, noted once
-        if (p.warn !== "alarm" || ctx.answer === undefined) logLock(party, "chest", ctx.tier, Number(p.difficulty), best);
-        if (best < Number(p.difficulty)) return { effects: [{ type: "text", text: "The chest is locked, and nobody in your party can pick the lock yet. Try again in a few steps." }], consumed: false };
+        if (p.warn !== "alarm" || ctx.answer === undefined) logLock(party, "chest", ctx.tier, need, best);
+        if (best < need) {
+          const locked: Effect[] = [{ type: "text", text: "The chest is locked, and nobody in your party can pick the lock yet. Try again in a few steps." }];
+          if (fumbleLock(action, ctx, locked, lockRng, picker)) locked.push({ type: "defeat" });
+          return { effects: locked, consumed: false };
+        }
         effects.push({ type: "text", text: `${party.characters[picker]!.name} picks the lock.` });
       }
       // a chest in a niche of a castle is wired to an alarm: the party is asked, and the first one tried calls the light guards
@@ -695,9 +726,9 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Locked door", question: "The door is locked. Do you want to try to break it open?", yes: "Break it", no: "Leave" }], consumed: false };
         if (ctx.answer === null) return { effects, consumed: false };
       }
-      const difficulty = Number(p.difficulty ?? 1);
-      let best = 0;
-      for (const i of activeCharacters(party)) best = Math.max(best, thieveryRoll(party.characters[i]!, rng));
+      // the lock of a door grows with the level of the party like the lock of a chest, an easier one (`data/locks.ts`)
+      const difficulty = lockDifficulty("door", ctx.tier, lockPartyLevel(party));
+      const { best } = pickLock(party, rng);
       logLock(party, "door", ctx.tier, difficulty, best);
       if (best >= difficulty) {
         effects.push({ type: "door", state: "unlocked" });

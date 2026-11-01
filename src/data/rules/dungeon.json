@@ -10,7 +10,7 @@
       "count": { "chance": 480 },
       "variants": [
         { "weight": 78, "params": { "locked": false } },
-        { "weight": 22, "params": { "locked": true, "difficulty": "=tier*2" } }
+        { "weight": 22, "params": { "locked": true, "difficulty": 1 } }
       ]
     },
     { "id": "boss_guard", "kind": "spawn", "anchor": "bossRoom", "count": { "perMap": [1, 1] }, "params": { "boss": true, "group": "=2+rand(0,tier)" } },

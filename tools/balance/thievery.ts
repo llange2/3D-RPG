@@ -7,13 +7,17 @@
  * Heroes: the ten classes x five races with the start attributes of `hero.ts` and the same attribute growth and typical gear per tier as the
  * combat simulator (lck/acc of the rings count, `attr()` adds worn items). Hero levels per tier: `pathLevels` of `challenge.ts` (the XP path).
  *
- * Usage: tsx tools/balance/thievery.ts [--xp[=0.5]] [--growth=none] [--salts=12] [--easy=0.8] [--hard=0.5] [--anchor=mid] [--ref=<name>] [--hardref=<name>]
+ * `--lever` reports the formula of the game instead (`lockDifficulty` in `src/data/locks.ts`: the lock grows with the level of the party): the fit of `refSkill`, the hardness for the targets
+ * `--chest=0.7 --king=0.35 --door=0.9` (median ninja, mean over all levels from 4 on) and the chances of every profile with the hardness the game has.
+ *
+ * Usage: tsx tools/balance/thievery.ts [--lever] [--xp[=0.5]] [--growth=none] [--salts=12] [--easy=0.8] [--hard=0.5] [--anchor=mid] [--ref=<name>] [--hardref=<name>]
  *   --xp      levels from the XP table (share of each tier cleared, default 0.5) instead of the fixed design bands (1 / 5 / 11 / 19 / 33 / 50)
  *   --anchor  level of the band the target chance is set for: entry | mid | exit | mean (default mid)
  *   --ref     reference for the easy lock: min | nothief | ninja | thief | max | party:<nothief|ninja|thief> (default nothief)
  *   --hardref reference for the hard lock (default thief)
  */
 import { BASE_CLASS, BASE_RACE } from "../../src/data/tables";
+import { LOCK_HARDNESS, lockEase, lockLevel, refSkill, type LockKind } from "../../src/data/locks";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { createCharacter, thieveryRoll } from "../../src/sim/character";
 import type { ClassName, RaceName } from "../../src/sim/types";
@@ -136,6 +140,74 @@ export function difficultyFor(group: Group, band: Band, target: number, growth: 
   return best;
 }
 
+// ---------------------------------------------------------------- the level lever (`data/locks.ts`)
+
+/** The difficulty of a lock of hardness `k` for a party of `level` in a place of `tier` (the formula of `lockDifficulty` with a free hardness). */
+export function leverDifficulty(k: number, tier: number, level: number): number {
+  const l = lockLevel(tier, level);
+  return Math.max(1, Math.round(k * refSkill(l) * lockEase(l)));
+}
+
+/** Chance of a group at a lock of hardness `k` for heroes of `level` (every hero has that level) in the tier of `band`. */
+export function leverChance(group: Group, band: Band, k: number, level: number, growth: Growth, salts: number): number {
+  return groupChance(group, band, leverDifficulty(k, band.tier, level), growth, salts, [level]);
+}
+
+/** The hardness (steps of 0.01) whose chance for `group`, averaged over every level of every tier from `fromLevel` on, is closest to `target`. */
+export function hardnessFor(group: Group, tiers: Band[], target: number, growth: Growth, salts: number, fromLevel = 1): number {
+  let best = 0.5;
+  let gap = Infinity;
+  for (let i = 10; i <= 150; i++) {
+    const k = i / 100;
+    let sum = 0;
+    let n = 0;
+    for (const band of tiers) for (const level of band.levels) if (level >= fromLevel) (sum += leverChance(group, band, k, level, growth, salts)), n++;
+    const g = Math.abs(sum / n - target);
+    if (g < gap) (gap = g), (best = k);
+  }
+  return best;
+}
+
+/** Report of the level lever: how well `refSkill` fits the median ninja, the hardness for the targets, the chances per profile, tier and level with the hardness of `LOCK_HARDNESS`. */
+function leverReport(tiers: Band[], profs: Profile[], growth: Growth, salts: number, targets: Record<LockKind, { ref: string; target: number }>): void {
+  const ninja = profs.find((p) => p.key === "ninja")!;
+  console.log("\n== Stufenhebel: refSkill gegen den Skill des Median-Ninjas ==");
+  console.log("Stufe".padEnd(8) + "Simulator".padEnd(12) + "refSkill".padEnd(10) + "Abweichung");
+  for (const b of tiers) {
+    for (const lv of [b.entry, Math.round((b.entry + b.exit) / 2), b.exit]) {
+      const sim = mean(skillsAt(ninja.spec, lv, b.tier, growth, salts));
+      console.log(String(lv).padEnd(8) + sim.toFixed(1).padEnd(12) + refSkill(lv).toFixed(1).padEnd(10) + `${(((refSkill(lv) - sim) / sim) * 100).toFixed(0)} %`);
+    }
+  }
+
+  const lineups: Record<string, Group> = {};
+  for (const p of profs) lineups[p.label] = [p.spec];
+  for (const [k, v] of Object.entries(PARTY_LINEUPS)) lineups[v.label] = v.heroes;
+  const groupOf = (key: string): Group => (key.startsWith("party:") ? PARTY_LINEUPS[key.slice(6)]!.heroes : [profs.find((p) => p.key === key)!.spec]);
+
+  console.log("\n== Stufenhebel: Haerte, bei der die Chance ueber alle Stufen des Spiels das Ziel trifft ==");
+  for (const kind of Object.keys(targets) as LockKind[]) {
+    const t = targets[kind];
+    console.log(`  ${kind.padEnd(11)} Ziel ${pct(t.target)} fuer ${t.ref.padEnd(8)} -> Haerte ${hardnessFor(groupOf(t.ref), tiers, t.target, growth, salts, 4).toFixed(2)}   (im Spiel: ${LOCK_HARDNESS[kind]})`);
+  }
+
+  for (const kind of Object.keys(LOCK_HARDNESS) as LockKind[]) {
+    const k = LOCK_HARDNESS[kind];
+    console.log(`\nErfolgschance an ${kind} (Haerte ${k}), Stufe Eintritt / Mitte / Austritt des Tiers (alle Helden einer Stufe):`);
+    console.log("Wer".padEnd(40) + tiers.map((b) => `L${b.tier}`.padEnd(16)).join(""));
+    for (const [label, group] of Object.entries(lineups)) {
+      const cells = tiers.map((b) => [b.entry, Math.round((b.entry + b.exit) / 2), b.exit].map((lv) => pct(leverChance(group, b, k, lv, growth, salts))).join(" ").padEnd(16));
+      console.log(label.slice(0, 38).padEnd(40) + cells.join(""));
+    }
+  }
+
+  console.log(`\nStufe 1 bis 3 (Tier 1), Schwierigkeit und Chance des Median-Ninjas / Dieb / Gruppe ohne Dieb/Ninja an der gewoehnlichen Kiste (Haerte ${LOCK_HARDNESS.chest}):`);
+  for (const lv of [1, 2, 3, 4]) {
+    const row = ["ninja", "thief", "party:nothief"].map((key) => pct(leverChance(groupOf(key), tiers[0]!, LOCK_HARDNESS.chest, lv, growth, salts)));
+    console.log(`  Stufe ${lv}: Schwierigkeit ${String(leverDifficulty(LOCK_HARDNESS.chest, 1, lv)).padStart(3)}   ${row.join("  ")}`);
+  }
+}
+
 // ---------------------------------------------------------------- report
 
 const pct = (x: number): string => `${Math.round(x * 100)}%`.padStart(4);
@@ -188,6 +260,17 @@ function main(): void {
   };
   const tiers = bands(levels);
   const profs = profiles(growth, salts);
+
+  // the formula of `data/locks.ts` (the level lever) instead of the table per tier
+  if (a.lever) {
+    console.log(`Wachstum der Attribute: ${growth.to === 0 ? "keins" : `auf ${growth.to} bei Stufe ${growth.atLevel}`}; Ausruestung: typisch fuer das Tier (${salts} Wuerfe)`);
+    leverReport(tiers, profs, growth, salts, {
+      chest: { ref: "ninja", target: Number(a.chest ?? 0.7) },
+      "king chest": { ref: "ninja", target: Number(a.king ?? 0.35) },
+      door: { ref: "ninja", target: Number(a.door ?? 0.9) },
+    });
+    return;
+  }
 
   console.log(`Wachstum der Attribute: ${growth.to === 0 ? "keins" : `auf ${growth.to} bei Stufe ${growth.atLevel}`}; Ausruestung: typisch fuer das Tier (${salts} Wuerfe); Pfad: ${a.xp ? "XP-Tabelle v4" : "feste Entwurfsbaender"}; Ziel gilt auf: ${a.anchor ?? "mid"}`);
   crossCheck(growth);
