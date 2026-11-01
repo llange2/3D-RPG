@@ -214,6 +214,8 @@ export function recalcValues(c: Character, talents: readonly string[], refill: b
   if (calc <= 0) calc = 1;
   // BALANCE v4: +10 health on top (a level 1 Wizard had 2 points); `healthFlat()` is 0 in the legacy mode
   c.health = pyRound(c.level * calc) + healthFlat();
+  // the Body Builder talent: one more hit point for every character level
+  if (talents.includes("talent_body_builder")) c.health += c.level;
 
   const mana = base("mana");
   const lvl = c.level;

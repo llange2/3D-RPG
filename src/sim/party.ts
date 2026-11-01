@@ -11,11 +11,15 @@ export const MINUTES_PER_DAY = 1440;
 export const STEP_MINUTES_INSIDE = 1;
 /** Game minutes per tile step in the open country (the generated overworld and the campaign's outside map). */
 export const STEP_MINUTES_OUTSIDE = 10;
+/** The same step for a party with the Pathfinder talent. */
+export const STEP_MINUTES_PATHFINDER = 7;
 /** Game minutes per action (an attack, a spell, using an object), inside and outside alike. */
 export const ACTION_MINUTES = 1;
 
-export function stepMinutes(outside: boolean): number {
-  return outside ? STEP_MINUTES_OUTSIDE : STEP_MINUTES_INSIDE;
+/** `talents` are the party's: the Pathfinder shortens a step in the open country only (inside, a step is one minute for everybody). */
+export function stepMinutes(outside: boolean, talents: readonly string[] = []): number {
+  if (!outside) return STEP_MINUTES_INSIDE;
+  return talents.includes("talent_pathfinder") ? STEP_MINUTES_PATHFINDER : STEP_MINUTES_OUTSIDE;
 }
 
 /** The four heroes of the old game. */

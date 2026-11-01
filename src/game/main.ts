@@ -25,6 +25,8 @@ async function main(): Promise<void> {
   void preloadButtonArt();
   // the same for the item pictures: every slot of an inventory or a shop is a window onto one decoded sheet
   void preloadItemIcons();
+  // the status symbols beside the minimap (Wizard's Eye, Power Shield, Levitate, the four protections): a cast would otherwise show them only after the download
+  preloadImages(["levitate", "power_shield", "wizard_eye", "protect_acid", "protect_fire", "protect_ice", "protect_magic"].map((n) => `ui/tex_gui_${n}.webp`));
   splitLegacySaves();
   // the textures are chosen once, before the first one is asked for (a change in the menu reloads the page)
   setTextureQuality(readSettings().textureQuality);

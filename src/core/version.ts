@@ -129,5 +129,6 @@
  * a quest that teleports (1, 3) tries a pocket in every size before a sealed end room (the Grotto of Wilana had a sealed one, so the runes teleported nobody).
  * 43 = 42nd playtest: the riddle of the bulette is replaced by one of snow (#319); the end room of quest 2 lies next to the hall or is a pocket in the rock that runes in the hall lead to (it was sealed far away in the
  * maze of the Catacombs of Kela); a shop never stands on a street that goes on, it is dug into the house wall as a niche (the smith of Quinudale).
+ * 44 = 43rd playtest: the ordinary monsters of a cave or dungeon are of the place's own level only (`pickMonsters`): the level 2 Cave of Aldoa let Vampire Bats and Wild Fungus of level 1 out of its gongs.
  */
-export const GEN_VERSION = 43;
+export const GEN_VERSION = 44;

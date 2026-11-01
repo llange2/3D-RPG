@@ -81,6 +81,13 @@ const PORTAL_SHINE = 0.45;
 /** How much of its own texture the Magical Orb mascot gives off, on top of the light that falls on it (more than the portal: the ball is small and has to read as the source of its glow). */
 const ORB_SHINE = 0.75;
 
+/**
+ * Models that are painted brighter than the walls they stand in, as a factor on their colour (43rd playtest, point 2). The cave's way out is lit up from the same
+ * level as the rock around it, but its frame stones are light and the dark opening drags the mean of the texture down, so the frame stood out from the wall (measured
+ * under the torch: 45 against 25 of 255). 0.65 brings it to about 29.
+ */
+const MODEL_DIM: Record<string, number> = { blk_cave_exit: 0.65 };
+
 /** Opacity of the see-through attack effects (the old game gave the fireball 0.7 and the poison cloud 0.3). */
 const PROJECTILE_ALPHA: Record<string, number> = { proj_fire: 0.85, proj_poison: 0.6 };
 
@@ -215,6 +222,8 @@ export class PropRenderer {
           std.emissiveTexture = std.diffuseTexture;
           std.emissiveColor = new Color3(ORB_SHINE, ORB_SHINE, ORB_SHINE);
         }
+        const dim = MODEL_DIM[key];
+        if (dim !== undefined) std.diffuseColor = std.diffuseColor.scale(dim);
         mesh.material = std;
         // the strip of the town's columns (720 x 5360) is drawn twice as wide as the column is round: squeezed to half its width (the user's wish)
         if (key === "blk_pillars_city" && std.diffuseTexture) (std.diffuseTexture as Texture).uScale = 2;

@@ -31,6 +31,8 @@ export interface QuestLogView {
   done: string[];
   /** The mouse-over of a line of `open` or `done`: what the heroes have found out for that quest (36th playtest). Absent when nothing was found out. */
   notes?: Record<string, string>;
+  /** The names of the caves and dungeons in the lines, which the log prints in bold. The lines stay plain text. */
+  places?: string[];
 }
 
 const at = (poi: Poi): string => `${poi.x}/${poi.y}`;
@@ -65,12 +67,23 @@ const DUNGEON_LINES: Record<QuestId, { open: (name: string, where: string, boss:
   },
 };
 
+/** A line cut into pieces, the names of `places` marked bold (the longest name wins where one contains another). */
+export function placeSegments(line: string, places: readonly string[]): { text: string; bold: boolean }[] {
+  if (places.length === 0) return [{ text: line, bold: false }];
+  const pattern = [...places].sort((a, b) => b.length - a.length).map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  return line
+    .split(new RegExp(`(${pattern})`))
+    .map((text, i) => ({ text, bold: i % 2 === 1 }))
+    .filter((s) => s.text !== "");
+}
+
 export function worldQuestLog(input: QuestLogInput): QuestLogView {
   const { world, opened, visited } = input;
   const open: string[] = [];
   const done: string[] = [];
   const pois = world.allPois();
   const notes: Record<string, string> = {};
+  const places = new Set<string>();
 
   // the Skull Miser
   const handed = number(opened, "skulls=");
@@ -103,8 +116,10 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     if (!need) continue;
     const kind = need.endsWith("_keycard") ? "the pyramid" : poi.name;
     if (visited.has(poi.id)) {
+      if (!need.endsWith("_keycard")) places.add(poi.name);
       done.push(`Opened ${kind} (${at(poi)}) with the ${itemName(need)}.`);
     } else if (opened.has(lockSeenFlag(poi.id)) || input.carried(need) > 0) {
+      if (!need.endsWith("_keycard")) places.add(poi.name);
       open.push(input.carried(need) > 0 ? `Use the ${itemName(need)} to open ${kind} at ${at(poi)}.` : `Find the ${itemName(need)} to open ${kind} at ${at(poi)}.`);
     }
   }
@@ -115,6 +130,7 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     const ref = world.dungeonRef(poi.id);
     if (!ref || ref.quest === "spaceship" || !visited.has(poi.id)) continue;
     const reached = opened.has(reachedFlag(poi.id));
+    places.add(poi.name);
     if (poi.kind === "cave") {
       if (reached) done.push(`Explored the scary ${poi.name}.`);
       else open.push(`Explore the scary ${poi.name} at ${at(poi)}.`);
@@ -127,5 +143,5 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     const clues = [...opened].filter((k) => k.startsWith(`clue:${poi.id}|`)).map((k) => k.slice(`clue:${poi.id}|`.length));
     if (clues.length > 0) notes[line] = clues.join("\n");
   }
-  return { open, done, ...(Object.keys(notes).length > 0 ? { notes } : {}) };
+  return { open, done, ...(Object.keys(notes).length > 0 ? { notes } : {}), ...(places.size > 0 ? { places: [...places] } : {}) };
 }

@@ -86,7 +86,7 @@ import { emptyContainerLine, propLine } from "../data/prop-texts";
 import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
-import { SKULL_MISER_MET, clueFlag, lockSeenFlag, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
+import { SKULL_MISER_MET, clueFlag, lockSeenFlag, placeSegments, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
 import { overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
@@ -1154,7 +1154,7 @@ export class Game {
     // a levitating party does not walk: the wind takes the place of the footsteps
     if (hasEffect(s.party, "levitate")) this.audio.windStep(0.6);
     else this.audio.play(this.mode === "overworld" ? stepSound(this.world.tile(x, y)) : 9010, 0.6);
-    this.passTime(stepMinutes(this.outdoors()));
+    this.passTime(stepMinutes(this.outdoors(), s.party.talents));
     this.campaignView.focus(x, y);
     this.interiorView.focus(x, y);
     s.at = this.campaignLocation() ?? (this.mode === "interior" && s.at.mode === "interior" ? { ...s.at, x, y, facing: this.player.facing } : { mode: "overworld", x, y, facing: this.player.facing });
@@ -1648,7 +1648,11 @@ export class Game {
         const box = document.createElement("div");
         box.append(Object.assign(document.createElement("h3"), { textContent: title }));
         if (names.length === 0) box.append(Object.assign(document.createElement("p"), { textContent: empty, className: "small" }));
-        for (const n of names) box.append(Object.assign(document.createElement("p"), { textContent: n, ...(view.notes?.[n] ? { title: view.notes[n], className: "has-note" } : {}) }));
+        for (const n of names) {
+          const p = Object.assign(document.createElement("p"), view.notes?.[n] ? { title: view.notes[n], className: "has-note" } : {});
+          p.append(...placeSegments(n, view.places ?? []).map((s) => (s.bold ? Object.assign(document.createElement("strong"), { textContent: s.text }) : s.text)));
+          box.append(p);
+        }
         return box;
       };
       const button = Object.assign(document.createElement("button"), { className: "btn close", textContent: "Close (Esc)", onclick: close });

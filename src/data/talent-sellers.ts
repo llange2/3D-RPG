@@ -25,11 +25,11 @@ export function sellerParams(talent: string): Record<string, string | number> {
 
 export const TALENT_SELLERS: Record<string, TalentSeller> = {
   talent_cartographer: { persona: 48, text: TEXTS[338]! },
-  talent_pathfinder: { persona: 57, text: "My friends, I am Darek the pathfinder, at your service. The outside holds many secrets, but only those, who can understand the signs can see them." },
+  talent_pathfinder: { persona: 57, text: "My friends, I am Darek the pathfinder, at your service. The outside holds many secrets, but those who can read the signs of the land never wander. Pathfinding will help you to travel faster: every step in the open country will take you 7 minutes instead of 10." },
   talent_cave_explorer: { persona: 56, text: "Hey there, you look like you are decent adventurers. My name is Oro. There are riches in old forgotten caves, but only those, who are knowable enough can explore them." },
   talent_seafarer: { persona: 51, text: "Call me Jolly. I have been so much at sea that I know water better than land. I can teach you to build a float so that you can cross lakes and seas." },
   talent_body_builder: { persona: 55, text: TEXTS[426]! },
-  talent_arms_master: { persona: 54, text: TEXTS[425]! },
+  talent_arms_master: { persona: 54, text: "Obsidian is hard, but it can break in untrained hands. I can teach you how to wield obsidian weapons and wear obsidian armor, so that nothing shatters but your enemies." },
   // the guild apprentices of the towns (item 50) sell the memberships: the guild houses only let members in
   guild_level_1: { persona: 50, text: TEXTS[290]! },
   guild_level_2: { persona: 50, text: "Friends, the Albatross guild has a place for you, if your purse has a place for the fee. A scholar has to eat as well." },

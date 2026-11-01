@@ -1303,6 +1303,21 @@ Tests: `tests/unit/playtest38.test.ts` (Heilbrunnen: nur Stufe 1, genau einer, z
 12. **Wizard's Eye deckt nur die Minikarte auf:** die große Karte (`Game.openMap`, `eye = false`, Monster mit `mappedMonsters(false)`) zeigt nur erkundete Zellen, wie sonst; auf Ereignisse und verborgene Objekte wirkt Eye dort nicht mehr.
 13. **Debug > Export saves / Import saves** (`exportSaves`, `importSaves` in `game/state.ts`, `game/fileTransfer.ts`): Export schreibt erst den Autospeicher und lädt dann alle Plätze beider Spielarten als eine JSON-Datei herunter (`mm3-saves-<Zeit>.json`, Format `{ format: "mm3-saves", saves: [{ kind, slot, save }] }`). Import nimmt ein solches Bündel oder einen einzelnen Speicherstand (der kommt in den manuellen Platz seiner Spielart), prüft Version und Spielart und überschreibt die Plätze; danach „Load game“.
 
+## Der 43. Playtest
+
+`GEN_VERSION` 44, Seed `cedar-peak-198`, Größe `default`. Acht Punkte (Punkt 6 ist nur ein Vorschlag):
+
+1. **Monster der eigenen Stufe** (`pickMonsters` in `data/dungeon-themes.ts`): Höhlen und Dungeons ziehen ihre gewöhnlichen Monster nur noch aus der **eigenen** Stufe des Ortes (vorher Stufe und eine darunter: die Cave of Aldoa, Stufe 2, rief an den Gongs Vampire Bats und Wild Fungus der Stufe 1). Jede Gruppe hat auf jeder Stufe mindestens drei Monster (Tiere und Pflanzen: 6 / 3 / 4 / 3 / 6), die alte Regel bleibt nur als Notfall. Gongs, Hinterhalte und Wachgruppen lesen `themeMonsters`, also dieselbe Liste. Der Boss bleibt „höchstens eine Stufe darüber“.
+2. **Höhlenausgang dunkler** (`MODEL_DIM` in `render/props.ts`): `blk_cave_exit` bekommt den Faktor 0,65 auf die Farbe. Gemessen unter der Fackel: Rahmen 45 gegen Fels 22 bis 28, jetzt 29 (`blk_cave_wall` hat den Mittelwert 0,538, der Ausgang 0,427, aber seine Rahmensteine sind hell und die dunkle Öffnung zieht den Mittelwert herunter, die Helligkeitsangleichung über den Mittelwert reichte also nicht).
+3. **Statussymbole vorgeladen** (`main.ts`): die sieben `ui/tex_gui_*.webp` (Levitate, Power Shield, Wizard's Eye, vier Schutzarten) laden beim Start (`preloadImages`).
+4. **Questbuch: Namen von Höhlen und Dungeons fett** (`QuestLogView.places`, `placeSegments` in `game/questLog.ts`, `<strong>` in `Game.openQuestLog`): die Zeilen bleiben Klartext (die Notizen und Tests lesen sie als Schlüssel), das Fenster schneidet die Namen heraus. Schlüsselschlösser der Dungeons zählen mit, die Pyramide nicht (kein Name).
+5. **Talent Pathfinder:** ein Schritt im Freien dauert 7 statt 10 Minuten (`stepMinutes(outside, talents)`, `STEP_MINUTES_PATHFINDER`; in Gebäuden ändert sich nichts). Beschreibung und Verkäufertext neu (`TALENT_TEXTS` in `data/tables.ts`, `talent-sellers.ts`).
+6. **Talent Cave Explorer:** nur ein Vorschlag, nicht umgesetzt (siehe Antwort an den Nutzer). Der Berge-Effekt des Altspiels entfällt, Pässe sind höchstens fünf Felder lang.
+7. **Talent Arms Master:** Preis 10'000 (`TALENT_CHANGES` in `data/tables.ts`, die generierte `raw/TALENTS.json` bleibt unberührt), **Obsidian-Waffen, -Rüstung und -Ausrüstung** (`needsArmsMaster` in `sim/items.ts`: Material 8, kein Ring, kein Questgegenstand) legt nur an, wer das Talent hat (`cannotWear` in `ui/panels.ts`: Klick, Doppelklick, Rechtsklick, Markierung der Plätze). Der Tooltip sagt „Requires Arms Master talent to equip“, aber nur, wenn die Klasse den Gegenstand sonst tragen könnte. Verkäufertext: „Obsidian is hard, but it can break in untrained hands …“.
+8. **Talent Body Builder:** +1 Lebenspunkt je Stufe (`recalcValues`); `TALENT_CHANGES` setzt `recalc_attribute_values`, damit der Kauf alle Helden neu berechnet.
+
+Tests: `tests/unit/playtest43.test.ts`. Das Talent „Pathfinder“ spürt `Game.onArrived` (`stepMinutes(this.outdoors(), s.party.talents)`).
+
 ## Lichtlinien über dem Boden (Showcase)
 
 Ein rein visuelles Werkzeug, **kein `GEN_VERSION`**: gerade Linien aus Licht mit farbigem Schein, an denen Lichtimpulse entlanglaufen. Bisher nur im Showcase (Esc > Debug > Teleport to Level); echte Einsatzorte (Gong zur Rune in Quest 3, Straßen und Lavaadern der Überwelt, Gänge des Raumschiffs) sind nicht entschieden.
