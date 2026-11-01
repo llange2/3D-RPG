@@ -286,6 +286,17 @@ function facesAndChalices(env: QuestEnv, rng: Rng): QuestResult {
   let code = [0, 1, 2, 3, 4].map(() => rng.int(4));
   while (code.filter((d) => d !== row.away).length < 3) code = [0, 1, 2, 3, 4].map(() => rng.int(4));
   const head = statueOf(rng, place, [95, 29]);
+  // 42nd playtest, point 6: an end room that lies in the rock, away from the hall (a maze has no wall to spare next to it), is reached by runes in the hall, which light up
+  // when the row is right. They lie in front of the heads, not on the way along them, and the party stands on them when it has looked at the whole row.
+  if (env.map.dungeon?.endRoom?.isolated) {
+    const middle = { x: hall.x + (hall.w >> 1), y: hall.y + (hall.h >> 1) };
+    const spots: { x: number; y: number }[] = [];
+    for (let dy = 0; dy < hall.h; dy++) for (let dx = 0; dx < hall.w; dx++) spots.push({ x: hall.x + dx, y: hall.y + dy });
+    const far = (s: { y: number }) => Math.abs(s.y - row.y) >= 2;
+    const dist = (s: { x: number; y: number }) => Math.abs(s.x - middle.x) + Math.abs(s.y - middle.y);
+    spots.sort((p, q) => Number(!far(p)) - Number(!far(q)) || dist(p) - dist(q) || p.y - q.y || p.x - q.x);
+    for (const s of spots) if (env.place({ uid: env.uid("rune"), kind: "rune", x: s.x, y: s.y, params: { need: "heads", item: 73 } })) break;
+  }
   for (let dy = 0; dy < hall.h; dy++) for (let dx = 0; dx < hall.w; dx++) env.reserve(hall.x + dx, hall.y + dy);
   code.forEach((want, i) => {
     const column = row.ascending ? i : 4 - i;

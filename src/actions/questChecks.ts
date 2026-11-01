@@ -69,6 +69,11 @@ export function questIssues(map: InteriorMap, content: MapContent): string[] {
       if (row.filter((h) => h.params.start !== h.params.want).length < 3) issues.push(`${key}: the heads start too close to the answer`);
       const sameWall = row.every((h) => h.y === row[0]!.y) || row.every((h) => h.x === row[0]!.x);
       if (!sameWall) issues.push(`${key}: the heads do not stand in a row`);
+      // the end room is next to the hall (sealed) or the right row calls up runes in the hall that take the party there (42nd playtest, point 6)
+      const runes = of("rune").filter((a) => a.params.need === "heads");
+      const hall = ref.hall;
+      if (end.isolated && (runes.length !== 1 || (hall && !(runes[0]!.x >= hall.x && runes[0]!.y >= hall.y && runes[0]!.x < hall.x + hall.w && runes[0]!.y < hall.y + hall.h)))) issues.push(`${key}: the end room is a pocket and the hall has no runes (${runes.length})`);
+      if (!end.isolated && runes.length > 0) issues.push(`${key}: runes in the hall although the end room is sealed`);
       break;
     }
 

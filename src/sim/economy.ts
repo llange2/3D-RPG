@@ -1,7 +1,6 @@
 import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
-import { RIDDLES_WORLD, RIDDLE_NUMBERS } from "../data/riddles";
+import { RIDDLES_WORLD } from "../data/riddles";
 import { CONSTANTS, SPELLS, TALENTS, type SpellDef } from "../data/tables";
-import type { Poi } from "../world/types";
 import type { World } from "../world/world";
 import { isV4, RULES } from "./balance";
 import { isAlive, levelUp, recalcValues, removeCondition, xpToNextLevel } from "./character";
@@ -128,37 +127,44 @@ const WORD_RUMOURS = [
 ];
 
 /**
- * A rumour that lets a word slip: the answer of a riddle that statues of the world ask for (a place up to one level above the tavern), or, now and then, the answer
- * of a riddle that no statue of this world asks, which is only a funny rumour.
+ * A rumour that lets a password slip (42nd playtest, point 7): the answer of a riddle that a statue of a dungeon, cave or castle nearby asks (a place up to one level above the
+ * tavern). Null if the world has none yet.
  */
-export function wordRumour(world: World, tavernTier: number, rng: Rng): string {
-  const hidden = world.riddlesOfWorld();
-  const near = hidden.filter((r) => r.tier <= tavernTier + 1);
-  const real = near.length > 0 && rng.chance(700);
-  const used = new Set(hidden.map((r) => r.riddle));
-  const decoys = RIDDLE_NUMBERS.filter((n) => !used.has(n));
-  const id = real ? near[rng.int(near.length)]!.riddle : (decoys.length > 0 ? decoys : RIDDLE_NUMBERS)[rng.int((decoys.length > 0 ? decoys : RIDDLE_NUMBERS).length)]!;
-  const answer = RIDDLES_WORLD[String(id)]!.answer;
+export function wordRumour(world: World, tavernTier: number, rng: Rng): string | null {
+  const near = world.riddlesOfWorld().filter((r) => r.tier <= tavernTier + 1);
+  if (near.length === 0) return null;
+  const answer = RIDDLES_WORLD[String(near[rng.int(near.length)]!.riddle)]!.answer;
   return WORD_RUMOURS[rng.int(WORD_RUMOURS.length)]!.replace(/\{a\}/g, answer);
 }
 
-/** A rumour about the closest dungeon, cave or castle: the direction and rough distance from the party. */
-export function rumour(world: World, x: number, y: number): { poi: Poi; text: string } | null {
-  let best: { poi: Poi; d: number } | null = null;
-  for (const p of world.poisInRect(x - 260, y - 260, x + 260, y + 260)) {
-    if (p.kind === "town") continue;
-    const d = Math.max(Math.abs(p.x - x), Math.abs(p.y - y));
-    if (d < 6) continue;
-    if (!best || d < best.d) best = { poi: p, d };
-  }
-  if (!best) return null;
-  const dx = best.poi.x - x;
-  const dy = best.poi.y - y;
-  const ns = Math.abs(dy) > Math.abs(dx) / 2 ? (dy < 0 ? "north" : "south") : "";
-  const ew = Math.abs(dx) > Math.abs(dy) / 2 ? (dx < 0 ? "west" : "east") : "";
-  const dir = [ns, ew].filter(Boolean).join("-");
-  const kind = best.poi.kind === "castle" ? "a castle" : best.poi.kind === "cave" ? "a cave" : "a dungeon";
-  return { poi: best.poi, text: `They say ${kind} called ${best.poi.name} lies about ${Math.round(best.d / 5) * 5} paces ${dir}. Dangerous folk live there (level ${best.poi.tier}).` };
+/** A funny rumour that means nothing. */
+export const SILLY_RUMOURS: readonly string[] = [
+  "A man at the bar swears that his goat can count to nine, but only on Tuesdays.",
+  "\"The moon is a cheese,\" says a fat merchant, \"and the king's cook has the only knife that cuts it.\"",
+  "An old woman whispers: \"Never trust a chicken that looks at you for longer than a heartbeat.\"",
+  "The barkeep leans over the counter. \"They say the best sword is the one you did not have to draw. I say the best soup is the one you did not have to cook.\"",
+  "A stable boy claims that horses dream of oats made of gold, and that this is why they are so tired in the morning.",
+  "A drunk dwarf announces that beards grow faster if you sing to them. His is very long, and he looks very tired.",
+  "\"A frog in the well means rain,\" mutters a farmer. \"Two frogs mean a wedding. Three frogs mean my wife has been in the well again.\"",
+  "A minstrel shrugs: \"I know four hundred songs, and in all of them somebody loses a boot.\"",
+  "An old soldier taps his wooden leg. \"Lost it to a goose. Don't laugh. You have never seen that goose.\"",
+  "Somebody in the corner insists that the mountains were once flat, and that the giants tidied them up into heaps.",
+  "\"If your shadow runs away from you at noon, don't chase it,\" a tailor advises. \"It always comes back for supper.\"",
+  "A fisherman sighs. \"The big one that got away? It came back. It wanted its hook returned.\"",
+  "A child by the fire explains with great seriousness that the stars are holes in the night, and the day is the glue.",
+  "A baker nods wisely. \"Bread without salt is like a knight without a horse. It gets there, but nobody is proud of it.\"",
+  "\"I once saw a wizard sneeze,\" a farmhand says. \"The cow was a bit of a toad for a week, but she gave excellent milk.\"",
+  "A traveller whispers: \"There is a town where the rooster sleeps in and the sun has to wait.\"",
+  "The barkeep polishes a mug and sighs. \"They say a tavern is only as good as its worst story. Mine is about a ham.\"",
+  "A one-eyed sailor swears that the sea is only a very large puddle, and that the ships are the puddle's idea.",
+  "\"Beware of lamp posts that smile,\" says a bard. \"I met one in a dream, and it owed me money.\"",
+  "A blacksmith grunts: \"A hammer never forgets. That is why I never lend mine to my brother.\"",
+];
+
+/** The rumours of a tavern (42nd playtest, point 7): half the time a password of a place nearby, otherwise something funny and senseless. No distances or directions to places. */
+export function tavernRumour(world: World, tavernTier: number, rng: Rng): string {
+  const word = rng.int(2) === 0 ? wordRumour(world, tavernTier, rng) : null;
+  return word ?? SILLY_RUMOURS[rng.int(SILLY_RUMOURS.length)]!;
 }
 
 // ------------------------------------------------------------------ temple
@@ -306,6 +312,11 @@ export function train(party: Party, index: number): TrainResult {
   if (party.gold < cost) return { ok: false, reason: "gold", cost };
   party.gold -= cost;
   levelUp(c, party.talents, 1, party.mascot);
+  // 42nd playtest, point 1: a trained hero is rested in hit points and spell points (`levelUp` refills them); a hero at 0 is awake again,
+  // as with every healing. The other conditions stay: the two hours of drill pass on the clock (`TRAINING_MINUTES`), so poison can still kill.
+  c.hp = c.health;
+  c.sp = c.mana;
+  removeCondition(c, "Unconscious");
   return { ok: true, cost };
 }
 

@@ -1,7 +1,7 @@
 import { thousands } from "../core/format";
 import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
 import { loreLine } from "../data/lore";
-import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, propLine } from "../data/prop-texts";
+import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, emptyContainerLine, propLine } from "../data/prop-texts";
 import { RAT_TRAP, SEARCHABLE_DECOR, dodgeChance, trapDamageFor, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
 import { isBookshelf } from "../data/spell-loot";
 import { pickMonsterWeighted } from "../data/monsters";
@@ -14,7 +14,7 @@ import { recordThievery, type LockKind } from "../sim/thieveryLog";
 import { activeCharacters, addXp, carriedItems, freeSlots, giveItem, grantTalent, hasEffect, protectionLevel, takeOne } from "../sim/party";
 import type { Attribute, Character, Condition, Item, Party } from "../sim/types";
 import type { ActionInstance, MapContent } from "./types";
-import { FACING_NAMES, gongRuneActive, gongsStruck, headFacing, moanSolved, ringSolved, rotationSolved, sameAnswer, turnHead } from "./quests";
+import { FACING_NAMES, gongsStruck, headFacing, ringSolved, rotationSolved, runeActive, sameAnswer, turnHead } from "./quests";
 import { answerMatches } from "../data/riddles";
 import { trapElementOf, type ServiceKind } from "./registry";
 
@@ -206,7 +206,7 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
   }
   const nothing = gold === 0 && items === 0 && scrolls.length === 0 && !(typeof p.extra === "string" && p.extra !== "");
   if (nothing && shelf) effects.push({ type: "text", text: BOOKSHELF_EMPTY[rng.int(BOOKSHELF_EMPTY.length)]! });
-  else if (nothing && !barrel) effects.push({ type: "text", text: "The chest is empty." });
+  else if (nothing && !barrel) effects.push({ type: "text", text: emptyContainerLine(p.chest) });
 }
 
 /**
@@ -583,7 +583,11 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       // the row is right when every head looks the way it should: the last turn opens the end room
       const after = new Set([...(ctx.opened ?? NONE)].filter((k) => !next.remove.includes(k)));
       for (const k of next.add) after.add(k);
-      if (ctx.content && rotationSolved(ctx.content, after)) effects.push({ type: "endroom" });
+      if (ctx.content && rotationSolved(ctx.content, after)) {
+        // an end room that no wall of the hall can hide is a pocket in the rock: the right row calls up runes in the hall, and they take the party there
+        if (ctx.content.actions.some((r) => r.kind === "rune" && r.params.need === "heads")) effects.push({ type: "text", text: "A hum fills the hall. Magic runes light up on the floor." });
+        else effects.push({ type: "endroom" });
+      }
       return { effects, consumed: false, state: next };
     }
 
@@ -628,7 +632,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       // quest 1 (the middle of the field) and quest 3 (the runes the last gong calls up): only the solved quest takes the party to the end room
       const content = ctx.content ?? EMPTY;
       const opened = ctx.opened ?? NONE;
-      const ready = p.need === "moan" ? moanSolved(content, opened) : gongRuneActive(action, content, opened);
+      const ready = runeActive(action, content, opened);
       if (!ready) return { effects, consumed: false };
       // (what happens next is told by the game once it knows the kind of end room: the floor falls away only for a pocket in the rock, a sealed room just opens its wall)
       effects.push({ type: "text", text: "The runes flare up." }, { type: "endroom" });

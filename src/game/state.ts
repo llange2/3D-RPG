@@ -287,6 +287,58 @@ export function splitLegacySaves(): void {
   }
 }
 
+/** All the saves of this browser in one file (Esc > Debug > Export saves): what a tester sends so that the game can be looked at somewhere else. */
+export interface SaveBundle {
+  format: "mm3-saves";
+  exportedAt: string;
+  saves: { kind: GameKind; slot: SaveSlot; save: SaveFile }[];
+}
+
+/** Every save in the slots of both kinds of game. */
+export function exportSaves(): SaveBundle {
+  const saves: SaveBundle["saves"] = [];
+  for (const kind of GAME_KINDS) for (const slot of SAVE_SLOTS) {
+    const save = readSave(kind, slot);
+    if (save) saves.push({ kind, slot, save });
+  }
+  return { format: "mm3-saves", exportedAt: new Date().toISOString(), saves };
+}
+
+const isSaveFile = (v: unknown): v is SaveFile => typeof v === "object" && v !== null && (v as SaveFile).version === 1 && typeof (v as SaveFile).state === "object" && (v as SaveFile).state !== null && Array.isArray((v as SaveFile).state.party?.characters);
+
+/**
+ * Puts the saves of a file into their slots, replacing what is there. The file is a bundle (`exportSaves`) or a single save, which goes into the manual slot of its kind.
+ * Returns the slots written ("world / manual") and why the rest was left out; nothing is written when the text is no save at all.
+ */
+export function importSaves(text: string): { written: string[]; skipped: string[] } {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return { written: [], skipped: ["the file is no JSON"] };
+  }
+  const entries: { kind: GameKind; slot: SaveSlot; save: unknown }[] =
+    isSaveFile(data) ? [{ kind: data.state.campaign ? "campaign" : "world", slot: "manual", save: data }] :
+    typeof data === "object" && data !== null && (data as SaveBundle).format === "mm3-saves" && Array.isArray((data as SaveBundle).saves) ? (data as SaveBundle).saves : [];
+  const written: string[] = [];
+  const skipped: string[] = [];
+  for (const { kind, slot, save } of entries) {
+    const name = `${kind} / ${slot}`;
+    if (!GAME_KINDS.includes(kind) || !SAVE_SLOTS.includes(slot)) skipped.push(`${name}: unknown slot`);
+    else if (!isSaveFile(save) || !!save.state.campaign !== (kind === "campaign")) skipped.push(`${name}: not a save of this kind of game`);
+    else {
+      try {
+        localStorage.setItem(KEYS[kind][slot], JSON.stringify(save));
+        written.push(name);
+      } catch {
+        skipped.push(`${name}: the browser refused to store it`);
+      }
+    }
+  }
+  if (entries.length === 0) skipped.push("the file holds no save");
+  return { written, skipped };
+}
+
 export function describeSave(file: SaveFile): string {
   const d = new Date(file.savedAt);
   const time = Number.isNaN(d.getTime()) ? "" : ` ${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;

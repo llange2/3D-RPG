@@ -1,4 +1,4 @@
-import { gongRuneActive, headFacing, ringHeadPresent } from "../actions/quests";
+import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
@@ -74,8 +74,8 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   if (typeof a.params.bearing === "number") bearing = a.params.bearing;
   // the runes of quest 3 appear with the last gong; the middle of the field of quest 1 stays bare
   if (a.kind === "rune") {
-    if (a.params.need !== "gongs" || !content) return null;
-    if (!gongRuneActive(a, content, opened)) return null;
+    if (a.params.need === "moan" || !content) return null;
+    if (!runeActive(a, content, opened)) return null;
   }
   if (a.kind === "head") {
     if (a.params.mode === "ring" || a.params.mode === "moan") {

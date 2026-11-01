@@ -1,6 +1,6 @@
 import { hash2, valueNoise2 } from "../core/noise";
 import { tunedItemModels } from "../data/item-tuning";
-import { BIOME, CHUNK_SIZE, DECO, GROUND, TILE_SIZE, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
+import { BIOME, CHUNK_SIZE, DECO, GROUND, TILE_SIZE, isTileWalkable, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
 import { poiFront, type PoiSide, type World } from "../world/world";
 import { flatTerrainOf, type FlatTileSet } from "./flatGround";
 import { tileHeight, tileToWorldX, tileToWorldZ, usesTileModels } from "./heights";
@@ -132,6 +132,28 @@ function landmarkSpec(h: number): PropSpec {
 export function landmarkItemAt(tx: number, ty: number): number {
   let k = ((hash2(0xbeef, tx, ty) >>> 0) >>> 3) % LANDMARK_TOTAL;
   return LANDMARKS.find((l) => (k -= l.weight) < 0)!.item;
+}
+
+/** The straw hut (item 45), the one landmark with a door. */
+const STRAW_HUT_ITEM = 45;
+
+/**
+ * The bearing (degrees, 0 = north) a hut turns its door to (42nd playtest, point 9): to a road, bridge or pass beside it, else to a side where the tile in front of the door is open
+ * ground (nothing stands on it, nobody has to walk round a tree or a mountain to reach the door); `h` decides between several sides, so the pick stays the same. `tileOf` gives the tile
+ * beside the hut by its offset.
+ */
+export function doorBearing(tileOf: (dx: number, dy: number) => TileInfo, h: number): number {
+  const isRoad = (t: TileInfo) => t.ground === GROUND.ROAD || t.ground === GROUND.BRIDGE || t.ground === GROUND.PASS;
+  const sides = ([[0, -1, 0], [1, 0, 90], [0, 1, 180], [-1, 0, 270]] as const).map(([dx, dy, bearing]) => {
+    const t = tileOf(dx, dy);
+    const open = isTileWalkable(t) && t.poiId === null && t.ground !== GROUND.SHALLOW && t.ground !== GROUND.LAVA_POOL;
+    // a road in front of the door is best; failing that open ground that touches a road (the road runs past the corner of the hut), then any open ground
+    const touchesRoad = open && ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const).some(([ox, oy]) => (dx + ox !== 0 || dy + oy !== 0) && isRoad(tileOf(dx + ox, dy + oy)));
+    return { bearing, score: isRoad(t) ? 3 : touchesRoad ? 2 : open ? 1 : 0 };
+  });
+  const best = Math.max(...sides.map((s) => s.score));
+  const options = sides.filter((s) => s.score === best);
+  return options[h % options.length]!.bearing;
 }
 
 export function propSpec(deco: number, biome: Biome, h: number, tileModels = false): PropSpec | null {
@@ -381,7 +403,7 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
           y: base + (flatTiles && asTile && hasOwnSlab(spec.model) ? FLAT_SLAB_SINK : 0) + (tile.deco === DECO.LANDMARK ? groundPropLift() : 0),
           z: wz + oz,
           // trees stand in steps of 90 degrees in every mode (also on the old flat ground), small things turn freely
-          rotY: (asTile || tile.deco === DECO.TREE ? ((hh >>> 12) % 4) * 90 : (hh >>> 12) % 360) * (Math.PI / 180),
+          rotY: (tile.deco === DECO.LANDMARK && landmarkItemAt(tx, ty) === STRAW_HUT_ITEM ? doorBearing((dx, dy) => tileAt(lx + dx, ly + dy), hh >>> 12) : asTile || tile.deco === DECO.TREE ? ((hh >>> 12) % 4) * 90 : (hh >>> 12) % 360) * (Math.PI / 180),
           scale: spec.scale * jitterScale,
           scaleXYZ: spec.scaleXYZ,
           lod: spec.lod ? { model: spec.lod.model, scale: spec.lod.scale * jitterScale } : undefined,

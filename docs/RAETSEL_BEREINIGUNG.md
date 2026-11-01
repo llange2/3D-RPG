@@ -17,6 +17,7 @@ Erzeugt von `tools/export/export_world_riddles.py` aus `.ignore/quests_1.2.md`; 
 - #24: one-letter answer
 - #26: anachronism: the piano (the riddle is about keys and time)
 - #30: anachronism: iced tea
+- #49: the answer 'bulette' is a game monster, not guessable
 - #50: broken text ('rugo f smothering')
 - #66: broken: question holds answer and instructions
 - #69: anachronism: a watch with hands
@@ -97,14 +98,15 @@ Erzeugt von `tools/export/export_world_riddles.py` aus `.ignore/quests_1.2.md`; 
 - #316: `oath`
 - #317: `horse`
 - #318: `torch`
+- #319: `snow`
 
 ## Länge der Antworten
 
 - 3 Buchstaben: 26
-- 4 Buchstaben: 82
+- 4 Buchstaben: 83
 - 5 Buchstaben: 57
 - 6 Buchstaben: 43
-- 7 Buchstaben: 26
+- 7 Buchstaben: 25
 - 8 Buchstaben: 11
 - 9 Buchstaben: 10
 - 11 Buchstaben: 2

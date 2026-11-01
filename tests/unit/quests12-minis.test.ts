@@ -5,7 +5,7 @@ import type { ActionInstance } from "../../src/actions/types";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { RIDDLES_WORLD } from "../../src/data/riddles";
 import { generateInterior, planDungeon } from "../../src/interiors";
-import { wordRumour } from "../../src/sim/economy";
+import { SILLY_RUMOURS, tavernRumour, wordRumour } from "../../src/sim/economy";
 import { createDefaultParty } from "../../src/sim/party";
 import { World } from "../../src/world/world";
 
@@ -72,18 +72,23 @@ describe("mini quests and the riddles of the world", () => {
     expect(resolveAction(mini!, ctx(String(mini!.params.answer))).effects[0]).toMatchObject({ text: expect.stringContaining("silent") });
   });
 
-  it("lets a word slip in the tavern: the answer of a riddle of the world, or, now and then, a silly one", () => {
+  it("tells in the tavern, half and half, a password of a place nearby or a silly saying, and never where a place lies (42nd playtest, point 7)", () => {
     const world = new World("minis-a", "default");
     const real = new Set(world.riddlesOfWorld().map((r) => RIDDLES_WORLD[String(r.riddle)]!.answer));
     const texts = new Set<string>();
-    let realOnes = 0;
-    for (let i = 0; i < 80; i++) {
-      const text = wordRumour(world, 3, new Rng(seedFromString(`r${i}`)));
+    let passwords = 0;
+    for (let i = 0; i < 200; i++) {
+      const text = tavernRumour(world, 3, new Rng(seedFromString(`r${i}`)));
       texts.add(text);
-      if ([...real].some((w) => new RegExp(`\\b${w}\\b`).test(text))) realOnes++;
+      if (!SILLY_RUMOURS.includes(text)) {
+        passwords++;
+        expect([...real].some((w) => new RegExp(`\\b${w}\\b`).test(text)), text).toBe(true);
+      }
+      expect(text).not.toMatch(/paces|lies about/);
     }
     expect(texts.size).toBeGreaterThan(20);
-    expect(realOnes).toBeGreaterThan(30);
-    expect(realOnes).toBeLessThan(80);
+    expect(passwords).toBeGreaterThan(70);
+    expect(passwords).toBeLessThan(130);
+    expect(wordRumour(world, 3, new Rng(seedFromString("w")))).not.toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { gongRuneActive } from "../actions/quests";
+import { runeActive } from "../actions/quests";
 import { heapGone } from "../actions/registry";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
@@ -117,8 +117,8 @@ export function crystalLamps(content: MapContent, opened: ReadonlySet<string> = 
     if (objectTaken(a, opened)) continue;
     // the runes of quest 3 are not there before the last gong rings, and the middle of the field of quest 1 stays bare (Tomb of Aldena 61/51 glowed with nothing to see)
     if (a.kind === "rune") {
-      if (a.params.need !== "gongs") continue;
-      if (!gongRuneActive(a, content, opened)) continue;
+      if (a.params.need === "moan") continue;
+      if (!runeActive(a, content, opened)) continue;
     }
     const element = elementOf(a);
     const item = element !== null ? TRAP_OBJECT[element] : shownItem(a);

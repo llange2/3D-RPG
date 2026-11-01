@@ -257,6 +257,10 @@ html.loading-on #game-cursor { display: none; }
 /* 40th playtest, point 9: the window of a hero has one size. The tallest state (a ring against a ring with other stats, 14 lines in two columns, and the six buttons of the Donkey's party)
    measured 549 px for the right-hand column (tools/dev/check-playtest40.ts); the window then is 654 px high at most */
 .charscreen .cols > .gear { min-height: 550px; }
+/* 42nd playtest, point 8: "Party Info" and "Mascot" have the size of a hero's window (the same 550 px as the right-hand column above); the lists of the party info scroll inside it */
+.charscreen .perks-view { height: 550px; }
+.charscreen .perks-view .perk-cols { flex: 1 1 auto; min-height: 0; max-height: none; }
+.charscreen .mascot-view { min-height: 550px; }
 .tooltip .bonus-lines.many { columns: 2; column-gap: 16px; }
 .tooltip .bonus-lines.many > div { break-inside: avoid; }
 .perks-view { display: flex; flex-direction: column; gap: 8px; }

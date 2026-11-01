@@ -342,8 +342,7 @@ export function knownContent(content: MapContent, opened: ReadonlySet<string>, e
 }
 
 /**
- * Draws an interior. `traps` (keys `x,y`) are the traps to mark: the map hides them unless the party has Wizard's Eye and the Crow
- * (see `Game.trapsShown`). `eye`: Wizard's Eye is on, the whole map shows. `detect`: Wizard's Eye or Detect Monster, monsters show wherever they are (the game hands over only the monsters in the viewing cone otherwise, `Game.mappedMonsters`). `icons`: the symbols of the old game; without them the map is coloured squares.
+ * Draws an interior. `traps` (keys `x,y`) are the traps to mark: seen, gone off or found by the Crow (see `Game.trapsShown`). `eye`: Wizard's Eye is on, the whole map shows. `detect`: Wizard's Eye or Detect Monster, monsters show wherever they are (the game hands over only the monsters in the viewing cone otherwise, `Game.mappedMonsters`). `icons`: the symbols of the old game; without them the map is coloured squares.
  */
 export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, content: MapContent, explored: Explored, opened: Set<string>, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, traps: ReadonlySet<string> = new Set(), view?: MapView, icons?: MinimapIcons | null, eye = false, detect = false): void {
   const ctx = canvas.getContext("2d")!;
@@ -510,12 +509,12 @@ const INTERIOR_LEGEND: (LegendEntry & { when: (map: InteriorMap, content: MapCon
   { color: "#9be28a", label: "Person, quest or talent", icon: { symbol: "persona" }, when: (_, c) => c.actions.some((a) => a.kind === "talent" || a.kind === "work" || (a.kind === "lore" && typeof a.params.persona === "number") || LEGACY_COLOR[a.legacy?.id ?? -1] === "#9be28a") },
   { color: "#b98aff", label: "Shrine or blessing", icon: { symbol: "event" }, when: (_, c) => c.actions.some((a) => a.kind === "shrine" || LEGACY_COLOR[a.legacy?.id ?? -1] === "#b98aff") },
   { color: "#555", label: "Used up (dimmed)", when: () => true },
-  { color: TRAP_COLOR, label: "Trap in sight (Wizard's Eye and the Crow)", icon: { symbol: "trap" }, when: (_m, _c, traps) => traps },
+  { color: TRAP_COLOR, label: "Trap (seen, gone off or found by the Crow)", icon: { symbol: "trap" }, when: (_m, _c, traps) => traps },
   { color: MONSTER_COLOR, label: "Monster", icon: { symbol: "pos2" }, when: () => true },
   { color: "#fff", label: "You", icon: { symbol: "pos1" }, when: () => true },
 ];
 
-/** `traps`: the map marks traps just now (Wizard's Eye and the Crow), so the legend names them. */
+/** `traps`: the map marks traps just now, so the legend names them. */
 export function interiorLegend(map: InteriorMap, content: MapContent, traps = false, opened: ReadonlySet<string> = new Set(), eye = false): LegendEntry[] {
   const known = knownContent(content, opened, eye);
   return INTERIOR_LEGEND.filter((e) => e.when(map, known, traps)).map(({ color, label, icon }) => ({ color, label, ...(icon ? { icon } : {}) }));
