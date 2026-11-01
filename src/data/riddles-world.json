@@ -107,13 +107,6 @@
    "person"
   ]
  },
- "26": {
-  "question": "I’m made out of five letters, And I’m made out of seven letters; I have keys but I don’t have locks, I’m concerned with time, but not with clocks.",
-  "answer": "piano",
-  "aliases": [
-   "keyboard"
-  ]
- },
  "27": {
   "question": "Forty white horses on a red hill. They champ, they stamp, and then stand still.",
   "answer": "teeth",
@@ -127,11 +120,6 @@
  "29": {
   "question": "I am what men love more than life, fear more than death or mortal strife, what dead men have and rich require. I’m what contented men desire.",
   "answer": "nothing",
-  "aliases": []
- },
- "30": {
-  "question": "Two men drink poisoned Iced Tea. One man drinks his fast and lives. The other man drinks his slow and dies. How is this possible?",
-  "answer": "ice",
   "aliases": []
  },
  "31": {
@@ -339,13 +327,6 @@
   "answer": "cloud",
   "aliases": []
  },
- "69": {
-  "question": "A face I do have, but see I do not. When they see my hands, they oft ponder in thought,what am I?",
-  "answer": "watch",
-  "aliases": [
-   "clock"
-  ]
- },
  "70": {
   "question": "The more you take, the more you leave behind. What am I?",
   "answer": "footsteps",
@@ -402,15 +383,6 @@
   "question": "I shine brightest in the dark. I am there but cannot be seen. To have me costs you nothing. To be without me costs you everything.",
   "answer": "hope",
   "aliases": []
- },
- "80": {
-  "question": "I am taken from a mine, and shut up in a wooden case, from which I am never released, and yet I am used by almost everybody.",
-  "answer": "graphite",
-  "aliases": [
-   "lead",
-   "pencil",
-   "pencil lead"
-  ]
  },
  "81": {
   "question": "What goes round the house and in the house but never touches the house?",
@@ -508,32 +480,15 @@
    "reverberation"
   ]
  },
- "104": {
-  "question": "What can travel around the world while staying in a corner?",
-  "answer": "stamp",
-  "aliases": []
- },
  "106": {
   "question": "What has a heart that doesn’t beat?",
   "answer": "artichoke",
-  "aliases": []
- },
- "107": {
-  "question": "What begins with T, ends with T, and has T in it?",
-  "answer": "teapot",
   "aliases": []
  },
  "108": {
   "question": "What runs all around a backyard, yet never moves?",
   "answer": "fence",
   "aliases": []
- },
- "109": {
-  "question": "What has many keys but can’t open a single lock?",
-  "answer": "piano",
-  "aliases": [
-   "keyboard"
-  ]
  },
  "111": {
   "question": "What has one eye, but can’t see?",
@@ -635,13 +590,6 @@
   "answer": "word",
   "aliases": []
  },
- "133": {
-  "question": "What has keys but can’t open locks?",
-  "answer": "keyboard",
-  "aliases": [
-   "piano"
-  ]
- },
  "134": {
   "question": "What belongs to you but is used more by others?",
   "answer": "name",
@@ -650,11 +598,6 @@
  "135": {
   "question": "What has a bottom at the top?",
   "answer": "leg",
-  "aliases": []
- },
- "136": {
-  "question": "What travels around the world but stays in one spot?",
-  "answer": "stamp",
   "aliases": []
  },
  "137": {
@@ -731,11 +674,6 @@
    "tome"
   ]
  },
- "150": {
-  "question": "What begins with an E, ends with an E, but only contains one letter?",
-  "answer": "envelope",
-  "aliases": []
- },
  "151": {
   "question": "What kind of room has no doors or windows?",
   "answer": "mushroom",
@@ -762,11 +700,6 @@
  "155": {
   "question": "What has holes but still holds water?",
   "answer": "sponge",
-  "aliases": []
- },
- "156": {
-  "question": "What has a ring but no finger?",
-  "answer": "telephone",
   "aliases": []
  },
  "157": {
@@ -824,19 +757,9 @@
    "person"
   ]
  },
- "167": {
-  "question": "What can travel the world while staying in its corner?",
-  "answer": "stamp",
-  "aliases": []
- },
  "168": {
   "question": "What comes down but never goes up?",
   "answer": "rain",
-  "aliases": []
- },
- "169": {
-  "question": "What begins and ends with T, is full of T and has T in it?",
-  "answer": "teapot",
   "aliases": []
  },
  "170": {
@@ -854,16 +777,6 @@
  "172": {
   "question": "What runs around the whole yard without moving?",
   "answer": "fence",
-  "aliases": []
- },
- "173": {
-  "question": "What has no beginning, end or middle?",
-  "answer": "doughnut",
-  "aliases": []
- },
- "174": {
-  "question": "What goes up when the rain comes down?",
-  "answer": "umbrella",
   "aliases": []
  },
  "175": {
@@ -890,11 +803,6 @@
   "answer": "time",
   "aliases": []
  },
- "182": {
-  "question": "What is black when you see it and white when you touch it?",
-  "answer": "chalkboard",
-  "aliases": []
- },
  "183": {
   "question": "What can fill entire rooms without taking up space?",
   "answer": "light",
@@ -906,18 +814,6 @@
   "aliases": [
    "breeze"
   ]
- },
- "187": {
-  "question": "What is full of keys but cannot open locks?",
-  "answer": "keyboard",
-  "aliases": [
-   "piano"
-  ]
- },
- "188": {
-  "question": "What has many rings but no fingers?",
-  "answer": "telephone",
-  "aliases": []
  },
  "190": {
   "question": "What flies forever, rests never?",
@@ -1052,11 +948,6 @@
  "217": {
   "question": "I am a cloak that hides the world, yet I reveal the stars.",
   "answer": "night",
-  "aliases": []
- },
- "218": {
-  "question": "I am a key that opens no lock, a tune with no sound.",
-  "answer": "password",
   "aliases": []
  },
  "219": {
@@ -1475,5 +1366,103 @@
   "aliases": [
    "soul"
   ]
+ },
+ "301": {
+  "question": "I stand still while others strike me, and from my back come swords and shoes for horses.",
+  "answer": "anvil",
+  "aliases": []
+ },
+ "302": {
+  "question": "I hang in the tower and speak only when struck. I call the faithful, and I warn the town of fire.",
+  "answer": "bell",
+  "aliases": []
+ },
+ "303": {
+  "question": "Strung without a bow, I am plucked by the minstrel, and I sing at the king's table.",
+  "answer": "harp",
+  "aliases": []
+ },
+ "304": {
+  "question": "I am a feather that never flies. Dipped in ink, I write the laws of the king.",
+  "answer": "quill",
+  "aliases": []
+ },
+ "305": {
+  "question": "I am a ring of water that no ship sails, and I keep the enemies of the castle wet.",
+  "answer": "moat",
+  "aliases": []
+ },
+ "306": {
+  "question": "I stand open for friends and shut for foes, and the watchman holds my lock.",
+  "answer": "gate",
+  "aliases": []
+ },
+ "307": {
+  "question": "I take the blows meant for another and wear the colours of my lord.",
+  "answer": "shield",
+  "aliases": []
+ },
+ "308": {
+  "question": "The baker makes me, the beggar prays for me, and the king breaks me with his guests.",
+  "answer": "bread",
+  "aliases": []
+ },
+ "309": {
+  "question": "I hoard what I cannot spend and sleep on a bed of gold. Brave men come, few return.",
+  "answer": "dragon",
+  "aliases": [
+   "wyrm"
+  ]
+ },
+ "310": {
+  "question": "Heavy is the head that wears me, yet many fight to carry me.",
+  "answer": "crown",
+  "aliases": []
+ },
+ "311": {
+  "question": "I have teeth but never bite. The jailer carries me on an iron ring.",
+  "answer": "key",
+  "aliases": []
+ },
+ "312": {
+  "question": "I weave without a loom, and the flies are my only customers.",
+  "answer": "spider",
+  "aliases": []
+ },
+ "313": {
+  "question": "I am a deep hole where women gather to talk, and buckets rise from my dark belly.",
+  "answer": "well",
+  "aliases": []
+ },
+ "314": {
+  "question": "A herald blows me before the king appears. I am made of brass and noise.",
+  "answer": "trumpet",
+  "aliases": [
+   "horn"
+  ]
+ },
+ "315": {
+  "question": "Each of my links holds the next, and I am only as strong as the weakest.",
+  "answer": "chain",
+  "aliases": []
+ },
+ "316": {
+  "question": "A knight speaks me once and keeps me longer than his life. The coward breaks me.",
+  "answer": "oath",
+  "aliases": [
+   "vow"
+  ]
+ },
+ "317": {
+  "question": "I carry you into battle and need no sword, yet I wear iron shoes.",
+  "answer": "horse",
+  "aliases": [
+   "steed"
+  ]
+ },
+ "318": {
+  "question": "I give light on the way through the dungeon. One gust of wind and I am gone.",
+  "answer": "torch",
+  "aliases": []
  }
 }

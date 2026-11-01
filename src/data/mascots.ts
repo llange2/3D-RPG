@@ -37,7 +37,7 @@ export const isSolidSpotItem = (shown: number): boolean => shown !== 0 && shown 
 export const MASCOT_ASK: Record<string, string> = {
   Crow: "The crow is sitting on its bird perch. Quickly her head moves to the left, then slowly back at you. This intelligent creature certainly is aware of its environment and its dangers.\nAllow the crow to follow you?",
   Orb: "The orb hovers in the forest, emitting a soothing glow. You feel a magical aura coming from it. Although you are not quite sure what “it” actually is, it seems it is willing to help you.\nTry to have the orb follow you?",
-  Fairy: "A smile appears, when the fairy sees you. “My heroes, my saviors, you returned. Let me join you and I will use my abilities to increase your elemental resistances.”\nAccept the fairy’s offer?",
+  Fairy: "A smile appears, when the fairy sees you. “You look fun. Let me join you and I will use my abilities to increase your elemental resistances.”\nAccept the fairy’s offer?",
   Wolf: "The majestic wolf looks you right into your eyes and you keep a respectful distance. You are fully aware of the its fighting strength.\nInvite the wolf into your party to fight alongside you?",
   Donkey: "This has got to be the friendliest donkey, you have ever seen. He gently nudges his head against you and lets you pet him. He also does not seem to mind carrying things around.\nAdopt this pet into your group?",
 };

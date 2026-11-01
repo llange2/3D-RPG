@@ -56,12 +56,53 @@ DROP = {
     185: "same question as #162",
     159: "same question as #133 (piano or keyboard)",
     105: "same riddle as #3",
+    # 40th playtest, point 11: the game is set in the Middle Ages (castles, swords, magic), so what did not exist then is out
+    26: "anachronism: the piano (the riddle is about keys and time)",
+    30: "anachronism: iced tea",
+    69: "anachronism: a watch with hands",
+    80: "anachronism: the pencil (the answer was graphite)",
+    104: "anachronism: the postage stamp",
+    107: "anachronism: tea and the teapot",
+    109: "anachronism: the piano",
+    133: "anachronism: the computer keyboard",
+    136: "anachronism: the postage stamp",
+    150: "anachronism: the envelope",
+    156: "anachronism: the telephone ('What has a ring but no finger?')",
+    167: "anachronism: the postage stamp",
+    169: "anachronism: tea and the teapot",
+    173: "anachronism: the doughnut",
+    174: "anachronism: the umbrella",
+    182: "anachronism: the chalkboard",
+    187: "anachronism: the computer keyboard",
+    188: "anachronism: the telephone",
+    218: "anachronism: the password",
+}
+
+# Added in their place (40th playtest, point 11): riddles of the Middle Ages, written for the game. One word each, not in the question.
+ADD = {
+    301: ("I stand still while others strike me, and from my back come swords and shoes for horses.", "anvil", []),
+    302: ("I hang in the tower and speak only when struck. I call the faithful, and I warn the town of fire.", "bell", []),
+    303: ("Strung without a bow, I am plucked by the minstrel, and I sing at the king's table.", "harp", []),
+    304: ("I am a feather that never flies. Dipped in ink, I write the laws of the king.", "quill", []),
+    305: ("I am a ring of water that no ship sails, and I keep the enemies of the castle wet.", "moat", []),
+    306: ("I stand open for friends and shut for foes, and the watchman holds my lock.", "gate", []),
+    307: ("I take the blows meant for another and wear the colours of my lord.", "shield", []),
+    308: ("The baker makes me, the beggar prays for me, and the king breaks me with his guests.", "bread", []),
+    309: ("I hoard what I cannot spend and sleep on a bed of gold. Brave men come, few return.", "dragon", ["wyrm"]),
+    310: ("Heavy is the head that wears me, yet many fight to carry me.", "crown", []),
+    311: ("I have teeth but never bite. The jailer carries me on an iron ring.", "key", []),
+    312: ("I weave without a loom, and the flies are my only customers.", "spider", []),
+    313: ("I am a deep hole where women gather to talk, and buckets rise from my dark belly.", "well", []),
+    314: ("A herald blows me before the king appears. I am made of brass and noise.", "trumpet", ["horn"]),
+    315: ("Each of my links holds the next, and I am only as strong as the weakest.", "chain", []),
+    316: ("A knight speaks me once and keeps me longer than his life. The coward breaks me.", "oath", ["vow"]),
+    317: ("I carry you into battle and need no sword, yet I wear iron shoes.", "horse", ["steed"]),
+    318: ("I give light on the way through the dungeon. One gust of wind and I am gone.", "torch", []),
 }
 
 # Fixed: the answer becomes one word; the old wording stays an accepted alias.
 FIX = {
     57: ("chest", ["treasure chest"]),
-    80: ("graphite", ["pencil lead", "lead", "pencil"]),
     93: ("ring", ["wedding ring"]),
     141: ("cards", ["deck of cards", "deck"]),
     144: ("ball", ["tennis ball"]),
@@ -70,7 +111,6 @@ FIX = {
 # Words that mean the same to the player. Every group is accepted for every riddle whose answer is in it.
 SYNONYMS = [
     ["clock", "watch"],
-    ["piano", "keyboard"],
     ["coin", "penny", "money"],
     ["fire", "flame"],
     ["man", "human", "person", "mankind"],
@@ -119,6 +159,12 @@ def main() -> None:
         if n in FIX:
             answer, aliases = FIX[n]
         kept[n] = {"question": r["question"].strip(), "answer": answer, "aliases": aliases}
+    for n, (question, answer, aliases) in ADD.items():
+        if n in kept or str(n) in src:
+            sys.exit(f"added riddle #{n} clashes with the document")
+        if answer in question.lower():
+            sys.exit(f"added riddle #{n}: the answer stands in the question")
+        kept[n] = {"question": question, "answer": answer, "aliases": aliases}
 
     # cap the number of riddles that share an answer: keep the lowest numbers (the later "I am ..." riddles are the vaguer ones)
     capped: dict[int, str] = {}
@@ -140,7 +186,8 @@ def main() -> None:
         r["aliases"] = sorted(set(r["aliases"] + extra))
 
     out = {str(n): kept[n] for n in sorted(kept)}
-    OUT.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    # CRLF on every system, as the file has been committed (a text write would depend on the system)
+    OUT.write_bytes((json.dumps(out, indent=1, ensure_ascii=False) + "\n").replace("\n", "\r\n").encode("utf-8"))
 
     answers = Counter(r["answer"] for r in kept.values())
     by_len = Counter(len(r["answer"]) for r in kept.values())
@@ -160,6 +207,8 @@ def main() -> None:
     lines += [f"- #{n}: {why}" for n, why in sorted({**DROP, **capped}.items())]
     lines += ["", "## Repariert (neue Antwort, alte bleibt als Alias)", ""]
     lines += [f"- #{n}: `{a}` (Alias: {', '.join(al)})" for n, (a, al) in sorted(FIX.items())]
+    lines += ["", "## Hinzugefügt (Rätsel des Mittelalters, 40. Playtest)", ""]
+    lines += [f"- #{n}: `{a}`" for n, (_, a, _al) in sorted(ADD.items())]
     lines += ["", "## Länge der Antworten", ""]
     lines += [f"- {k} Buchstaben: {v}" for k, v in sorted(by_len.items())]
     REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")

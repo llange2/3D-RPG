@@ -78,7 +78,8 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     hands ? h("div", { text: HANDS_LABEL[hands] }) : null,
     // the item type is a technical word of the old tables ("crossbow", "silver_skull"): the player gets what it is worth, or that it is a quest item
     h("div", { text: item.quest ? "Quest item" : `Worth: ${thousands(item.value)} gold` }),
-    ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null)),
+    // 40th playtest, point 9: up to 14 lines (a ring against a ring with other stats) run in two columns, so that the window stays a size that fits the screen
+    h("div", { class: `bonus-lines${lines.length > 6 ? " many" : ""}` }, ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null))),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
     c && !allowed ? h("div", { class: "small", style: "color:#e8745f", text: `A ${c.classType} cannot use this.` }) : null,
     shieldBlocked ? h("div", { class: "small", style: "color:#e8745f", text: "Not with a two-handed weapon in the weapon hand." }) : null,
@@ -119,7 +120,7 @@ export const MASCOTS: Record<string, { portrait: string; full?: string; text: st
   // BALANCE v4: the texts of Wolf, Fairy and Orb follow the numbers in sim/balance.ts (v4: 10%, 30 points, 20% spell damage)
   Wolf: { portrait: "npc02", text: `Fights alongside the party: a monster that drops below ${Math.round(wolfBelow() * 100)}% of its health is killed by the wolf.` },
   Donkey: { portrait: "npc03", full: "npc03_full", text: "Carries a backpack of 20 slots. Whatever the heroes cannot hold goes to the Donkey." },
-  Fairy: { portrait: "npc04", full: "npc04_full", text: `Takes ${fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION)} points off every elemental hit (fire, ice, acid and magic) that reaches a hero.` },
+  Fairy: { portrait: "npc04", text: `Takes ${fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION)} points off every elemental hit (fire, ice, acid and magic) that reaches a hero.` },
   Orb: {
     portrait: "npc05",
     text: orbSpellBonus() > 0
@@ -551,7 +552,7 @@ export async function pickCaster(ui: UI, party: Party, heroes: number[], aimed: 
 }
 
 /** The portraits of the heroes as buttons (36th playtest, point 15): the pick of who drinks from a chalice, a well or a barrel. No names, no bars; the name is the mouse-over. */
-export function pickHeroPortrait(ui: UI, party: Party, question: string, canPick: (c: Character) => boolean): Promise<number | null> {
+export function pickHeroPortrait(ui: UI, party: Party, question: string, canPick: (c: Character) => boolean, hpBar = false): Promise<number | null> {
   return ui.modal<number | null>(
     (close) =>
       h(
@@ -561,8 +562,14 @@ export function pickHeroPortrait(ui: UI, party: Party, question: string, canPick
         h(
           "div",
           { class: "caster-row" },
+          // 40th playtest, point 10: every choice of a hero shows the portraits; where it is about healing, the red bar of the hit points sits under each
           ...party.characters.map((c, i) =>
-            h("button", { class: `hero-btn${canPick(c) ? "" : " off"}`, title: c.name, onclick: () => canPick(c) && close(i) }, portraitImage(c, "portrait caster-portrait")),
+            h(
+              "button",
+              { class: `hero-btn${canPick(c) ? "" : " off"}`, title: hpBar ? `${c.name}: ${c.hp} / ${c.health} HP` : c.name, onclick: () => canPick(c) && close(i) },
+              portraitImage(c, "portrait caster-portrait"),
+              hpBar ? h("div", { class: "bar hp" }, h("i", { style: `width:${c.health > 0 ? Math.max(0, Math.min(100, Math.round((c.hp * 100) / c.health))) : 0}%` })) : null,
+            ),
           ),
         ),
         h("div", { class: "buttons" }, h("button", { class: "btn", text: "Back", onclick: () => close(null) })),
@@ -669,7 +676,8 @@ export async function askSpellDetails(ui: UI, party: Party, spellId: number): Pr
     choice.beacon = beacon;
   }
   if (needsTarget(spellId)) {
-    const target = await ui.choose(ITEM_SPELLS.has(spellId) ? "Whose backpack?" : "On whom?", "", party.characters.map((ch, i) => ({ label: ch.name, value: i, note: `${ch.hp}/${ch.health} HP, ${ch.conditions.join(", ")}` })));
+    const backpack = ITEM_SPELLS.has(spellId);
+    const target = await pickHeroPortrait(ui, party, backpack ? "Whose backpack?" : "On whom?", () => true, !backpack);
     if (target === null) return null;
     choice.target = target;
   }

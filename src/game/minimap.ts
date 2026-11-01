@@ -351,7 +351,8 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
   const half = Math.floor(cells / 2);
   const mx = view?.x ?? px;
   const my = view?.y ?? py;
-  if (icons) icons.gridMin = view ? BIG_MAP_GRID_MIN : 0;
+  // 40th playtest, point 5: the maps of places keep the dark lines between the cells however far the map is zoomed out; only the overworld drops them (`drawOverworldMap`)
+  if (icons) icons.gridMin = 0;
   const key = `in:${map.key}`;
   content = knownContent(content, opened, eye);
   ctx.fillStyle = "#0a0705";

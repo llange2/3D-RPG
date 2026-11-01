@@ -28,7 +28,7 @@ import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { ITEM_LAMPS, LOOT_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
+import { ITEM_LAMPS, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, registryFile, takeResume } from "../render/modelSet";
@@ -43,6 +43,7 @@ import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, itemModelKey, itemProp } from "../render/itemProps";
 import { addCondition, canAct, recalcValues, xpToNextLevel } from "../sim/character";
+import { onThievery, thieveryEntries, thieverySummary } from "../sim/thieveryLog";
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
 import { monsterById } from "../sim/combat";
@@ -299,6 +300,8 @@ export class Game {
   private lamps: LampSource[] = [];
   /** The gold light of every pile of loot on the map (`renderLoot`). */
   private lootLamps: LampSource[] = [];
+  /** The gold light of the wild Magical Orbs of the generated world (`syncMascots`); the campaign's come with `collectLamps`. */
+  private mascotLamps: LampSource[] = [];
   /** The lights of the pool (`Renderer.lamps`) and the lamp each one holds now, with how bright it is (0 to 1). */
   private lampSlots: { lamp: LampSource | null; level: number }[] = [];
   /** Whether the lamp pool also serves the monsters that glow (`MONSTER_GLOW`): in the interiors of generated places. */
@@ -429,8 +432,31 @@ export class Game {
     return true;
   }
 
+  /**
+   * TEMPORARY (40th playtest, point 7, `sim/thieveryLog.ts`): every lock the party tries goes to the log of the game, to the console and to the browser storage (`mm3-thievery-log`),
+   * and `window.__thievery` hands over the entries and the sums, so the real chance of the thievery roll can be read off a playthrough (the aim is 80 % for an ordinary chest).
+   */
+  private watchThievery(): void {
+    const pct = (n: number) => `${Math.round(n)}%`;
+    onThievery((e, all) => {
+      const mine = thieverySummary(e.kind);
+      this.ui.log(
+        `Thievery (${e.kind}, tier ${e.tier}, lock ${e.difficulty}): ${e.success ? "picked" : "failed"}. Best roll ${e.best}, chance ${pct(e.chance * 100)} (${e.heroes.map((r) => `${r.name} ${r.classType} L${r.level}: up to ${r.skill}`).join("; ")}). All ${e.kind}s so far: ${mine.attempts}, expected ${pct(mine.expected)}, actual ${pct(mine.actual)}.`,
+        e.success ? "good" : "info",
+      );
+      console.info("[thievery]", JSON.stringify(e), JSON.stringify(all));
+      try {
+        localStorage.setItem("mm3-thievery-log", JSON.stringify({ summary: all, chests: thieverySummary("chest"), entries: thieveryEntries.slice(-300) }));
+      } catch {
+        // storage may be blocked; the console and `window.__thievery` still have it
+      }
+    });
+    (window as unknown as { __thievery: unknown }).__thievery = { entries: thieveryEntries, summary: thieverySummary, clear: () => thieveryEntries.splice(0) };
+  }
+
   /** Shows the title screen and starts or continues a game. */
   async start(defaultSeed: string): Promise<void> {
+    this.watchThievery();
     this.mode = "title";
     this.ui.setHudVisible(false);
     this.audio.setAmbient(new Map());
@@ -1475,10 +1501,7 @@ export class Game {
       ui: {
         message: (text) => ui.message(text),
         confirm: (text) => ui.confirm("", text, "Yes", "No"),
-        pickCharacter: async (question, includeIncapacitated = false) => {
-          const options = state.party.characters.map((c, i) => ({ label: c.name, value: i, note: `${c.hp}/${c.health} HP`, disabled: !includeIncapacitated && !canAct(c) }));
-          return ui.choose("", question, options);
-        },
+        pickCharacter: (question, includeIncapacitated = false) => pickHeroPortrait(ui, state.party, question, (c) => includeIncapacitated || canAct(c), true),
         askText: (question) => ui.prompt(question),
         pickPortal: (title, options) => ui.choose(title, "", options),
         sound: (id) => this.audio.play(id),
@@ -1681,10 +1704,12 @@ export class Game {
     if (sig === this.mascotShown) return;
     this.mascotShown = sig;
     const list: PropInstance[] = [];
+    const glows: LampSource[] = [];
     for (const s of spots) {
       const shown = mascotSpotItem(s.item, this.state.party.mascot);
       if (!shown) continue;
       const w = this.worldPos(s.x, s.y);
+      if (shown === 10) glows.push(lampSource(MASCOT_ORB_LAMP, w.x, w.z, `${MASCOT_ORB_KEY}${s.x},${s.y}`));
       // compass bearing towards the tile it faces (0 north), the same convention as the old map's item rotation
       const bearing = (Math.atan2(s.faceX - s.x, s.y - s.faceY) * 180) / Math.PI;
       const inst = itemProp(shown, (bearing + 360) % 360, w.x, w.z, this.staticInfo);
@@ -1694,6 +1719,8 @@ export class Game {
     }
     this.props.setInstances("mascots", list);
     this.props.flush();
+    this.mascotLamps = glows;
+    this.enableLampLights();
   }
 
   // ---------------------------------------------------------------- monster huts
@@ -4456,7 +4483,7 @@ export class Game {
       const lamp = c.i === undefined ? undefined : LAMPS[c.i];
       if (!lamp) continue;
       const l = model.toLocal(x, y);
-      out.push(lampSource(lamp, cellCenterX(l.x), cellCenterZ(l.y)));
+      out.push(lampSource(lamp, cellCenterX(l.x), cellCenterZ(l.y), c.i === 10 ? `${MASCOT_ORB_KEY}${x},${y}` : undefined));
     }
     return out;
   }
@@ -4471,7 +4498,7 @@ export class Game {
   }
 
   private enableLampLights(): void {
-    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0;
+    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.mascotLamps.length > 0;
     for (const light of this.r.lamps) light.setEnabled(on);
   }
 
@@ -4481,7 +4508,7 @@ export class Game {
    * the free light and then fades in, instead of one popping off and the other on in a single frame. By day outside they add nothing; underground and at night they do.
    */
   private updateLamps(dt: number): void {
-    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0) return;
+    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
     const { x, z } = this.player;
@@ -4489,7 +4516,10 @@ export class Game {
     const carried: LampSource[] = this.glowMonsters
       ? this.monsters.glowing(this.glowModels).map((g) => ({ ...MONSTER_GLOW.get(g.defId)!, x: g.x, y: g.y, z: g.z, key: `m:${g.uid}` }))
       : [];
-    const near = [...this.lamps, ...this.lootLamps, ...carried]
+    // the Orb in the party is no longer at its place: its lamp goes out with it
+    const orbAway = this.state.party.mascot === "Orb";
+    const near = [...this.lamps, ...this.lootLamps, ...this.mascotLamps, ...carried]
+      .filter((lamp) => !(orbAway && lamp.key.startsWith(MASCOT_ORB_KEY)))
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
       .filter((e) => e.d < LAMP_REACH)
       .sort((a, b) => a.d - b.d)
@@ -4526,7 +4556,9 @@ export class Game {
       light.position.set(lamp.x, lamp.y, lamp.z);
       light.diffuse.set(lamp.color[0], lamp.color[1], lamp.color[2]);
       light.range = lamp.range ?? LAMP_RANGE;
-      light.intensity = (lamp.intensity ?? LAMP_INTENSITY) * need * slot.level;
+      // the mascot orb keeps a share of its light by day, so that the gold glow shows in the forest as well
+      const share = lamp.key.startsWith(MASCOT_ORB_KEY) ? Math.max(need, 0.4) : need;
+      light.intensity = (lamp.intensity ?? LAMP_INTENSITY) * share * slot.level;
     });
   }
 

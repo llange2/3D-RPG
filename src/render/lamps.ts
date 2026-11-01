@@ -1,4 +1,4 @@
-import { gongsStruck } from "../actions/quests";
+import { gongRuneActive } from "../actions/quests";
 import { heapGone } from "../actions/registry";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
@@ -41,6 +41,10 @@ export const RUNES_LAMP: LampKind = { y: 0.6, color: [0.5, 0.8, 1], range: 4.5, 
 export const PORTAL_LAMP: LampKind = { y: 1.5, color: [0.45, 0.55, 1], range: 6, intensity: 3 };
 /** What is worth taking glows gold (32nd playtest, point 3): the orb a little stronger than the keys, the heap of treasure, and the loot a monster leaves (point 14). */
 export const ORB_LAMP: LampKind = { y: 1.0, color: [1, 0.8, 0.3], range: 5.5, intensity: 3 };
+/** The Magical Orb mascot (item 10) waiting for the party glows gold, clearly stronger than the orb of ultimate power (40th playtest, point 2). */
+export const MASCOT_ORB_LAMP: LampKind = { y: 1.2, color: [1, 0.78, 0.25], range: 9, intensity: 5 };
+/** Prefix of the key of the mascot orb's lamp: it goes out while the Orb is the party's mascot (`Game.updateLamps`). */
+export const MASCOT_ORB_KEY = "mo:";
 export const GOLD_LAMP: LampKind = { y: 0.9, color: [1, 0.8, 0.3], range: 4.5, intensity: 2.2 };
 export const LOOT_LAMP: LampKind = { y: 0.6, color: [1, 0.8, 0.3], range: 4, intensity: 1.9 };
 /** The computer terminal of the spaceship glows blue (point 4). */
@@ -60,6 +64,7 @@ export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
   73: RUNES_LAMP,
   3: PORTAL_LAMP,
   109: ORB_LAMP,
+  10: MASCOT_ORB_LAMP, // Mascot: Magical Orb (the campaign's maps; the generated world adds it in `Game.syncMascots`)
   4: GOLD_LAMP, // heap of treasure
   ...Object.fromEntries([17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 65, 66, 122, 123, 124].map((item) => [item, GOLD_LAMP])), // quest keys and key cards
   68: COMPUTER_LAMP,
@@ -113,8 +118,7 @@ export function crystalLamps(content: MapContent, opened: ReadonlySet<string> = 
     // the runes of quest 3 are not there before the last gong rings, and the middle of the field of quest 1 stays bare (Tomb of Aldena 61/51 glowed with nothing to see)
     if (a.kind === "rune") {
       if (a.params.need !== "gongs") continue;
-      const gongs = gongsStruck(content, opened);
-      if (gongs.total === 0 || gongs.done < gongs.total) continue;
+      if (!gongRuneActive(a, content, opened)) continue;
     }
     const element = elementOf(a);
     const item = element !== null ? TRAP_OBJECT[element] : shownItem(a);

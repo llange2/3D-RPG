@@ -81,18 +81,21 @@ describe("quest 3: the gongs", () => {
     const { content } = questInterior("quest_3", "cave_2", 2, 2);
     const { use } = play(content);
     const gongs = of(content, "gong");
-    const rune = of(content, "rune")[0]!;
+    // 40th playtest, point 6: every gong has runes of its own; only those round the gong struck last lead to the end room
+    const runes = of(content, "rune");
     expect([4, 5]).toContain(gongs.length);
-    expect(opensEnd(use(rune))).toBe(false);
+    expect(runes.length).toBe(gongs.length);
+    for (const r of runes) expect(opensEnd(use(r))).toBe(false);
     gongs.forEach((g, i) => {
       const out = use(g);
       // (a gong is struck again and again since the 35th playtest: it is done by its uid in the set, not by being consumed)
       expect(out.consumed).toBe(false);
       expect(out.state?.add).toContain(g.uid);
       expect(out.effects.some((e) => e.type === "ambush")).toBe(true);
-      if (i < gongs.length - 1) expect(opensEnd(use(rune))).toBe(false);
+      if (i < gongs.length - 1) for (const r of runes) expect(opensEnd(use(r))).toBe(false);
     });
-    expect(opensEnd(use(rune))).toBe(true);
+    const last = gongs[gongs.length - 1]!;
+    for (const r of runes) expect(opensEnd(use(r))).toBe(r.params.after === last.uid);
   });
 });
 

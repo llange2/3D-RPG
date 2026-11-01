@@ -246,6 +246,11 @@ html.loading-on #game-cursor { display: none; }
 .charscreen .slot .item-icon { width: 46px; height: 46px; }
 .charscreen .tooltip { min-height: 70px; margin-top: 8px; padding: 6px 10px; }
 .charscreen .row-btns { margin-top: 6px; }
+/* 40th playtest, point 9: the window of a hero has one size. The tallest state (a ring against a ring with other stats, 14 lines in two columns, and the six buttons of the Donkey's party)
+   measured 549 px for the right-hand column (tools/dev/check-playtest40.ts); the window then is 654 px high at most */
+.charscreen .cols > .gear { min-height: 550px; }
+.tooltip .bonus-lines.many { columns: 2; column-gap: 16px; }
+.tooltip .bonus-lines.many > div { break-inside: avoid; }
 .perks-view { display: flex; flex-direction: column; gap: 8px; }
 .party-stats { display: grid; grid-template-columns: auto auto; gap: 2px 18px; justify-content: start; font-size: 17px; padding-bottom: 6px; border-bottom: 1px solid var(--gold-dim); }
 .party-stats .v { color: var(--gold); }
@@ -367,7 +372,8 @@ img.portrait.caster-portrait { width: 110px; height: 110px; object-fit: cover; b
 .caster-spell.off { cursor: default; filter: grayscale(0.85) brightness(0.7); }
 .plate-button { display: flex; align-items: center; justify-content: center; padding: 0 0 6% 0; border: 0; background-color: transparent; background-repeat: no-repeat; background-size: 100% 100%; cursor: pointer; color: #3b2208; font: 700 17px var(--font-head); transition: transform 0.08s, filter 0.08s; }
 .plate-button:hover { transform: scale(1.04); filter: brightness(1.08) drop-shadow(0 0 4px #fff8); }
-.hero-btn { padding: 0; border: 0; background: none; cursor: pointer; transition: transform 0.08s, filter 0.08s; }
+.hero-btn { padding: 0; border: 0; background: none; cursor: pointer; transition: transform 0.08s, filter 0.08s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.hero-btn .bar { width: 100%; margin-top: 0; }
 .hero-btn:hover:not(.off) img.portrait { border-color: var(--gold); }
 .hero-btn:hover:not(.off) { transform: scale(1.05); }
 .hero-btn.off { cursor: default; opacity: 0.4; filter: grayscale(0.7); }

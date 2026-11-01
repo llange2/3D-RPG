@@ -319,8 +319,13 @@ export { addCondition, removeCondition } from "./conditions";
 
 /** Thievery roll: random between a third of the skill and the full skill (port of get_thievery_roll_value). */
 export function thieveryRoll(c: Character, rng: Rng): number {
-  const skill = Math.max(1, Math.floor(((attr(c, "lck") + attr(c, "acc")) / 2 + c.thievery) * c.level * 0.1));
+  const skill = thieverySkill(c);
   return rng.range(Math.floor(skill / 3), skill);
+}
+
+/** The top of a hero's thievery roll (the roll lies between a third of it and all of it). */
+export function thieverySkill(c: Character): number {
+  return Math.max(1, Math.floor(((attr(c, "lck") + attr(c, "acc")) / 2 + c.thievery) * c.level * 0.1));
 }
 
 // ---------------------------------------------------------------- equipment

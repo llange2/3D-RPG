@@ -4,7 +4,7 @@ import { allowedIn, type Place } from "../data/item-rules";
 import { letterHints } from "../data/letter-hints";
 import { RIDDLES_WORLD, WORD_RIDDLES } from "../data/riddles";
 import { placeOf } from "../interiors/place";
-import type { InteriorMap } from "../interiors/types";
+import { CELL, type InteriorMap } from "../interiors/types";
 import type { AnchorSet } from "./anchors";
 import { doorCell, fillEndRoom } from "./endRoom";
 import { themeMonsters } from "./monsterPool";
@@ -336,13 +336,42 @@ function gongs(env: QuestEnv, rng: Rng): QuestResult {
       }
     }
   }
-  // the runes appear in the middle of the place when the last gong has sounded: the floor cell nearest to the middle of the floor
-  const floor: { x: number; y: number }[] = [];
-  for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) if (env.free(x, y)) floor.push({ x, y });
-  const mid = floor.length > 0 ? { x: Math.round(floor.reduce((s, c) => s + c.x, 0) / floor.length), y: Math.round(floor.reduce((s, c) => s + c.y, 0) / floor.length) } : { x: map.width >> 1, y: map.height >> 1 };
-  const rune = [...floor].sort((a, b) => Math.abs(a.x - mid.x) + Math.abs(a.y - mid.y) - (Math.abs(b.x - mid.x) + Math.abs(b.y - mid.y)) || a.y - b.y || a.x - b.x).find((c) => env.place({ uid: env.uid("rune"), kind: "rune", x: c.x, y: c.y, params: { need: "gongs", item: 73 } }));
-  void rune;
+  // 40th playtest, point 6: the runes appear round the gong that sounds last, within three fields of it (the middle of the place was hard to find). Which gong that is
+  // depends on the order the party strikes them in, so every gong has runes of its own; the game shows only those of the gong that came last (`finalGong`).
+  for (const gong of placed) placeRunes(env, gong);
   return {};
+}
+
+/** How far from its gong the runes may lie, in steps over the floor. */
+export const RUNE_REACH = 3;
+
+/**
+ * Puts the runes of one gong on a floor cell within `RUNE_REACH` steps of it: two steps away first (the cell in front of the gong is where the party stands to strike it),
+ * then three, then one. A gong that has no free cell in reach takes the nearest one further out, so that the quest can always be finished.
+ */
+function placeRunes(env: QuestEnv, gong: ActionInstance): void {
+  const { map } = env;
+  const at = (x: number, y: number) => y * map.width + x;
+  const depth = new Map<number, number>([[at(gong.x, gong.y), 0]]);
+  const queue = [{ x: gong.x, y: gong.y }];
+  for (let i = 0; i < queue.length; i++) {
+    const c = queue[i]!;
+    const d = depth.get(at(c.x, c.y))!;
+    if (d >= 8) continue;
+    for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]] as const) {
+      const x = c.x + dx;
+      const y = c.y + dy;
+      if (x < 0 || y < 0 || x >= map.width || y >= map.height || depth.has(at(x, y)) || map.cells[at(x, y)] !== CELL.FLOOR) continue;
+      depth.set(at(x, y), d + 1);
+      queue.push({ x, y });
+    }
+  }
+  // the order of preference by distance: 2, 3, 1, then outwards
+  const rank = (d: number) => (d === 2 ? 0 : d === 3 ? 1 : d === 1 ? 2 : d);
+  const spots = queue
+    .filter((c) => (depth.get(at(c.x, c.y)) ?? 0) > 0 && env.free(c.x, c.y))
+    .sort((a, b) => rank(depth.get(at(a.x, a.y))!) - rank(depth.get(at(b.x, b.y))!) || a.y - b.y || a.x - b.x);
+  for (const s of spots) if (env.place({ uid: env.uid("rune"), kind: "rune", x: s.x, y: s.y, params: { need: "gongs", item: 73, after: gong.uid } })) return;
 }
 
 // ---------------------------------------------------------------- quest 4: calculations
