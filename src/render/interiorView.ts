@@ -17,6 +17,7 @@ import { CELL_SIZE, cellCenterX, cellCenterZ, cellX, cellZ, meshInterior, modelF
 import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
+import { GlowLines } from "./glowLines";
 import { FLAT_Z_OFFSET, flatTileMaterial } from "./materials";
 import type { PropRenderer } from "./props";
 import type { PropInstance } from "./terrainMesher";
@@ -132,6 +133,8 @@ export class InteriorView {
   private materials = new Map<string, StandardMaterial>();
   private readonly doors: InteriorDoors;
   private readonly traps: InteriorTraps;
+  /** Lines of light over the floor (so far only the debug showcase has them). */
+  private readonly glow: GlowLines;
   private owner = "";
   private map: InteriorMap | null = null;
   private content: MapContent | null = null;
@@ -162,6 +165,7 @@ export class InteriorView {
   ) {
     this.doors = new InteriorDoors(props, staticInfo);
     this.traps = new InteriorTraps(props, staticInfo);
+    this.glow = new GlowLines(r.scene);
   }
 
   private styleMaterial(key: string, map: InteriorMap): StandardMaterial {
@@ -235,6 +239,7 @@ export class InteriorView {
     this.buildObjects();
     this.doors.show(map, content, opened, this.owner);
     this.pushCastleGate();
+    this.glow.show(map.showcase?.lines ?? []);
   }
 
   /** The gate of a generated castle stands on the exit cell, its slab on the edge towards the wall behind it (where the other places have a door texture). */
@@ -785,6 +790,7 @@ export class InteriorView {
     this.multi?.dispose(false, false);
     this.doors.dispose();
     this.traps.dispose();
+    this.glow.dispose();
     this.mesh = null;
     this.multi = null;
     this.owner = "";

@@ -4,6 +4,7 @@
  *     shared; disposing them with the first dead monster turned all the others white or black.
  *  2. An interior shows its own theme's textures after another interior was visited (the material cache is per theme).
  *  3. Nothing of a campaign map stays in the world when a generated game starts afterwards.
+ *  4. The light lines of the debug showcase flow, and their meshes, materials and pictures are gone after leaving.
  *
  * Usage: tsx tools/dev/check-render.ts [url]      (default http://localhost:5173/)
  */
@@ -65,6 +66,22 @@ const PAGE_CHECKS = `(async () => {
   for (const [key, model] of props.models) {
     for (const [owner, buf] of model.buffers) if (buf.length > 0 && owner === "campaign") problems.push("campaign prop " + key + " is still drawn in the generated world");
   }
+
+  // ---- 4. light lines over the floor (the debug showcase): meshes, materials and pictures are the lines' own and go with them
+  const glowing = () => ["meshes", "materials", "textures"].map((k) => g.scene[k].filter((x) => x.name.startsWith("glow-line")).length);
+  await g.enter("showcase");
+  await sleep(500);
+  const shown = glowing();
+  if (shown.some((n) => n < 4)) problems.push("the showcase shows fewer than 4 light lines: " + shown.join("/"));
+  const picture = g.scene.textures.find((t) => t.name.startsWith("glow-line"));
+  const u0 = picture ? picture.uOffset : 0;
+  // the scene is slow here (monsters of check 1 are still standing), so give it a few frames
+  for (let i = 0; i < 15 && picture && picture.uOffset === u0; i++) await sleep(200);
+  if (picture && picture.uOffset === u0) problems.push("the light lines do not flow");
+  await g.leave();
+  await sleep(500);
+  const left = glowing();
+  if (left.some((n) => n !== 0)) problems.push("light lines stay behind after leaving the showcase: " + left.join("/"));
   return problems;
 })();`;
 
