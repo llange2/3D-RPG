@@ -286,7 +286,7 @@ export const TALENTS: Record<string, TalentDef> = Object.fromEntries(
 
 /** Names and descriptions of talents whose old text no longer says what they do (the Pathfinder spotted hidden items, now it travels faster). */
 const TALENT_TEXTS: Record<string, { name: string; description: string }> = {
-  talent_cave_explorer: { name: "Cave Explorer", description: "Knows how to find the way through caves." },
+  talent_cave_explorer: { name: "Cave Explorer", description: "Senses hidden walls in caves: within three fields of a brittle wall, one of the heroes notices that the rock is hollow." },
   talent_pathfinder: { name: "Pathfinder", description: "Pathfinding will help you to travel faster: in the open country a step takes 7 minutes instead of 10." },
   talent_arms_master: { name: "Arms master", description: "Allows the heroes to wield obsidian weapons and wear obsidian armor." },
   talent_body_builder: { name: "Body Builder", description: "Increases your health points: every hero gets 1 more for each character level." },
