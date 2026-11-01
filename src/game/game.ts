@@ -86,7 +86,8 @@ import { emptyContainerLine, propLine } from "../data/prop-texts";
 import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
-import { SKULL_MISER_MET, clueFlag, lockSeenFlag, placeSegments, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
+import { CAVE_EXPLORER, SENSE_STEPS, pickOf, senseFlag, senseLine, wallsSensed } from "./caveSense";
+import { SKULL_MISER_MET,clueFlag, lockSeenFlag, placeSegments, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
 import { overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
@@ -1198,7 +1199,40 @@ export class Game {
       const place = this.world.poiAtEntrance(x, y);
       if (place) await this.promptEnterPoi(place.id);
     }
-    if (this.mode === "interior" && !this.enc.battleMode) await this.noticeBrittleWall(x, y);
+    if (this.mode === "interior" && !this.enc.battleMode) {
+      await this.senseBrittleWalls(x, y);
+      await this.noticeBrittleWall(x, y);
+    }
+  }
+
+  /**
+   * The Cave Explorer talent (43rd playtest, follow-up): in a cave, a party that comes within three fields of a brittle wall stops, one of the heroes says that something
+   * is hollow close by, and the player confirms. Once per wall (`senseFlag`); the hero and the words depend on the wall, so a save shows the same every time.
+   */
+  private async senseBrittleWalls(x: number, y: number): Promise<void> {
+    const rt = this.interior;
+    if (!rt || rt.campaign || rt.map.kind !== "cave" || this.over || this.busy || !this.state.party.talents.includes(CAVE_EXPLORER)) return;
+    const near: ActionInstance[] = [];
+    for (let dy = -SENSE_STEPS; dy <= SENSE_STEPS; dy++) {
+      for (let dx = -SENSE_STEPS; dx <= SENSE_STEPS; dx++) {
+        const cx = x + dx;
+        const cy = y + dy;
+        if (cx < 0 || cy < 0 || cx >= rt.map.width || cy >= rt.map.height) continue;
+        const a = rt.actionAt.get(this.cellIndex(cx, cy));
+        if (a?.kind === "breakable_wall" && !this.state.broken.has(a.uid) && !this.state.opened.has(senseFlag(a.uid))) near.push(a);
+      }
+    }
+    const { map } = rt;
+    const sensed = wallsSensed(x, y, near, (cx, cy) => cx >= 0 && cy >= 0 && cx < map.width && cy < map.height && map.cells[cy * map.width + cx] === CELL.FLOOR);
+    const wall = near.find((a) => sensed.some((w) => w.x === a.x && w.y === a.y));
+    if (!wall) return;
+    this.state.opened.add(senseFlag(wall.uid));
+    const heroes = activeCharacters(this.state.party).map((i) => this.state.party.characters[i]!);
+    const hero = heroes[pickOf(`${wall.uid}:hero`) % Math.max(1, heroes.length)];
+    if (!hero) return;
+    this.player.locked = true;
+    await this.ui.message(senseLine(hero.name, pickOf(wall.uid)), rt.poi.name);
+    this.player.locked = false;
   }
 
   /** A step takes ten minutes in the open country (the overworld and the campaign's outside map), one in towns, castles, dungeons and caves. */
