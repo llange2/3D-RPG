@@ -25,7 +25,12 @@ export interface CaravanSpot {
   y: number;
   faceX: number;
   faceY: number;
+  /** Drawn as the cottage (`obj_cottage`) instead of the rustic caravan: every third wagon of a town, the same stall in another house. */
+  cottage: boolean;
 }
+
+/** One in this many caravans is a cottage. */
+export const COTTAGE_EVERY = 3;
 
 /**
  * How far from the town's entrance a caravan stands, as (nearest ring, farthest ring, free neighbours it needs): in sight of the town, not
@@ -52,7 +57,11 @@ export function caravansOf(world: World, place: Poi): CaravanSpot[] {
   if (cached) return cached;
   const front = world.frontOf(town);
   const out: CaravanSpot[] = [];
+  // the three wagons of Starthaven's tier are one cottage and two caravans; the towns with a single wagon draw it by their id
+  const cottageAt = rngFor(world.rootSeed, LAYER.POI, "cottage", town.id).int(COTTAGE_EVERY);
+  let index = -1;
   for (const talent of talents) {
+    index++;
     const rng = rngFor(world.rootSeed, LAYER.POI, "caravan", town.id, talent);
     let spot: CaravanSpot | null = null;
     for (const [from, to, needRoom] of SEARCH) {
@@ -67,7 +76,7 @@ export function caravansOf(world: World, place: Poi): CaravanSpot[] {
           let room = 0;
           for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) if (world.tile(x + dx, y + dy).ground === GROUND.LAND && world.tile(x + dx, y + dy).deco === DECO.NONE) room++;
           if (room < needRoom) continue;
-          spot = { id: `caravan:${town.id}:${talent}`, town: town.id, talent, x, y, faceX: front.x, faceY: front.y };
+          spot = { id: `caravan:${town.id}:${talent}`, town: town.id, talent, x, y, faceX: front.x, faceY: front.y, cottage: (index + cottageAt) % COTTAGE_EVERY === 0 };
           break;
         }
       }

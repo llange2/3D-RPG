@@ -17,6 +17,15 @@ export const WIDTH_FACTOR: Readonly<Record<string, number>> = { "26": 0.85 };
  */
 export const GROUNDED_ITEMS: ReadonlySet<number> = new Set([8, 16, 26, 42, 102]);
 
+/**
+ * The cottage (`obj_cottage`, the user's model) stands in the place of every third rustic caravan, and of every third caravan landmark of the open country. The file is
+ * normalised to a bit under one unit (0.84 x 0.95 x 0.92), the caravan's to 1.9: the scale makes it a house about as wide as the wagon.
+ */
+export const COTTAGE_MODEL = "obj_cottage";
+export const COTTAGE_SCALE = 3.2;
+/** Degrees to turn the cottage about the vertical axis so that its door looks the way a caravan faces (the model is made facing another way than the wagon). */
+export const COTTAGE_YAW = 90;
+
 type Pose = { scale3: [number, number, number] };
 
 /** The old item models with the corrections applied. Every renderer of the old items (campaign, landmarks, caravans) reads these. */

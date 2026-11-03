@@ -56,9 +56,9 @@ describe("what each place draws in 3D", () => {
     expect(environmentModels(map("dungeon"), "floor").sort()).toEqual(["blk_dungeon_ceiling", "blk_floor"]);
     expect(environmentModels(map("cave"), "floor")).toEqual(["blk_cave_ceiling"]);
     expect(environmentModels(map("town"), "floor")).toEqual(["blk_city_floor"]);
-    // the castle lies under the open sky and its floor has no model: only its wall does
-    expect(environmentModels(map("castle"), "floor")).toEqual([]);
-    expect(environmentModels(map("castle"), "full")).toEqual(["blk_fortress_wall"]);
+    // the castle lies under the open sky: its floor has a model, its wall a piece (Full 3D), and it has no ceiling
+    expect(environmentModels(map("castle"), "floor")).toEqual(["blk_fortress_floor"]);
+    expect(environmentModels(map("castle"), "full").sort()).toEqual(["blk_fortress_floor", "blk_fortress_wall"]);
     // the dungeon's, the cave's and the town's walls have no piece of their own
     expect(environmentModels(map("dungeon"), "full").sort()).toEqual(["blk_dungeon_ceiling", "blk_floor"]);
   });
@@ -105,7 +105,7 @@ describe("what each place draws in 3D", () => {
   });
 });
 
-describe("the models of the user (.ignore/3D Models)", () => {
+describe("the models of the user (tools/assets/sources/models)", () => {
   const registry = (file: string) => JSON.parse(readFileSync(join(PUBLIC, file), "utf-8")) as Record<string, { tris: number; bounds: number[]; fromObj: boolean }>;
   const built = existsSync(join(PUBLIC, "models.static.json")) && existsSync(join(PUBLIC, "models.static.original.json"));
   const size = (b: number[]) => ({ w: b[3]! - b[0]!, h: b[4]! - b[1]!, d: b[5]! - b[2]! });
@@ -113,12 +113,13 @@ describe("the models of the user (.ignore/3D Models)", () => {
   it.runIf(built)("lie down as slabs, one cell wide, and the wall piece stands up (both sets)", () => {
     for (const file of ["models.static.json", "models.static.original.json"]) {
       const r = registry(file);
-      for (const key of ["blk_city_floor", "blk_dungeon_ceiling", "blk_cave_ceiling"]) {
+      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_dungeon_ceiling", "blk_cave_ceiling", "blk_cyber_ceiling"]) {
         const s = size(r[key]!.bounds);
-        expect(s.w, `${file} ${key}`).toBeGreaterThan(1.8);
-        expect(s.d, `${file} ${key}`).toBeGreaterThan(1.8);
-        // the relief is a fraction of the width: a slab that stood on its edge would be 1.9 high
-        expect(s.h, `${file} ${key}`).toBeLessThan(0.5);
+        // the files are normalised to 1.9 (floors, most ceilings) or to half of it (the spaceship's ceiling): the game scales a slab to the cell by its bounds
+        expect(s.w, `${file} ${key}`).toBeGreaterThan(0.9);
+        expect(Math.abs(s.w - s.d), `${file} ${key}`).toBeLessThan(0.1 * s.w);
+        // the relief is a fraction of the width: a slab that stood on its edge would be as high as it is wide
+        expect(s.h, `${file} ${key}`).toBeLessThan(0.3 * s.w);
       }
       const wall = size(r["blk_fortress_wall"]!.bounds);
       expect(wall.h).toBeGreaterThan(wall.w);
@@ -129,10 +130,14 @@ describe("the models of the user (.ignore/3D Models)", () => {
     }
   });
 
-  it.runIf(built)("replace the old village and lantern, in the generated world and in the campaign", () => {
+  it.runIf(built)("replace the old village, castle and lantern, in the generated world and in the campaign", () => {
     for (const file of ["models.static.json", "models.static.original.json"]) {
       const r = registry(file);
-      for (const key of ["poi_town", "ci_47", "obj_lantern", "ci_76"]) expect(r[key]!.fromObj, `${file} ${key}`).toBe(false);
+      for (const key of ["poi_town", "ci_47", "poi_castle", "ci_44", "obj_lantern", "ci_76"]) expect(r[key]!.fromObj, `${file} ${key}`).toBe(false);
+      // the castle is about as big as the old one (1.85 x 1.5 x 1.85)
+      const castle = size(r["poi_castle"]!.bounds);
+      expect(Math.max(castle.w, castle.d)).toBeGreaterThan(1.7);
+      expect(Math.max(castle.w, castle.d)).toBeLessThan(2.1);
       // the village stays about as big as the old one (1.7 x 1.25 x 1.9), the lantern as high (2.0)
       const village = size(r["poi_town"]!.bounds);
       expect(Math.max(village.w, village.d)).toBeGreaterThan(1.7);

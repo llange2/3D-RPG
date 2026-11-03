@@ -51,6 +51,8 @@ const TILE_LIFT = 0.012;
 const CEILING_GAP = 0.01;
 /** The tiles are cut to the cell and a little over, so that no seam of the background shows between two of them. */
 const TILE_OVERLAP = 1.004;
+/** How far a wall piece stands out of its wall, in world units (the old piece was 0.175 thick: the banners and the gate were set for that). */
+const PANEL_DEPTH = 0.175;
 /** Yaw of a wall piece in front of its wall: the piece is turned so that its front, the side with the relief, looks into the cell. */
 const PANEL_YAW = 0;
 
@@ -465,19 +467,26 @@ export class InteriorView {
       if (Math.abs(p.x - at.x) > near || Math.abs(p.y - at.y) > near) continue;
       const b = this.staticInfo[p.model]?.bounds;
       if (!b) continue;
-      // the piece is 1.37 wide, 1.90 high and 0.08 thick: stretched to the cell's width and the wall's height (the pieces keep their proportions)
-      const sx = CELL_SIZE / (b[3] - b[0]);
+      // the piece is about 0.7 wide, 0.95 high and 0.08 thick: stretched to the cell's width and the wall's height (the pieces keep their proportions), and pressed to `PANEL_DEPTH`
+      // whatever its own relief (the banners hang a hand's breadth from the wall; a deeper piece cut through them). An end that closes a corner reaches over the notch (`WallPanel.grow`)
+      const thick = PANEL_DEPTH;
+      const sx = (CELL_SIZE + thick * p.grow.length) / (b[3] - b[0]);
       const sy = height / (b[4] - b[1]);
-      const thick = (b[5] - b[2]) * sx;
+      const sz = thick / (b[5] - b[2]);
       // the face looks into the cell: its normal is the opposite of the direction of the wall
       const d = FACING_DELTA[p.dir];
       const nx = -d.dx;
       const nz = d.dy;
       const half = CELL_SIZE / 2;
       // the middle of the wall face (on the edge of the cell), moved into the cell by half the piece's thickness: its back lies on the wall
-      const cx = cellCenterX(p.x) - nx * half + nx * thick * 0.5;
-      const cz = cellCenterZ(p.y) - nz * half + nz * thick * 0.5;
-      list.push({ model: p.model, x: cx, y: -b[1] * sy, z: cz, rotY: Math.atan2(nx, nz) + PANEL_YAW, scale: sx, scaleXYZ: [sx, sy, sx], atOrigin: true });
+      let cx = cellCenterX(p.x) - nx * half + nx * thick * 0.5;
+      let cz = cellCenterZ(p.y) - nz * half + nz * thick * 0.5;
+      // the grown ends move the middle of the piece along the wall by half of what they grow
+      for (const side of p.grow) {
+        cx += FACING_DELTA[side].dx * thick * 0.5;
+        cz -= FACING_DELTA[side].dy * thick * 0.5;
+      }
+      list.push({ model: p.model, x: cx, y: -b[1] * sy, z: cz, rotY: Math.atan2(nx, nz) + PANEL_YAW, scale: sx, scaleXYZ: [sx, sy, sz], atOrigin: true });
     }
     this.props.setInstances(owner, list);
     this.props.flush();
@@ -619,6 +628,11 @@ export class InteriorView {
         }
       }
       if (themed) {
+        // a banner or a carving hangs a hand's breadth from the flat wall: with the 3D wall pieces on it stands out of the wall by their depth too, or their stones cut through the cloth
+        if (this.panelList.length > 0 && WALL_HUNG.has(shownItem(a) ?? -1)) {
+          themed.x += Math.sin(themed.rotY) * PANEL_DEPTH;
+          themed.z += Math.cos(themed.rotY) * PANEL_DEPTH;
+        }
         (a.kind === "treasure" && typeof a.params.chest === "number" && SPINNING_ITEMS.has(a.params.chest) ? this.spinners : instances).push(themed);
         continue;
       }

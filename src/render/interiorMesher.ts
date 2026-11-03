@@ -49,7 +49,14 @@ export interface WallPanel {
   /** Direction of the wall seen from the cell (the face looks the other way, into the cell). */
   dir: Facing;
   model: string;
+  /**
+   * The ends of the piece (E or W; only on pieces of a wall that runs east to west) that grow by the piece's thickness: there the wall ends in a corner that sticks out into open ground, and the
+   * piece on the side of that corner leaves a notch of its thickness unless this one reaches over it.
+   */
+  grow: Facing[];
 }
+
+const OPPOSITE: Record<Facing, Facing> = { N: "S", S: "N", E: "W", W: "E" };
 
 /** Texture of a plain floor cell (a pit, a floorless cell and everything that is not floor have none). */
 function floorTextureAt(map: InteriorMap, cx: number, cy: number): string | null {
@@ -200,6 +207,7 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
 
   // door niches of town buildings: the cell behind the doorway gets the door texture
   const doorFaces = new Set<string>();
+  let gateFace: string | null = null;
   for (const lot of map.lots) {
     const [dx, dy] = [FACING_DELTA[lot.door.facing].dx, FACING_DELTA[lot.door.facing].dy];
     doorFaces.add(`${lot.door.x - dx},${lot.door.y - dy}|${lot.door.x},${lot.door.y}`);
@@ -209,8 +217,10 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
     // niche in the city wall, so the wall lies outside the map), the door of a dungeon, a castle, a cave or a cyber complex
     const dx = map.exit.x - map.spawn.x;
     const dy = map.exit.y - map.spawn.y;
-    // a generated castle has the Castle Gate model there instead (`InteriorView.pushCastleGate`)
-    if (!map.castle || styles) doorFaces.add(`${map.exit.x + dx},${map.exit.y + dy}|${map.exit.x},${map.exit.y}`);
+    // a generated castle has the Castle Gate model there instead (`InteriorView.pushCastleGate`), and no wall piece in front of it: the piece hid the gate's door
+    const face = `${map.exit.x + dx},${map.exit.y + dy}|${map.exit.x},${map.exit.y}`;
+    if (!map.castle || styles) doorFaces.add(face);
+    else gateFace = face;
   }
 
   for (let cy = 0; cy < map.height; cy++) {
@@ -279,8 +289,8 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
         } else if (doorFaces.has(`${nx},${ny}|${cx},${cy}`)) material = "door";
         else if (kind === CELL.BUILDING) material = "building";
         else if (cracked.has(`${nx},${ny}`)) material = "wall_cracked";
-        const panel = options.models ? wallModelOfMaterial(map, material) : undefined;
-        if (panel && options.models!.has(panel)) panels.push({ x: cx, y: cy, dir, model: panel });
+        const panel = options.models && `${nx},${ny}|${cx},${cy}` !== gateFace ? wallModelOfMaterial(map, material) : undefined;
+        if (panel && options.models!.has(panel)) panels.push({ x: cx, y: cy, dir, model: panel, grow: [] });
         const b = bucket(material, cx, cy);
         const s = shade * (dir === "N" || dir === "S" ? 1 : 0.93);
         const a = b.vertex([bl[0], 0, bl[1]], n, [0, 0], s);
@@ -355,6 +365,18 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
     vCount += buckets.get(k)!.positions.length / 3;
     iCount += buckets.get(k)!.indices.length;
   }
+  // the corners of the pieces: where a wall ends in a corner that sticks out into open ground (the floor cell `c` beside the piece and the cell beyond the wall end are both floor, and that wall
+  // face has a piece too), the piece of the wall running east to west reaches over the notch the two pieces would leave (their thickness is what lies between their ends)
+  const placed = new Set(panels.map((p) => `${p.x},${p.y},${p.dir}`));
+  for (const p of panels) {
+    if (p.dir !== "N" && p.dir !== "S") continue;
+    const d = FACING_DELTA[p.dir];
+    for (const side of ["E", "W"] as const) {
+      const e = FACING_DELTA[side];
+      if (cellAt(p.x + e.dx, p.y + e.dy) === CELL.FLOOR && placed.has(`${p.x + d.dx + e.dx},${p.y + d.dy + e.dy},${OPPOSITE[side]}`)) p.grow.push(side);
+    }
+  }
+
   const out: InteriorGeometry = {
     positions: new Float32Array(vCount * 3),
     normals: new Float32Array(vCount * 3),

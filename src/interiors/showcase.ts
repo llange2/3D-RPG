@@ -17,10 +17,16 @@ import type { InteriorMap, LightLine, ShowcaseLayout } from "./types";
 export const SHOWCASE_ID = "showcase";
 export const SHOWCASE_NAME = "Showcase: all monsters and objects";
 
-/** Models of the interior view that no old item stands for: the fountain of a town and its statue. */
+/**
+ * Models that no old item stands for: the fountain of a town and its statue (the interior view's), the cottage that takes the place of a third of the caravans and the pirate ship
+ * (the overworld's, the user's own models; they are loaded for the showcase only: `OVERWORLD_EXTRAS`).
+ */
+export const OVERWORLD_EXTRAS = ["obj_cottage", "obj_pirate_ship"] as const;
 export const SHOWCASE_EXTRAS: readonly { model: string; scale: number }[] = [
   { model: "obj_fountain", scale: 1.3 },
   { model: "obj_statue", scale: 1.15 },
+  { model: "obj_cottage", scale: 3.2 },
+  { model: "obj_pirate_ship", scale: 2.4 },
 ];
 
 /** Places, huge buildings and the like get a wide slot of their own (the pyramid is the largest). */

@@ -1,5 +1,6 @@
 import { hash2, valueNoise2 } from "../core/noise";
-import { tunedItemModels } from "../data/item-tuning";
+import { COTTAGE_MODEL, COTTAGE_SCALE, tunedItemModels } from "../data/item-tuning";
+import { CARAVAN_ITEM, COTTAGE_EVERY } from "../world/caravans";
 import { BIOME, CHUNK_SIZE, DECO, GROUND, TILE_SIZE, isTileWalkable, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
 import { poiFront, type PoiSide, type World } from "../world/world";
 import { flatTerrainOf, type FlatTileSet } from "./flatGround";
@@ -119,11 +120,15 @@ const LANDMARKS: readonly { item: number; weight: number }[] = [
   { item: 2, weight: 1 }, // Fountain
 ];
 const LANDMARK_TOTAL = LANDMARKS.reduce((n, l) => n + l.weight, 0);
-export const LANDMARK_MODELS = LANDMARKS.map((l) => `ci_${l.item}`);
+export const LANDMARK_MODELS = [...LANDMARKS.map((l) => `ci_${l.item}`), COTTAGE_MODEL];
+
+/** Every third rustic caravan of the open country is the cottage (the same landmark, item 26, in another house). */
+const landmarkIsCottage = (h: number): boolean => (h >>> 9) % COTTAGE_EVERY === 0;
 
 function landmarkSpec(h: number): PropSpec {
   let k = (h >>> 3) % LANDMARK_TOTAL;
   const pick = LANDMARKS.find((l) => (k -= l.weight) < 0)!;
+  if (pick.item === CARAVAN_ITEM && landmarkIsCottage(h)) return { model: COTTAGE_MODEL, scale: COTTAGE_SCALE };
   const pose = ITEM_POSES[String(pick.item)]!;
   return { model: `ci_${pick.item}`, scale: pose.scale, scaleXYZ: pose.scale3 };
 }

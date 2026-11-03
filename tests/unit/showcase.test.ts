@@ -3,7 +3,7 @@ import { buildMapContent } from "../../src/actions";
 import { PERSONAS } from "../../src/data/personas";
 import { MONSTERS } from "../../src/data/tables";
 import { generateInterior, SHOWCASE_ID, CELL } from "../../src/interiors";
-import { SHOWCASE_EXTRAS, showcaseItems } from "../../src/interiors/showcase";
+import { OVERWORLD_EXTRAS, SHOWCASE_EXTRAS, showcaseItems } from "../../src/interiors/showcase";
 import { cellsOfLine } from "../../src/render/glowLineGeometry";
 import { INTERIOR_MODELS } from "../../src/render/interiorView";
 import { ITEM_LAMPS, MONSTER_LAMPS } from "../../src/render/lamps";
@@ -54,7 +54,8 @@ describe("the debug showcase", () => {
     const signs = INTERIOR_MODELS.filter((m) => m.startsWith("obj_sign_"));
     expect(signs).toHaveLength(7);
     const rest = INTERIOR_MODELS.filter((m) => !shownByItems.has(m) && !m.startsWith("obj_sign_"));
-    expect(rest.sort()).toEqual(SHOWCASE_EXTRAS.map((e) => e.model).sort());
+    // the cottage and the pirate ship belong to the overworld: the showcase loads them itself (`OVERWORLD_EXTRAS`)
+    expect([...rest, ...OVERWORLD_EXTRAS].sort()).toEqual(SHOWCASE_EXTRAS.map((e) => e.model).sort());
     expect(showcase.extras.map((e) => e.model).sort()).toEqual(SHOWCASE_EXTRAS.map((e) => e.model).sort());
   });
 
