@@ -1,6 +1,7 @@
 import { hash2 } from "../core/noise";
 import { coveredFaces, roundCorners } from "../interiors/roundCorners";
 import { CELL, FACING_DELTA, type Facing, type InteriorKind, type InteriorMap } from "../interiors/types";
+import { ceilingModelOfTexture, floorModelOfTexture, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
 import { campaignGroundOf, resolveCorner, type CampaignGround, type FlatTileSet } from "./flatGround";
 
 /** Geometry of an interior, grouped by (material, 16x16 section) so the engine can cull sections individually. */
@@ -16,10 +17,14 @@ export interface InteriorGeometry {
    */
   groups: { material: string; section: number; start: number; count: number }[];
   wallHeight: number;
+  /** The wall faces that have a 3D wall piece in front of them (`options.models` has the model); the flat face stays behind as the far view. */
+  panels: WallPanel[];
 }
 
 export const CELL_SIZE = 3;
 const SECTION = 16;
+/** No 3D model is wanted: the default of `meshInterior`. */
+const NO_MODELS: ReadonlySet<string> = new Set();
 /** How much of the water texture one campaign cell covers (a texture per two cells); the endless world's water runs at a third of that, see `WATER_UV_SCALE`. */
 const WATER_CELL_UV = 0.5;
 /** How far the painted ground tiles of a campaign map lie above its floor quads (the material also pulls them forward, `FLAT_Z_OFFSET`). */
@@ -37,26 +42,116 @@ export function wallHeightOf(map: InteriorMap): number {
   return WALL_HEIGHT[map.kind];
 }
 
-/** Texture of the dungeon floor; a floor cell with it can be drawn by the 3D floor model (`blk_floor`) instead of a flat quad. */
-const DUNGEON_FLOOR = "tex_dungeon_floor";
-
-/**
- * Does the 3D floor model replace the flat floor quad of this cell? Only the dungeon's own floor has such a model (the old
- * `Dungeon floor and ceiling.glb`); caves, fortresses, cyber maps and towns keep their textures. A pit is its own floor.
- */
-export function hasModelFloor(map: InteriorMap, cx: number, cy: number): boolean {
-  const i = cy * map.width + cx;
-  if (map.cells[i] !== CELL.FLOOR) return false;
-  if (!map.styles) return map.theme.floor === DUNGEON_FLOOR;
-  const style = map.styles.list[map.styles.cell[i]!];
-  return !!style && style.cls === "floor" && !style.floorless && style.floor === `tex/${DUNGEON_FLOOR}`;
+/** A wall face that a 3D wall piece is drawn in front of: the cell it belongs to, the side the wall lies on and the model. */
+export interface WallPanel {
+  x: number;
+  y: number;
+  /** Direction of the wall seen from the cell (the face looks the other way, into the cell). */
+  dir: Facing;
+  model: string;
 }
 
-/** Floor cells (grid indices) the 3D floor model covers; `holes` (open pits) have no floor at all. */
-export function modelFloorCells(map: InteriorMap, holes: ReadonlySet<number> = new Set()): number[] {
+/** Texture of a plain floor cell (a pit, a floorless cell and everything that is not floor have none). */
+function floorTextureAt(map: InteriorMap, cx: number, cy: number): string | null {
+  const i = cy * map.width + cx;
+  if (map.cells[i] !== CELL.FLOOR) return null;
+  if (!map.styles) return map.theme.floor;
+  const style = map.styles.list[map.styles.cell[i]!];
+  return style && style.cls === "floor" && !style.floorless ? (style.floor ?? null) : null;
+}
+
+/** The 3D floor model of this cell's floor, if its texture has one (`FLOOR_MODELS`): the old dungeon cobble, the city's tiles. */
+export function floorModelAt(map: InteriorMap, cx: number, cy: number): string | null {
+  return floorModelOfTexture(floorTextureAt(map, cx, cy))?.model ?? null;
+}
+
+/**
+ * Does a 3D floor model take the place of the flat floor quad of this cell? Only a floor with a model of its own ground does (the old `Dungeon floor
+ * and ceiling.glb`); the city's tiles lie over the quad. Caves, fortresses and cyber maps keep their textures. A pit is its own floor.
+ */
+export function hasModelFloor(map: InteriorMap, cx: number, cy: number, models?: ReadonlySet<string>): boolean {
+  const floor = floorModelOfTexture(floorTextureAt(map, cx, cy));
+  return !!floor && floor.replacesQuad && (!models || models.has(floor.model));
+}
+
+/** Floor cells (grid indices) a 3D floor model covers; `holes` (open pits) have no floor at all. `models` are the ones that are loaded and wanted (all, if left out). */
+export function modelFloorCells(map: InteriorMap, holes: ReadonlySet<number> = new Set(), models?: ReadonlySet<string>): number[] {
   const out: number[] = [];
-  for (let cy = 0; cy < map.height; cy++) for (let cx = 0; cx < map.width; cx++) if (hasModelFloor(map, cx, cy) && !holes.has(cy * map.width + cx)) out.push(cy * map.width + cx);
+  for (let cy = 0; cy < map.height; cy++) {
+    for (let cx = 0; cx < map.width; cx++) {
+      const model = floorModelAt(map, cx, cy);
+      if (model && (!models || models.has(model)) && !holes.has(cy * map.width + cx)) out.push(cy * map.width + cx);
+    }
+  }
   return out;
+}
+
+/** The 3D ceiling model over this cell, if it has a ceiling and its texture has a model (`CEILING_MODELS`). */
+export function ceilingModelAt(map: InteriorMap, cx: number, cy: number): string | null {
+  const i = cy * map.width + cx;
+  if (map.cells[i] !== CELL.FLOOR) return null;
+  if (!map.styles) return ceilingModelOfTexture(map.theme.ceiling) ?? null;
+  const style = map.styles.list[map.styles.cell[i]!];
+  return style && style.cls === "floor" && style.ceiling ? (ceilingModelOfTexture(style.ceiling) ?? null) : null;
+}
+
+/** Cells (grid indices) under a 3D ceiling model. */
+export function modelCeilingCells(map: InteriorMap, models?: ReadonlySet<string>): number[] {
+  const out: number[] = [];
+  for (let cy = 0; cy < map.height; cy++) {
+    for (let cx = 0; cx < map.width; cx++) {
+      const model = ceilingModelAt(map, cx, cy);
+      if (model && (!models || models.has(model))) out.push(cy * map.width + cx);
+    }
+  }
+  return out;
+}
+
+/** The 3D wall piece for a wall material of the mesh (`wall` of a generated map, `wall:<style>` of a campaign map), if its texture has one. */
+function wallModelOfMaterial(map: InteriorMap, material: string): string | undefined {
+  if (material === "wall") return map.styles ? undefined : wallModelOfTexture(map.theme.wall);
+  if (!material.startsWith("wall:") || !map.styles) return undefined;
+  return wallModelOfTexture(map.styles.list[Number(material.slice(5))]?.wall);
+}
+
+/**
+ * Every model the environment draws on this map, by the textures the map uses: loaded with the others before the first frame (a dungeon needs no city
+ * floor). The flat environment draws none.
+ */
+export function environmentModels(map: InteriorMap, environment: Environment): string[] {
+  if (environment === "flat") return [];
+  const floors = new Set<string | null | undefined>();
+  const ceilings = new Set<string | null | undefined>();
+  const walls = new Set<string | null | undefined>();
+  if (map.styles) {
+    for (const style of map.styles.list) {
+      if (style.cls === "floor" && !style.floorless) {
+        floors.add(style.floor);
+        ceilings.add(style.ceiling);
+      }
+      if (style.cls === "wall") walls.add(style.wall);
+    }
+  } else {
+    floors.add(map.theme.floor);
+    ceilings.add(map.theme.ceiling);
+    walls.add(map.theme.wall);
+  }
+  const keys = new Set<string>();
+  for (const f of floors) {
+    const m = floorModelOfTexture(f);
+    if (m) keys.add(m.model);
+  }
+  for (const c of ceilings) {
+    const m = ceilingModelOfTexture(c);
+    if (m) keys.add(m);
+  }
+  if (hasWallModels(environment)) {
+    for (const w of walls) {
+      const m = wallModelOfTexture(w);
+      if (m) keys.add(m);
+    }
+  }
+  return [...keys];
 }
 
 /** World position of the west/north edge of a cell. x grows east, z grows north (so z = -cellY * 3). */
@@ -85,12 +180,13 @@ class Bucket {
  * thousand quads. `cracked` lists wall cells (as `x,y`) that hide a breakable wall and get the cracked texture. `holes` are
  * grid indices of floor cells without a floor: the open pits of a generated map, which the pit model fills.
  */
-export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(), options: { modelFloor?: boolean; holes?: ReadonlySet<number>; modelWalls?: boolean; roundWalls?: boolean; flatTiles?: FlatTileSet } = {}): InteriorGeometry {
+export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(), options: { models?: ReadonlySet<string>; holes?: ReadonlySet<number>; modelWalls?: boolean; roundWalls?: boolean; flatTiles?: FlatTileSet } = {}): InteriorGeometry {
   const H = wallHeightOf(map);
   // the rounded corners of the spaceship are models that stand where the wall faces would be (`interiors/roundCorners.ts`)
   const corners = options.roundWalls ? roundCorners(map) : [];
   const covered = coveredFaces(corners);
   const w = map.width;
+  const panels: WallPanel[] = [];
   const buckets = new Map<string, Bucket>(); // key = `${material}|${section}`
   const bucket = (material: string, cx: number, cy: number) => {
     const section = Math.floor(cy / SECTION) * 100 + Math.floor(cx / SECTION);
@@ -131,7 +227,7 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
       const shade = isWater ? 1 : 0.94 + (((hash2(0x77, cx, cy) >>> 6) % 100) / 100) * 0.1;
 
       // floor: facing up (front face order checked in the browser, same as the terrain)
-      if (!(styles && styles.list[style]!.floorless) && !options.holes?.has(cy * w + cx) && !(options.modelFloor && hasModelFloor(map, cx, cy))) {
+      if (!(styles && styles.list[style]!.floorless) && !options.holes?.has(cy * w + cx) && !hasModelFloor(map, cx, cy, options.models ?? NO_MODELS)) {
         const f = bucket(styles ? `floor:${style}` : "floor", cx, cy);
         // water is one sheet: its texture runs on from cell to cell, scaled by the UVs (the texture is shared with the
         // overworld's water and keeps its own scale), where a cell of any other floor shows the whole texture
@@ -183,6 +279,8 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
         } else if (doorFaces.has(`${nx},${ny}|${cx},${cy}`)) material = "door";
         else if (kind === CELL.BUILDING) material = "building";
         else if (cracked.has(`${nx},${ny}`)) material = "wall_cracked";
+        const panel = options.models ? wallModelOfMaterial(map, material) : undefined;
+        if (panel && options.models!.has(panel)) panels.push({ x: cx, y: cy, dir, model: panel });
         const b = bucket(material, cx, cy);
         const s = shade * (dir === "N" || dir === "S" ? 1 : 0.93);
         const a = b.vertex([bl[0], 0, bl[1]], n, [0, 0], s);
@@ -265,6 +363,7 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
     indices: new Uint32Array(iCount),
     groups: [],
     wallHeight: H,
+    panels,
   };
   let v = 0;
   let ii = 0;

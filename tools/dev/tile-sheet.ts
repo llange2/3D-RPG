@@ -79,8 +79,8 @@ const browser = await puppeteer.launch({
 try {
   for (const mode of modes) {
     const page = await browser.newPage();
-    // the setting is read at start: floorModel true = 3D ground, false = painted tiles
-    await page.evaluateOnNewDocument((v: string) => localStorage.setItem("mm3-seed-rpg:settings:v1", v), JSON.stringify({ floorModel: mode === "3d" }));
+    // the setting is read at start: environment "floor" = 3D ground, "flat" = painted tiles
+    await page.evaluateOnNewDocument((v: string) => localStorage.setItem("mm3-seed-rpg:settings:v1", v), JSON.stringify({ environment: mode === "3d" ? "floor" : "flat" }));
     await page.goto(`${base}?autostart=1&seed=${seed}`, { waitUntil: "load", timeout: 60000 });
     await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
     await new Promise((r) => setTimeout(r, 5000));

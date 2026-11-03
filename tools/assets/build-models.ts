@@ -18,12 +18,26 @@ import { PERSONAS, personaModelId } from "../../src/data/personas";
 import { OLD, OUT, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
 
 const OBJ_DIR = join(OLD, "objects");
+/** The user's own models (floors, ceilings, a wall, the village, the lantern), made after the old game: not part of `old_code`. */
+const NEW_DIR = join(ROOT, ".ignore", "3D Models");
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+
+/** `new:` in front of a source names a file of the user's own models folder, anything else lies in the old game's objects. */
+const NEW_PREFIX = "new:";
+const sourcePath = (source: string): string => (source.startsWith(NEW_PREFIX) ? join(NEW_DIR, source.slice(NEW_PREFIX.length)) : join(OBJ_DIR, source));
 
 export interface ModelSpec {
   key: string;
-  /** Path relative to resources/objects (without folder prefix for the objects root). */
+  /** Path relative to resources/objects (without folder prefix for the objects root), or `new:<file>` in the user's models folder (`.ignore/3D Models`). */
   source: string;
+  /**
+   * Turns the model about the x axis (degrees) before anything else. The slabs of the user's floors and ceilings come out of the modelling tool
+   * standing upright (the thin side along z); +90 lays one down with its z side facing down (a ceiling, whose relief hangs into the room), -90 with
+   * its z side facing up (a floor).
+   */
+  rotateX?: number;
+  /** Turns the model about the vertical axis (degrees), for a model that was made facing another way than the old one. */
+  rotateY?: number;
   maxTris: number;
   texSize: number;
   /** Keep skins and animations (monsters, NPCs). */
@@ -179,6 +193,15 @@ function triCount(doc: Document): number {
 async function processDoc(doc: Document, spec: ModelSpec, profile: ModelProfile): Promise<void> {
   doc.setLogger(new Logger(Logger.Verbosity.WARN));
   for (const node of doc.getRoot().listNodes()) if (spec.drop?.includes(node.getName())) node.dispose();
+  if (spec.rotateX || spec.rotateY) {
+    // a rotation on the nodes that hang directly under the scene: the geometry stays as it is, bounds and ground top read the world matrix
+    const half = (deg: number) => [Math.sin((deg * Math.PI) / 360), Math.cos((deg * Math.PI) / 360)] as const;
+    const [sx, cx] = half(spec.rotateX ?? 0);
+    const [sy, cy] = half(spec.rotateY ?? 0);
+    // qy * qx: first about x, then about the vertical axis
+    const q: [number, number, number, number] = [cy * sx, sy * cx, -sy * sx, cy * cx];
+    for (const scene of doc.getRoot().listScenes()) for (const node of scene.listChildren()) node.setRotation(q);
+  }
   if (spec.heightfield) heightfieldDoc(doc, spec.heightfield.cells, spec.heightfield.uvSpan);
   doc.createExtension(EXTTextureWebP).setRequired(false);
   // flat matte look: drop normal, roughness, occlusion and emissive maps, keep the colour
@@ -498,7 +521,7 @@ function computeNormals(doc: Document, mode: "flat" | "smooth" | "crease"): void
 }
 
 export async function buildModel(spec: ModelSpec, profile: ModelProfile = "reduced"): Promise<ModelInfo | null> {
-  const src = join(OBJ_DIR, spec.source);
+  const src = sourcePath(spec.source);
   if (!existsSync(src)) {
     console.warn(`  missing source: ${spec.source}`);
     return null;
@@ -557,6 +580,15 @@ function pruneStale(keys: Set<string>, profile: ModelProfile): void {
 const S = (key: string, source: string, maxTris: number, texSize = 512, animated = false): ModelSpec => ({ key, source, maxTris, texSize, animated });
 
 /** Map decorations of the hand-built campaign: one model per item id of the old ITEMS table (see export_item_models.py). */
+/**
+ * Items of the old table whose model the user has replaced by one of their own (`.ignore/3D Models`): the Village (47) and the Rustic lantern (76),
+ * which the generated world uses as `poi_town` and `obj_lantern` too. `rotateY` turns the new model to face as the old one did.
+ */
+const REPLACED_ITEMS: Record<number, Pick<ModelSpec, "source" | "rotateY">> = {
+  47: { source: "new:Village (poi_town).glb" },
+  76: { source: "new:Rustic lantern (obj_lantern).glb" },
+};
+
 function campaignItemModels(): ModelSpec[] {
   const path = join(ROOT, "src", "data", "item-models.json");
   if (!existsSync(path)) return [];
@@ -570,7 +602,7 @@ function campaignItemModels(): ModelSpec[] {
     const big = [26, 41, 42, 43, 44, 45, 47, 101, 102].includes(n);
     const closeUp = [2, 6, 27, 28, 29, 30, 33, 34, 61, 95].includes(n);
     // the bone pile (70) keeps its 10 000 triangles: its texture is a baked atlas, any simplification (even to 3000) shatters it
-    const spec = S(`ci_${n}`, item.source, n === 70 ? 10000 : closeUp ? 3000 : big ? 1800 : 800, big || closeUp ? 512 : 256);
+    const spec = { ...S(`ci_${n}`, item.source, n === 70 ? 10000 : closeUp ? 3000 : big ? 1800 : 800, big || closeUp ? 512 : 256), ...REPLACED_ITEMS[n] };
     // the rounded corners of the spaceship: their .mtl points at a path on the author's disk (the outer one at the dungeon ceiling by mistake); both wear the cyber wall
     specs.push(n === 84 || n === 85 ? { ...spec, texture: "textures/tex_cyber_wall.jpg" } : spec);
   }
@@ -581,7 +613,7 @@ function campaignItemModels(): ModelSpec[] {
 export const STATIC_MODELS: ModelSpec[] = [
   // points of interest seen from the overworld
   { ...S("poi_castle", "Castle.obj", 9000, 1024), normals: "smooth" },
-  { ...S("poi_town", "Village.obj", 9000, 1024), normals: "smooth" },
+  { ...S("poi_town", "new:Village (poi_town).glb", 9000, 1024), normals: "smooth", ...REPLACED_ITEMS[47] },
   S("poi_hut", "Hut.obj", 1200),
   S("poi_pyramid", "Pyramid.obj", 900),
   S("poi_dungeon", "Dungeon entrance.obj", 1200),
@@ -631,7 +663,7 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_altar", "Amethyst altar.obj", 900, 256),
   S("obj_fountain", "Fountain.obj", 1200, 256),
   S("obj_gravestone", "Gravestone.obj", 400, 256),
-  S("obj_lantern", "Rustic lantern.obj", 400, 256),
+  { ...S("obj_lantern", "new:Rustic lantern (obj_lantern).glb", 400, 256), ...REPLACED_ITEMS[76] },
   S("obj_barrel", "Wooden_barrel.obj", 400, 256),
   S("obj_statue", "Statue.obj", 900, 256),
   S("obj_throne", "Evil throne.obj", 900, 256),
@@ -673,6 +705,14 @@ export const STATIC_MODELS: ModelSpec[] = [
   // `capped`: even the original set gets the reduced triangle count (a view holds a few hundred of these); the UV islands of the stones keep the
   // simplifier at about 2760 triangles however low the budget, and the sloppy pass would shatter the cobbles
   { ...S("blk_floor", "Dungeon floor and ceiling.glb", 1400, 1024), drop: ["Cube"], capped: true },
+  // the user's own 3D floors, ceilings and wall for the environments "3D Floor/Ceiling" and "Full 3D" (`render/environment.ts`): one slab per cell,
+  // standing upright in the files and laid down here (the dungeon and cave ceilings hang their relief down into the room, the city floor lies up).
+  // `capped`: a view holds a few hundred of them, so the original set gets the same triangle budget
+  { ...S("blk_city_floor", "new:City Tiles (tex_city_floor).glb", 1400, 1024), rotateX: -90, capped: true },
+  { ...S("blk_dungeon_ceiling", "new:Rustic Ceiling (tex_dungeon_ceiling).glb", 1400, 1024), rotateX: 90, capped: true },
+  { ...S("blk_cave_ceiling", "new:Cave Ceiling (tex_cave_ceiling).glb", 1000, 1024), rotateX: 90, capped: true },
+  // a piece of the fortress wall, 1.37 x 1.90 and 0.08 thick: one per wall face of a castle
+  { ...S("blk_fortress_wall", "new:Castle wall (tex_fortress_wall).glb", 1500, 1024), capped: true },
   // the cave's walls and the way out (blocks 44 and 45): one rock model per wall cell, 10 000 triangles each in the original; a view holds
   // a few hundred of them, so the budget is low
   S("blk_cave_wall", "Cave wall.glb", 700, 512),

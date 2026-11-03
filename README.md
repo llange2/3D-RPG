@@ -28,8 +28,8 @@ Options (title screen and Esc menu, `Options`): three windows, Controls, Graphic
 puts the window into effect at once, `Back` drops it. **Controls:** Key bindings (every action has up to two keys, a key that is given to another action is taken
 from the first, Escape stays the menu, Reset to defaults), Fade out cursor, if unused, Show action keys in GUI (off removes the action buttons at the lower right altogether; the keys alone play the game).
 **Graphics:** the Quality slider (Low, Medium, High, Custom) sets the five rows below it, and a mix that is no preset moves it to Custom; the default is Medium.
-Low: flat ground, normal textures, distance close, resolution low, no town films. Medium: flat, normal, medium, normal, films. High: 3D ground, high textures, far,
-normal, films. Ground and floors (3D or flat: the overworld, the outdoor cells of campaign maps, dungeon floors; towns always have their flat floor), Textures
+Low: flat environment, normal textures, distance close, resolution low, no town films. Medium: flat, normal, medium, normal, films. High: Full 3D, high textures, far,
+normal, films. Environment (Flat; 3D Floor/Ceiling: the 3D ground of the overworld and of the outdoor cells of campaign maps, the 3D floors of dungeons and towns and the 3D ceilings of dungeons and caves; Full 3D: and the wall pieces of the castles), Textures
 (normal or high, the page restarts), Distance (close, medium, far: 2, 3 or 4 chunks around the party; `?view=` overrides it), Resolution (normal or low), Animated
 town scenes, Show FPS. **Sound:** Music and Sound effects on or off, and a volume slider for each (the middle is the default). The choices are remembered.
 

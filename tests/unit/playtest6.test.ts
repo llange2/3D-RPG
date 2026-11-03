@@ -181,7 +181,7 @@ describe("the dungeon floor model", () => {
   const world = new World("floor-model");
   const poi = (kind: "dungeon" | "cave" | "castle" | "town") => ({ id: `p:f:${kind}`, kind, name: kind, x: 3, y: 4, size: 1, side: "S" as const, region: { rx: 0, ry: 0 }, anchor: false, tier: 2, biome: BIOME.MEADOW });
   const floorQuads = (map: InteriorMap, modelFloor: boolean) => {
-    const geo = meshInterior(map, new Set(), { modelFloor });
+    const geo = meshInterior(map, new Set(), { models: modelFloor ? new Set(["blk_floor", "blk_city_floor"]) : new Set<string>() });
     return geo.groups.filter((g) => g.material === "floor").reduce((n, g) => n + g.count / 6, 0);
   };
 
@@ -191,11 +191,15 @@ describe("the dungeon floor model", () => {
     expect(cells.length).toBeGreaterThan(100);
     expect(floorQuads(dungeon, false)).toBe(cells.length);
     expect(floorQuads(dungeon, true)).toBe(0);
-    for (const kind of ["cave", "castle", "town"] as const) {
+    for (const kind of ["cave", "castle"] as const) {
       const map = generateInterior(world, poi(kind));
       expect(modelFloorCells(map), kind).toHaveLength(0);
       expect(floorQuads(map, true), kind).toBe(floorQuads(map, false));
     }
+    // the town's tiles lie over the flat floor, which stays below them for the part of the town beyond the window of models
+    const town = generateInterior(world, poi("town"));
+    expect(modelFloorCells(town).length).toBeGreaterThan(100);
+    expect(floorQuads(town, true)).toBe(floorQuads(town, false));
   });
 
   it("covers the dungeon floors of a campaign map but not its pit or its walls", async () => {
