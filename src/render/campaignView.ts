@@ -112,8 +112,6 @@ export class CampaignView {
       const laterKey = later === undefined ? undefined : BLOCKS[later]?.style.model?.key;
       if (laterKey) keys.add(laterKey);
     }
-    // the 3D floor of the dungeon cells
-    keys.add("blk_floor");
     // gates, doors and levers appear through actions later
     for (const id of [80, 81, 87, 39, 63, 128]) {
       const k = itemModelKey(id);

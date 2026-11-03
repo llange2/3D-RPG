@@ -40,7 +40,7 @@ try {
   page.on("response", (r) => {
     if (r.status() >= 400) problems.push(`[http ${r.status()}] ${r.url()}`);
   });
-  // browser storage set before the game boots (its settings are read at start), e.g. --storage=mm3-seed-rpg:settings:v1={"floorModel":false}
+  // browser storage set before the game boots (its settings are read at start), e.g. --storage=mm3-seed-rpg:settings:v1={"environment":"flat"}
   for (const entry of args.filter((a) => a.startsWith("--storage="))) {
     const [key, ...value] = entry.slice("--storage=".length).split("=");
     await page.evaluateOnNewDocument((k: string, v: string) => localStorage.setItem(k, v), key!, value.join("="));

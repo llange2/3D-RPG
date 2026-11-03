@@ -4,13 +4,14 @@
  */
 import type { TextureQuality } from "../render/assets";
 import type { Resolution, ViewDistance } from "../render/engine";
+import type { Environment } from "../render/environment";
 
 export type QualityLevel = "low" | "medium" | "high" | "custom";
 
 /** The five settings the slider sets. */
 export interface QualityParts {
-  /** The 3D ground models (true) or the flat painted tiles. */
-  floorModel: boolean;
+  /** Flat, 3D floors and ceilings, or full 3D with the walls (`render/environment.ts`). */
+  environment: Environment;
   textureQuality: TextureQuality;
   viewDistance: ViewDistance;
   resolution: Resolution;
@@ -24,16 +25,16 @@ export const QUALITY_LEVELS: readonly QualityLevel[] = ["low", "medium", "high",
 export const QUALITY_NAMES: Record<QualityLevel, string> = { low: "Low", medium: "Medium", high: "High", custom: "Custom" };
 
 export const QUALITY_PRESETS: Record<Exclude<QualityLevel, "custom">, QualityParts> = {
-  low: { floorModel: false, textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false },
-  medium: { floorModel: false, textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true },
-  high: { floorModel: true, textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true },
+  low: { environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false },
+  medium: { environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true },
+  high: { environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true },
 };
 
 /** The level whose preset the settings equal, else "custom". */
 export function qualityOf(s: QualityParts): QualityLevel {
   for (const level of ["low", "medium", "high"] as const) {
     const p = QUALITY_PRESETS[level];
-    if (p.floorModel === s.floorModel && p.textureQuality === s.textureQuality && p.viewDistance === s.viewDistance && p.resolution === s.resolution && p.animatedTown === s.animatedTown) return level;
+    if (p.environment === s.environment && p.textureQuality === s.textureQuality && p.viewDistance === s.viewDistance && p.resolution === s.resolution && p.animatedTown === s.animatedTown) return level;
   }
   return "custom";
 }

@@ -66,16 +66,16 @@ try {
   await sleep(300);
   const first = await rows();
   expect(
-    JSON.stringify(first) === JSON.stringify(["Quality: Medium", "Ground and floors: flat", "Textures: normal", "Distance: Medium", "Resolution: normal", "Animated town scenes: on", "Show FPS: off"]),
+    JSON.stringify(first) === JSON.stringify(["Quality: Medium", "Environment: Flat", "Textures: normal", "Distance: Medium", "Resolution: normal", "Animated town scenes: on", "Show FPS: off"]),
     `Graphics starts at Medium (${first.join(" | ")})`,
   );
   await page.screenshot({ path: join(outDir, "options-graphics.png") });
   await slide(0, 0);
   const low = await rows();
-  expect(low[0] === "Quality: Low" && low[1] === "Ground and floors: flat" && low[3] === "Distance: Close" && low[4] === "Resolution: low" && low[5] === "Animated town scenes: off", `the slider at Low sets the switches (${low.join(" | ")})`);
+  expect(low[0] === "Quality: Low" && low[1] === "Environment: Flat" && low[3] === "Distance: Close" && low[4] === "Resolution: low" && low[5] === "Animated town scenes: off", `the slider at Low sets the switches (${low.join(" | ")})`);
   await slide(0, 2);
   const high = await rows();
-  expect(high[0] === "Quality: High" && high[1] === "Ground and floors: 3D" && high[2] === "Textures: high" && high[3] === "Distance: Far", `the slider at High sets the switches (${high.join(" | ")})`);
+  expect(high[0] === "Quality: High" && high[1] === "Environment: Full 3D" && high[2] === "Textures: high" && high[3] === "Distance: Far", `the slider at High sets the switches (${high.join(" | ")})`);
   await slide(0, 1);
   await click(".modal-back:last-child .parchment .opt", "Show FPS");
   await click(".modal-back:last-child .parchment .opt", "Distance");

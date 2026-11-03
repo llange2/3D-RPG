@@ -25,11 +25,12 @@ import { ChunkManager } from "../render/chunkManager";
 import { LAMP_RANGE, VIEW_DISTANCES, VIEW_TILES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
 import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
+import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/environment";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
 import { ITEM_LAMPS, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
-import { cellCenterX, cellCenterZ } from "../render/interiorMesher";
+import { cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, registryFile, takeResume } from "../render/modelSet";
 import { MENU_KEY, actionOf, assignKey, defaultKeys, primaryKey, GAME_ACTIONS } from "./keybindings";
@@ -360,7 +361,7 @@ export class Game {
     this.staticInfo = staticInfo;
     this.monsters = new MonsterRenderer(this.r.scene, monsterInfo, staticInfo);
     this.interiorView = new InteriorView(this.r, this.textures, this.props, staticInfo);
-    this.interiorView.setModelFloor(this.settings.floorModel);
+    this.interiorView.setEnvironment(this.settings.environment);
     this.interiorView.setViewShare(VIEW_SHARE[this.viewDistance]);
     this.campaignView = new CampaignView(this.interiorView, this.props, staticInfo, this.monsters);
     this.campaignView.setViewShare(VIEW_SHARE[this.viewDistance]);
@@ -414,12 +415,12 @@ export class Game {
   }
 
   /**
-   * The ground follows the floor choice: the painted tiles when floors are flat (and built), the old ground models otherwise. That is the
-   * overworld, the outdoor cells of campaign maps and, through `InteriorView.setModelFloor`, the floors of dungeons and towns. The
-   * overworld's chunks need `ChunkManager.rebuild` after a change; the interior and campaign views redraw themselves.
+   * The ground follows the environment: the painted tiles when it is flat (and built), the old ground models otherwise. That is the
+   * overworld and the outdoor cells of campaign maps; the floors, ceilings and walls of the interiors follow through `InteriorView.setEnvironment`.
+   * The overworld's chunks need `ChunkManager.rebuild` after a change; the interior and campaign views redraw themselves.
    */
   private applyGround(): void {
-    const tiles = this.settings.floorModel ? null : this.flatTiles;
+    const tiles = hasGroundModels(this.settings.environment) ? null : this.flatTiles;
     setFlatGround(tiles);
     this.interiorView.setFlatTiles(tiles);
     this.campaignView.setFlatGround(tiles !== null);
@@ -792,7 +793,7 @@ export class Game {
         ...content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])),
         ...(map.showcase ? [...map.showcase.monsters.map((m) => m.defId), ...map.showcase.personas.map((p) => personaModelId(p.persona))] : []),
       ]);
-      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...castleGateModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
+      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...castleGateModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...environmentModels(map, this.settings.environment), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
       // the end room of a quest solved earlier is open
@@ -1472,7 +1473,7 @@ export class Game {
       if (stash) this.stashCampaign();
       model = await loadCampaignMap(slug, camp.maps[slug] ?? {});
       this.ui.loading.set(LOAD_DATA);
-      await this.props.ensure(this.staticInfo, [...CampaignView.modelKeys(model), "obj_loot"], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
+      await this.props.ensure(this.staticInfo, [...CampaignView.modelKeys(model), ...environmentModels(model.toInteriorMap(), this.settings.environment), "obj_loot"], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       const start = model.safeStart();
       const arrive = at ? arrival(model, at.x, at.y, at.rotation, from) : { x: start.x, y: start.y, rotation: { N: 0, E: 90, S: 180, W: 270 }[start.facing] };
       this.chunks?.dispose();
@@ -4240,7 +4241,7 @@ export class Game {
         set: (v) => Object.assign(draft, applyQuality(QUALITY_LEVELS[v] ?? "custom", draft)),
         ticks: QUALITY_LEVELS.map((l) => QUALITY_NAMES[l]),
       },
-      { type: "toggle", label: () => `Ground and floors: ${draft.floorModel ? "3D" : "flat"}`, flip: () => (draft.floorModel = !draft.floorModel) },
+      { type: "toggle", label: () => `Environment: ${ENVIRONMENT_NAMES[draft.environment]}`, flip: () => (draft.environment = ENVIRONMENTS[(ENVIRONMENTS.indexOf(draft.environment) + 1) % ENVIRONMENTS.length]!) },
       { type: "toggle", label: () => `Textures: ${draft.textureQuality}`, flip: () => (draft.textureQuality = draft.textureQuality === "high" ? "normal" : "high") },
       { type: "toggle", label: () => `Distance: ${VIEW_NAMES[draft.viewDistance]}`, flip: () => (draft.viewDistance = VIEW_DISTANCES[(VIEW_DISTANCES.indexOf(draft.viewDistance) + 1) % VIEW_DISTANCES.length]!) },
       { type: "toggle", label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
@@ -4277,8 +4278,12 @@ export class Game {
     const viewChanged = next.viewDistance !== this.viewDistance;
     this.settings = { ...next, viewDistance: viewChanged ? next.viewDistance : before.viewDistance };
 
-    if (next.floorModel !== before.floorModel) {
-      this.interiorView.setModelFloor(next.floorModel);
+    if (next.environment !== before.environment) {
+      // the models of the new environment for the map that is shown arrive first (they are only fetched when an environment wants them)
+      if (this.mode === "interior") await this.props.ensure(this.staticInfo, this.interiorView.environmentKeys(next.environment));
+      this.interiorView.setEnvironment(next.environment);
+    }
+    if (hasGroundModels(next.environment) !== hasGroundModels(before.environment)) {
       this.applyGround();
       // the caravans, huts and mascots stand a little higher on the 3D ground than on the flat one: draw them again
       this.caravanShown = "";

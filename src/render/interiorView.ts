@@ -14,7 +14,8 @@ import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/
 import type { StaticModelInfo, TextureCache } from "./assets";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
-import { CELL_SIZE, cellCenterX, cellCenterZ, cellX, cellZ, meshInterior, modelFloorCells, wallHeightOf } from "./interiorMesher";
+import { hasGroundModels, hasWallModels, type Environment } from "./environment";
+import { CELL_SIZE, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type WallPanel } from "./interiorMesher";
 import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
@@ -39,6 +40,19 @@ const FLOOR_SCALE: [number, number, number] = [1.5, 1.473, 1.5];
  * triangles; the Light spell thins the fog a little, and the cells at the edge of the window are still in view then.
  */
 const FLOOR_RADIUS = 8;
+/** The city's tiles are seen in daylight and far through the thin fog, so their window is wider; beyond it the flat floor quad below shows the same tiles. */
+const CITY_FLOOR_RADIUS = 10;
+/** The ceiling hangs above the eyes and the torch hardly reaches it: a smaller window than the floor's. */
+const CEILING_RADIUS = 6;
+/** The wall pieces of "Full 3D" within this many cells of the party; farther off, the flat wall behind them shows. */
+const PANEL_RADIUS = 10;
+/** A floor tile of the user's lies a hair above the flat floor quad it covers; a ceiling hangs a hair under the flat one (no z-fighting at 1 cm). */
+const TILE_LIFT = 0.012;
+const CEILING_GAP = 0.01;
+/** The tiles are cut to the cell and a little over, so that no seam of the background shows between two of them. */
+const TILE_OVERLAP = 1.004;
+/** Yaw of a wall piece in front of its wall: the piece is turned so that its front, the side with the relief, looks into the cell. */
+const PANEL_YAW = 0;
 
 /**
  * The cave's walls and its way out are models of the old game (add_block 44 and 45: `Cave wall.glb` at scale 1.75 with its origin 1.5 up,
@@ -122,7 +136,7 @@ const CHESTS = ["obj_chest", "obj_chest_iron", "obj_chest_noble", "obj_chest_sap
 const SHRINES = ["obj_well_red", "obj_well_yellow", "obj_altar"];
 
 /** Models the interior view may ask for; loaded on demand. `ci_87` is the blade that hangs in a guillotine trap (map item 87). */
-export const INTERIOR_MODELS = [...CHESTS, ...SHRINES, "blk_floor", "obj_sign_inn", "obj_sign_bank", "obj_sign_guild", "obj_sign_smith", "obj_sign_tavern", "obj_sign_temple", "obj_sign_training", "obj_fountain", "obj_statue", "obj_spear_trap", "obj_pit", "obj_guillotine", "ci_87", "obj_lantern"];
+export const INTERIOR_MODELS = [...CHESTS, ...SHRINES, "obj_sign_inn", "obj_sign_bank", "obj_sign_guild", "obj_sign_smith", "obj_sign_tavern", "obj_sign_temple", "obj_sign_training", "obj_fountain", "obj_statue", "obj_spear_trap", "obj_pit", "obj_guillotine", "ci_87", "obj_lantern"];
 
 /**
  * Renders one interior: floor, ceiling and wall mesh in sections, doors and gates and object instances (chests, shrines,
@@ -144,12 +158,16 @@ export class InteriorView {
   private opened: ReadonlySet<string> = new Set();
   /** Theme the cached materials belong to; they are cached by role (floor, wall, ...), so a new theme needs new ones. */
   private materialTheme = "";
-  /** The player's choice: dungeon floors as the 3D cobble model. Only takes effect when the model is loaded. */
-  private modelFloorWanted = true;
-  /** Floor cells (grid indices) the model covers on the current map, and the cell the party last stood on. */
+  /** The player's choice (Options > Graphics > Environment). A model only takes effect when it is loaded. */
+  private environment: Environment = "flat";
+  /** Floor cells (grid indices) a 3D floor model covers on the current map, the cells under a 3D ceiling, the wall faces with a wall piece and the cell the party last stood on. */
   private floorCells: number[] = [];
+  private ceilingCells: number[] = [];
+  private panelList: WallPanel[] = [];
   private floorFocus: { x: number; y: number } | null = null;
   private floorShown: { x: number; y: number } | null = null;
+  private ceilingShown: { x: number; y: number } | null = null;
+  private panelShown: { x: number; y: number } | null = null;
   /** Wall cells of a generated cave that touch the floor (grid indices), the cell last drawn around, and whether the cave's walls are models. */
   private caveWalls: number[] = [];
   private caveShown: { x: number; y: number } | null = null;
@@ -234,6 +252,8 @@ export class InteriorView {
     this.floorFocus = null;
     this.caveShown = null;
     this.roundShown = null;
+    this.ceilingShown = null;
+    this.panelShown = null;
     // the traps come first: an open pit has no floor, so the mesh needs to know about it
     this.traps.show(map, content, opened, this.owner);
     this.buildMesh();
@@ -261,6 +281,8 @@ export class InteriorView {
     this.caveShown = null;
     this.roundShown = null;
     this.pushFloor(true);
+    this.pushCeiling(true);
+    this.pushPanels(true);
     if (this.floorFocus) {
       this.pushCaveWalls(this.floorFocus.x, this.floorFocus.y);
       this.pushRoundCorners(this.floorFocus.x, this.floorFocus.y);
@@ -269,16 +291,22 @@ export class InteriorView {
 
   private viewShare = 1;
 
-  /** Whether floors are drawn by the 3D model: wanted, and the model is loaded. */
-  private get modelFloor(): boolean {
-    return this.modelFloorWanted && this.props.has(FLOOR_MODEL);
+  /** The 3D models of the environment on this map that are wanted and loaded: floors and ceilings from "3D Floor/Ceiling" on, wall pieces in "Full 3D". */
+  private enabledModels(): Set<string> {
+    const map = this.map;
+    return new Set(map ? environmentModels(map, this.environment).filter((k) => this.props.has(k)) : []);
   }
 
-  /** The player's choice of 3D dungeon floors or flat ones; takes effect at once on the map that is shown. */
-  setModelFloor(on: boolean): void {
-    if (this.modelFloorWanted === on) return;
-    this.modelFloorWanted = on;
+  /** The player's choice of environment; takes effect at once on the map that is shown (the models it needs have to be loaded: `Game` asks for `environmentModels`). */
+  setEnvironment(environment: Environment): void {
+    if (this.environment === environment) return;
+    this.environment = environment;
     if (this.map) this.buildMesh();
+  }
+
+  /** The models the environment wants on the map that is shown (empty when it is flat), for `Game` to load before it switches. */
+  environmentKeys(environment: Environment): string[] {
+    return this.map ? environmentModels(this.map, environment) : [];
   }
 
   /** The painted ground tiles of the flat mode for the outdoor parts of campaign maps (null: the textured floor quads alone). Takes effect at once. */
@@ -297,6 +325,8 @@ export class InteriorView {
   focus(cx: number, cy: number): void {
     this.floorFocus = { x: cx, y: cy };
     this.pushFloor(false);
+    this.pushCeiling(false);
+    this.pushPanels(false);
     this.pushCaveWalls(cx, cy);
     this.pushRoundCorners(cx, cy);
   }
@@ -358,14 +388,96 @@ export class InteriorView {
     // a few hundred matrices per step cost next to nothing, so the window follows the party cell by cell
     if (!force && this.floorShown && this.floorShown.x === at.x && this.floorShown.y === at.y) return;
     this.floorShown = { ...at };
-    const near = Math.max(3, Math.round(FLOOR_RADIUS * this.viewShare));
     const list: PropInstance[] = [];
     for (const i of this.floorCells) {
       const x = i % map.width;
       const y = (i - x) / map.width;
+      const model = floorModelAt(map, x, y);
+      if (!model) continue;
+      const near = Math.max(3, Math.round((model === FLOOR_MODEL ? FLOOR_RADIUS : CITY_FLOOR_RADIUS) * this.viewShare));
       if (Math.abs(x - at.x) > near || Math.abs(y - at.y) > near) continue;
-      // the old game set the model 0.05 above the origin of its block; 0.02 keeps the model's ceiling plane under the real one
-      list.push({ model: FLOOR_MODEL, x: cellCenterX(x), y: 0.02, z: cellCenterZ(y), rotY: 0, scale: FLOOR_SCALE[0], scaleXYZ: FLOOR_SCALE, atOrigin: true });
+      if (model === FLOOR_MODEL) {
+        // the old game set the model 0.05 above the origin of its block; 0.02 keeps the model's ceiling plane under the real one
+        list.push({ model, x: cellCenterX(x), y: 0.02, z: cellCenterZ(y), rotY: 0, scale: FLOOR_SCALE[0], scaleXYZ: FLOOR_SCALE, atOrigin: true });
+        continue;
+      }
+      const fit = this.tileFit(model);
+      if (fit) list.push({ model, x: cellCenterX(x), y: TILE_LIFT - fit.top * fit.scale[1], z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
+    }
+    this.props.setInstances(owner, list);
+    this.props.flush();
+  }
+
+  /** How a slab model of the user's is scaled to fill one cell (the files are normalised to about 1.9 units), and the height of its top above its origin (model units). */
+  private tileFit(model: string): { scale: [number, number, number]; top: number } | null {
+    const b = this.staticInfo[model]?.bounds;
+    if (!b) return null;
+    const sx = (CELL_SIZE * TILE_OVERLAP) / (b[3] - b[0]);
+    const sz = (CELL_SIZE * TILE_OVERLAP) / (b[5] - b[2]);
+    return { scale: [sx, (sx + sz) / 2, sz], top: b[4] };
+  }
+
+  /** The 3D ceilings within `CEILING_RADIUS` cells: the flat back of each slab lies a hair under the flat ceiling, its relief hangs into the room. */
+  private pushCeiling(force: boolean): void {
+    const map = this.map;
+    const owner = `${this.owner}:ceiling`;
+    if (!map || this.ceilingCells.length === 0 || !this.floorFocus) {
+      this.props.removeOwner(owner);
+      this.ceilingShown = null;
+      this.props.flush();
+      return;
+    }
+    const at = this.floorFocus;
+    if (!force && this.ceilingShown && this.ceilingShown.x === at.x && this.ceilingShown.y === at.y) return;
+    this.ceilingShown = { ...at };
+    const near = Math.max(2, Math.round(CEILING_RADIUS * this.viewShare));
+    const height = wallHeightOf(map);
+    const list: PropInstance[] = [];
+    for (const i of this.ceilingCells) {
+      const x = i % map.width;
+      const y = (i - x) / map.width;
+      if (Math.abs(x - at.x) > near || Math.abs(y - at.y) > near) continue;
+      const model = ceilingModelAt(map, x, y);
+      const fit = model ? this.tileFit(model) : null;
+      if (model && fit) list.push({ model, x: cellCenterX(x), y: height - CEILING_GAP - fit.top * fit.scale[1], z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
+    }
+    this.props.setInstances(owner, list);
+    this.props.flush();
+  }
+
+  /** The wall pieces of "Full 3D" within `PANEL_RADIUS` cells: each stands in the cell with its back on the wall, in front of the flat wall face. */
+  private pushPanels(force: boolean): void {
+    const map = this.map;
+    const owner = `${this.owner}:panels`;
+    if (!map || this.panelList.length === 0 || !this.floorFocus) {
+      this.props.removeOwner(owner);
+      this.panelShown = null;
+      this.props.flush();
+      return;
+    }
+    const at = this.floorFocus;
+    if (!force && this.panelShown && this.panelShown.x === at.x && this.panelShown.y === at.y) return;
+    this.panelShown = { ...at };
+    const near = Math.max(3, Math.round(PANEL_RADIUS * this.viewShare));
+    const height = wallHeightOf(map);
+    const list: PropInstance[] = [];
+    for (const p of this.panelList) {
+      if (Math.abs(p.x - at.x) > near || Math.abs(p.y - at.y) > near) continue;
+      const b = this.staticInfo[p.model]?.bounds;
+      if (!b) continue;
+      // the piece is 1.37 wide, 1.90 high and 0.08 thick: stretched to the cell's width and the wall's height (the pieces keep their proportions)
+      const sx = CELL_SIZE / (b[3] - b[0]);
+      const sy = height / (b[4] - b[1]);
+      const thick = (b[5] - b[2]) * sx;
+      // the face looks into the cell: its normal is the opposite of the direction of the wall
+      const d = FACING_DELTA[p.dir];
+      const nx = -d.dx;
+      const nz = d.dy;
+      const half = CELL_SIZE / 2;
+      // the middle of the wall face (on the edge of the cell), moved into the cell by half the piece's thickness: its back lies on the wall
+      const cx = cellCenterX(p.x) - nx * half + nx * thick * 0.5;
+      const cz = cellCenterZ(p.y) - nz * half + nz * thick * 0.5;
+      list.push({ model: p.model, x: cx, y: -b[1] * sy, z: cz, rotY: Math.atan2(nx, nz) + PANEL_YAW, scale: sx, scaleXYZ: [sx, sy, sx], atOrigin: true });
     }
     this.props.setInstances(owner, list);
     this.props.flush();
@@ -375,9 +487,10 @@ export class InteriorView {
     const map = this.map!;
     this.mesh?.dispose(false, false);
     this.multi?.dispose(false, false);
-    const modelFloor = this.modelFloor;
+    const models = hasGroundModels(this.environment) ? this.enabledModels() : new Set<string>();
     const holes = this.traps.holes();
-    this.floorCells = modelFloor ? modelFloorCells(map, holes) : [];
+    this.floorCells = modelFloorCells(map, holes, models);
+    this.ceilingCells = modelCeilingCells(map, models);
     // a cave's walls are the old game's rock models when they are loaded; the cells next to the floor are the ones that show
     this.caveModels = caveModelKeys(map).length > 0 && caveModelKeys(map).every((k) => this.props.has(k));
     // the spaceship's walls are round where the models of the corners are loaded
@@ -396,7 +509,7 @@ export class InteriorView {
         }
       }
     }
-    const geo = meshInterior(map, new Set(), { modelFloor, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined });
+    const geo = meshInterior(map, new Set(), { models, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined });
     const mesh = new Mesh(`interior:${map.key}`, this.r.scene);
     const vd = new VertexData();
     vd.positions = geo.positions;
@@ -424,7 +537,11 @@ export class InteriorView {
     mesh.freezeWorldMatrix();
     this.mesh = mesh;
     this.multi = multi;
+    // the wall pieces belong to the faces of this mesh: only "Full 3D" draws them
+    this.panelList = hasWallModels(this.environment) ? geo.panels : [];
     this.pushFloor(true);
+    this.pushCeiling(true);
+    this.pushPanels(true);
     // the models of a cave's rock and of the round corners are chosen from the cells: a changed map (a wall that gave way) shows them again at once, not with the next step
     if (this.floorFocus) {
       this.caveShown = null;
@@ -821,6 +938,8 @@ export class InteriorView {
     if (this.owner) {
       this.props.removeOwner(this.owner);
       this.props.removeOwner(`${this.owner}:floor`);
+      this.props.removeOwner(`${this.owner}:ceiling`);
+      this.props.removeOwner(`${this.owner}:panels`);
       this.props.removeOwner(`${this.owner}:walls`);
       this.props.removeOwner(`${this.owner}:round`);
       this.props.removeOwner(`${this.owner}:spin`);
@@ -842,6 +961,10 @@ export class InteriorView {
     this.roundModels = false;
     this.floorCells = [];
     this.floorShown = null;
+    this.ceilingCells = [];
+    this.ceilingShown = null;
+    this.panelList = [];
+    this.panelShown = null;
     this.props.flush();
     this.mesh?.dispose(false, false);
     this.multi?.dispose(false, false);

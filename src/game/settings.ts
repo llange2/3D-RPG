@@ -5,14 +5,16 @@
  */
 import type { TextureQuality } from "../render/assets";
 import type { Resolution, ViewDistance } from "../render/engine";
+import { ENVIRONMENTS, type Environment } from "../render/environment";
 import { defaultKeys, parseKeys, type KeyBindings } from "./keybindings";
 
 export interface Settings {
   /**
-   * The ground and floors: the old 3D models (the ground tile models of the overworld and the campaign's outdoor maps, the dungeon floor
-   * model) or the flat painted tiles and textured quads. A town's floor is the same in both: the old game's city floor is a flat slab.
+   * The environment: flat (the painted ground tiles and textured quads), "3D Floor/Ceiling" (the ground models of the overworld and the campaign's
+   * outdoor maps, the 3D floors and ceilings of the interiors) or "Full 3D" (and the wall pieces). Stored settings from before the option
+   * existed have `floorModel`: true was the 3D ground and floors, which is "3D Floor/Ceiling".
    */
-  floorModel: boolean;
+  environment: Environment;
   /** How much of the world is drawn around the party (chunks, windows of models, fog). */
   viewDistance: ViewDistance;
   /** `low` renders the picture smaller and lets the browser scale it up. */
@@ -41,7 +43,7 @@ export interface Settings {
 const KEY = "mm3-seed-rpg:settings:v1";
 /** The defaults are the "Medium" quality (`game/quality.ts`): flat ground, normal textures, medium distance, normal resolution, animated town scenes. */
 export function defaultSettings(): Settings {
-  return { floorModel: false, viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true };
+  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true };
 }
 export const DEFAULT_SETTINGS: Settings = defaultSettings();
 
@@ -64,7 +66,8 @@ export function parseSettings(raw: string | null): Settings {
     out.resolution = quality === "low" ? "low" : "normal";
     out.viewDistance = OLD_QUALITY_VIEW[quality] ?? out.viewDistance;
   }
-  if (typeof stored.floorModel === "boolean") out.floorModel = stored.floorModel;
+  if (typeof stored.floorModel === "boolean") out.environment = stored.floorModel ? "floor" : "flat";
+  if (ENVIRONMENTS.includes(stored.environment as Environment)) out.environment = stored.environment as Environment;
   if (stored.viewDistance === "close" || stored.viewDistance === "medium" || stored.viewDistance === "far") {
     if (!quality) out.viewDistance = stored.viewDistance;
     else {

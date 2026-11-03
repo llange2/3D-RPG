@@ -163,16 +163,16 @@ describe("37th playtest, point 4: key bindings", () => {
 describe("37th playtest, point 4b: the quality slider", () => {
   it("sets the five switches of Low, Medium and High", () => {
     const base = { ...DEFAULT_SETTINGS };
-    expect(applyQuality("low", base)).toEqual({ floorModel: false, textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false });
-    expect(applyQuality("medium", base)).toEqual({ floorModel: false, textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true });
-    expect(applyQuality("high", base)).toEqual({ floorModel: true, textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true });
+    expect(applyQuality("low", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false });
+    expect(applyQuality("medium", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true });
+    expect(applyQuality("high", base)).toEqual({ environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true });
     expect(QUALITY_LEVELS).toEqual(["low", "medium", "high", "custom"]);
   });
 
   it("reads the level back from the switches, and jumps to Custom for any other mix", () => {
     for (const level of ["low", "medium", "high"] as const) expect(qualityOf(applyQuality(level, DEFAULT_SETTINGS))).toBe(level);
     expect(qualityOf({ ...applyQuality("medium", DEFAULT_SETTINGS), resolution: "low" })).toBe("custom");
-    expect(qualityOf({ ...applyQuality("high", DEFAULT_SETTINGS), floorModel: false })).toBe("custom");
+    expect(qualityOf({ ...applyQuality("high", DEFAULT_SETTINGS), environment: "floor" })).toBe("custom");
     expect(applyQuality("custom", { ...DEFAULT_SETTINGS, viewDistance: "far" }).viewDistance).toBe("far");
   });
 
