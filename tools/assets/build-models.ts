@@ -36,6 +36,11 @@ export interface ModelSpec {
    * its z side facing up (a floor).
    */
   rotateX?: number;
+  /**
+   * Keep the normal map (the pipeline drops it from every other model: flat matte look). For a slab whose relief is in the map and not in the mesh:
+   * the city's floor tiles are flat triangles, their joints, bevels and engraved patterns are only in the normal map.
+   */
+  keepNormalMap?: boolean;
   /** Turns the model about the vertical axis (degrees), for a model that was made facing another way than the old one. */
   rotateY?: number;
   maxTris: number;
@@ -206,7 +211,8 @@ async function processDoc(doc: Document, spec: ModelSpec, profile: ModelProfile)
   doc.createExtension(EXTTextureWebP).setRequired(false);
   // flat matte look: drop normal, roughness, occlusion and emissive maps, keep the colour
   for (const mat of doc.getRoot().listMaterials()) {
-    mat.setNormalTexture(null).setOcclusionTexture(null).setMetallicRoughnessTexture(null).setEmissiveTexture(null);
+    if (!spec.keepNormalMap) mat.setNormalTexture(null);
+    mat.setOcclusionTexture(null).setMetallicRoughnessTexture(null).setEmissiveTexture(null);
     mat.setMetallicFactor(0).setRoughnessFactor(1).setEmissiveFactor([0, 0, 0]);
   }
   await doc.transform(prune());
@@ -708,7 +714,7 @@ export const STATIC_MODELS: ModelSpec[] = [
   // the user's own 3D floors, ceilings and wall for the environments "3D Floor/Ceiling" and "Full 3D" (`render/environment.ts`): one slab per cell,
   // standing upright in the files and laid down here (the dungeon and cave ceilings hang their relief down into the room, the city floor lies up).
   // `capped`: a view holds a few hundred of them, so the original set gets the same triangle budget
-  { ...S("blk_city_floor", "new:City Tiles (tex_city_floor).glb", 1400, 1024), rotateX: -90, capped: true },
+  { ...S("blk_city_floor", "new:City Tiles (tex_city_floor).glb", 1400, 1024), rotateX: -90, capped: true, keepNormalMap: true },
   { ...S("blk_dungeon_ceiling", "new:Rustic Ceiling (tex_dungeon_ceiling).glb", 1400, 1024), rotateX: 90, capped: true },
   { ...S("blk_cave_ceiling", "new:Cave Ceiling (tex_cave_ceiling).glb", 1000, 1024), rotateX: 90, capped: true },
   // a piece of the fortress wall, 1.37 x 1.90 and 0.08 thick: one per wall face of a castle

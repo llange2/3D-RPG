@@ -91,6 +91,9 @@ const MODEL_DIM: Record<string, number> = { blk_cave_exit: 0.65 };
 /** Opacity of the see-through attack effects (the old game gave the fireball 0.7 and the poison cloud 0.3). */
 const PROJECTILE_ALPHA: Record<string, number> = { proj_fire: 0.85, proj_poison: 0.6 };
 
+/** Strength of a kept normal map (`keepNormalMap`). */
+const BUMP_LEVEL = 2.5;
+
 /** Replaces the glTF PBR material by a cheap StandardMaterial with the same colour texture. */
 export function toStandardMaterial(mat: PBRMaterial | StandardMaterial, scene: Scene, boost = 1): StandardMaterial {
   if (mat instanceof StandardMaterial) return mat;
@@ -98,6 +101,14 @@ export function toStandardMaterial(mat: PBRMaterial | StandardMaterial, scene: S
   std.diffuseTexture = mat.albedoTexture;
   if (std.diffuseTexture) std.diffuseTexture.level = boost;
   std.diffuseColor = mat.albedoColor ?? Color3.White();
+  // a model that keeps its normal map (`keepNormalMap` in the pipeline: the city's floor tiles) shows its joints and engravings in the light
+  if (mat.bumpTexture) {
+    std.bumpTexture = mat.bumpTexture;
+    // daylight lights a floor from above at a flat angle: the map's own strength shows the joints only faintly, doubled they read as relief
+    std.bumpTexture.level = BUMP_LEVEL;
+    std.invertNormalMapX = mat.invertNormalMapX;
+    std.invertNormalMapY = mat.invertNormalMapY;
+  }
   std.specularColor = Color3.Black();
   std.backFaceCulling = mat.backFaceCulling;
   return std;

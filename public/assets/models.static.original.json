@@ -3622,7 +3622,7 @@
  "blk_city_floor": {
   "file": "models-original/blk_city_floor.glb",
   "tris": 1400,
-  "bytes": 1411068,
+  "bytes": 2243004,
   "bounds": [
    -0.9497940540313721,
    -0.05553103610873212,
@@ -3634,7 +3634,7 @@
   "animations": [],
   "groundTop": 0,
   "fromObj": false,
-  "mean": 0.705
+  "mean": 0.629
  },
  "blk_cave_ceiling": {
   "file": "models-original/blk_cave_ceiling.glb",
