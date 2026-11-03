@@ -18,8 +18,11 @@ import { PERSONAS, personaModelId } from "../../src/data/personas";
 import { OLD, OUT, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
 
 const OBJ_DIR = join(OLD, "objects");
-/** The user's own models (floors, ceilings, a wall, the village, the lantern), made after the old game: not part of `old_code`. */
-const NEW_DIR = join(ROOT, ".ignore", "3D Models");
+/**
+ * The user's own models (floors, ceilings, a wall, the village, the castle, the cottage, the pirate ship, the lantern), made after the old game: not part of
+ * `old_code`. They are the sources of these models and live in the repository (the `.ignore/3D Models` folder they came from was only a hand-over folder).
+ */
+const NEW_DIR = join(ROOT, "tools", "assets", "sources", "models");
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 
 /** `new:` in front of a source names a file of the user's own models folder, anything else lies in the old game's objects. */
@@ -28,7 +31,7 @@ const sourcePath = (source: string): string => (source.startsWith(NEW_PREFIX) ? 
 
 export interface ModelSpec {
   key: string;
-  /** Path relative to resources/objects (without folder prefix for the objects root), or `new:<file>` in the user's models folder (`.ignore/3D Models`). */
+  /** Path relative to resources/objects (without folder prefix for the objects root), or `new:<file>` in the user's models folder (`tools/assets/sources/models`). */
   source: string;
   /**
    * Turns the model about the x axis (degrees) before anything else. The slabs of the user's floors and ceilings come out of the modelling tool
@@ -587,10 +590,11 @@ const S = (key: string, source: string, maxTris: number, texSize = 512, animated
 
 /** Map decorations of the hand-built campaign: one model per item id of the old ITEMS table (see export_item_models.py). */
 /**
- * Items of the old table whose model the user has replaced by one of their own (`.ignore/3D Models`): the Village (47) and the Rustic lantern (76),
- * which the generated world uses as `poi_town` and `obj_lantern` too. `rotateY` turns the new model to face as the old one did.
+ * Items of the old table whose model the user has replaced by one of their own (`tools/assets/sources/models`): the Castle (44), the Village (47) and the
+ * Rustic lantern (76), which the generated world uses as `poi_castle`, `poi_town` and `obj_lantern` too. `rotateY` turns the new model to face as the old one did.
  */
 const REPLACED_ITEMS: Record<number, Pick<ModelSpec, "source" | "rotateY">> = {
+  44: { source: "new:Castle.glb" },
   47: { source: "new:Village (poi_town).glb" },
   76: { source: "new:Rustic lantern (obj_lantern).glb" },
 };
@@ -618,8 +622,11 @@ function campaignItemModels(): ModelSpec[] {
 /** Props, buildings, vegetation and terrain pieces used by the overworld and the interiors. */
 export const STATIC_MODELS: ModelSpec[] = [
   // points of interest seen from the overworld
-  { ...S("poi_castle", "Castle.obj", 9000, 1024), normals: "smooth" },
+  { ...S("poi_castle", "new:Castle.glb", 9000, 1024), normals: "smooth", ...REPLACED_ITEMS[44] },
   { ...S("poi_town", "new:Village (poi_town).glb", 9000, 1024), normals: "smooth", ...REPLACED_ITEMS[47] },
+  // the cottage: a house that stands in the place of every third rustic caravan (`world/caravans.ts`, the caravan landmarks), and the pirate ship of ue_quest_4
+  S("obj_cottage", "new:Cottage.glb", 3000, 1024),
+  S("obj_pirate_ship", "new:Pirate Ship.glb", 4500, 1024),
   S("poi_hut", "Hut.obj", 1200),
   S("poi_pyramid", "Pyramid.obj", 900),
   S("poi_dungeon", "Dungeon entrance.obj", 1200),
@@ -717,8 +724,12 @@ export const STATIC_MODELS: ModelSpec[] = [
   { ...S("blk_city_floor", "new:City Tiles (tex_city_floor).glb", 1400, 1024), rotateX: -90, capped: true, keepNormalMap: true },
   { ...S("blk_dungeon_ceiling", "new:Rustic Ceiling (tex_dungeon_ceiling).glb", 1400, 1024), rotateX: 90, capped: true },
   { ...S("blk_cave_ceiling", "new:Cave Ceiling (tex_cave_ceiling).glb", 1000, 1024), rotateX: 90, capped: true },
-  // a piece of the fortress wall, 1.37 x 1.90 and 0.08 thick: one per wall face of a castle
-  { ...S("blk_fortress_wall", "new:Castle wall (tex_fortress_wall).glb", 1500, 1024), capped: true },
+  // the castle's floor (it lies flat in the file already) and the spaceship's ceiling (upright like the others)
+  { ...S("blk_fortress_floor", "new:Castle_floor.glb", 1400, 1024), capped: true },
+  { ...S("blk_cyber_ceiling", "new:Spaceship Ceiling.glb", 1400, 1024), rotateX: 90, capped: true },
+  // a piece of the fortress wall, 0.67 x 0.95 and 0.08 thick: one per wall face of a castle. It keeps all of its 3149 triangles: the relief has undercuts, and every reduction
+  // (1500 triangles) tore black cracks into it
+  { ...S("blk_fortress_wall", "new:Castle wall (tex_fortress_wall).glb", 3200, 1024), capped: true },
   // the cave's walls and the way out (blocks 44 and 45): one rock model per wall cell, 10 000 triangles each in the original; a view holds
   // a few hundred of them, so the budget is low
   S("blk_cave_wall", "Cave wall.glb", 700, 512),

@@ -121,13 +121,19 @@ export function poiBounds(p: Pick<Poi, "x" | "y" | "size">): { x0: number; y0: n
  * The tiles in front of a place that count as its entrance, the one the road ends at first. The model stands in the middle of its footprint, so
  * a footprint of two tiles has two tiles in front of its door (the model's door is between them) and both lead in; one of three has only the
  * middle one, a single tile only its own.
+ *
+ * The door of the village model (the user's own, `tools/assets/sources/models`) is at the right end of its front, seen from outside, not in the middle: the road of a town ends at the
+ * tile on the right (castles keep their order: their gate is in the middle).
  */
-export function poiEntrances(p: Pick<Poi, "x" | "y" | "size" | "side">): { x: number; y: number }[] {
+export function poiEntrances(p: Pick<Poi, "x" | "y" | "size" | "side"> & { kind?: PoiKind }): { x: number; y: number }[] {
   const b = poiBounds(p);
   const { dx, dy } = SIDE_DELTA[p.side];
   const front = { x: dx === 0 ? p.x : dx > 0 ? b.x1 + 1 : b.x0 - 1, y: dy === 0 ? p.y : dy > 0 ? b.y1 + 1 : b.y0 - 1 };
   if (p.size % 2 !== 0) return [front];
-  return [front, dx === 0 ? { x: p.x - 1, y: front.y } : { x: front.x, y: p.y - 1 }];
+  const beside = dx === 0 ? { x: p.x - 1, y: front.y } : { x: front.x, y: p.y - 1 };
+  // seen from outside the right-hand tile is the one with the larger coordinate on the sides S and W (the visitor faces N or E) and the smaller one on N and E
+  const rightIsBeside = p.side === "N" || p.side === "E";
+  return p.kind === "town" && rightIsBeside ? [beside, front] : [front, beside];
 }
 
 export function isGroundWalkable(g: Ground): boolean {

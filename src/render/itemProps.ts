@@ -1,4 +1,4 @@
-import { GROUNDED_ITEMS, tunedItemModels } from "../data/item-tuning";
+import { COTTAGE_MODEL, COTTAGE_SCALE, COTTAGE_YAW, GROUNDED_ITEMS, tunedItemModels } from "../data/item-tuning";
 import type { GateDirection, TrapKind } from "../campaign/types";
 import type { StaticModelInfo } from "./assets";
 import type { PropInstance } from "./terrainMesher";
@@ -76,6 +76,11 @@ export function trapMover(kind: TrapKind, t: number, rotationDeg: number, px: nu
   return kind === "guillotine"
     ? itemProp(GUILLOTINE_ITEM, rotationDeg, px, pz, staticInfo, origin)
     : { model: SPEAR_MODEL, x: px, y: origin, z: pz, rotY: rotationDeg * RAD, scale: SPEAR_SCALE[0], scaleXYZ: SPEAR_SCALE, atOrigin: true };
+}
+
+/** The cottage that takes the place of a caravan, resting on the ground and facing `rotationDeg` like the wagon would (the prop renderer leaves it out while the model is not loaded). */
+export function cottageProp(rotationDeg: number, px: number, pz: number): PropInstance {
+  return { model: COTTAGE_MODEL, x: px, y: 0, z: pz, rotY: ((rotationDeg + COTTAGE_YAW) % 360) * RAD, scale: COTTAGE_SCALE };
 }
 
 /**

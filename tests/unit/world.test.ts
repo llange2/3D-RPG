@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { GEN_VERSION } from "../../src/core/version";
 import { planDungeon } from "../../src/interiors";
-import { CHUNK_SIZE, GROUND, WORLD_SIZES, WORLD_SIZE_NAMES, isTileWalkable, poiBounds, type WorldSize } from "../../src/world/types";
+import { CHUNK_SIZE, GROUND, WORLD_SIZES, WORLD_SIZE_NAMES, isTileWalkable, poiBounds, poiEntrances, type WorldSize } from "../../src/world/types";
 import { World, chunkHash } from "../../src/world/world";
 import { GOLDEN_CHUNKS, GOLDEN_SEEDS, goldenSize, worldGoldenHashes } from "../helpers/golden";
 import { buildWalkGrid, flood } from "../helpers/reach";
@@ -225,7 +225,10 @@ describe("islands", () => {
       const b = poiBounds(p);
       // the tile in front of the middle of the side the road arrives from, touching the footprint
       const next = { N: [p.x, b.y0 - 1], E: [b.x1 + 1, p.y], S: [p.x, b.y1 + 1], W: [b.x0 - 1, p.y] }[front.side];
-      expect([front.x, front.y], `${p.id} front tile is next to the place`).toEqual(next);
+      // a place two tiles wide has two entrance tiles, one of them the middle of the side; the road of a town ends at the right-hand one (the village model's door), whichever it is
+      const entrances = poiEntrances(p).map((e) => [e.x, e.y]);
+      expect(entrances, `${p.id} front tile is next to the place`).toContainEqual(next);
+      expect([front.x, front.y], `${p.id} front tile is the first entrance`).toEqual(entrances[0]);
       const t = world.tile(front.x, front.y);
       expect(isTileWalkable(t), `${p.id} entrance ${front.x},${front.y}`).toBe(true);
       expect(world.poiAtEntrance(front.x, front.y)?.id).toBe(p.id);

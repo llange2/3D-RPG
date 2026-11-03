@@ -134,5 +134,6 @@
  * for a failed attempt (`lockTrap`, `trapDamage`, `trapLevel`, `actions/lockTrap.ts`).
  * 46 = ue_quest_4 (quest document 1.4, the Pirate Queen): 20 Pearls of Youth and Beauty hide in the ordinary chests of the caves and dungeons of level 3 and 4 and in the alarm chests of the castles of level 3 and 4
  * (`DungeonRef.pearls`, `CastleLayout.pearls`).
+ * 47 = the user's new village model: its door is at the right end of the front, so the road of a town ends at the right-hand one of its two entrance tiles (seen from outside; `poiEntrances`).
  */
-export const GEN_VERSION = 46;
+export const GEN_VERSION = 47;

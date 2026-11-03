@@ -1,6 +1,6 @@
 /**
  * The "Environment" option of Options > Graphics: how much of the surroundings is drawn with the 3D models of the old game and of the user's own
- * floors, ceilings and walls (`.ignore/3D Models`), and how much with painted tiles and textured quads.
+ * floors, ceilings and walls (`tools/assets/sources/models`), and how much with painted tiles and textured quads.
  *
  * - `flat`: the painted ground tiles of the overworld, flat floors, ceilings and walls (the cave's rock stays a model, as ever).
  * - `floor`: "3D Floor/Ceiling": the ground models of the overworld and the models of the floors and ceilings of the interiors.
@@ -31,12 +31,14 @@ export const textureName = (file: string | null | undefined): string => (file ??
 export const FLOOR_MODELS: Readonly<Record<string, { model: string; replacesQuad: boolean }>> = {
   tex_dungeon_floor: { model: "blk_floor", replacesQuad: true },
   tex_city_floor: { model: "blk_city_floor", replacesQuad: false },
+  tex_fortress_floor: { model: "blk_fortress_floor", replacesQuad: false },
 };
 
 /** Ceiling textures that have a 3D ceiling model (the flat ceiling stays above it as the backing of the gaps). */
 export const CEILING_MODELS: Readonly<Record<string, string>> = {
   tex_dungeon_ceiling: "blk_dungeon_ceiling",
   tex_cave_ceiling: "blk_cave_ceiling",
+  tex_cyber_ceiling: "blk_cyber_ceiling",
 };
 
 /** Wall textures that have a 3D wall piece (one per wall face, in front of the flat wall). */

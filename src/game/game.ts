@@ -42,7 +42,7 @@ import { SkyDome } from "../render/sky";
 import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
-import { ITEM_MODELS, itemModelKey, itemProp } from "../render/itemProps";
+import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
 import { addCondition, canAct, recalcValues, xpToNextLevel } from "../sim/character";
 import { onThievery, thieveryEntries, thieverySummary } from "../sim/thieveryLog";
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
@@ -75,7 +75,7 @@ import { sellerParams } from "../data/talent-sellers";
 import { CARAVAN_ITEM, caravansIn, caravansOf, type CaravanSpot } from "../world/caravans";
 import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, hutXpPercent, slotDistance, slotKey, type HutSpot } from "../world/huts";
 import { PIRATE_RETURN_MINUTES, pirateDistance, pirateHome, pirateSail } from "../world/pirate";
-import { PirateShip } from "../render/pirateShip";
+import { PIRATE_SHIP_MODEL, PirateShip } from "../render/pirateShip";
 import { hutScene } from "../data/hut-texts";
 import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
@@ -793,7 +793,7 @@ export class Game {
         ...content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])),
         ...(map.showcase ? [...map.showcase.monsters.map((m) => m.defId), ...map.showcase.personas.map((p) => personaModelId(p.persona))] : []),
       ]);
-      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...caveModelKeys(map), ...castleGateModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...environmentModels(map, this.settings.environment), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
+      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...(map.showcase ? map.showcase.extras.map((e) => e.model) : []), ...caveModelKeys(map), ...castleGateModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...environmentModels(map, this.settings.environment), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
       // the end room of a quest solved earlier is open
@@ -2028,7 +2028,10 @@ export class Game {
       this.pirateShip?.hide();
       return;
     }
-    this.pirateShip ??= new PirateShip(this.r.scene);
+    if (!this.pirateShip) {
+      this.pirateShip = new PirateShip(this.props);
+      void this.props.ensure(this.staticInfo, [PIRATE_SHIP_MODEL]);
+    }
     const sx = this.player.tx + wrapDelta(this.player.tx, ship.x, this.world.width);
     const sy = this.player.ty + wrapDelta(this.player.ty, ship.y, this.world.height);
     this.pirateShip.place(tileCenterX(sx), tileCenterZ(sy), this.pirateYaw);
@@ -2069,7 +2072,7 @@ export class Game {
     for (const s of spots) {
       const w = this.worldPos(s.x, s.y);
       const bearing = (Math.atan2(s.faceX - s.x, s.y - s.faceY) * 180) / Math.PI;
-      const inst = itemProp(CARAVAN_ITEM, (bearing + 360) % 360, w.x, w.z, this.staticInfo);
+      const inst = s.cottage ? cottageProp((bearing + 360) % 360, w.x, w.z) : itemProp(CARAVAN_ITEM, (bearing + 360) % 360, w.x, w.z, this.staticInfo);
       if (!inst) continue;
       inst.y += w.y + groundPropLift();
       list.push(inst);

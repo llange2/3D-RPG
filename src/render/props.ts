@@ -324,6 +324,11 @@ export class PropRenderer {
     }
   }
 
+  /** Fades every instance of one model through the visibility of its meshes (1 = solid). Only for a model that is on screen once: the materials stay untouched, they are shared. */
+  setVisibility(key: string, alpha: number): void {
+    for (const mesh of this.models.get(key)?.meshes ?? []) mesh.visibility = alpha;
+  }
+
   removeOwner(owner: string): void {
     for (const model of this.models.values()) {
       if (model.buffers.delete(owner)) model.dirty = true;
