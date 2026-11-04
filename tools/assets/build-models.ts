@@ -90,6 +90,11 @@ export interface ModelInfo {
   animations: string[];
   /** Top of the slab a tile model stands on (model units); 0 for animated models. */
   groundTop: number;
+  /**
+   * Height (model units) of the upward facing plane that holds most of the area: the face of a floor tile, as opposed to `bounds[4]`, which is the
+   * tip of its highest engraving. A floor tile is set by this height, or its face lies under the flat floor quad and only the engravings show.
+   */
+  surface?: number;
   /** Converted from OBJ: these render inside-out in Babylon and need their faces flipped at load time. */
   fromObj: boolean;
   /**
@@ -382,6 +387,51 @@ function fixWinding(doc: Document): number {
 }
 
 /**
+ * Height (model units) of the upward facing plane with the most area, in bins of 2.5 mm so that the slight unevenness of a hand-made tile stays in one
+ * bin (the three bins around a level count together). Unlike `groundTopOf` it does not look for the lowest plateau: a floor tile has only one.
+ */
+function surfaceOf(doc: Document): number {
+  const bins = new Map<number, number>();
+  const step = 0.0025;
+  for (const node of doc.getRoot().listNodes()) {
+    const mesh = node.getMesh();
+    if (!mesh) continue;
+    const m = node.getWorldMatrix();
+    const world = (p: TypedArray, o: number): [number, number, number] => [
+      m[0]! * p[o]! + m[4]! * p[o + 1]! + m[8]! * p[o + 2]! + m[12]!,
+      m[1]! * p[o]! + m[5]! * p[o + 1]! + m[9]! * p[o + 2]! + m[13]!,
+      m[2]! * p[o]! + m[6]! * p[o + 1]! + m[10]! * p[o + 2]! + m[14]!,
+    ];
+    for (const prim of mesh.listPrimitives()) {
+      const pos = prim.getAttribute("POSITION");
+      if (!pos) continue;
+      const p = pos.getArray()!;
+      const idx = prim.getIndices()?.getArray() ?? Uint32Array.from({ length: p.length / 3 }, (_, k) => k);
+      for (let t = 0; t < idx.length; t += 3) {
+        const a = world(p, idx[t]! * 3), b = world(p, idx[t + 1]! * 3), c = world(p, idx[t + 2]! * 3);
+        const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+        const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        const area = Math.hypot(nx, ny, nz) / 2;
+        if (area === 0 || ny / (2 * area) < 0.9) continue;
+        const bin = Math.round(((a[1] + b[1] + c[1]) / 3) / step);
+        bins.set(bin, (bins.get(bin) ?? 0) + area);
+      }
+    }
+  }
+  let best = 0;
+  let bestArea = -1;
+  for (const bin of bins.keys()) {
+    const area = (bins.get(bin - 1) ?? 0) + (bins.get(bin) ?? 0) + (bins.get(bin + 1) ?? 0);
+    if (area > bestArea) {
+      best = bin;
+      bestArea = area;
+    }
+  }
+  return Math.round(best * step * 10000) / 10000;
+}
+
+/**
  * Height (in model units) of the largest upward facing flat area. Tile models (trees, mountains, buildings) stand on a
  * slab whose top is that plateau; the game sinks the slab into the terrain so only what grows out of it shows.
  */
@@ -563,6 +613,7 @@ export async function buildModel(spec: ModelSpec, profile: ModelProfile = "reduc
     bounds: [...b.min, ...b.max] as ModelInfo["bounds"],
     animations: doc.getRoot().listAnimations().map((a) => a.getName()),
     groundTop: spec.animated ? 0 : groundTopOf(doc),
+    surface: spec.animated ? undefined : surfaceOf(doc),
     fromObj: extname(src).toLowerCase() === ".obj",
     mean: await meanBrightness(doc),
   };
@@ -724,12 +775,16 @@ export const STATIC_MODELS: ModelSpec[] = [
   { ...S("blk_city_floor", "new:City Tiles (tex_city_floor).glb", 1400, 1024), rotateX: -90, capped: true, keepNormalMap: true },
   { ...S("blk_dungeon_ceiling", "new:Rustic Ceiling (tex_dungeon_ceiling).glb", 1400, 1024), rotateX: 90, capped: true },
   { ...S("blk_cave_ceiling", "new:Cave Ceiling (tex_cave_ceiling).glb", 1000, 1024), rotateX: 90, capped: true },
-  // the castle's floor (it lies flat in the file already) and the spaceship's ceiling (upright like the others)
+  // the castle's floor (it lies flat in the file already) and the spaceship's floor (upright like the others). The castle has no 3D wall and the
+  // spaceship no 3D ceiling: both stay flat
   { ...S("blk_fortress_floor", "new:Castle_floor.glb", 1400, 1024), capped: true },
-  { ...S("blk_cyber_ceiling", "new:Spaceship Ceiling.glb", 1400, 1024), rotateX: 90, capped: true },
-  // a piece of the fortress wall, 0.67 x 0.95 and 0.08 thick: one per wall face of a castle. It keeps all of its 3149 triangles: the relief has undercuts, and every reduction
-  // (1500 triangles) tore black cracks into it
-  { ...S("blk_fortress_wall", "new:Castle wall (tex_fortress_wall).glb", 3200, 1024), capped: true },
+  { ...S("blk_cyber_floor", "new:Spaceship floor (tex_cyber_floor).glb", 1400, 1024), rotateX: -90, capped: true, keepNormalMap: true },
+  // the wall pieces of "Full 3D", standing upright in the files (the thin side along z, the relief towards +z): one per wall face, the city's 0.94 x 0.96 and
+  // 0.05 thick, the dungeon's 0.66 x 0.96 and 0.14 thick, and the dungeon's broken wall, 0.64 x 0.96 and 0.24 thick. Their relief has undercuts: a
+  // reduction tears black cracks into it (it did in the castle's), so they keep what the source has, 2300 to 3200 triangles
+  { ...S("blk_city_wall", "new:City wall (tex_city_wall).glb", 2400, 1024), capped: true, keepNormalMap: true },
+  { ...S("blk_dungeon_wall", "new:Dungeon wall (tex_dungeon_wall).glb", 3000, 1024), capped: true },
+  { ...S("blk_dungeon_wall_broken", "new:Dungeon wall broken.glb", 3200, 1024), capped: true },
   // the cave's walls and the way out (blocks 44 and 45): one rock model per wall cell, 10 000 triangles each in the original; a view holds
   // a few hundred of them, so the budget is low
   S("blk_cave_wall", "Cave wall.glb", 700, 512),

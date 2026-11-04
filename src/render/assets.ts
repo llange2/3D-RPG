@@ -15,6 +15,8 @@ export interface StaticModelInfo {
   animations: string[];
   /** Top of the slab a tile model stands on (model units). */
   groundTop: number;
+  /** Height of the upward facing plane with the most area (the face of a floor tile, below the tips of its engravings in `bounds`). Absent in old registries. */
+  surface?: number;
   /** Converted from OBJ: faces must be flipped at load time. */
   fromObj: boolean;
   /** Mean brightness of the colour texture, 0 to 1 (what `textureBoost` brings to a common level). Absent for animated models and old registries. */
