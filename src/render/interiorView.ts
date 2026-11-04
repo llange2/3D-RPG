@@ -53,6 +53,14 @@ const TILE_LIFT = 0.012;
 const CEILING_GAP = 0.01;
 /** The tiles are cut to the cell and a little over, so that no seam of the background shows between two of them. */
 const TILE_OVERLAP = 1.004;
+/**
+ * The cave's dirt tile (`gndx_dirt`) is a slab with rounded edges: its top bends down by 0.03 (model units) over the last bit and its sides fall 0.2 below the face, so two
+ * neighbours leave a V-shaped groove whose bottom the flat quad cuts: the quad shone through as a light seam on every cell border, brightest under a crystal's light (4 Nov 2026).
+ * Cut to the cell plus twice the bend (1.03), the flat tops of neighbours meet and nothing of the groove is left.
+ */
+const TILE_OVERLAP_BY_MODEL: Readonly<Record<string, number>> = { gndx_dirt: 1.05 };
+/** Neighbours that overlap share their flat top: every other cell sits this much higher, so the two never fight for the same depth. */
+const TILE_PARITY_LIFT = 0.004;
 /** How far a wall piece stands out of its wall, in world units (the old piece was 0.175 thick: the banners and the gate were set for that). */
 const PANEL_DEPTH = 0.175;
 /** Yaw of a wall piece in front of its wall: the piece is turned so that its front, the side with the relief, looks into the cell. */
@@ -407,7 +415,7 @@ export class InteriorView {
       }
       const fit = this.tileFit(model);
       // the face of the tile (not the tip of its highest engraving) lies a hair above the flat quad: set by the tips, the face lay under the quad and only the engravings showed
-      if (fit) list.push({ model, x: cellCenterX(x), y: TILE_LIFT - fit.face * fit.scale[1], z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
+      if (fit) list.push({ model, x: cellCenterX(x), y: TILE_LIFT + ((x + y) & 1) * TILE_PARITY_LIFT - fit.face * fit.scale[1], z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
     }
     this.props.setInstances(owner, list);
     this.props.flush();
@@ -421,8 +429,9 @@ export class InteriorView {
     const info = this.staticInfo[model];
     const b = info?.bounds;
     if (!b) return null;
-    const sx = (CELL_SIZE * TILE_OVERLAP) / (b[3] - b[0]);
-    const sz = (CELL_SIZE * TILE_OVERLAP) / (b[5] - b[2]);
+    const overlap = TILE_OVERLAP_BY_MODEL[model] ?? TILE_OVERLAP;
+    const sx = (CELL_SIZE * overlap) / (b[3] - b[0]);
+    const sz = (CELL_SIZE * overlap) / (b[5] - b[2]);
     return { scale: [sx, ((sx + sz) / 2) * relief, sz], top: b[4], bottom: b[1], face: info?.surface ?? info?.groundTop ?? b[4] };
   }
 
@@ -717,7 +726,7 @@ export class InteriorView {
       for (const p of map.pillars ?? []) instances.push({ model: pillar, x: cellCenterX(p.x), y: 0, z: cellCenterZ(p.y), rotY: 0, scale: 1.5, scaleXYZ: [1.5, height, 1.5] });
     }
     // the models of the debug showcase that no old item stands for, turned to look south at the party
-    for (const e of map.showcase?.extras ?? []) instances.push({ model: e.model, x: cellCenterX(e.x), y: 0, z: cellCenterZ(e.y), rotY: Math.PI, scale: e.scale });
+    for (const e of map.showcase?.extras ?? []) instances.push({ model: e.model, x: cellCenterX(e.x), y: 0, z: cellCenterZ(e.y), rotY: Math.PI, scale: e.scale, ...(e.height ? { scaleXYZ: [e.scale, e.scale * e.height, e.scale] as [number, number, number] } : {}) });
     const flameModel = itemModelKey(MAGIC_FLAMES_ITEM);
     this.flames = flameModel ? instances.filter((p) => p.model === flameModel) : [];
     if (this.flames.length > 0) instances = instances.filter((p) => p.model !== flameModel);

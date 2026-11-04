@@ -39,7 +39,7 @@ import { PropRenderer } from "../render/props";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
-import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
+import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
@@ -85,7 +85,7 @@ import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell
 import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
 import { BIRD_PERCH, BLUE_MUSHROOM, MASCOT_ASK, MASCOT_ITEM, isSolidSpotItem, mascotSpotItem } from "../data/mascots";
-import { emptyContainerLine, propLine } from "../data/prop-texts";
+import { COTTAGE_LINES, emptyContainerLine, propLine } from "../data/prop-texts";
 import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
@@ -1332,6 +1332,7 @@ export class Game {
         // a well, a hut, a stone head: everything the party bumps into says what it is (trees and mountains are the exception); about a third of the wells, fountains and stone heads are magic
         const boon = landmarkBoon(this.world, x, y);
         if (boon) await this.useBoon(x, y, boon);
+        else if (landmarkIsCottageAt(this.world.wrapX(x), this.world.wrapY(y))) this.ui.log(COTTAGE_LINES[0]!, "info");
         else this.ui.log(propLine(landmarkItemAt(this.world.wrapX(x), this.world.wrapY(y)), `${this.world.wrapX(x)},${this.world.wrapY(y)}`), "info");
       } else if (this.world.tile(x, y).ground === GROUND.SHALLOW) {
         this.ui.log("The water is too deep to wade through. Someone who can swim could cross it.", "info");
@@ -2084,7 +2085,7 @@ export class Game {
   /** The party bumps into a caravan: the talent it sells, asked and paid like at the people of the towns (`talent` action). */
   private async visitCaravan(caravan: CaravanSpot): Promise<void> {
     this.passTime(ACTION_MINUTES);
-    await this.useAction({ uid: caravan.id, kind: "talent", x: caravan.x, y: caravan.y, params: { talent: caravan.talent, ...sellerParams(caravan.talent) } });
+    await this.useAction({ uid: caravan.id, kind: "talent", x: caravan.x, y: caravan.y, params: { talent: caravan.talent, ...sellerParams(caravan.talent, caravan.cottage) } });
   }
 
   /** The party walks up to a mascot's place: the old question, and on yes the mascot joins (and the previous one goes back to its place). */
@@ -4556,7 +4557,7 @@ export class Game {
   }
 
   /** Every caravan of the world (fixed by the seed), for the maps. */
-  private caravanSites: { world: World; list: (MapEvent & { talent: string })[] } | null = null;
+  private caravanSites: { world: World; list: (MapEvent & { talent: string; home: string })[] } | null = null;
 
   /**
    * What the maps mark with a question mark on the open land: the mascots still waiting (the one in the party is gone from its place), the Monster Huts
@@ -4565,12 +4566,13 @@ export class Game {
   private overworldEvents(): MapEvent[] {
     if (!this.state) return [];
     if (this.caravanSites?.world !== this.world) {
-      const list: (MapEvent & { talent: string })[] = [];
-      for (const poi of this.world.allPois()) for (const c of caravansOf(this.world, poi)) list.push({ x: c.x, y: c.y, label: "Caravan (talent trader)", talent: c.talent });
+      const list: (MapEvent & { talent: string; home: string })[] = [];
+      // a wagon drawn as the cottage is called a cottage on the maps
+      for (const poi of this.world.allPois()) for (const c of caravansOf(this.world, poi)) list.push({ x: c.x, y: c.y, label: `${c.cottage ? "Cottage" : "Caravan"} (talent trader)`, talent: c.talent, home: c.cottage ? "Cottage" : "Caravan" });
       this.caravanSites = { world: this.world, list };
     }
     // a caravan whose talent the party has bought has nothing left to sell: its question mark is grey
-    const out: MapEvent[] = this.caravanSites.list.map(({ talent, ...ev }) => (this.state.party.talents.includes(talent) ? { ...ev, label: `Caravan (${talentInfo(talent).name}: bought)`, done: true } : ev));
+    const out: MapEvent[] = this.caravanSites.list.map(({ talent, home, ...ev }) => (this.state.party.talents.includes(talent) ? { ...ev, label: `${home} (${talentInfo(talent).name}: bought)`, done: true } : ev));
     for (const s of this.mode === "overworld" ? this.mascotSpots() : []) if (s.mascot !== this.state.party.mascot) out.push({ x: s.x, y: s.y, label: "Mascot" });
     for (const h of hutIndex(this.world).huts) if (!this.hutBurnt(h)) out.push({ x: h.x, y: h.y, label: "Monster Hut" });
     return out;

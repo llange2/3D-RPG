@@ -1,5 +1,5 @@
 import { hash2, valueNoise2 } from "../core/noise";
-import { COTTAGE_MODEL, COTTAGE_SCALE, tunedItemModels } from "../data/item-tuning";
+import { COTTAGE_MODEL, COTTAGE_SCALE, COTTAGE_SCALE_XYZ, tunedItemModels } from "../data/item-tuning";
 import { CARAVAN_ITEM, COTTAGE_EVERY } from "../world/caravans";
 import { BIOME, CHUNK_SIZE, DECO, GROUND, TILE_SIZE, isTileWalkable, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
 import { poiFront, type PoiSide, type World } from "../world/world";
@@ -128,7 +128,7 @@ const landmarkIsCottage = (h: number): boolean => (h >>> 9) % COTTAGE_EVERY === 
 function landmarkSpec(h: number): PropSpec {
   let k = (h >>> 3) % LANDMARK_TOTAL;
   const pick = LANDMARKS.find((l) => (k -= l.weight) < 0)!;
-  if (pick.item === CARAVAN_ITEM && landmarkIsCottage(h)) return { model: COTTAGE_MODEL, scale: COTTAGE_SCALE };
+  if (pick.item === CARAVAN_ITEM && landmarkIsCottage(h)) return { model: COTTAGE_MODEL, scale: COTTAGE_SCALE, scaleXYZ: COTTAGE_SCALE_XYZ };
   const pose = ITEM_POSES[String(pick.item)]!;
   return { model: `ci_${pick.item}`, scale: pose.scale, scaleXYZ: pose.scale3 };
 }
@@ -137,6 +137,11 @@ function landmarkSpec(h: number): PropSpec {
 export function landmarkItemAt(tx: number, ty: number): number {
   let k = ((hash2(0xbeef, tx, ty) >>> 0) >>> 3) % LANDMARK_TOTAL;
   return LANDMARKS.find((l) => (k -= l.weight) < 0)!.item;
+}
+
+/** Whether the landmark tile is the cottage (the rustic caravan's item in another house), so that the log and the maps call it by the right name. */
+export function landmarkIsCottageAt(tx: number, ty: number): boolean {
+  return landmarkItemAt(tx, ty) === CARAVAN_ITEM && landmarkIsCottage(hash2(0xbeef, tx, ty) >>> 0);
 }
 
 /** The straw hut (item 45), the one landmark with a door. */
