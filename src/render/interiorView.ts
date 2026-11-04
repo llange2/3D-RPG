@@ -33,6 +33,8 @@ const SPIN_SPEED = 0.5;
 
 /** The old dungeon floor and its scale (add_block 10): a cobbled mesh, one model per cell. */
 const FLOOR_MODEL = "blk_floor";
+/** The floor of a cave in the flat environments: the painted dirt tile (the 3D environments put the old dirt model over it, `FLOOR_MODELS`). */
+const CAVE_FLOOR = "terrain/flat/dirt_full";
 const FLOOR_SCALE: [number, number, number] = [1.5, 1.473, 1.5];
 /**
  * Cells around the party that get a floor model (a square of 17 x 17 at the most, a few thousand triangles each). The torch
@@ -194,7 +196,7 @@ export class InteriorView {
     const style = map.styles!.list[Number(index)]!;
     const file = kind === "floor" ? style.floor : kind === "ceiling" ? style.ceiling : style.wall;
     const m = new StandardMaterial(`interior:${key}`, this.r.scene);
-    const tex = this.textures.get(`${groundTexture(file ?? "tex/tex_black")}.webp`);
+    const tex = this.textures.get(`${kind === "floor" && file?.endsWith("tex_cave") ? CAVE_FLOOR : groundTexture(file ?? "tex/tex_black")}.webp`);
     m.diffuseTexture = tex;
     m.specularColor = Color3.Black();
     m.diffuseColor = Color3.FromHexString(map.theme.ambient);
@@ -222,7 +224,7 @@ export class InteriorView {
     const file =
       key === "floor" ? t.floor : key === "ceiling" ? (t.ceiling ?? t.floor) : key === "door" ? t.door : t.wall;
     m = new StandardMaterial(`interior:${key}`, this.r.scene);
-    m.diffuseTexture = this.textures.get(`tex/${file}.webp`);
+    m.diffuseTexture = this.textures.get(key === "floor" && map.kind === "cave" ? `${CAVE_FLOOR}.webp` : `tex/${file}.webp`);
     m.specularColor = Color3.Black();
     m.diffuseColor = Color3.FromHexString(t.ambient);
     if (key === "building") m.diffuseColor = Color3.FromHexString(t.ambient).multiply(new Color3(0.9, 0.82, 0.72));
@@ -421,7 +423,7 @@ export class InteriorView {
     if (!b) return null;
     const sx = (CELL_SIZE * TILE_OVERLAP) / (b[3] - b[0]);
     const sz = (CELL_SIZE * TILE_OVERLAP) / (b[5] - b[2]);
-    return { scale: [sx, ((sx + sz) / 2) * relief, sz], top: b[4], bottom: b[1], face: info?.surface ?? b[4] };
+    return { scale: [sx, ((sx + sz) / 2) * relief, sz], top: b[4], bottom: b[1], face: info?.surface ?? info?.groundTop ?? b[4] };
   }
 
   /** How far the flat ceiling is raised over the cells under each ceiling model that hangs above the room (`CEILING_RELIEF`): the depth of the flattened slab. */

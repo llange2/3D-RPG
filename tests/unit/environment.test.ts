@@ -135,7 +135,7 @@ describe("the models of the user (tools/assets/sources/models)", () => {
   it.runIf(built)("lie down as slabs, one cell wide, and the wall piece stands up (both sets)", () => {
     for (const file of ["models.static.json", "models.static.original.json"]) {
       const r = registry(file);
-      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_dungeon_ceiling", "blk_cave_ceiling", "blk_cyber_floor"]) {
+      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_dungeon_ceiling", "blk_cave_ceiling"]) {
         const s = size(r[key]!.bounds);
         // the files are normalised to 1.9 (floors, most ceilings) or to half of it (the spaceship's floor): the game scales a slab to the cell by its bounds
         expect(s.w, `${file} ${key}`).toBeGreaterThan(0.9);
@@ -150,13 +150,13 @@ describe("the models of the user (tools/assets/sources/models)", () => {
         expect(wall.d, `${file} ${key}`).toBeLessThan(0.3);
       }
       // the floor tiles carry the height of their face (the plane with most area), below the tips of their engravings: the game sets them by it
-      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_cyber_floor"]) {
+      for (const key of ["blk_city_floor", "blk_fortress_floor"]) {
         const info = r[key] as unknown as { surface?: number; bounds: number[] };
         expect(info.surface, `${file} ${key}`).toBeDefined();
         expect(info.surface!, `${file} ${key}`).toBeLessThanOrEqual(info.bounds[4]!);
         expect(info.surface!, `${file} ${key}`).toBeGreaterThan(info.bounds[1]!);
       }
-      for (const gone of ["blk_fortress_wall", "blk_cyber_ceiling"]) expect(r[gone], `${file} ${gone}`).toBeUndefined();
+      for (const gone of ["blk_fortress_wall", "blk_cyber_ceiling", "blk_cyber_floor"]) expect(r[gone], `${file} ${gone}`).toBeUndefined();
     }
   });
 
