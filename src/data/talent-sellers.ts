@@ -14,13 +14,15 @@ export interface TalentSeller {
   item?: number;
   /** What the seller says before the price. */
   text: string;
+  /** What he says when his stall is drawn as the cottage instead of the rustic caravan (`CaravanSpot.cottage`); the caravan's text names a caravan. */
+  cottageText?: string;
 }
 
-/** The params a `talent` action carries for its seller: what he says, and the person or object he stands as. */
-export function sellerParams(talent: string): Record<string, string | number> {
+/** The params a `talent` action carries for its seller: what he says, and the person or object he stands as. `cottage`: the stall is the cottage. */
+export function sellerParams(talent: string, cottage = false): Record<string, string | number> {
   const seller = TALENT_SELLERS[talent];
   if (!seller) throw new Error(`nobody sells ${talent}`);
-  return { text: seller.text, ...(seller.persona !== undefined ? { persona: seller.persona } : {}), ...(seller.item !== undefined ? { item: seller.item } : {}) };
+  return { text: cottage && seller.cottageText ? seller.cottageText : seller.text, ...(seller.persona !== undefined ? { persona: seller.persona } : {}), ...(seller.item !== undefined ? { item: seller.item } : {}) };
 }
 
 export const TALENT_SELLERS: Record<string, TalentSeller> = {
@@ -36,12 +38,32 @@ export const TALENT_SELLERS: Record<string, TalentSeller> = {
   guild_level_3: { persona: 50, text: "Do you want to cast spells that do more than singe an eyebrow? The Falcon guild teaches them. I teach the way in." },
   guild_level_4: { persona: 50, text: "The Buzzard guild keeps the great spells. I keep the key. For a modest fee, of course." },
   guild_level_5: { persona: 50, text: "The Eagle guild is the highest circle there is. You have come a long way, and I am glad to open the door for you." },
-  talent_orientation: { item: 26, text: "The caravan is full of old maps, compasses and one very confused parrot. A sign says: 'Put the money on the table and you will never lose your way on the map again!'" },
-  talent_swimmer: { item: 26, text: "The caravan smells of wet wool and lake water. A sign says: 'Put the money on the table and learn to swim across rivers!'" },
-  talent_perceptive: { item: 26, text: "A rusty caravan with a magnifying glass nailed to the door. A sign says: 'Put the money on the table and see what others overlook: hidden passages and doors!'" },
+  talent_orientation: {
+    item: 26,
+    text: "The caravan is full of old maps, compasses and one very confused parrot. A sign says: 'Put the money on the table and you will never lose your way on the map again!'",
+    cottageText: "The cottage is full of old maps, compasses and one very confused parrot. A sign says: 'Put the money on the table and you will never lose your way on the map again!'",
+  },
+  talent_swimmer: {
+    item: 26,
+    text: "The caravan smells of wet wool and lake water. A sign says: 'Put the money on the table and learn to swim across rivers!'",
+    cottageText: "The cottage smells of wet wool and lake water. A sign says: 'Put the money on the table and learn to swim across rivers!'",
+  },
+  talent_perceptive: {
+    item: 26,
+    text: "A rusty caravan with a magnifying glass nailed to the door. A sign says: 'Put the money on the table and see what others overlook: hidden passages and doors!'",
+    cottageText: "A cottage with a magnifying glass nailed to the door. A sign says: 'Put the money on the table and see what others overlook: hidden passages and doors!'",
+  },
   talent_prayer_master: { persona: 52, text: "I am Lord Prayer." },
   talent_prestidigitator: { persona: 52, text: "I am Lord Magic." },
   // the rusty caravans of the open country (`world/caravans.ts`): the old game's hut of the bargainers, with a sign
-  talent_bargainer: { item: 26, text: "The caravan is rusty and empty, except for a table with a shiny scale on it. Next to it is a sign: 'Put the money on the table and become bargainers!'" },
-  talent_merchant: { item: 26, text: "A rusty caravan full of crates, scales and sacks. A sign on the door says: 'Put the money on the table and become merchants!'" },
+  talent_bargainer: {
+    item: 26,
+    text: "The caravan is rusty and empty, except for a table with a shiny scale on it. Next to it is a sign: 'Put the money on the table and become bargainers!'",
+    cottageText: "The cottage is cosy and almost empty, except for a table with a shiny scale on it. Next to it is a sign: 'Put the money on the table and become bargainers!'",
+  },
+  talent_merchant: {
+    item: 26,
+    text: "A rusty caravan full of crates, scales and sacks. A sign on the door says: 'Put the money on the table and become merchants!'",
+    cottageText: "A cottage full of crates, scales and sacks. A sign on the door says: 'Put the money on the table and become merchants!'",
+  },
 };

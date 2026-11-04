@@ -1,7 +1,7 @@
 import { LAYER, rngFor } from "../core/rng";
 import { BOON_SOURCE, type BoonSource } from "../data/boon-texts";
 import { MAP_ITEMS } from "../data/tables";
-import { landmarkItemAt } from "../render/terrainMesher";
+import { landmarkIsCottageAt, landmarkItemAt } from "../render/terrainMesher";
 import { ATTRIBUTES, type BoonKey } from "../sim/types";
 import { boonAmount } from "../sim/boons";
 import { DECO } from "../world/types";
@@ -21,7 +21,10 @@ export interface LandmarkBoon {
 
 /** What stands on a landmark tile, by the name of its old item (for the mouse-over of the map). */
 export function landmarkName(world: World, x: number, y: number): string {
-  return MAP_ITEMS[landmarkItemAt(world.wrapX(x), world.wrapY(y))]?.name.trim() ?? "Landmark";
+  const wx = world.wrapX(x);
+  const wy = world.wrapY(y);
+  if (landmarkIsCottageAt(wx, wy)) return "Cottage";
+  return MAP_ITEMS[landmarkItemAt(wx, wy)]?.name.trim() ?? "Landmark";
 }
 
 const STATS: readonly BoonKey[] = [...ATTRIBUTES, "res_fire", "res_ice", "res_acid", "res_magic"];

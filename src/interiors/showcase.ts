@@ -1,5 +1,5 @@
 import { INTERIOR_THEMES } from "../data/interior-themes";
-import { tunedItemModels } from "../data/item-tuning";
+import { COTTAGE_HEIGHT_FACTOR, COTTAGE_SCALE, tunedItemModels } from "../data/item-tuning";
 import { PERSONAS } from "../data/personas";
 import { MONSTERS } from "../data/tables";
 import { Builder } from "./builder";
@@ -22,10 +22,10 @@ export const SHOWCASE_NAME = "Showcase: all monsters and objects";
  * (the overworld's, the user's own models; they are loaded for the showcase only: `OVERWORLD_EXTRAS`).
  */
 export const OVERWORLD_EXTRAS = ["obj_cottage", "obj_pirate_ship"] as const;
-export const SHOWCASE_EXTRAS: readonly { model: string; scale: number }[] = [
+export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: number }[] = [
   { model: "obj_fountain", scale: 1.3 },
   { model: "obj_statue", scale: 1.15 },
-  { model: "obj_cottage", scale: 3.2 },
+  { model: "obj_cottage", scale: COTTAGE_SCALE, height: COTTAGE_HEIGHT_FACTOR },
   { model: "obj_pirate_ship", scale: 2.4 },
 ];
 

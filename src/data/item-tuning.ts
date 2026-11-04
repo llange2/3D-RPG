@@ -23,6 +23,9 @@ export const GROUNDED_ITEMS: ReadonlySet<number> = new Set([8, 16, 26, 42, 102])
  */
 export const COTTAGE_MODEL = "obj_cottage";
 export const COTTAGE_SCALE = 3.2;
+/** The cottage is drawn 25 % higher than wide (the user's wish, 4 Nov 2026): width and depth keep `COTTAGE_SCALE`. */
+export const COTTAGE_HEIGHT_FACTOR = 1.25;
+export const COTTAGE_SCALE_XYZ: [number, number, number] = [COTTAGE_SCALE, COTTAGE_SCALE * COTTAGE_HEIGHT_FACTOR, COTTAGE_SCALE];
 /** Degrees to turn the cottage about the vertical axis so that its door looks the way a caravan faces (the model is made facing another way than the wagon). */
 export const COTTAGE_YAW = 90;
 

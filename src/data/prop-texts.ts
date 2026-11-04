@@ -87,6 +87,9 @@ const PROP_LINES: Record<number, readonly string[]> = {
   128: ["An opened stone coffin. Whatever was in there has left."],
 };
 
+/** What the party reads at the cottage that stands in the place of a rustic caravan (`landmarkIsCottageAt`). */
+export const COTTAGE_LINES: readonly string[] = ["A cosy cottage. The chimney smokes, the door is firmly shut and the garden gnome looks suspicious."];
+
 /** The lines for an object, or a plain "You see a ..." from its name. `pick` (a number, or a string such as the uid) chooses among several. */
 export function propLine(item: number, pick: number | string = 0): string {
   const lines = PROP_LINES[item];
