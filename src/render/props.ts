@@ -199,6 +199,9 @@ export class PropRenderer {
         // (the party's torch, the Light spell) left chests, the dungeon entrance and every campaign decoration black. Daylight
         // does not show it, the hemisphere light has the same colour on both sides.
         if (info.fromObj) std.backFaceCulling = false;
+        // the city's wall piece and floor tile (they keep their normal map) are double sided glTF with undercut relief: the faces of the engravings that look away from
+        // the torch are drawn from behind, and without lighting from both sides those came out black at night (the "black spots" of the city walls). Not for OBJ (above)
+        if (!info.fromObj && std.bumpTexture) std.twoSidedLighting = true;
         // attack effects glow: the old game drew them with an unlit shader, and in a torch-lit dungeon they would fade out
         // a few tiles away from the party otherwise
         if (key.startsWith("proj_")) {

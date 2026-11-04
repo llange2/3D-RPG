@@ -54,7 +54,7 @@ describe("what each place draws in 3D", () => {
 
   it("gives every place the models of its own textures", () => {
     expect(environmentModels(map("dungeon"), "floor").sort()).toEqual(["blk_dungeon_ceiling", "blk_floor"]);
-    expect(environmentModels(map("cave"), "floor")).toEqual(["blk_cave_ceiling"]);
+    expect(environmentModels(map("cave"), "floor").sort()).toEqual(["blk_cave_ceiling", "gndx_dirt"]);
     expect(environmentModels(map("town"), "floor")).toEqual(["blk_city_floor"]);
     // the castle lies under the open sky: its floor has a model, its walls stay flat (also in Full 3D), and it has no ceiling
     expect(environmentModels(map("castle"), "floor")).toEqual(["blk_fortress_floor"]);
@@ -62,7 +62,7 @@ describe("what each place draws in 3D", () => {
     // the dungeon's and the town's walls have a piece (Full 3D), the dungeon's also the one of a wall that gave way; the cave's walls are its rock models
     expect(environmentModels(map("dungeon"), "full").sort()).toEqual(["blk_dungeon_ceiling", "blk_dungeon_wall", "blk_dungeon_wall_broken", "blk_floor"]);
     expect(environmentModels(map("town"), "full").sort()).toEqual(["blk_city_floor", "blk_city_wall"]);
-    expect(environmentModels(map("cave"), "full")).toEqual(["blk_cave_ceiling"]);
+    expect(environmentModels(map("cave"), "full").sort()).toEqual(["blk_cave_ceiling", "gndx_dirt"]);
   });
 
   it("lifts the flat ceiling over a flattened cave ceiling by its depth, and over no other", () => {
