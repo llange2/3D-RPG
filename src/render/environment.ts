@@ -32,18 +32,36 @@ export const FLOOR_MODELS: Readonly<Record<string, { model: string; replacesQuad
   tex_dungeon_floor: { model: "blk_floor", replacesQuad: true },
   tex_city_floor: { model: "blk_city_floor", replacesQuad: false },
   tex_fortress_floor: { model: "blk_fortress_floor", replacesQuad: false },
+  tex_cyber_floor: { model: "blk_cyber_floor", replacesQuad: false },
 };
 
-/** Ceiling textures that have a 3D ceiling model (the flat ceiling stays above it as the backing of the gaps). */
+/**
+ * Ceiling textures that have a 3D ceiling model (the flat ceiling stays above it as the backing of the gaps). The spaceship's and the castle's
+ * ceilings have none: they stay flat.
+ */
 export const CEILING_MODELS: Readonly<Record<string, string>> = {
   tex_dungeon_ceiling: "blk_dungeon_ceiling",
   tex_cave_ceiling: "blk_cave_ceiling",
-  tex_cyber_ceiling: "blk_cyber_ceiling",
 };
 
-/** Wall textures that have a 3D wall piece (one per wall face, in front of the flat wall). */
+/**
+ * Ceiling models that are drawn flatter than the file has them (the factor on their height) and are lifted by what is left of their relief: their
+ * lowest point is then as high as the flat ceiling, the rooms are as high as the flat ones are, and the flat ceiling moves up to the back of the slabs
+ * (`InteriorView`, `meshInterior` option `ceilingLift`). The cave's relief is too deep for a room of 3 units.
+ */
+export const CEILING_RELIEF: Readonly<Record<string, number>> = {
+  blk_cave_ceiling: 0.5,
+};
+
+/** Wall textures that have a 3D wall piece (one per wall face, in front of the flat wall). The castle, the cave and the spaceship have none: flat. */
 export const WALL_MODELS: Readonly<Record<string, string>> = {
-  tex_fortress_wall: "blk_fortress_wall",
+  tex_dungeon_wall: "blk_dungeon_wall",
+  tex_city_wall: "blk_city_wall",
+};
+
+/** The wall piece a wall that gave way turns into, by the wall piece it was part of: the dungeon's wall with a hole in it (the city's broken wall stays the old model). */
+export const BROKEN_PIECES: Readonly<Record<string, string>> = {
+  blk_dungeon_wall: "blk_dungeon_wall_broken",
 };
 
 export const floorModelOfTexture = (file: string | null | undefined): { model: string; replacesQuad: boolean } | undefined => FLOOR_MODELS[textureName(file)];

@@ -14,7 +14,7 @@ import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/
 import type { StaticModelInfo, TextureCache } from "./assets";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
-import { hasGroundModels, hasWallModels, type Environment } from "./environment";
+import { BROKEN_PIECES, CEILING_RELIEF, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
 import { CELL_SIZE, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type WallPanel } from "./interiorMesher";
 import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
@@ -404,19 +404,35 @@ export class InteriorView {
         continue;
       }
       const fit = this.tileFit(model);
-      if (fit) list.push({ model, x: cellCenterX(x), y: TILE_LIFT - fit.top * fit.scale[1], z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
+      // the face of the tile (not the tip of its highest engraving) lies a hair above the flat quad: set by the tips, the face lay under the quad and only the engravings showed
+      if (fit) list.push({ model, x: cellCenterX(x), y: TILE_LIFT - fit.face * fit.scale[1], z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
     }
     this.props.setInstances(owner, list);
     this.props.flush();
   }
 
-  /** How a slab model of the user's is scaled to fill one cell (the files are normalised to about 1.9 units), and the height of its top above its origin (model units). */
-  private tileFit(model: string): { scale: [number, number, number]; top: number } | null {
-    const b = this.staticInfo[model]?.bounds;
+  /**
+   * How a slab model of the user's is scaled to fill one cell (the files are normalised to about 1.9 units), and the heights of its top and bottom above its
+   * origin and of its face, the plane that holds most of its area (model units; the register's `surface`, the top without it). `relief` flattens the slab.
+   */
+  private tileFit(model: string, relief = 1): { scale: [number, number, number]; top: number; bottom: number; face: number } | null {
+    const info = this.staticInfo[model];
+    const b = info?.bounds;
     if (!b) return null;
     const sx = (CELL_SIZE * TILE_OVERLAP) / (b[3] - b[0]);
     const sz = (CELL_SIZE * TILE_OVERLAP) / (b[5] - b[2]);
-    return { scale: [sx, (sx + sz) / 2, sz], top: b[4] };
+    return { scale: [sx, ((sx + sz) / 2) * relief, sz], top: b[4], bottom: b[1], face: info?.surface ?? b[4] };
+  }
+
+  /** How far the flat ceiling is raised over the cells under each ceiling model that hangs above the room (`CEILING_RELIEF`): the depth of the flattened slab. */
+  private ceilingLifts(models: ReadonlySet<string>): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const model of models) {
+      const relief = CEILING_RELIEF[model];
+      const fit = relief === undefined ? null : this.tileFit(model, relief);
+      if (fit) out[model] = (fit.top - fit.bottom) * fit.scale[1] + CEILING_GAP;
+    }
+    return out;
   }
 
   /** The 3D ceilings within `CEILING_RADIUS` cells: the flat back of each slab lies a hair under the flat ceiling, its relief hangs into the room. */
@@ -440,8 +456,12 @@ export class InteriorView {
       const y = (i - x) / map.width;
       if (Math.abs(x - at.x) > near || Math.abs(y - at.y) > near) continue;
       const model = ceilingModelAt(map, x, y);
-      const fit = model ? this.tileFit(model) : null;
-      if (model && fit) list.push({ model, x: cellCenterX(x), y: height - CEILING_GAP - fit.top * fit.scale[1], z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
+      const relief = model ? CEILING_RELIEF[model] : undefined;
+      const fit = model ? this.tileFit(model, relief) : null;
+      if (!model || !fit) continue;
+      // a flattened ceiling hangs above the room, its lowest point at the height of the flat ceiling (which `meshInterior` raised to its back); the others hang from the flat ceiling
+      const y0 = relief === undefined ? height - CEILING_GAP - fit.top * fit.scale[1] : height - fit.bottom * fit.scale[1];
+      list.push({ model, x: cellCenterX(x), y: y0, z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
     }
     this.props.setInstances(owner, list);
     this.props.flush();
@@ -518,7 +538,7 @@ export class InteriorView {
         }
       }
     }
-    const geo = meshInterior(map, new Set(), { models, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined });
+    const geo = meshInterior(map, new Set(), { models, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined, ceilingLift: this.ceilingLifts(models) });
     const mesh = new Mesh(`interior:${map.key}`, this.r.scene);
     const vd = new VertexData();
     vd.positions = geo.positions;
@@ -558,6 +578,21 @@ export class InteriorView {
       this.pushCaveWalls(this.floorFocus.x, this.floorFocus.y);
       this.pushRoundCorners(this.floorFocus.x, this.floorFocus.y);
     }
+  }
+
+  /**
+   * In "Full 3D" a wall that gave way is the user's broken wall piece (`BROKEN_PIECES`: the wall with a hole and its rubble) instead of the old model, stretched like
+   * the other wall pieces to the cell's width and the wall's height and standing across the passage. False when the environment or the map has none.
+   */
+  private pushBrokenPiece(instances: PropInstance[], map: InteriorMap, alongX: boolean, x: number, z: number): boolean {
+    const piece = hasWallModels(this.environment) ? BROKEN_PIECES[wallModelOfTexture(map.theme.wall) ?? ""] : undefined;
+    const b = piece ? this.staticInfo[piece]?.bounds : undefined;
+    if (!piece || !b || !this.props.has(piece)) return false;
+    const sx = CELL_SIZE / (b[3] - b[0]);
+    const sy = wallHeightOf(map) / (b[4] - b[1]);
+    const sz = (PANEL_DEPTH * 2) / (b[5] - b[2]);
+    instances.push({ model: piece, x, y: -b[1] * sy, z, rotY: alongX ? Math.PI / 2 : 0, scale: sx, scaleXYZ: [sx, sy, sz], atOrigin: true });
+    return true;
   }
 
   /** Shows the layout of a changed map (campaign maps change when walls break, doors open or blocks move). */
@@ -660,6 +695,7 @@ export class InteriorView {
           break;
         }
         case "breakable_wall": {
+          if (this.brokenWalls.has(a.uid) && this.pushBrokenPiece(instances, map, a.params.axis === "x", x, z)) break;
           const look = brokenWallLook(map);
           if (!look || !this.brokenWalls.has(a.uid) || !this.props.has(look.model)) break;
           // the passage runs along the axis of the action; the glTF models stand turned by half a circle (see `GLTF_YAW` in blocks.ts)

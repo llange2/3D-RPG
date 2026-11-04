@@ -26,14 +26,15 @@ describe("the user's models live in the repository", () => {
     expect(text).not.toContain(`join(ROOT, ".ignore"`);
   });
 
-  it("has the cottage, the pirate ship, the castle's floor and the spaceship's ceiling in both model sets", () => {
+  it("has the cottage, the pirate ship, the castle's floor and the spaceship's floor in both model sets, and neither the castle's wall nor the spaceship's ceiling", () => {
     for (const file of ["models.static.json", "models.static.original.json"]) {
       if (!existsSync(join(PUBLIC, file))) continue;
       const r = JSON.parse(readFileSync(join(PUBLIC, file), "utf-8")) as Record<string, { file: string; bounds: number[] }>;
-      for (const key of [COTTAGE_MODEL, PIRATE_SHIP_MODEL, "blk_fortress_floor", "blk_cyber_ceiling"]) {
+      for (const key of [COTTAGE_MODEL, PIRATE_SHIP_MODEL, "blk_fortress_floor", "blk_cyber_floor"]) {
         expect(r[key], `${file} ${key}`).toBeDefined();
         expect(existsSync(join(PUBLIC, r[key]!.file)), `${file} ${key} file`).toBe(true);
       }
+      for (const key of ["blk_fortress_wall", "blk_cyber_ceiling"]) expect(r[key], `${file} ${key}`).toBeUndefined();
     }
   });
 });
@@ -97,26 +98,18 @@ describe("the road of a town ends at its door, which the village model has on th
   });
 });
 
-describe("the castle in Full 3D: gate, corners, floor", () => {
+describe("the wall pieces in Full 3D: corners, castle, floors", () => {
   const world = new World("environment");
   const poi = { id: "p:e:castle", kind: "castle" as const, name: "castle", x: 3, y: 4, size: 2, side: "S" as const, region: { rx: 0, ry: 0 }, anchor: false, tier: 2, biome: BIOME.MEADOW };
   const castle: InteriorMap = generateInterior(world, poi);
-  const models = new Set(["blk_fortress_wall", "blk_fortress_floor"]);
-  const geo = meshInterior(castle, new Set(), { models });
-  const at = (x: number, y: number) => (x < 0 || y < 0 || x >= castle.width || y >= castle.height ? CELL.SOLID : castle.cells[y * castle.width + x]);
+  const dungeon: InteriorMap = generateInterior(world, { ...poi, id: "p:e:dungeon", kind: "dungeon" as const, size: 1 });
+  const models = new Set(["blk_dungeon_wall", "blk_city_wall", "blk_fortress_floor"]);
+  const geo = meshInterior(dungeon, new Set(), { models });
+  const at = (x: number, y: number) => (x < 0 || y < 0 || x >= dungeon.width || y >= dungeon.height ? CELL.SOLID : dungeon.cells[y * dungeon.width + x]);
 
-  it("has a castle with a gate that is a model of its own", () => {
+  it("has a castle with a gate that is a model of its own, and no wall piece (its walls stay flat)", () => {
     expect(castle.castle).toBeTruthy();
-  });
-
-  it("puts no wall piece in front of the gate: the wooden door was hidden behind it", () => {
-    const dx = castle.exit.x - castle.spawn.x;
-    const dy = castle.exit.y - castle.spawn.y;
-    // the wall behind the exit cell is the one the gate stands in
-    const behind = (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "E" : "W") : dy > 0 ? "S" : "N") as keyof typeof FACING_DELTA;
-    expect(geo.panels.some((p) => p.x === castle.exit.x && p.y === castle.exit.y && p.dir === behind)).toBe(false);
-    // every other wall face has its piece
-    expect(geo.panels.length).toBeGreaterThan(100);
+    expect(meshInterior(castle, new Set(), { models }).panels).toHaveLength(0);
   });
 
   it("reaches the piece of a wall that runs east to west over the notch at a corner that sticks out, and only there", () => {
@@ -133,13 +126,14 @@ describe("the castle in Full 3D: gate, corners, floor", () => {
         if (sticksOut) grown++;
       }
     }
-    expect(grown).toBeGreaterThan(5);
+    expect(grown).toBeGreaterThan(0);
   });
 
-  it("has a 3D floor model on its floor cells (the castle's floor texture), and a ceiling for the spaceship's cyber texture", () => {
+  it("has a 3D floor model on the castle's and the spaceship's floors, and no ceiling model for the spaceship", () => {
     expect(floorModelOfTexture("tex_fortress_floor")).toEqual({ model: "blk_fortress_floor", replacesQuad: false });
     expect(floorModelAt(castle, castle.spawn.x, castle.spawn.y)).toBe("blk_fortress_floor");
-    expect(ceilingModelOfTexture("tex/tex_cyber_ceiling")).toBe("blk_cyber_ceiling");
+    expect(floorModelOfTexture("tex/tex_cyber_floor")).toEqual({ model: "blk_cyber_floor", replacesQuad: false });
+    expect(ceilingModelOfTexture("tex/tex_cyber_ceiling")).toBeUndefined();
   });
 });
 

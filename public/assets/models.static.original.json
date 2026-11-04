@@ -3616,6 +3616,7 @@
   ],
   "animations": [],
   "groundTop": 0.1,
+  "surface": 0.125,
   "fromObj": false,
   "mean": 0.139
  },
@@ -3633,6 +3634,7 @@
   ],
   "animations": [],
   "groundTop": 0,
+  "surface": 0.025,
   "fromObj": false,
   "mean": 0.629
  },
@@ -3652,23 +3654,6 @@
   "groundTop": 0.05,
   "fromObj": false,
   "mean": 0.066
- },
- "blk_fortress_wall": {
-  "file": "models-original/blk_fortress_wall.glb",
-  "tris": 3149,
-  "bytes": 637088,
-  "bounds": [
-   -0.3347170054912567,
-   -0.47631800174713135,
-   -0.0407710000872612,
-   0.3342289924621582,
-   0.47631800174713135,
-   0.04272500053048134
-  ],
-  "animations": [],
-  "groundTop": -0.35,
-  "fromObj": false,
-  "mean": 0.247
  },
  "obj_cottage": {
   "file": "models-original/obj_cottage.glb",
@@ -3718,24 +3703,80 @@
   ],
   "animations": [],
   "groundTop": 0,
+  "surface": 0.02,
   "fromObj": false,
   "mean": 0.445
  },
- "blk_cyber_ceiling": {
-  "file": "models-original/blk_cyber_ceiling.glb",
-  "tris": 1399,
-  "bytes": 468372,
+ "blk_city_wall": {
+  "file": "models-original/blk_city_wall.glb",
+  "tris": 2338,
+  "bytes": 1760188,
   "bounds": [
-   -0.47680699825286865,
-   -0.022704999893903836,
-   -0.4753420054912567,
-   0.47680699825286865,
-   0.02221699990332137,
-   0.4753420054912567
+   -0.4748539924621582,
+   -0.47582998871803284,
+   -0.024170000106096268,
+   0.4748539924621582,
+   0.4738770127296448,
+   0.0217289999127388
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "surface": 0.475,
+  "fromObj": false,
+  "mean": 0.561
+ },
+ "blk_cyber_floor": {
+  "file": "models-original/blk_cyber_floor.glb",
+  "tris": 1400,
+  "bytes": 964352,
+  "bounds": [
+   -0.4782710075378418,
+   -0.026123000308871373,
+   -0.47582998871803284,
+   0.4782710075378418,
+   0.02856400050222884,
+   0.47729501128196716
   ],
   "animations": [],
   "groundTop": 0,
+  "surface": -0.0025,
   "fromObj": false,
-  "mean": 0.162
+  "mean": 0.575
+ },
+ "blk_dungeon_wall": {
+  "file": "models-original/blk_dungeon_wall.glb",
+  "tris": 2998,
+  "bytes": 893796,
+  "bounds": [
+   -0.33178699016571045,
+   -0.47680699825286865,
+   -0.07055699825286865,
+   0.33178699016571045,
+   0.47631800174713135,
+   0.07299800217151642
+  ],
+  "animations": [],
+  "groundTop": -0.4,
+  "surface": 0.475,
+  "fromObj": false,
+  "mean": 0.154
+ },
+ "blk_dungeon_wall_broken": {
+  "file": "models-original/blk_dungeon_wall_broken.glb",
+  "tris": 3169,
+  "bytes": 1355724,
+  "bounds": [
+   -0.31665000319480896,
+   -0.47680699825286865,
+   -0.12036100029945374,
+   0.3156740069389343,
+   0.47680699825286865,
+   0.12475600093603134
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "surface": 0.475,
+  "fromObj": false,
+  "mean": 0.217
  }
 }

@@ -1,7 +1,7 @@
 import { hash2 } from "../core/noise";
 import { coveredFaces, roundCorners } from "../interiors/roundCorners";
 import { CELL, FACING_DELTA, type Facing, type InteriorKind, type InteriorMap } from "../interiors/types";
-import { ceilingModelOfTexture, floorModelOfTexture, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
+import { BROKEN_PIECES, ceilingModelOfTexture, floorModelOfTexture, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
 import { campaignGroundOf, resolveCorner, type CampaignGround, type FlatTileSet } from "./flatGround";
 
 /** Geometry of an interior, grouped by (material, 16x16 section) so the engine can cull sections individually. */
@@ -116,7 +116,8 @@ export function modelCeilingCells(map: InteriorMap, models?: ReadonlySet<string>
 
 /** The 3D wall piece for a wall material of the mesh (`wall` of a generated map, `wall:<style>` of a campaign map), if its texture has one. */
 function wallModelOfMaterial(map: InteriorMap, material: string): string | undefined {
-  if (material === "wall") return map.styles ? undefined : wallModelOfTexture(map.theme.wall);
+  // the walls of a town's houses and its outer wall are one texture (the houses' tinted), so the same piece
+  if (material === "wall" || material === "building") return map.styles ? undefined : wallModelOfTexture(map.theme.wall);
   if (!material.startsWith("wall:") || !map.styles) return undefined;
   return wallModelOfTexture(map.styles.list[Number(material.slice(5))]?.wall);
 }
@@ -156,6 +157,7 @@ export function environmentModels(map: InteriorMap, environment: Environment): s
     for (const w of walls) {
       const m = wallModelOfTexture(w);
       if (m) keys.add(m);
+      if (m && BROKEN_PIECES[m]) keys.add(BROKEN_PIECES[m]!);
     }
   }
   return [...keys];
@@ -187,8 +189,15 @@ class Bucket {
  * thousand quads. `cracked` lists wall cells (as `x,y`) that hide a breakable wall and get the cracked texture. `holes` are
  * grid indices of floor cells without a floor: the open pits of a generated map, which the pit model fills.
  */
-export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(), options: { models?: ReadonlySet<string>; holes?: ReadonlySet<number>; modelWalls?: boolean; roundWalls?: boolean; flatTiles?: FlatTileSet } = {}): InteriorGeometry {
-  const H = wallHeightOf(map);
+export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(), options: { models?: ReadonlySet<string>; holes?: ReadonlySet<number>; modelWalls?: boolean; roundWalls?: boolean; flatTiles?: FlatTileSet; ceilingLift?: Readonly<Record<string, number>> } = {}): InteriorGeometry {
+  const wallHeight = wallHeightOf(map);
+  // a ceiling model that is hung above the room (`CEILING_RELIEF`) raises the flat ceiling behind it and the walls up to it, so that the slabs have a back to show against
+  const liftAt = (cx: number, cy: number): number => {
+    if (!options.ceilingLift) return 0;
+    const model = ceilingModelAt(map, cx, cy);
+    return model && options.models?.has(model) ? (options.ceilingLift[model] ?? 0) : 0;
+  };
+  const H = wallHeight;
   // the rounded corners of the spaceship are models that stand where the wall faces would be (`interiors/roundCorners.ts`)
   const corners = options.roundWalls ? roundCorners(map) : [];
   const covered = coveredFaces(corners);
@@ -251,12 +260,13 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
       }
       if (here === CELL.LOW) continue; // no ceiling, no walls
 
+      const roof = H + liftAt(cx, cy);
       if (styles ? styles.list[style]!.ceiling : map.theme.ceiling) {
         const c = bucket(styles ? `ceiling:${style}` : "ceiling", cx, cy);
-        const ca = c.vertex([x0, H, z1], [0, -1, 0], [0, 0], shade);
-        const cb = c.vertex([x1, H, z1], [0, -1, 0], [1, 0], shade);
-        const cc = c.vertex([x1, H, z0], [0, -1, 0], [1, 1], shade);
-        const cd = c.vertex([x0, H, z0], [0, -1, 0], [0, 1], shade);
+        const ca = c.vertex([x0, roof, z1], [0, -1, 0], [0, 0], shade);
+        const cb = c.vertex([x1, roof, z1], [0, -1, 0], [1, 0], shade);
+        const cc = c.vertex([x1, roof, z0], [0, -1, 0], [1, 1], shade);
+        const cd = c.vertex([x0, roof, z0], [0, -1, 0], [0, 1], shade);
         c.indices.push(ca, cb, cc, ca, cc, cd);
       }
 
@@ -294,8 +304,8 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
         const b = bucket(material, cx, cy);
         const s = shade * (dir === "N" || dir === "S" ? 1 : 0.93);
         const a = b.vertex([bl[0], 0, bl[1]], n, [0, 0], s);
-        const t1 = b.vertex([bl[0], H, bl[1]], n, [0, 1], s);
-        const t2 = b.vertex([br[0], H, br[1]], n, [1, 1], s);
+        const t1 = b.vertex([bl[0], roof, bl[1]], n, [0, 1], s);
+        const t2 = b.vertex([br[0], roof, br[1]], n, [1, 1], s);
         const d = b.vertex([br[0], 0, br[1]], n, [1, 0], s);
         // front face toward the cell (checked in the browser: the order bottom-left, bottom-right, top-right faces the other way)
         b.indices.push(a, t2, t1, a, d, t2);

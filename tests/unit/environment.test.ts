@@ -56,11 +56,27 @@ describe("what each place draws in 3D", () => {
     expect(environmentModels(map("dungeon"), "floor").sort()).toEqual(["blk_dungeon_ceiling", "blk_floor"]);
     expect(environmentModels(map("cave"), "floor")).toEqual(["blk_cave_ceiling"]);
     expect(environmentModels(map("town"), "floor")).toEqual(["blk_city_floor"]);
-    // the castle lies under the open sky: its floor has a model, its wall a piece (Full 3D), and it has no ceiling
+    // the castle lies under the open sky: its floor has a model, its walls stay flat (also in Full 3D), and it has no ceiling
     expect(environmentModels(map("castle"), "floor")).toEqual(["blk_fortress_floor"]);
-    expect(environmentModels(map("castle"), "full").sort()).toEqual(["blk_fortress_floor", "blk_fortress_wall"]);
-    // the dungeon's, the cave's and the town's walls have no piece of their own
-    expect(environmentModels(map("dungeon"), "full").sort()).toEqual(["blk_dungeon_ceiling", "blk_floor"]);
+    expect(environmentModels(map("castle"), "full")).toEqual(["blk_fortress_floor"]);
+    // the dungeon's and the town's walls have a piece (Full 3D), the dungeon's also the one of a wall that gave way; the cave's walls are its rock models
+    expect(environmentModels(map("dungeon"), "full").sort()).toEqual(["blk_dungeon_ceiling", "blk_dungeon_wall", "blk_dungeon_wall_broken", "blk_floor"]);
+    expect(environmentModels(map("town"), "full").sort()).toEqual(["blk_city_floor", "blk_city_wall"]);
+    expect(environmentModels(map("cave"), "full")).toEqual(["blk_cave_ceiling"]);
+  });
+
+  it("lifts the flat ceiling over a flattened cave ceiling by its depth, and over no other", () => {
+    const cave = map("cave");
+    const cell = cave.spawn;
+    const roofOf = (lift?: Record<string, number>) => {
+      const g = meshInterior(cave, new Set(), { models: new Set(["blk_cave_ceiling"]), ceilingLift: lift });
+      let top = 0;
+      for (const group of g.groups.filter((x) => x.material === "ceiling")) for (let i = group.start; i < group.start + group.count; i++) top = Math.max(top, g.positions[g.indices[i]! * 3 + 1]!);
+      return top;
+    };
+    expect(roofOf({ blk_cave_ceiling: 0.4 }) - roofOf()).toBeCloseTo(0.4, 5);
+    expect(roofOf({ blk_dungeon_ceiling: 0.4 })).toBeCloseTo(roofOf(), 5);
+    expect(cell).toBeDefined();
   });
 
   it("puts a ceiling model over every floor cell of a dungeon and a cave, and none over a town", () => {
@@ -84,24 +100,30 @@ describe("what each place draws in 3D", () => {
     expect(quads(["blk_city_floor"])).toBe(quads([]));
   });
 
-  it("makes a wall piece for every wall face of a castle in Full 3D, and none otherwise", () => {
-    const castle = map("castle");
-    const flat = meshInterior(castle);
-    expect(flat.panels).toHaveLength(0);
-    const full = meshInterior(castle, new Set(), { models: new Set(["blk_fortress_wall"]) });
-    expect(full.panels.length).toBeGreaterThan(100);
-    for (const p of full.panels) {
-      expect(castle.cells[p.y * castle.width + p.x]).toBe(CELL.FLOOR);
-      const d = FACING_DELTA[p.dir];
-      const x = p.x + d.dx;
-      const y = p.y + d.dy;
-      const beyond = x < 0 || y < 0 || x >= castle.width || y >= castle.height ? CELL.SOLID : castle.cells[y * castle.width + x];
-      expect(beyond, `${p.x},${p.y} ${p.dir}`).not.toBe(CELL.FLOOR);
+  it("makes a wall piece for every wall face of a dungeon and of a town in Full 3D, and none for a castle or a cave", () => {
+    for (const [kind, piece] of [["dungeon", "blk_dungeon_wall"], ["town", "blk_city_wall"]] as const) {
+      const place = map(kind);
+      const flat = meshInterior(place);
+      expect(flat.panels, kind).toHaveLength(0);
+      const full = meshInterior(place, new Set(), { models: new Set([piece]) });
+      expect(full.panels.length, kind).toBeGreaterThan(100);
+      for (const p of full.panels) {
+        expect(p.model).toBe(piece);
+        expect(place.cells[p.y * place.width + p.x]).toBe(CELL.FLOOR);
+        const d = FACING_DELTA[p.dir];
+        const x = p.x + d.dx;
+        const y = p.y + d.dy;
+        const beyond = x < 0 || y < 0 || x >= place.width || y >= place.height ? CELL.SOLID : place.cells[y * place.width + x];
+        expect(beyond, `${kind} ${p.x},${p.y} ${p.dir}`).not.toBe(CELL.FLOOR);
+      }
+      // the flat wall stays behind the pieces (the far view), whichever environment: the geometry is the same
+      const wallCount = (g: typeof flat) => g.groups.filter((x) => x.material === "wall" || x.material === "building").reduce((n, x) => n + x.count, 0);
+      expect(wallCount(full), kind).toBe(wallCount(flat));
     }
-    // the flat wall stays behind the pieces (the far view), whichever environment: the geometry is the same
-    expect(full.groups.filter((g) => g.material === "wall").reduce((n, g) => n + g.count, 0)).toBe(flat.groups.filter((g) => g.material === "wall").reduce((n, g) => n + g.count, 0));
-    // a dungeon has no wall model
-    expect(meshInterior(map("dungeon"), new Set(), { models: new Set(["blk_fortress_wall", "blk_floor"]) }).panels).toHaveLength(0);
+    // a castle and a cave have no wall model: the pieces of the others do not fit them
+    const all = new Set(["blk_dungeon_wall", "blk_city_wall", "blk_floor"]);
+    expect(meshInterior(map("castle"), new Set(), { models: all }).panels).toHaveLength(0);
+    expect(meshInterior(map("cave"), new Set(), { models: all }).panels).toHaveLength(0);
   });
 });
 
@@ -113,20 +135,28 @@ describe("the models of the user (tools/assets/sources/models)", () => {
   it.runIf(built)("lie down as slabs, one cell wide, and the wall piece stands up (both sets)", () => {
     for (const file of ["models.static.json", "models.static.original.json"]) {
       const r = registry(file);
-      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_dungeon_ceiling", "blk_cave_ceiling", "blk_cyber_ceiling"]) {
+      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_dungeon_ceiling", "blk_cave_ceiling", "blk_cyber_floor"]) {
         const s = size(r[key]!.bounds);
-        // the files are normalised to 1.9 (floors, most ceilings) or to half of it (the spaceship's ceiling): the game scales a slab to the cell by its bounds
+        // the files are normalised to 1.9 (floors, most ceilings) or to half of it (the spaceship's floor): the game scales a slab to the cell by its bounds
         expect(s.w, `${file} ${key}`).toBeGreaterThan(0.9);
         expect(Math.abs(s.w - s.d), `${file} ${key}`).toBeLessThan(0.1 * s.w);
         // the relief is a fraction of the width: a slab that stood on its edge would be as high as it is wide
         expect(s.h, `${file} ${key}`).toBeLessThan(0.3 * s.w);
       }
-      const wall = size(r["blk_fortress_wall"]!.bounds);
-      expect(wall.h).toBeGreaterThan(wall.w);
-      expect(wall.d).toBeLessThan(0.2);
-      // the fortress wall is 3 wide and 4.2 high in the game: the piece has about that shape
-      expect(wall.h / wall.w).toBeGreaterThan(1.3);
-      expect(wall.h / wall.w).toBeLessThan(1.45);
+      // the wall pieces stand up (the thin side along z, the relief towards +z), at least as high as wide
+      for (const key of ["blk_city_wall", "blk_dungeon_wall", "blk_dungeon_wall_broken"]) {
+        const wall = size(r[key]!.bounds);
+        expect(wall.h, `${file} ${key}`).toBeGreaterThanOrEqual(wall.w * 0.99);
+        expect(wall.d, `${file} ${key}`).toBeLessThan(0.3);
+      }
+      // the floor tiles carry the height of their face (the plane with most area), below the tips of their engravings: the game sets them by it
+      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_cyber_floor"]) {
+        const info = r[key] as unknown as { surface?: number; bounds: number[] };
+        expect(info.surface, `${file} ${key}`).toBeDefined();
+        expect(info.surface!, `${file} ${key}`).toBeLessThanOrEqual(info.bounds[4]!);
+        expect(info.surface!, `${file} ${key}`).toBeGreaterThan(info.bounds[1]!);
+      }
+      for (const gone of ["blk_fortress_wall", "blk_cyber_ceiling"]) expect(r[gone], `${file} ${gone}`).toBeUndefined();
     }
   });
 
