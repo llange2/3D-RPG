@@ -191,9 +191,9 @@ describe("the dungeon floor model", () => {
     expect(cells.length).toBeGreaterThan(100);
     expect(floorQuads(dungeon, false)).toBe(cells.length);
     expect(floorQuads(dungeon, true)).toBe(0);
-    // a cave has no floor model; a castle's (the user's `blk_fortress_floor`) lies over the flat floor, which stays below it like a town's
+    // a cave's floor is the old dirt tile over the flat floor (the quads stay); a castle's (the user's `blk_fortress_floor`) lies over the flat floor, which stays below it like a town's
     const cave = generateInterior(world, poi("cave"));
-    expect(modelFloorCells(cave)).toHaveLength(0);
+    expect(modelFloorCells(cave).length).toBeGreaterThan(50);
     expect(floorQuads(cave, true)).toBe(floorQuads(cave, false));
     const castle = generateInterior(world, poi("castle"));
     expect(modelFloorCells(castle).length).toBeGreaterThan(50);

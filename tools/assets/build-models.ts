@@ -641,13 +641,14 @@ const S = (key: string, source: string, maxTris: number, texSize = 512, animated
 
 /** Map decorations of the hand-built campaign: one model per item id of the old ITEMS table (see export_item_models.py). */
 /**
- * Items of the old table whose model the user has replaced by one of their own (`tools/assets/sources/models`): the Castle (44), the Village (47) and the
- * Rustic lantern (76), which the generated world uses as `poi_castle`, `poi_town` and `obj_lantern` too. `rotateY` turns the new model to face as the old one did.
+ * Items of the old table whose model the user has replaced by one of their own (`tools/assets/sources/models`): the Castle (44), the Village (47), the
+ * Rustic lantern (76), which the generated world uses as `poi_castle`, `poi_town` and `obj_lantern` too, and the Mermaid fountain (89). `rotateY` turns the new model to face as the old one did.
  */
 const REPLACED_ITEMS: Record<number, Pick<ModelSpec, "source" | "rotateY">> = {
   44: { source: "new:Castle.glb" },
   47: { source: "new:Village (poi_town).glb" },
   76: { source: "new:Rustic lantern (obj_lantern).glb" },
+  89: { source: "new:Mermaid_Fountain.glb" },
 };
 
 function campaignItemModels(): ModelSpec[] {
@@ -775,10 +776,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   { ...S("blk_city_floor", "new:City Tiles (tex_city_floor).glb", 1400, 1024), rotateX: -90, capped: true, keepNormalMap: true },
   { ...S("blk_dungeon_ceiling", "new:Rustic Ceiling (tex_dungeon_ceiling).glb", 1400, 1024), rotateX: 90, capped: true },
   { ...S("blk_cave_ceiling", "new:Cave Ceiling (tex_cave_ceiling).glb", 1000, 1024), rotateX: 90, capped: true },
-  // the castle's floor (it lies flat in the file already) and the spaceship's floor (upright like the others). The castle has no 3D wall and the
-  // spaceship no 3D ceiling: both stay flat
+  // the castle's floor (it lies flat in the file already). The castle has no 3D wall and the spaceship no 3D floor and no 3D ceiling: all stay flat
   { ...S("blk_fortress_floor", "new:Castle_floor.glb", 1400, 1024), capped: true },
-  { ...S("blk_cyber_floor", "new:Spaceship floor (tex_cyber_floor).glb", 1400, 1024), rotateX: -90, capped: true, keepNormalMap: true },
   // the wall pieces of "Full 3D", standing upright in the files (the thin side along z, the relief towards +z): one per wall face, the city's 0.94 x 0.96 and
   // 0.05 thick, the dungeon's 0.66 x 0.96 and 0.14 thick, and the dungeon's broken wall, 0.64 x 0.96 and 0.24 thick. Their relief has undercuts: a
   // reduction tears black cracks into it (it did in the castle's), so they keep what the source has, 2300 to 3200 triangles

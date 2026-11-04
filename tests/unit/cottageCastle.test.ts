@@ -26,15 +26,15 @@ describe("the user's models live in the repository", () => {
     expect(text).not.toContain(`join(ROOT, ".ignore"`);
   });
 
-  it("has the cottage, the pirate ship, the castle's floor and the spaceship's floor in both model sets, and neither the castle's wall nor the spaceship's ceiling", () => {
+  it("has the cottage, the pirate ship, the castle's floor in both model sets, and neither the castle's wall nor the spaceship's floor and ceiling", () => {
     for (const file of ["models.static.json", "models.static.original.json"]) {
       if (!existsSync(join(PUBLIC, file))) continue;
       const r = JSON.parse(readFileSync(join(PUBLIC, file), "utf-8")) as Record<string, { file: string; bounds: number[] }>;
-      for (const key of [COTTAGE_MODEL, PIRATE_SHIP_MODEL, "blk_fortress_floor", "blk_cyber_floor"]) {
+      for (const key of [COTTAGE_MODEL, PIRATE_SHIP_MODEL, "blk_fortress_floor"]) {
         expect(r[key], `${file} ${key}`).toBeDefined();
         expect(existsSync(join(PUBLIC, r[key]!.file)), `${file} ${key} file`).toBe(true);
       }
-      for (const key of ["blk_fortress_wall", "blk_cyber_ceiling"]) expect(r[key], `${file} ${key}`).toBeUndefined();
+      for (const key of ["blk_fortress_wall", "blk_cyber_ceiling", "blk_cyber_floor"]) expect(r[key], `${file} ${key}`).toBeUndefined();
     }
   });
 });
@@ -129,10 +129,10 @@ describe("the wall pieces in Full 3D: corners, castle, floors", () => {
     expect(grown).toBeGreaterThan(0);
   });
 
-  it("has a 3D floor model on the castle's and the spaceship's floors, and no ceiling model for the spaceship", () => {
+  it("has a 3D floor model on the castle's floor, and none for the spaceship's floor and ceiling", () => {
     expect(floorModelOfTexture("tex_fortress_floor")).toEqual({ model: "blk_fortress_floor", replacesQuad: false });
     expect(floorModelAt(castle, castle.spawn.x, castle.spawn.y)).toBe("blk_fortress_floor");
-    expect(floorModelOfTexture("tex/tex_cyber_floor")).toEqual({ model: "blk_cyber_floor", replacesQuad: false });
+    expect(floorModelOfTexture("tex/tex_cyber_floor")).toBeUndefined();
     expect(ceilingModelOfTexture("tex/tex_cyber_ceiling")).toBeUndefined();
   });
 });

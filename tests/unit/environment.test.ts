@@ -54,7 +54,7 @@ describe("what each place draws in 3D", () => {
 
   it("gives every place the models of its own textures", () => {
     expect(environmentModels(map("dungeon"), "floor").sort()).toEqual(["blk_dungeon_ceiling", "blk_floor"]);
-    expect(environmentModels(map("cave"), "floor")).toEqual(["blk_cave_ceiling"]);
+    expect(environmentModels(map("cave"), "floor").sort()).toEqual(["blk_cave_ceiling", "gndx_dirt"]);
     expect(environmentModels(map("town"), "floor")).toEqual(["blk_city_floor"]);
     // the castle lies under the open sky: its floor has a model, its walls stay flat (also in Full 3D), and it has no ceiling
     expect(environmentModels(map("castle"), "floor")).toEqual(["blk_fortress_floor"]);
@@ -62,7 +62,7 @@ describe("what each place draws in 3D", () => {
     // the dungeon's and the town's walls have a piece (Full 3D), the dungeon's also the one of a wall that gave way; the cave's walls are its rock models
     expect(environmentModels(map("dungeon"), "full").sort()).toEqual(["blk_dungeon_ceiling", "blk_dungeon_wall", "blk_dungeon_wall_broken", "blk_floor"]);
     expect(environmentModels(map("town"), "full").sort()).toEqual(["blk_city_floor", "blk_city_wall"]);
-    expect(environmentModels(map("cave"), "full")).toEqual(["blk_cave_ceiling"]);
+    expect(environmentModels(map("cave"), "full").sort()).toEqual(["blk_cave_ceiling", "gndx_dirt"]);
   });
 
   it("lifts the flat ceiling over a flattened cave ceiling by its depth, and over no other", () => {
@@ -135,7 +135,7 @@ describe("the models of the user (tools/assets/sources/models)", () => {
   it.runIf(built)("lie down as slabs, one cell wide, and the wall piece stands up (both sets)", () => {
     for (const file of ["models.static.json", "models.static.original.json"]) {
       const r = registry(file);
-      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_dungeon_ceiling", "blk_cave_ceiling", "blk_cyber_floor"]) {
+      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_dungeon_ceiling", "blk_cave_ceiling"]) {
         const s = size(r[key]!.bounds);
         // the files are normalised to 1.9 (floors, most ceilings) or to half of it (the spaceship's floor): the game scales a slab to the cell by its bounds
         expect(s.w, `${file} ${key}`).toBeGreaterThan(0.9);
@@ -150,13 +150,13 @@ describe("the models of the user (tools/assets/sources/models)", () => {
         expect(wall.d, `${file} ${key}`).toBeLessThan(0.3);
       }
       // the floor tiles carry the height of their face (the plane with most area), below the tips of their engravings: the game sets them by it
-      for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_cyber_floor"]) {
+      for (const key of ["blk_city_floor", "blk_fortress_floor"]) {
         const info = r[key] as unknown as { surface?: number; bounds: number[] };
         expect(info.surface, `${file} ${key}`).toBeDefined();
         expect(info.surface!, `${file} ${key}`).toBeLessThanOrEqual(info.bounds[4]!);
         expect(info.surface!, `${file} ${key}`).toBeGreaterThan(info.bounds[1]!);
       }
-      for (const gone of ["blk_fortress_wall", "blk_cyber_ceiling"]) expect(r[gone], `${file} ${gone}`).toBeUndefined();
+      for (const gone of ["blk_fortress_wall", "blk_cyber_ceiling", "blk_cyber_floor"]) expect(r[gone], `${file} ${gone}`).toBeUndefined();
     }
   });
 
