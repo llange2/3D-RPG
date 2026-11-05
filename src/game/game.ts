@@ -15,7 +15,7 @@ import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
-import { BLACK_CARD, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
+import { BLACK_CARD, COMPUTER_ITEM, ENGINES_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
@@ -2290,7 +2290,8 @@ export class Game {
     for (const e of effects) {
       switch (e.type) {
         case "text":
-          if (a.kind === "lore") await ui.message(e.text, rt?.poi.name ?? "");
+          // a computer of the spaceship (item 68) shows its text on the ComputerScreen, everything else on the scroll
+          if (a.kind === "lore") await (Number(a.params.item) === COMPUTER_ITEM ? ui.computerMessage(e.text, rt?.poi.name ?? "") : ui.message(e.text, rt?.poi.name ?? ""));
           else ui.log(e.text, e.tone ?? (a.kind === "trap" ? "bad" : "info"));
           break;
         case "gold":
@@ -4041,6 +4042,7 @@ export class Game {
         { label: "+100k Gold", value: "gold", note: "for the party" },
         { label: "All spells", value: "spells", note: "of each hero's school" },
         { label: "All talents", value: "talents", note: "for each hero" },
+        { label: `Engine hum: ${this.state.opened.has(ENGINES_FLAG) ? "on" : "off"}`, value: "hum", note: "spaceship sound test (the engines of quest_7)" },
         { label: "Reveal map", value: "map", note: this.mode === "overworld" ? (this.state.campaign ? "150 tiles around" : "the whole world") : "this level" },
         { label: "Identify", value: "identify", note: this.mode === "overworld" ? "the nearest place" : "this place" },
         ...(this.state.campaign ? [] : [{ label: "Teleport to Level", value: "teleport", note: "any town, cave, dungeon or castle" }]),
@@ -4067,6 +4069,12 @@ export class Game {
           break;
         case "talents":
           this.ui.toast(`${debugAllTalents(party)} talents added`);
+          break;
+        case "hum":
+          if (this.state.opened.has(ENGINES_FLAG)) this.state.opened.delete(ENGINES_FLAG);
+          else this.state.opened.add(ENGINES_FLAG);
+          this.updateAmbient();
+          this.ui.toast(`Engine hum ${this.state.opened.has(ENGINES_FLAG) ? "on (inside the spaceship)" : "off"}`);
           break;
         case "map":
           this.revealMap();
@@ -4409,6 +4417,8 @@ export class Game {
       }
     } else if (this.mode === "interior" && rt) {
       for (const a of rt.content.actions) if (a.kind === "fountain" || (a.kind === "decor" && FOUNTAIN_ITEMS.includes(Number(a.params.item)))) add(1, Math.hypot(a.x - this.player.tx, a.y - this.player.ty), 5);
+      // the engines of the spaceship hum everywhere inside it, in every section, as soon as they run (quest_7)
+      if (rt.map.spaceship && this.state.opened.has(ENGINES_FLAG)) levels.set(ENGINE_HUM_SOUND, ENGINE_HUM_LEVEL);
     } else if (this.mode === "overworld") {
       const tile = this.world.tile(this.player.tx, this.player.ty);
       const night = isNight(this.state.party);

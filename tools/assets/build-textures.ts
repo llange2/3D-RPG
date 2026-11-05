@@ -118,6 +118,9 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   // the Pirate Queen (ue_quest_4, quest document 1.4): the user's painting, shown in the dialogue with the pirate ship
   add("icons portraits", await toWebp(join(SOURCES, "ui", "pirate_queen.png"), join(OUT, "icons", "portraits", "pirate_queen.webp"), 512, 85));
 
+  // the ComputerScreen (quest document 1.5): the frame of the message box of the spaceship's computers, drawn for the game (`sources/ui/computer_screen.png`, 512 x 364 like the scroll)
+  add("ui", await toWebp(join(SOURCES, "ui", "computer_screen.png"), join(OUT, "ui", "computer_screen.webp"), null, 90));
+
   // sky: the old 8192x2048 cloud image becomes a 2048x512 layer
   const sky = join(TEX, "Sky01.jpg");
   const skyOut = join(OUT, "ui", "sky01.webp");
