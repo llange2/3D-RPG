@@ -2899,7 +2899,7 @@
  "ci_67": {
   "file": "models-original/ci_67.glb",
   "tris": 10000,
-  "bytes": 1033248,
+  "bytes": 1004128,
   "bounds": [
    -0.4338659942150116,
    -0.9978280067443848,
@@ -2911,7 +2911,7 @@
   "animations": [],
   "groundTop": -0.9,
   "surface": -0.4925,
-  "fromObj": true,
+  "fromObj": false,
   "mean": 0.206
  },
  "ci_68": {
@@ -3975,5 +3975,59 @@
   "surface": 0.405,
   "fromObj": false,
   "mean": 0.257
+ },
+ "obj_futuristic_box": {
+  "file": "models-original/obj_futuristic_box.glb",
+  "tris": 10424,
+  "bytes": 2246520,
+  "bounds": [
+   -0.47631800174713135,
+   -0.2290329933166504,
+   -0.26977500319480896,
+   0.47631800174713135,
+   0.23120099306106567,
+   0.26928699016571045
+  ],
+  "animations": [],
+  "groundTop": -0.25,
+  "surface": 0.2175,
+  "fromObj": false,
+  "mean": 0.373
+ },
+ "obj_power_crystal_broken": {
+  "file": "models-original/obj_power_crystal_broken.glb",
+  "tris": 15676,
+  "bytes": 1830484,
+  "bounds": [
+   -0.2126459926366806,
+   -0.4753420054912567,
+   -0.21557599306106567,
+   0.21459999680519104,
+   0.4753420054912567,
+   0.21606400609016418
+  ],
+  "animations": [],
+  "groundTop": -0.4,
+  "surface": -0.1725,
+  "fromObj": false,
+  "mean": 0.381
+ },
+ "obj_spaceship_console": {
+  "file": "models-original/obj_spaceship_console.glb",
+  "tris": 3885,
+  "bytes": 876800,
+  "bounds": [
+   -0.5,
+   -0.30664101243019104,
+   -0.16503900289535522,
+   0.5,
+   0.3085939884185791,
+   0.16113300621509552
+  ],
+  "animations": [],
+  "groundTop": -0.25,
+  "surface": -0.2,
+  "fromObj": false,
+  "mean": 0.332
  }
 }

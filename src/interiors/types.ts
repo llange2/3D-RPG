@@ -213,7 +213,7 @@ export interface ShowcaseLayout {
   personas: { persona: number; x: number; y: number }[];
   /** The old items that have a model (shown as decoration, `item`), and the models of the interior view that no item stands for. */
   items: { item: number; x: number; y: number }[];
-  extras: { model: string; scale: number; height?: number; x: number; y: number }[];
+  extras: { model: string; scale: number; height?: number; lift?: number; x: number; y: number }[];
   /** Lines of light over the floor, on cells that hold nothing else (the test of the showcase checks it). */
   lines: LightLine[];
 }

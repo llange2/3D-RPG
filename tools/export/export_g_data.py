@@ -22,7 +22,7 @@ TABLES = {
     "BASE_CLASS": 10,
     "BASE_RACE": 5,
     "MONSTER_DATA": 91,
-    "QUEST_ITEMS": 22,
+    "QUEST_ITEMS": 22 + 1,  # + EXTRA_QUEST_ITEMS
     "RIDDLES_MASTER": 300,
     "SPELLS": 78,
     "TALENTS": 20,
@@ -31,6 +31,12 @@ TABLES = {
     "ITEMS": 142,
 }
 TEXT_LISTS = {"texts": 485, "itexts": 95}
+
+# Quest items of quest document 1.5 (quest_7, the spaceship): the power crystal that mends the broken one in the engine room and in the life support.
+# The picture `quest_power_crystal.png` is the user's (tools/assets/sources/items, built into the item sheet by build-item-icons.ts).
+EXTRA_QUEST_ITEMS = [
+    {"name": "Power crystal", "type": "quest_power_crystal", "texture": "resources/textures/quest_power_crystal", "value": -1},
+]
 
 
 def jsonable(value):
@@ -120,6 +126,11 @@ def main():
                 constants[name] = jsonable(ast.literal_eval(node.value))
             except (ValueError, SyntaxError):
                 pass  # references other names or calls functions: not plain data
+
+    # quest items that the old game does not know (quest document 1.5): the old table is never changed, they are appended here
+    for extra in EXTRA_QUEST_ITEMS:
+        if "QUEST_ITEMS" in found_tables and not any(q["type"] == extra["type"] for q in found_tables["QUEST_ITEMS"]):
+            found_tables["QUEST_ITEMS"].append(extra)
 
     for name, expected in TABLES.items():
         data = found_tables.get(name)
