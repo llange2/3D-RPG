@@ -22,11 +22,18 @@ export const SHOWCASE_NAME = "Showcase: all monsters and objects";
  * (the overworld's, the user's own models; they are loaded for the showcase only: `OVERWORLD_EXTRAS`).
  */
 export const OVERWORLD_EXTRAS = ["obj_cottage", "obj_pirate_ship"] as const;
-export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: number }[] = [
+/** The user's spaceship models of quest_7 (loaded for the showcase until the spaceship's own loading names them): the crate, the broken power crystal and the console. */
+export const SPACESHIP_EXTRAS = ["obj_futuristic_box", "obj_power_crystal_broken", "obj_spaceship_console"] as const;
+/** `lift`: how far the model's origin stands above the floor (the user's files are centred on their middle: half their height times the scale). */
+export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: number; lift?: number }[] = [
   { model: "obj_fountain", scale: 1.3 },
   { model: "obj_statue", scale: 1.15 },
   { model: "obj_cottage", scale: COTTAGE_SCALE, height: COTTAGE_HEIGHT_FACTOR },
   { model: "obj_pirate_ship", scale: 2.4 },
+  // the spaceship of quest_7 (quest document 1.5): the crate of the storage bay, the broken power crystal (the intact one is item 67) and the console of the bridge
+  { model: "obj_futuristic_box", scale: 1.6, lift: 0.37 },
+  { model: "obj_power_crystal_broken", scale: 1, lift: 0.48 },
+  { model: "obj_spaceship_console", scale: 2, lift: 0.62 },
 ];
 
 /** Places, huge buildings and the like get a wide slot of their own (the pyramid is the largest). */

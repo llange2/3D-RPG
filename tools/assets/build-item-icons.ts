@@ -7,12 +7,13 @@
  * The cells are 64 px square: the slots show them at 54 CSS pixels at most (about 1.2 times that on a sharp screen), where the 96 px files were
  * shrunk by the browser at every draw.
  */
-import { readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import sharp, { type OverlayOptions } from "sharp";
-import { OLD, OUT, ensureDir, upToDate } from "./lib";
+import { OLD, OUT, ROOT, ensureDir, upToDate } from "./lib";
 
 const TEX = join(OLD, "textures");
+const EXTRA = join(ROOT, "tools", "assets", "sources", "items");
 const CELL = 64;
 const COLUMNS = 20;
 
@@ -33,14 +34,17 @@ export async function buildItemIcons(): Promise<{ files: number; bytes: number }
     // (the quest items without a prefix of their own too: the Quatloo coin, the pearl and the artifacts have `quest_*.png`, and a coin in the backpack showed no picture, 35th playtest)
     .filter((n) => (n.startsWith("item_") || n.startsWith("quest_")) && /\.(png|jpg)$/.test(n))
     .sort();
-  const sources = names.map((n) => join(TEX, n));
+  // pictures of the user's own (quest items the old game lacks, `tools/assets/sources/items`): after the old ones, so that no cell moves
+  const own = existsSync(EXTRA) ? readdirSync(EXTRA).filter((n) => /\.(png|jpg)$/.test(n)).sort() : [];
+  const files = [...names.map((n) => ({ name: n, path: join(TEX, n) })), ...own.map((n) => ({ name: n, path: join(EXTRA, n) }))];
+  const sources = files.map((f) => f.path);
   if (upToDate(sheetOut, ...sources, import.meta.filename) && upToDate(registerOut, ...sources, import.meta.filename)) return { files: 2, bytes: statSync(sheetOut).size + statSync(registerOut).size };
 
   const cellOf: Record<string, number> = {};
   const composite: OverlayOptions[] = [];
-  for (const [i, n] of names.entries()) {
+  for (const [i, { name: n, path }] of files.entries()) {
     // a picture that is not square (a few are 88 x 96) keeps its shape inside the cell, as `object-fit: contain` showed it
-    const data = await sharp(join(TEX, n), { failOn: "none" })
+    const data = await sharp(path, { failOn: "none" })
       .resize(CELL, CELL, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .ensureAlpha()
       .raw()
@@ -48,13 +52,13 @@ export async function buildItemIcons(): Promise<{ files: number; bytes: number }
     cellOf[n.replace(/\.(png|jpg)$/, "")] = i;
     composite.push({ input: data, raw: { width: CELL, height: CELL, channels: 4 as const }, left: (i % COLUMNS) * CELL, top: Math.floor(i / COLUMNS) * CELL });
   }
-  const rows = Math.ceil(names.length / COLUMNS);
+  const rows = Math.ceil(files.length / COLUMNS);
   ensureDir(sheetOut);
   const info = await sharp({ create: { width: COLUMNS * CELL, height: rows * CELL, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite(composite)
     .webp({ quality: 86, effort: 5 })
     .toFile(sheetOut);
-  const register: ItemSheet = { cell: CELL, columns: COLUMNS, cells: names.length, cellOf };
+  const register: ItemSheet = { cell: CELL, columns: COLUMNS, cells: files.length, cellOf };
   writeFileSync(registerOut, JSON.stringify(register));
   return { files: 2, bytes: info.size + statSync(registerOut).size };
 }

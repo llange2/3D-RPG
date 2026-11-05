@@ -1,10 +1,10 @@
 /** Audio stage: transcodes the old mp3 files to Opus in WebM (music 64 kbps stereo, effects 40 kbps mono) with the ffmpeg binary from ffmpeg-static. */
 import { execFile } from "node:child_process";
-import { readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
-import { OLD, OUT, ensureDir, mb, pool, upToDate } from "./lib";
+import { OLD, OUT, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
 
 const run = promisify(execFile);
 
@@ -27,6 +27,15 @@ export async function buildAudio(): Promise<Record<string, { files: number; byte
       s.bytes += await transcode(join(OLD, dir, f), join(OUT, "audio", group, `${basename(f, ".mp3")}.webm`), bitrate, channels);
       s.files++;
     });
+  }
+  // the user's own sounds (`tools/assets/sources/audio`: the spaceship's light and engine hum) join the effects
+  const own = join(ROOT, "tools", "assets", "sources", "audio");
+  if (existsSync(own)) {
+    const s = stats["sfx"]!;
+    for (const f of readdirSync(own).filter((n) => n.endsWith(".mp3"))) {
+      s.bytes += await transcode(join(own, f), join(OUT, "audio", "sfx", `${basename(f, ".mp3")}.webm`), "40k", 1);
+      s.files++;
+    }
   }
   return stats;
 }

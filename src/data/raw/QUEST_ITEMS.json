@@ -130,5 +130,11 @@
   "type": "quest_silver_skull",
   "texture": "resources/textures/item_quest_silver_skull",
   "value": -1
+ },
+ {
+  "name": "Power crystal",
+  "type": "quest_power_crystal",
+  "texture": "resources/textures/quest_power_crystal",
+  "value": -1
  }
 ]

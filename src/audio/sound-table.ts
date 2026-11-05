@@ -30,6 +30,8 @@ export const SOUNDS: Record<number, SoundEntry> = {
   6: "crickets",
   7: "ambience_horror",
   8: "ambience_crazy_laughter",
+  // the engines of the spaceship (quest_7, quest document 1.5): a background loop like 1 to 8, the user's own file (`tools/assets/sources/audio`)
+  9: "low_engine_hum",
   9000: "coins",
   9001: "menu-selection",
   9002: "roll_dice",
@@ -85,6 +87,8 @@ export const SOUNDS: Record<number, SoundEntry> = {
   9052: "squeaky_door",
   9053: { alternate: ["foot_left_snow", "foot_right_snow"] },
   9054: { alternate: ["foot_left_swamp", "foot_right_swamp"] },
+  // the lights of the spaceship's life support come on (quest_7, the user's own file)
+  9055: "light_on",
 };
 
 /** Every file name a sound entry can play. */
