@@ -336,12 +336,12 @@ export class UI {
   }
 
   /** Parchment dialog with a text and buttons. */
-  async ask<T>(title: string, text: string, buttons: { label: string; value: T; primary?: boolean }[], dismiss?: T, dismissible = dismiss !== undefined): Promise<T> {
+  async ask<T>(title: string, text: string, buttons: { label: string; value: T; primary?: boolean }[], dismiss?: T, dismissible = dismiss !== undefined, skin = ""): Promise<T> {
     return this.modal<T>(
       (close) =>
         h(
           "div",
-          { class: "parchment" },
+          { class: `parchment${skin ? ` ${skin}` : ""}` },
           h("h2", { text: title }),
           h("p", { text }),
           h("div", { class: "buttons" }, ...buttons.map((b) => h("button", { class: `btn${b.primary ? " primary" : ""}`, text: b.label, onclick: () => close(b.value) }))),
@@ -370,6 +370,11 @@ export class UI {
 
   message(text: string, title = "", button = "OK"): Promise<void> {
     return this.ask(title, text, [{ label: button, value: undefined as void, primary: true }], undefined as void, true);
+  }
+
+  /** What a computer of the spaceship shows: the same box as `message`, on the ComputerScreen instead of the scroll (quest document 1.5). */
+  computerMessage(text: string, title = "", button = "OK"): Promise<void> {
+    return this.ask(title, text, [{ label: button, value: undefined as void, primary: true }], undefined as void, true, "computer");
   }
 
   /** Parchment list; resolves with the chosen value or null when dismissed. */

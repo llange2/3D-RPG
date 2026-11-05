@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   // the start message of index.html stays up until the game can show a screen of its own (the title or the loading picture)
   bootProgress(0);
   installCursor();
-  preloadImages(["ui/scroll.webp"]);
+  preloadImages(["ui/scroll.webp", "ui/computer_screen.webp"]);
   // the 78 spell pictures are one sheet: fetched and decoded now, so that the spell window opens with every plate in place
   void preloadSpellIcons();
   // the blank button of the "Select" plate of the spell window, decoded now as well
