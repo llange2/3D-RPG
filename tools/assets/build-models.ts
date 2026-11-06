@@ -792,7 +792,10 @@ export const STATIC_MODELS: ModelSpec[] = [
   // door frames of the campaign maps (old blocks 19, 41, 47): a wall piece with the doorway that the metal gates fit into
   // the frames carry a floor slab of their own (the gate's groove textured in, a different scale than the street): the cell draws its own floor
   { ...S("frame_city", "City door frame.glb", 300, 512), drop: ["Cube"] },
-  { ...S("frame_dungeon", "Dungeon Door frame.glb", 3700, 512), drop: ["Mesh_0", "Cube"] },
+  // the user's frame (6. 11. 2026) is the old frame, now with its own file next to the door's: the doorway of the dungeons and of the campaign's block 47
+  { ...S("frame_dungeon", "new:Dungeon_Door_Frame.glb", 3700, 512), drop: ["Mesh_0", "Cube"] },
+  // the leaf of the dungeon door, a model of its own since 6. 11. 2026: it stands in the frame (same origin) and swings on its hinges (`render/interiorDoors.ts`)
+  S("blk_dungeon_door", "new:Dungeon_Door.glb", 3000, 512),
   // the old game gave this one the fortress wall texture in code; its own .mtl points at a path on the author's disk
   { ...S("frame_fortress", "Fortress gate.obj", 400, 512), texture: "textures/tex_fortress_wall.jpg" },
   // dungeon blocks the old game built from models instead of textured cubes (add_block 15 to 18 and 20): the doors, the walls that

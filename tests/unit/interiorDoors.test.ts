@@ -87,14 +87,14 @@ describe("doors of generated interiors", () => {
       const map = generateInterior(world, poi);
       for (const k of doorModelKeys(map, buildMapContent(world, poi, map))) all.add(k);
     }
-    expect([...all].sort()).toEqual(["blk_door_closed", "blk_door_open", "ci_81", "frame_dungeon"]);
+    expect([...all].sort()).toEqual(["blk_dungeon_door", "ci_81", "frame_dungeon"]);
   });
 
   it("every model it asks for is in the asset registry", () => {
     const file = join(import.meta.dirname, "..", "..", "public", "assets", "models.static.json");
     if (!existsSync(file)) return;
     const registry = JSON.parse(readFileSync(file, "utf-8")) as Record<string, unknown>;
-    for (const k of ["blk_door_closed", "blk_door_open", "frame_dungeon", "frame_fortress", "ci_80", "ci_81"]) expect(registry[k], k).toBeDefined();
+    for (const k of ["blk_dungeon_door", "frame_dungeon", "frame_fortress", "ci_80", "ci_81"]) expect(registry[k], k).toBeDefined();
   });
 
   it("a gate leaves its frame like the old game's: the dungeon gate rises into the ceiling in 2.4 s, the castle gate sinks in 4 s", () => {

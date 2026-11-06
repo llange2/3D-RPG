@@ -1063,7 +1063,7 @@
  "frame_dungeon": {
   "file": "models-original/frame_dungeon.glb",
   "tris": 9992,
-  "bytes": 1092472,
+  "bytes": 1092468,
   "bounds": [
    -1.0065337418346374,
    -0.00009890544792923173,
@@ -4083,5 +4083,23 @@
   "surface": 0.475,
   "fromObj": false,
   "mean": 0.257
+ },
+ "blk_dungeon_door": {
+  "file": "models-original/blk_dungeon_door.glb",
+  "tris": 10000,
+  "bytes": 1288316,
+  "bounds": [
+   -0.6354330101982697,
+   0.03689119015502351,
+   -0.0718248097149059,
+   0.6346549953329728,
+   1.8744134922704956,
+   0.07296628708066161
+  ],
+  "animations": [],
+  "groundTop": 0.35,
+  "surface": 1.8725,
+  "fromObj": false,
+  "mean": 0.186
  }
 }

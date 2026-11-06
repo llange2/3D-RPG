@@ -2381,9 +2381,12 @@ export class Game {
             // an airlock is opened by its second lever: the door that opens is not the object that was used
             const doorUid = e.uid ?? a.uid;
             if (e.uid) this.state.opened.add(e.uid);
-            this.interiorView.setDoor(doorUid, true);
             // the sound follows what is drawn: a wooden door that was picked open must not clank like a gate
-            this.audio.play(doorSound(rt ? doorLook(rt.map, a.x, a.y) : "door"));
+            const look = rt ? doorLook(rt.map, a.x, a.y) : "door";
+            // a wooden door swings as long as its squeak lasts
+            if (look === "door") this.interiorView.swingSeconds = this.audio.durationOf(doorSound("door"), 2.672);
+            this.interiorView.setDoor(doorUid, true);
+            this.audio.play(doorSound(look));
             if (e.state === "unlocked") ui.log("The lock clicks open.", "good");
           } else this.audio.play(9014);
           break;
