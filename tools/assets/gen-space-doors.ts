@@ -2,7 +2,8 @@
  * The two leaves of the spaceship's sliding doors (`render/interiorDoors.ts`): the user's picture of a double door (`sources/models/Space_door.png`, 1776.png) cut in
  * the middle, the left half on one box and the right half on the other (6. 11. 2026). The boxes are as big as the opening of the user's frame `Space_lock.glb`
  * (measured on its triangles, second file of 6. 11. 2026: 0.929 wide, 0.862 high, the frame 0.16 deep) with a little overlap into the frame, so that no gap shows, and as thick as the
- * slot of the frame. Each leaf stands on its own middle, its lowest point at y = 0 (the prop renderer puts it on the floor), the front face looks along +z.
+ * slot of the frame: a section through the frame at the opening shows a sheet only 0.02 thick there (the thick border starts at 0.78 from the middle) with a slot of 0.011 in it, so a leaf
+ * of 0.01 hides in the sheet (one of 0.04 stood out of it on both sides and covered the frame while it slid, user, 6. 11. 2026). Each leaf stands on its own middle, its lowest point at y = 0 (the prop renderer puts it on the floor), the front face looks along +z.
  *
  * Usage: npx tsx tools/assets/gen-space-doors.ts   (writes `Space_door_left.glb` and `Space_door_right.glb` next to the picture)
  */
@@ -15,7 +16,7 @@ import { ROOT } from "./lib";
 const DIR = join(ROOT, "tools", "assets", "sources", "models");
 
 /** Size of a leaf in the units of the frame model: half the opening plus an overlap into the frame, the opening's height plus the same, the thickness of the slot. */
-export const LEAF = { width: 0.478, height: 0.872, depth: 0.04 };
+export const LEAF = { width: 0.478, height: 0.872, depth: 0.01 };
 
 type V3 = [number, number, number];
 

@@ -655,6 +655,11 @@ export class Game {
         obstacle: (x, y) => !!rt.campaign && rt.blocked.has(y * map.width + x),
         // the party can stand in front of a brittle wall's wall piece, and nothing reaches across it
         wallBetween: (x0, y0, x1, y1) => slabBetween(rt.slabs, map.width, x0, y0, x1, y1),
+        // a monster that has noticed the party opens the sliding doors of the spaceship (not its airlocks, they have levers)
+        opensDoor: (x, y) => {
+          const a = rt.actionAt.get(y * map.width + x);
+          return !!a && a.kind === "door" && a.params.slide === true && !this.state.opened.has(a.uid) && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y) && !rt.noMonster?.has(y * map.width + x);
+        },
       };
     }
     return {
@@ -687,7 +692,7 @@ export class Game {
 
   /**
    * The doors of the spaceship that are no airlocks shut again when the party has moved a cell away from them (user, 6. 11. 2026); an airlock, once opened, stays open. A door
-   * is left open while a monster stands in it. `silent` for the moment a level is entered, when nothing is seen to move.
+   * is left open while a monster is in it or an awake one next to it (it has opened it and is on its way through). `silent` for the moment a level is entered, when nothing is seen to move.
    */
   private closeSlidingDoors(silent = false): void {
     const rt = this.interior;
@@ -695,7 +700,10 @@ export class Game {
     let closed = false;
     for (const a of rt.content.actions) {
       if (a.kind !== "door" || a.params.airlock === true || !this.state.opened.has(a.uid)) continue;
-      if (Math.max(Math.abs(a.x - this.player.tx), Math.abs(a.y - this.player.ty)) < Game.DOOR_CLOSE_DISTANCE || this.monsterAt(a.x, a.y)) continue;
+      if (Math.max(Math.abs(a.x - this.player.tx), Math.abs(a.y - this.player.ty)) < Game.DOOR_CLOSE_DISTANCE) continue;
+      // a monster that is in the door stays; so does one that has noticed the party and stands next to it (it has opened the door and is on its way through: shutting it
+      // before its next step would keep it from ever getting through); one that sleeps next to it does not hold it
+      if (this.enc.monsters.some((m) => m.hp > 0 && (m.alerted || (m.x === a.x && m.y === a.y)) && Math.max(Math.abs(a.x - m.x), Math.abs(a.y - m.y)) <= 1)) continue;
       this.state.opened.delete(a.uid);
       this.interiorView.setDoor(a.uid, false);
       closed = true;
@@ -3073,6 +3081,17 @@ export class Game {
             this.monsters.moveTo(m.uid, p.x, p.y, p.z);
           });
           break;
+        case "monster_open_door": {
+          // the state is written at once (the door is open for the next step), the door moves with the monsters' turn
+          const door = this.interior?.actionAt.get(this.cellIndex(e.at[0], e.at[1]));
+          if (!door || door.kind !== "door") break;
+          this.state.opened.add(door.uid);
+          at(answer, () => {
+            this.interiorView.setDoor(door.uid, true);
+            this.audio.play(doorSound("slide"), 0.7);
+          });
+          break;
+        }
         case "monster_pull":
           // Gravity: a quick slide to the place it would have walked to, no walking clip
           at(0, () => {
