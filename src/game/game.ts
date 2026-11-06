@@ -15,7 +15,8 @@ import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
-import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
+import { sectionAt } from "../interiors/spaceship";
+import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
@@ -68,7 +69,7 @@ import { MinimapIcons } from "./minimapIcons";
 import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, type MapEvent, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend } from "./minimap";
 import { FACING_VEC, PlayerRig, type MoveDir } from "./player";
 import { downloadText, pickTextFile } from "./fileTransfer";
-import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode, teleportTargets } from "./debug";
+import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllKeys, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode, teleportTargets } from "./debug";
 import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
 import { sellerParams } from "../data/talent-sellers";
@@ -120,6 +121,9 @@ interface InteriorRuntime {
   slabs?: SlabMap;
   campaign?: CampaignRuntime;
 }
+
+/** How much of full daylight the mended ship gets: dim enough that the blue glow of the crystals still stands out (the first version was full daylight, the user found it too bright). */
+const SHIP_DAYLIGHT = 0.4;
 
 /** Prefix of the keys in `state.opened` that say which town portals the party has touched. */
 const PORTAL_KEY = "portal@";
@@ -4049,6 +4053,7 @@ export class Game {
         { label: "+100k Gold", value: "gold", note: "for the party" },
         { label: "All spells", value: "spells", note: "of each hero's school" },
         { label: "All talents", value: "talents", note: "for each hero" },
+        { label: "All keys & key cards", value: "keys", note: "nine keys, five key cards and the black one" },
         { label: `Engine hum: ${this.state.opened.has(ENGINES_FLAG) ? "on" : "off"}`, value: "hum", note: "spaceship sound test (the engines of quest_7)" },
         { label: "Reveal map", value: "map", note: this.mode === "overworld" ? (this.state.campaign ? "150 tiles around" : "the whole world") : "this level" },
         { label: "Identify", value: "identify", note: this.mode === "overworld" ? "the nearest place" : "this place" },
@@ -4076,6 +4081,10 @@ export class Game {
           break;
         case "talents":
           this.ui.toast(`${debugAllTalents(party)} talents added`);
+          break;
+        case "keys":
+          this.ui.toast(`${debugAllKeys(party)} keys and key cards added`);
+          this.refresh();
           break;
         case "hum":
           if (this.state.opened.has(ENGINES_FLAG)) this.state.opened.delete(ENGINES_FLAG);
@@ -4475,7 +4484,8 @@ export class Game {
     const rt = this.interior;
     const tile = this.mode === "overworld" ? this.world.tile(this.player.tx, this.player.ty) : null;
     return {
-      place: rt ? rt.poi.name : "The wilds",
+      // inside the spaceship the name is the section the party stands in (it changes at the airlocks), not the name of the pyramid that opened it
+      place: rt ? (rt.map.spaceship ? (SECTION_NAMES[sectionAt(rt.map.spaceship, this.player.tx, this.player.ty)] ?? rt.poi.name) : rt.poi.name) : "The wilds",
       sub: rt?.campaign ? "campaign" : rt ? `${rt.map.theme.id.replace(/_/g, " ")} - level ${rt.poi.tier}` : `${tile ? OVERWORLD_THEMES[tile.biome === BIOME.OCEAN ? BIOME.MEADOW : tile.biome].id : ""}`,
       facing: this.player.facing,
       // the world is a globe: the position shown is the one on the map, not how far the party has walked past the seam
@@ -4778,16 +4788,16 @@ export class Game {
     };
     const fog = this.interior!.map.theme.fog;
     this.r.setAtmosphere({
-      fogColor: mix("#1c0503", "#9fb2c0"),
+      fogColor: mix("#1c0503", "#5b6a76"),
       fogDensity: fog.density * (1 - 0.6 * s),
       fogRange: null,
-      light: s,
+      light: s * SHIP_DAYLIGHT,
       ambient: mix("#ff2a18", "#ffffff"),
       underground: false,
       torchColor: mix("#ff4a30", "#ffd18c"),
       torch: { intensity: ring.intensity * (1 - s), range: ring.range },
     });
-    this.props.setDaylight(s);
+    this.props.setDaylight(s * SHIP_DAYLIGHT);
   }
 
   /** Campaign objects that give light, with their cells in this map's own grid. */

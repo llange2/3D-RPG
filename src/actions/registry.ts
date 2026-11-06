@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { seedFromString } from "../core/rng";
+import { CRATE_ITEM } from "../data/quest-table";
 import { MAP_ITEMS } from "../data/tables";
 import type { ActionKind } from "./types";
 
@@ -293,6 +294,8 @@ export const TREASURE_HEAP = 4;
  * that stayed blocked was an invisible chest in the way (31st playtest, point 11). Chests, barrels and the rest stay where they stand.
  */
 export function heapGone(a: { uid: string; kind: ActionKind; params: Record<string, unknown> }, opened: ReadonlySet<string>): boolean {
+  // (a crate of the spaceship's storage bay stays, empty, like the others: it is a piece of the room, not the pickup)
+  if (Number(a.params.chest) === CRATE_ITEM) return false;
   return a.kind === "treasure" && (Number(a.params.chest) === TREASURE_HEAP || typeof a.params.quest === "string") && isSpent(a, opened);
 }
 

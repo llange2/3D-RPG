@@ -78,13 +78,13 @@ export const PEARL_GOLD = 50_000;
 /**
  * The engines of the spaceship (quest_7, quest document 1.5): once they run, `low_engine_hum` (ambient sound 9) plays for good inside the ship, below the music.
  * The level is a share of the effects volume: the hum is about as loud as the cyber music in the file, the music plays at 0.45 and the effects at 0.7, and 0.35
- * puts the hum about 7 dB under the music (first version, to be judged by ear). The flag is set by the control room's computer; Esc > Debug can set it for testing.
+ * put the hum about 7 dB under the music, which was too quiet: 0.7 (twice as loud, user 6. 11. 2026) is the second version, to be judged by ear. The flag is set by the control room's computer; Esc > Debug can set it for testing.
  */
 /** The computer terminal (old item 68): its messages show on the ComputerScreen. */
 export const COMPUTER_ITEM = 68;
 export const ENGINES_FLAG = "ship:engines";
 export const ENGINE_HUM_SOUND = 9;
-export const ENGINE_HUM_LEVEL = 0.35;
+export const ENGINE_HUM_LEVEL = 0.7;
 
 /** The old items that show a quest item on the map (the key and key card models); the rest are drawn as the place's chest. */
 export const QUEST_PROP: Readonly<Record<string, number>> = {
@@ -133,6 +133,9 @@ export const ENGINE_CRYSTAL_FLAG = "ship:engine";
 export const CRATE_ITEM = 301;
 export const BROKEN_CRYSTAL_ITEM = 302;
 export const CONSOLE_ITEM = 303;
+/** The console is 3 times its file (1.5 times the first size, 3 units wide: a cell) and may reach into the cells around it; this many cells around it stay free of objects (user, 6. 11. 2026). */
+export const CONSOLE_SCALE = 3;
+export const CONSOLE_CLEAR = 2;
 /** The intact power crystal is old item 67. */
 export const POWER_CRYSTAL_ITEM = 67;
 export const ORBS_FOR_KING = 11;

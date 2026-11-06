@@ -1,6 +1,6 @@
 import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
-import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM } from "../data/quest-table";
+import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
 import { isGlbItem, itemModelKey, itemProp } from "./itemProps";
@@ -17,7 +17,7 @@ import type { PropInstance } from "./terrainMesher";
 export const ALTAR_SCALE = 0.9;
 
 /** Old item id -> the interior view's own model and its scale, for the objects it has had since before the themes. */
-export const OWN_MODELS: Record<number, { model: string; scale: number; lift?: number }> = {
+export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?: [number, number, number]; lift?: number }> = {
   1: { model: "obj_chest", scale: 0.85 },
   74: { model: "obj_chest_iron", scale: 0.85 },
   72: { model: "obj_chest_noble", scale: 0.85 },
@@ -25,10 +25,12 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; lift?: n
   35: { model: "obj_altar", scale: ALTAR_SCALE },
   37: { model: "obj_well_red", scale: 1.5 },
   88: { model: "obj_well_yellow", scale: 1.5 },
-  // the user's models of the spaceship (quest document 1.5): centred on their middle, so `lift` (half their height times the scale) stands them on the floor
-  [CRATE_ITEM]: { model: "obj_futuristic_box", scale: 1.6, lift: 0.37 },
-  [BROKEN_CRYSTAL_ITEM]: { model: "obj_power_crystal_broken", scale: 1, lift: 0.48 },
-  [CONSOLE_ITEM]: { model: "obj_spaceship_console", scale: 2, lift: 0.62 },
+  // the user's models of the spaceship (quest document 1.5). The prop renderer rests a model's lowest point on the floor whatever the file's origin is, so none needs a `lift`
+  // (the first version lifted them by half their height and they hovered)
+  [CRATE_ITEM]: { model: "obj_futuristic_box", scale: 1.6 },
+  // the broken crystal is as big as the intact one it turns into (item 67, 0.87 x 2.0 x 0.86 in the original set; the file is 0.43 x 0.95 x 0.43), and it rests on the floor the same way
+  [BROKEN_CRYSTAL_ITEM]: { model: "obj_power_crystal_broken", scale: 2.03, scale3: [2.03, 2.1, 2.0] },
+  [CONSOLE_ITEM]: { model: "obj_spaceship_console", scale: CONSOLE_SCALE },
 };
 
 /**
@@ -105,6 +107,6 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   // a pulled lever has turned half a circle, so that its handle lies on the other side (the campaign turns its levers the same way)
   if (a.kind === "lever" && leverPulled(a, opened)) bearing += 180;
   const own = OWN_MODELS[item];
-  if (own) return { model: own.model, x, y: own.lift ?? 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale };
+  if (own) return { model: own.model, x, y: own.lift ?? 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale, ...(own.scale3 ? { scaleXYZ: own.scale3 } : {}) };
   return itemProp(item, bearing, x, z, staticInfo);
 }
