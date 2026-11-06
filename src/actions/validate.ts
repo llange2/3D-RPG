@@ -3,7 +3,7 @@ import { FORBIDDEN_PROPS } from "../data/dungeon-themes";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { questIssues } from "./questChecks";
-import { BRIDGE, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPPORT, ORBS_PER_SECTION, POWER_CRYSTAL, STORAGE_BAY } from "../data/quest-table";
+import { BRIDGE, CONSOLE_CLEAR, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPPORT, ORBS_PER_SECTION, POWER_CRYSTAL, STORAGE_BAY } from "../data/quest-table";
 import { MONSTERS, monsterGroup } from "../data/tables";
 import { sectionAt } from "../interiors/spaceship";
 import { analyzeTopology, type Topology } from "../interiors/topology";
@@ -150,6 +150,19 @@ export function spaceshipIssues(map: InteriorMap, content: MapContent): string[]
   const consoles = content.actions.filter((a) => a.params.terminal === "console");
   if (consoles.length !== 1 || sec(consoles[0]!) !== BRIDGE) issues.push(`${map.key}: not one console on the bridge`);
   for (const sp of content.spawns) for (const id of sp.monsterIds) if (monsterGroup(id) !== "robot") issues.push(`${sp.uid}: ${MONSTERS[id]?.name ?? id} is no robot`);
+  // two cells all round the console stay free of objects and monsters
+  const near = (o: { x: number; y: number }) => Math.abs(o.x - layout.console.x) <= CONSOLE_CLEAR && Math.abs(o.y - layout.console.y) <= CONSOLE_CLEAR;
+  for (const a of content.actions) if (!consoles.includes(a) && near(a)) issues.push(`${a.uid}: stands within ${CONSOLE_CLEAR} cells of the console`);
+  for (const sp of content.spawns) if (near(sp)) issues.push(`${sp.uid}: stands within ${CONSOLE_CLEAR} cells of the console`);
+  // the things the party looks for (orbs, crates, crystals) stand in no room with a transporter tube and are spread over the rooms of their section
+  const roomOf = (a: { x: number; y: number }) => layout.rooms.flat().find((r) => a.x >= r.x && a.x < r.x + r.w && a.y >= r.y && a.y < r.y + r.h);
+  const tubeRooms = new Set(tubes.map(roomOf));
+  const finds = content.actions.filter((a) => a.params.quest === "quest_orb" || a.params.reactor !== undefined || a.params.item === CRATE_ITEM || a.params.chest === CRATE_ITEM);
+  for (const a of finds) if (tubeRooms.has(roomOf(a))) issues.push(`${a.uid}: stands in the room of a transporter tube`);
+  for (const reactor of ["engine", "life"]) {
+    const rooms = new Set(content.actions.filter((a) => a.params.reactor === reactor).map(roomOf));
+    if (rooms.size < 2) issues.push(`${map.key}: all the crystals of ${reactor} are in one room`);
+  }
   return issues;
 }
 

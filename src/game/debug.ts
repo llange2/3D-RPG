@@ -1,6 +1,9 @@
+import { BLACK_CARD, CARD_COLORS, KEY_COLORS, cardType, keyType } from "../data/quest-table";
 import { TALENTS, SPELLS } from "../data/tables";
 import { isAlive, levelUp, recalcValues, removeCondition } from "../sim/character";
 import { cheats } from "../sim/cheats";
+import { questItem } from "../sim/items";
+import { carriedItems, giveItem } from "../sim/party";
 import { SPELL_SCHOOL, isSpellImplemented } from "../sim/spells";
 import type { Party } from "../sim/types";
 import type { Poi, PoiKind } from "../world/types";
@@ -56,6 +59,21 @@ export function debugAllSpells(party: Party): number {
       added++;
     }
     c.spells.sort((a, b) => a - b);
+  }
+  return added;
+}
+
+/**
+ * The nine keys, the five key cards of the pyramids and the black key card of the king, for each one the party does not carry yet (they fit in the backpacks, as many as there is room
+ * for). Returns how many were added.
+ */
+export function debugAllKeys(party: Party): number {
+  const have = new Set(carriedItems(party).map((i) => i.type));
+  let added = 0;
+  for (const type of [...KEY_COLORS.map(keyType), ...CARD_COLORS.map(cardType), BLACK_CARD]) {
+    if (have.has(type)) continue;
+    const item = questItem(type);
+    if (item && giveItem(party, item)) added++;
   }
   return added;
 }

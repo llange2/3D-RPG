@@ -137,5 +137,6 @@
  * 47 = the user's new village model: its door is at the right end of the front, so the road of a town ends at the right-hand one of its two entrance tiles (seen from outside; `poiEntrances`).
  * 48 = quest_7 (quest document 1.5, the spaceship): the bridge, control room, life support, storage bay and engine room in a grid with four airlocks and the console on the bridge; crates, power crystals,
  * computers with the code words of the mini quests, terminators; 8 orbs in the ship (none on the bridge) and 23 on the level 5 dungeons; the pyramid of the bridge stands on the hardest territory (`sectionOrder`).
+ * 49 = the spaceship's objects (user, 6. 11. 2026): nothing in the room of a section's tube, crystals, orbs and crates spread over the rooms, objects never shut a passage (`blocksPassage`), two cells round the console free.
  */
-export const GEN_VERSION = 48;
+export const GEN_VERSION = 49;

@@ -6,6 +6,9 @@ import { BRIDGE, CONTROL_ROOM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, ENGINE_ROOM, L
 import { analyzeTopology, generateInterior, planDungeon } from "../../src/interiors";
 import { sectionAt } from "../../src/interiors/spaceship";
 import { carriedItems, createDefaultParty, giveItem } from "../../src/sim/party";
+import { blocksCell, heapGone } from "../../src/actions/registry";
+import { splitsRing } from "../../src/interiors/passage";
+import { CELL } from "../../src/interiors/types";
 import { questItem } from "../../src/sim/items";
 import { World } from "../../src/world/world";
 
@@ -136,6 +139,26 @@ describe("the spaceship (quest document 1.5, quest_7)", () => {
     const crystal = crates.find((c) => c.kind === "treasure")!;
     use(crystal, ctx);
     expect(carriedItems(party).some((i) => i.type === "quest_power_crystal")).toBe(true);
+    // the emptied crate stays where it stands and still blocks its cell, like the others (it used to vanish with its pick-up)
+    expect(heapGone(crystal, opened)).toBe(false);
+  });
+
+  it("leaves the cells round the console free, keeps the tube rooms empty of finds, spreads the crystals over rooms and never lets an object shut a passage", { timeout: 120_000 }, () => {
+    for (const seed of ["ship-a", "ship-b", "ship-c", "ship-d"]) {
+      const { content, map, layout } = shipOf(seed);
+      // (the validation checks the console's free cells, the tube rooms and the spread of the crystals)
+      expect(validateContent(map, content), seed).toEqual([]);
+      const w = map.width;
+      const holds = new Set(content.actions.filter((a) => a.kind !== "tube" && a.kind !== "door").map((a) => a.y * w + a.x));
+      const open = (x: number, y: number) => map.cells[y * w + x] === CELL.FLOOR && !holds.has(y * w + x);
+      // a blocking object stands in no passage: with its own cell open again, the ring of cells round it is whole (or it stands in a dead end)
+      const blockers = content.actions.filter((o) => blocksCell(o) && o.kind !== "lever" && o.kind !== "lore");
+      expect(blockers.length).toBeGreaterThan(25);
+      for (const a of blockers) {
+        expect(splitsRing((x, y) => (x === a.x && y === a.y) || open(x, y), a.x, a.y), `${seed}: ${a.uid} shuts a passage`).toBe(false);
+      }
+      expect(layout.console.front.y).toBe(layout.console.y + 1);
+    }
   });
 
   it("mends the broken crystals with a power crystal: it is used up, life support turns the light on for the whole ship, the engine room makes the engines functional", () => {

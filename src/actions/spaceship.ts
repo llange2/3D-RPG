@@ -3,6 +3,7 @@ import {
   BRIDGE,
   BROKEN_CRYSTAL_ITEM,
   COMPUTER_ITEM,
+  CONSOLE_CLEAR,
   CONSOLE_ITEM,
   CONTROL_ROOM,
   CRATE_ITEM,
@@ -20,6 +21,7 @@ import { monsterGroup } from "../data/tables";
 import { CELL, type InteriorMap } from "../interiors/types";
 import { stillOpen } from "../interiors/castle";
 import { Builder } from "../interiors/builder";
+import { blocksPassage } from "../interiors/passage";
 import type { ActionInstance, MapContent, SpawnPoint } from "./types";
 
 /**
@@ -72,19 +74,23 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
   const b = new Builder(w, map.height);
   b.cells.set(map.cells);
   const blocked = new Set<number>();
+  const taken = new Set<number>();
   const canBlock = (x: number, y: number): boolean => {
     const i = y * w + x;
     if (map.cells[i] !== CELL.FLOOR || blocked.has(i)) return false;
+    // the user's rule for objects: never in a passage, and in a wider place so that the party can walk round it (`interiors/passage.ts`; the crates narrowed doorways and corners)
+    if (blocksPassage((cx, cy) => b.isFloor(cx, cy) && !blocked.has(cy * w + cx), (cx, cy) => taken.has(cy * w + cx), x, y)) return false;
     blocked.add(i);
     // (from the same cell for all five pyramids: the objects of the level do not depend on where the party appears)
     if (stillOpen(b, layout.console.front, blocked)) return true;
     blocked.delete(i);
     return false;
   };
-  const taken = new Set<number>();
+  /** The cells round the console stay free, so that it can be seen and walked round (it is big and may reach into them). */
+  const clear = new Set<number>();
   const put = (a: ActionInstance, blocks: boolean): boolean => {
     const i = a.y * w + a.x;
-    if (taken.has(i) || map.cells[i] !== CELL.FLOOR) return false;
+    if (taken.has(i) || map.cells[i] !== CELL.FLOOR || clear.has(i)) return false;
     if (blocks && !canBlock(a.x, a.y)) return false;
     taken.add(i);
     actions.push(a);
@@ -93,8 +99,9 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
 
   // the tubes: the way in from a pyramid and out again, one in every section
   layout.tubes.forEach((t, s) => put({ uid: uid("tube"), kind: "tube", x: t.x, y: t.y, params: { item: TUBE, section: s } }, false));
-  // the console in the middle of the bridge's hall (nothing is built around it: it ends the game)
+  // the console in the middle of the bridge's hall (nothing is built around it: two cells all round stay free)
   put({ uid: uid("console"), kind: "lore", x: layout.console.x, y: layout.console.y, params: { item: CONSOLE_ITEM, terminal: "console", pool: "dungeon", line: 0, bearing: 180 } }, false);
+  for (let dy = -CONSOLE_CLEAR; dy <= CONSOLE_CLEAR; dy++) for (let dx = -CONSOLE_CLEAR; dx <= CONSOLE_CLEAR; dx++) clear.add((layout.console.y + dy) * w + layout.console.x + dx);
   // the airlocks, each with a lever in a niche on both sides
   for (const lock of layout.locks) {
     const door = uid("airlock");
@@ -125,8 +132,29 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
     for (const room of rng.shuffle([...rooms])) if (place(room, make)) return true;
     return false;
   };
-  const areaOf = (r: Room): number => r.w * r.h;
-  const roomsOf = (s: number): Room[] => layout.rooms[s]!.filter((r) => !(s === BRIDGE && r === layout.hall));
+  /**
+   * Puts something in the room of the list that holds the fewest of its kind so far (`tally`; by chance among equals), so that the crystals, the crates and the orbs of a
+   * section are spread over its rooms and not heaped in one (user, 6. 11. 2026: all the crystals lay in one room).
+   */
+  const spread = (rooms: readonly Room[], tally: Map<Room, number>, make: (x: number, y: number) => ActionInstance): boolean => {
+    const order = rng.shuffle([...rooms]).sort((p, q) => (tally.get(p) ?? 0) - (tally.get(q) ?? 0));
+    for (const room of order) {
+      if (!place(room, make)) continue;
+      tally.set(room, (tally.get(room) ?? 0) + 1);
+      return true;
+    }
+    return false;
+  };
+  const holdsTube = (room: Room, s: number): boolean => {
+    const t = layout.tubes[s]!;
+    return t.x >= room.x && t.x < room.x + room.w && t.y >= room.y && t.y < room.y + room.h;
+  };
+  /** The rooms of a section that take objects: not the hall of the bridge and not the room with the section's transporter tube (user, 6. 11. 2026), unless nothing else is left. */
+  const roomsOf = (s: number): Room[] => {
+    const rooms = layout.rooms[s]!.filter((r) => !(s === BRIDGE && r === layout.hall));
+    const free = rooms.filter((r) => !holdsTube(r, s));
+    return free.length > 0 ? free : rooms;
+  };
 
   // the bridge's guards, the other sections' robots, two orbs in each section but the bridge
   // (the terminators have their own share: the other robots come first in the other sections, a terminator is rare there)
@@ -139,9 +167,7 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
   for (let s = 0; s < SECTIONS; s++) {
     const rooms = layout.rooms[s]!;
     rooms.forEach((room, i) => {
-      const entry = layout.tubes[s]!;
-      const holdsTube = entry.x >= room.x && entry.x < room.x + room.w && entry.y >= room.y && entry.y < room.y + room.h;
-      if (holdsTube) return;
+      if (holdsTube(room, s)) return;
       const hall = room === layout.hall;
       // the hall of the bridge: a group in each corner, around the console; the other rooms one group in the middle
       const cells = hall
@@ -161,36 +187,34 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
       }
     });
     if (s === BRIDGE) continue;
-    // an orb of its own for every orb, not two in one (31st playtest, point 11): the biggest rooms first
-    const byArea = roomsOf(s).sort((p, q) => areaOf(q) - areaOf(p));
+    // an orb of its own for every orb, not two in one (31st playtest, point 11), in different rooms
+    const orbRooms = new Map<Room, number>();
     for (let k = 0; k < ORBS_PER_SECTION; k++) {
-      placeIn(byArea, (x, y) => ({ uid: uid("orbs"), kind: "treasure", x, y, params: { level: tier, gold: 0, items: 0, quest: ORB, chest: ORB_OBJECT } }));
+      spread(roomsOf(s), orbRooms, (x, y) => ({ uid: uid("orbs"), kind: "treasure", x, y, params: { level: tier, gold: 0, items: 0, quest: ORB, chest: ORB_OBJECT } }));
     }
   }
 
   // the storage bay: ten crates
   const storage = roomsOf(STORAGE_BAY);
+  const crateRooms = new Map<Room, number>();
   rng.shuffle([...CRATES]).forEach((what, i) => {
     if (what === "crystal") {
-      placeIn(storage, (x, y) => ({ uid: uid("crate"), kind: "treasure", x, y, params: { level: tier, gold: 0, items: 0, quest: POWER_CRYSTAL, chest: CRATE_ITEM } }));
+      spread(storage, crateRooms, (x, y) => ({ uid: uid("crate"), kind: "treasure", x, y, params: { level: tier, gold: 0, items: 0, quest: POWER_CRYSTAL, chest: CRATE_ITEM } }));
     } else if (what === "xp") {
-      placeIn(storage, (x, y) => ({ uid: uid("crate"), kind: "chalice", x, y, params: { item: CRATE_ITEM, bonus: "xp", amount: 1_000_000, serum: i } }));
+      spread(storage, crateRooms, (x, y) => ({ uid: uid("crate"), kind: "chalice", x, y, params: { item: CRATE_ITEM, bonus: "xp", amount: 1_000_000, serum: i } }));
     } else if (what === "attr") {
-      placeIn(storage, (x, y) => ({ uid: uid("crate"), kind: "chalice", x, y, params: { item: CRATE_ITEM, bonus: "attr", attr: ATTRIBUTES[rng.int(ATTRIBUTES.length)]!, amount: 15 } }));
+      spread(storage, crateRooms, (x, y) => ({ uid: uid("crate"), kind: "chalice", x, y, params: { item: CRATE_ITEM, bonus: "attr", attr: ATTRIBUTES[rng.int(ATTRIBUTES.length)]!, amount: 15 } }));
     } else {
-      placeIn(storage, (x, y) => ({ uid: uid("crate"), kind: "chalice", x, y, params: { item: CRATE_ITEM, bonus: "res", element: ELEMENTS[rng.int(ELEMENTS.length)]!, amount: 30 } }));
+      spread(storage, crateRooms, (x, y) => ({ uid: uid("crate"), kind: "chalice", x, y, params: { item: CRATE_ITEM, bonus: "res", element: ELEMENTS[rng.int(ELEMENTS.length)]!, amount: 30 } }));
     }
   });
 
-  // the engine room and life support: four power crystals and a broken one, all in the biggest room that takes them (the rest in the others)
+  // the engine room and life support: four power crystals and a broken one, spread over the rooms (none in the room of the tube)
   for (const [section, reactor] of [[ENGINE_ROOM, "engine"], [LIFE_SUPPORT, "life"]] as const) {
-    const rooms = roomsOf(section).sort((p, q) => areaOf(q) - areaOf(p));
-    placeIn(rooms.slice(0, 1), (x, y) => ({ uid: uid("crystal"), kind: "lore", x, y, params: { item: BROKEN_CRYSTAL_ITEM, terminal: "crystal", reactor, pool: "dungeon", line: 0 } })) ||
-      placeIn(rooms, (x, y) => ({ uid: uid("crystal"), kind: "lore", x, y, params: { item: BROKEN_CRYSTAL_ITEM, terminal: "crystal", reactor, pool: "dungeon", line: 0 } }));
-    for (let k = 0; k < 4; k++) {
-      placeIn(rooms.slice(0, 1), (x, y) => ({ uid: uid("crystal"), kind: "decor", x, y, params: { item: POWER_CRYSTAL_ITEM, reactor } })) ||
-        placeIn(rooms, (x, y) => ({ uid: uid("crystal"), kind: "decor", x, y, params: { item: POWER_CRYSTAL_ITEM, reactor } }));
-    }
+    const rooms = roomsOf(section);
+    const crystalRooms = new Map<Room, number>();
+    spread(rooms, crystalRooms, (x, y) => ({ uid: uid("crystal"), kind: "lore", x, y, params: { item: BROKEN_CRYSTAL_ITEM, terminal: "crystal", reactor, pool: "dungeon", line: 0 } }));
+    for (let k = 0; k < 4; k++) spread(rooms, crystalRooms, (x, y) => ({ uid: uid("crystal"), kind: "decor", x, y, params: { item: POWER_CRYSTAL_ITEM, reactor } }));
   }
 
   // the control room: the status computer and the computers with the code words, one for each level that has mini quests (more if the list does not fit one screen)
