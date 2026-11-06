@@ -89,6 +89,8 @@ export const SOUNDS: Record<number, SoundEntry> = {
   9054: { alternate: ["foot_left_swamp", "foot_right_swamp"] },
   // the lights of the spaceship's life support come on (quest_7, the user's own file)
   9055: "light_on",
+  // the sliding doors and airlocks of the spaceship, opening and closing alike (the user's own file, 1.5 s: the doors move as long as it plays)
+  9056: "space_ship_door",
 };
 
 /** Every file name a sound entry can play. */

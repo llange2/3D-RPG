@@ -721,6 +721,11 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_futuristic_box", "new:Futuristic_Box.glb", 3000, 1024),
   S("obj_power_crystal_broken", "new:Power_crystal_broken.glb", 3000, 1024),
   S("obj_spaceship_console", "new:Spaceship_Console.glb", 3000, 1024),
+  // the sliding doors of the spaceship (6. 11. 2026): the user's lock (10 202 triangles, the doorway always there) and the two leaves, boxes with the halves of the user's picture
+  // of a double door (`gen-space-doors.ts`)
+  S("obj_space_lock", "new:Space_lock.glb", 3000, 1024),
+  S("obj_space_door_left", "new:Space_door_left.glb", 100, 1024),
+  S("obj_space_door_right", "new:Space_door_right.glb", 100, 1024),
   S("poi_hut", "Hut.obj", 1200),
   S("poi_pyramid", "Pyramid.obj", 900),
   S("poi_dungeon", "Dungeon entrance.obj", 1200),

@@ -111,6 +111,49 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
     put({ uid: uid("lever"), kind: "lever", x: lock.b.x, y: lock.b.y, params: { item: LEVER, airlock: door, side: "b", target: "" } }, true);
   }
 
+  // the doors of the sections (6. 11. 2026): sliding doors like the airlocks, but they shut again behind the party. One in each corridor that leaves a room, two to four cells outside it,
+  // in a straight piece of the corridor (walls on both sides of it and of the cells before and behind it, so that the frame stands in a wall and no rounded corner reaches into it)
+  const isFloor = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < map.height && map.cells[y * w + x] === CELL.FLOOR;
+  const keepsOff = (x: number, y: number): boolean =>
+    layout.locks.some((l) => Math.abs(l.door.x - x) <= 4 && Math.abs(l.door.y - y) <= 4) || layout.tubes.some((t) => Math.abs(t.x - x) <= 2 && Math.abs(t.y - y) <= 2) || (Math.abs(layout.console.x - x) <= CONSOLE_CLEAR + 1 && Math.abs(layout.console.y - y) <= CONSOLE_CLEAR + 1);
+  const straightFor = (x: number, y: number, axis: "x" | "y"): boolean => {
+    const along = axis === "x" ? { dx: 1, dy: 0 } : { dx: 0, dy: 1 };
+    const side = axis === "x" ? { dx: 0, dy: 1 } : { dx: 1, dy: 0 };
+    if (!isFloor(x, y) || !isFloor(x - along.dx, y - along.dy) || !isFloor(x + along.dx, y + along.dy)) return false;
+    for (const k of [-1, 0, 1]) for (const s of [-1, 1]) if (isFloor(x + along.dx * k + side.dx * s, y + along.dy * k + side.dy * s)) return false;
+    return true;
+  };
+  const doorCells: { x: number; y: number }[] = [];
+  const sides = [
+    { dx: -1, dy: 0, axis: "x" as const },
+    { dx: 1, dy: 0, axis: "x" as const },
+    { dx: 0, dy: -1, axis: "y" as const },
+    { dx: 0, dy: 1, axis: "y" as const },
+  ];
+  for (const rooms of layout.rooms) {
+    for (const r of rooms) {
+      for (const s of sides) {
+        // every cell along the wall that the direction points at: the corridor cell leaves the room from there
+        const edge: { x: number; y: number }[] = [];
+        if (s.axis === "x") for (let y = r.y; y < r.y + r.h; y++) edge.push({ x: s.dx < 0 ? r.x : r.x + r.w - 1, y });
+        else for (let x = r.x; x < r.x + r.w; x++) edge.push({ x, y: s.dy < 0 ? r.y : r.y + r.h - 1 });
+        for (const e of edge) {
+          for (let dist = 2; dist <= 4; dist++) {
+            const x = e.x + s.dx * dist;
+            const y = e.y + s.dy * dist;
+            // (the cells between the room and the door are floor: the corridor)
+            if (!isFloor(e.x + s.dx, e.y + s.dy) || !straightFor(x, y, s.axis) || keepsOff(x, y)) continue;
+            if (taken.has(y * w + x) || doorCells.some((d) => Math.abs(d.x - x) + Math.abs(d.y - y) < 4)) continue;
+            doorCells.push({ x, y });
+            actions.push({ uid: uid("door"), kind: "door", x, y, params: { locked: false, axis: s.axis, slide: true } });
+            taken.add(y * w + x);
+            break;
+          }
+        }
+      }
+    }
+  }
+
   const edgeCells = (room: Room): { x: number; y: number }[] => {
     const out: { x: number; y: number }[] = [];
     for (let y = room.y; y < room.y + room.h; y++) {

@@ -38,13 +38,17 @@ describe("doors of generated interiors", () => {
     expect(dungeonDoors / (dungeonDoors + dungeonGates)).toBeLessThan(0.75);
   });
 
-  it("the cyber theme (the pyramid's spaceship) has gates only", () => {
+  it("the cyber theme has gates only, the pyramid's spaceship sliding doors (6. 11. 2026)", () => {
     const pyramids = new World("doors-pyramids").allPois().filter((p) => p.kind === "dungeon" && p.size === 3);
     expect(pyramids.length).toBeGreaterThan(0);
     for (const poi of pyramids.slice(0, 5)) {
       const map = generateInterior(new World("doors-pyramids"), poi);
       expect(map.theme.id).toBe("cyber");
-      for (let x = 0; x < 20; x++) expect(doorLook(map, x, x * 2)).toBe("gate");
+      expect(map.spaceship).toBeDefined();
+      for (let x = 0; x < 20; x++) expect(doorLook(map, x, x * 2)).toBe("slide");
+      // the same theme in an ordinary dungeon keeps its gates
+      const plain = { ...map, spaceship: undefined };
+      for (let x = 0; x < 20; x++) expect(doorLook(plain, x, x * 2)).toBe("gate");
     }
   });
 

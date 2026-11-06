@@ -4029,5 +4029,59 @@
   "surface": -0.2,
   "fromObj": false,
   "mean": 0.332
+ },
+ "obj_space_door_right": {
+  "file": "models-original/obj_space_door_right.glb",
+  "tris": 12,
+  "bytes": 55060,
+  "bounds": [
+   -0.0860000029206276,
+   0,
+   -0.019999999552965164,
+   0.0860000029206276,
+   0.6100000143051147,
+   0.019999999552965164
+  ],
+  "animations": [],
+  "groundTop": 0.6,
+  "surface": 0.61,
+  "fromObj": false,
+  "mean": 0.195
+ },
+ "obj_space_door_left": {
+  "file": "models-original/obj_space_door_left.glb",
+  "tris": 12,
+  "bytes": 55456,
+  "bounds": [
+   -0.0860000029206276,
+   0,
+   -0.019999999552965164,
+   0.0860000029206276,
+   0.6100000143051147,
+   0.019999999552965164
+  ],
+  "animations": [],
+  "groundTop": 0.6,
+  "surface": 0.61,
+  "fromObj": false,
+  "mean": 0.199
+ },
+ "obj_space_lock": {
+  "file": "models-original/obj_space_lock.glb",
+  "tris": 10202,
+  "bytes": 925568,
+  "bounds": [
+   -0.4333913326263428,
+   -0.476806640625,
+   -0.11079100891947746,
+   0.4333912432193756,
+   0.47632792592048645,
+   0.11079101637005806
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "surface": 0.475,
+  "fromObj": false,
+  "mean": 0.257
  }
 }

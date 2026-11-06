@@ -678,7 +678,29 @@ export class Game {
 
   private isClosedDoor(x: number, y: number): boolean {
     const a = this.interior?.actionAt.get(this.cellIndex(x, y));
-    return !!a && a.kind === "door" && !this.state.opened.has(a.uid);
+    // a sliding door that is still opening is in the way as well (`InteriorView.isDoorPassable`)
+    return !!a && a.kind === "door" && (!this.state.opened.has(a.uid) || !this.interiorView.isDoorPassable(a.uid));
+  }
+
+  /** How far away from a sliding door of the spaceship (in cells, the larger of the two distances) the party must be for the door to close: one cell further than it takes to open it. */
+  private static readonly DOOR_CLOSE_DISTANCE = 2;
+
+  /**
+   * The doors of the spaceship that are no airlocks shut again when the party has moved a cell away from them (user, 6. 11. 2026); an airlock, once opened, stays open. A door
+   * is left open while a monster stands in it. `silent` for the moment a level is entered, when nothing is seen to move.
+   */
+  private closeSlidingDoors(silent = false): void {
+    const rt = this.interior;
+    if (this.mode !== "interior" || !rt?.map.spaceship) return;
+    let closed = false;
+    for (const a of rt.content.actions) {
+      if (a.kind !== "door" || a.params.airlock === true || !this.state.opened.has(a.uid)) continue;
+      if (Math.max(Math.abs(a.x - this.player.tx), Math.abs(a.y - this.player.ty)) < Game.DOOR_CLOSE_DISTANCE || this.monsterAt(a.x, a.y)) continue;
+      this.state.opened.delete(a.uid);
+      this.interiorView.setDoor(a.uid, false);
+      closed = true;
+    }
+    if (closed && !silent) this.audio.play(doorSound("slide"), 0.7);
   }
 
   private canEnter(x: number, y: number, ghost = false): boolean {
@@ -823,6 +845,12 @@ export class Game {
       this.interior = { poi, map, content, blocked, actionAt };
       this.syncQuestBlocks();
       this.enc = createEncounter();
+      // the sliding doors of the spaceship are shut when the level is entered (a save may have been made with one open), the airlocks keep their state; they open and close as long as their sound plays
+      if (map.spaceship) {
+        const from = at ?? map.spawn;
+        for (const a of content.actions) if (a.kind === "door" && a.params.airlock !== true && Math.max(Math.abs(a.x - from.x), Math.abs(a.y - from.y)) >= Game.DOOR_CLOSE_DISTANCE) this.state.opened.delete(a.uid);
+        this.interiorView.slideSeconds = this.audio.durationOf(doorSound("slide"), 1.536);
+      }
       this.interiorView.show(map, content, this.state.opened, this.state.broken);
       this.setLamps(crystalLamps(content, this.state.opened), true);
       this.syncShip(true);
@@ -1192,6 +1220,7 @@ export class Game {
         const spot = this.mascotSpots().find((m) => m.x === x && m.y === y);
         if (spot && mascotSpotItem(spot.item, s.party.mascot) === BIRD_PERCH) this.ui.log(propLine(BIRD_PERCH), "info");
       }
+      this.closeSlidingDoors();
     }
 
     if (this.ambushGrace) {
@@ -1370,6 +1399,8 @@ export class Game {
         return;
       }
       // a wall that can be broken is just a wall to a party that cannot tell
+      // a door that is on its way open is neither a wall to bump against nor to be opened again: the party waits
+      if (a?.kind === "door" && this.state.opened.has(a.uid)) return;
       const plainWall = a?.kind === "breakable_wall" && !this.state.party.talents.includes("talent_perceptive");
       if (a && !plainWall && actionTrigger(a) === "interact" && !(ACTION_DEFS[a.kind].persistence === "once" && this.state.opened.has(a.uid))) {
         this.passTime(ACTION_MINUTES);
