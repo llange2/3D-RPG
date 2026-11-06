@@ -1,6 +1,7 @@
 import { trapElementOf } from "../actions/registry";
 import type { ActionKind, MapContent } from "../actions/types";
 import { CELL, type Facing, type InteriorMap } from "../interiors/types";
+import { ENGINE_CRYSTAL_FLAG, LIFE_FLAG } from "../data/quest-table";
 import { MAP_ITEMS, talentInfo } from "../data/tables";
 import { BIOME, DECO, GROUND, poiBounds, wrapDelta, type Poi, type TileInfo } from "../world/types";
 import type { World } from "../world/world";
@@ -301,7 +302,9 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "talent": case "work": case "king": case "skullmiser": return "persona";
     case "portal": return "teleporter_city";
     // a person is a person; a statue or computer that tells a part of a riddle (quest 4, 6, the castles, the spaceship) is something to find (35th playtest)
-    case "lore": return typeof a.params.persona === "number" ? "persona" : typeof a.params.item === "number" && typeof a.params.text === "string" ? "event" : null;
+    case "lore": return typeof a.params.persona === "number" ? "persona" : (typeof a.params.item === "number" && typeof a.params.text === "string") || a.params.terminal === "crystal" ? "event" : null;
+    // the intact power crystals of the spaceship (the broken one is the `lore` above): the party looks for them
+    case "decor": return a.params.reactor !== undefined ? "event" : null;
     case "shrine": case "fountain": return "event";
     case "riddle": case "gong": case "lever": case "head": case "chalice": case "machine": return "event";
     case "qportal": return "teleporter_city";
@@ -615,8 +618,13 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "gong": return `Gong${used}`;
         case "lever": return "Lever";
         case "head": return "Stone head";
+        case "decor":
+          if (a.params.reactor !== undefined) return "Power Crystal";
+          break;
         case "lore":
           if (typeof a.params.persona === "number") return "Person";
+          // the broken crystal of life support or the engine room is an intact one once it has been replaced
+          if (a.params.terminal === "crystal") return opened.has(a.params.reactor === "life" ? LIFE_FLAG : ENGINE_CRYSTAL_FLAG) ? "Power Crystal" : "Power Crystal (broken)";
           // a statue or computer that tells a part of a riddle
           if (typeof a.params.item === "number" && typeof a.params.text === "string") return MAP_ITEMS[a.params.item]?.name.trim() || "Statue";
           break;

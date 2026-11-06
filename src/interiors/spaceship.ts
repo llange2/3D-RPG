@@ -1,6 +1,7 @@
 import type { Rng } from "../core/rng";
-import { BRIDGE, CONTROL_ROOM, ENGINE_ROOM, LIFE_SUPPORT, SECTIONS, STORAGE_BAY } from "../data/quest-table";
+import { BRIDGE, CONSOLE_CLEAR, CONTROL_ROOM, ENGINE_ROOM, LIFE_SUPPORT, SECTIONS, STORAGE_BAY } from "../data/quest-table";
 import { Builder, rectsOverlap, type BuildContext, type Rect } from "./builder";
+import { straightenCorners } from "./straighten";
 import type { InteriorMap, SpaceshipLayout } from "./types";
 
 /**
@@ -109,6 +110,17 @@ export function generateSpaceship(rng: Rng, ctx: BuildContext, section: number, 
   const hall = all[BRIDGE]![0]!;
   const hallMid = centre(hall);
   const console = { x: hallMid.x, y: hallMid.y, front: { x: hallMid.x, y: hallMid.y + 1 } };
+
+  // the models that round the corners need walls that run straight on both sides: the steps of one cell that the corridors leave in the walls are smoothed away (6. 11. 2026), but not where
+  // something stands on its cell (the tubes, the console and the hall round it, the airlocks with their niches) and not near the borders of the sections
+  const near = (p: { x: number; y: number }, x: number, y: number, r: number): boolean => Math.abs(p.x - x) <= r && Math.abs(p.y - y) <= r;
+  straightenCorners(b.cells, W, H, (x, y) => {
+    if (tubes.some((t) => near(t, x, y, 2) || near(t.front, x, y, 2))) return true;
+    if (near(console, x, y, CONSOLE_CLEAR + 3)) return true;
+    if (x >= hall.x - 1 && x <= hall.x + hall.w && y >= hall.y - 1 && y <= hall.y + hall.h) return true;
+    if (locks.some((l) => near(l.door, x, y, 3) || near(l.a, x, y, 2) || near(l.b, x, y, 2))) return true;
+    return Array.from({ length: SECTIONS }, (_, s) => originOf(s)).some((o) => Math.abs(x - o.x) <= 2 || Math.abs(y - o.y) <= 2) || x >= W - 3;
+  });
 
   const own = tubes[section] ?? tubes[0]!;
   const spawn = { x: own.front.x, y: own.front.y, facing: "S" as const };

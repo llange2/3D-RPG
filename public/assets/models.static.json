@@ -3186,8 +3186,8 @@
  },
  "ci_84": {
   "file": "models/ci_84.glb",
-  "tris": 40,
-  "bytes": 7820,
+  "tris": 22,
+  "bytes": 6300,
   "bounds": [
    -1,
    0,
@@ -3198,7 +3198,7 @@
   ],
   "animations": [],
   "groundTop": 0,
-  "surface": 2,
+  "surface": 0,
   "fromObj": true,
   "mean": 0.257
  },

@@ -504,6 +504,9 @@ function shipTerminal(action: ActionInstance, ctx: ActionContext): ActionOutcome
   // the console: life support and the engines have to work and the party needs the black key card
   if (!life || !engines) return { effects: [{ type: "text", text: SHIP.CONSOLE_NOT_READY }, { type: "sound", id: 9014 }], consumed: false };
   if (!carriedItems(party).some((i) => i.type === "quest_black_keycard")) return { effects: [{ type: "text", text: SHIP.CONSOLE_NO_CARD }, { type: "sound", id: 9014 }], consumed: false };
+  // the card ends the game: the heroes are asked first (6. 11. 2026)
+  if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Console", question: SHIP.INSERT_CARD, yes: "Insert it", no: "Not yet" }], consumed: false };
+  if (ctx.answer === null) return { effects: [], consumed: false };
   return { effects: [{ type: "text", text: SHIP.CONSOLE_STARTS }, { type: "ending" }], consumed: false };
 }
 

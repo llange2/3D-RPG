@@ -43,6 +43,10 @@ export const CRYSTAL_SNAPPED_LIFE = "As soon as you snap in the new crystal its 
 /** The console of the bridge. */
 export const CONSOLE_NOT_READY = "Ship not fully operational";
 export const CONSOLE_NO_CARD = "A slot beside the screen glows red. The console wants a black key card.";
+/** The words that rise over the black screen after the outro movie. */
+export const ENDING_TEXT =
+  "You are still startled by the discovery that underneath this world lay this strange vessel, which took you above the sky.\nYou admire the stars rushing by and wonder, where it will take you next.\n\nCongratulation on your victory!";
+export const INSERT_CARD = "A slot beside the screen glows softly. Your heroes hold the black key card. Do you want to insert it?";
 export const CONSOLE_STARTS = "The black key card slides into the slot. The console wakes up, the screens fill with symbols, and the world around you begins to dissolve.";
 
 /** The computers of the control room that list the code words of the mini quests. */
