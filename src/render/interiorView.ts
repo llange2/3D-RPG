@@ -879,6 +879,11 @@ export class InteriorView {
     this.doors.slideSeconds = seconds;
   }
 
+  /** Seconds a wooden door needs to swing open (the length of its sound). */
+  set swingSeconds(seconds: number) {
+    this.doors.swingSeconds = seconds;
+  }
+
   /** A pit went off: the floor under it is cut out and the pit model takes its place. It stays open. */
   openPit(uid: string): void {
     if (this.traps.openPit(uid)) this.buildMesh();

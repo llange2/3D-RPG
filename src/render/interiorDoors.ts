@@ -12,12 +12,27 @@ import type { PropInstance } from "./terrainMesher";
  * The doors of generated dungeons and castles are the ones of the hand-built maps: a wooden door in its frame (blocks 16 and 15 of
  * the old editor, Temple of Moo) or a frame with an iron gate in it (blocks 47 and 41 with the items 81 and 80, Fountain Head Cavern
  * and the castles). A dungeon has both kinds, a castle only gates. The spaceship has sliding doors only (`slide`): the user's lock model that always stands in the
- * corridor, with two leaves that part in its middle (6. 11. 2026).
+ * corridor, with two leaves that part in its middle (6. 11. 2026). The wooden door of a dungeon is the user's frame and leaf (also 6. 11. 2026): the leaf swings on its
+ * hinges, as long as the door's sound plays.
  */
 export type DoorLook = "door" | "gate" | "slide";
 
-const DOOR_CLOSED = "blk_door_closed";
-const DOOR_OPEN = "blk_door_open";
+/** The wooden door: the frame of the dungeon's gates, and the leaf (a model of its own, in the frame's coordinates) that swings on the hinge axis at its edge. */
+const DOOR_FRAME = "frame_dungeon";
+const DOOR_LEAF = "blk_dungeon_door";
+/**
+ * The hinge axis in the leaf's own coordinates (Babylon's: glTF files stand mirrored in x): a vertical line 0.04 inside the leaf's edge, on its middle plane. Found from the user's
+ * `Dungeon Door open.glb` of the old game, whose leaf is the closed one turned by 90 degrees about this line.
+ */
+const DOOR_HINGE_X = 0.5945;
+/** The leaf opens by this angle about the hinge (towards the corridor side, where the open leaf of the old maps lies against the wall). */
+const DOOR_SWING = -Math.PI / 2;
+/** How far a wooden door is open before the party may walk through (the leaf has then left the middle of the doorway). */
+export const DOOR_PASSABLE = 0.7;
+/** Seconds a wooden door needs until `Game` has read the length of its sound: the squeak of the old game's 9052 (`squeaky_door`). */
+const DOOR_SECONDS = 2.672;
+/** The prop renderer sinks every model by this much below its base (`PropRenderer.load`); the leaf is placed by its origin, so it gets the same sink as the frame has. */
+const PROP_SINK = 0.02;
 
 /** The sliding door: the frame (the user's `Space_lock.glb`) and the two leaves (boxes with the halves of the user's picture of a double door, `tools/assets/gen-space-doors.ts`). */
 const SLIDE_FRAME = "obj_space_lock";
@@ -99,8 +114,8 @@ export function doorModelKeys(map: InteriorMap, content: MapContent): string[] {
       keys.add(SLIDE_LEFT);
       keys.add(SLIDE_RIGHT);
     } else if (look === "door") {
-      keys.add(DOOR_CLOSED);
-      keys.add(DOOR_OPEN);
+      keys.add(DOOR_FRAME);
+      keys.add(DOOR_LEAF);
     } else {
       const gate = GATES[gateSetOf(map)];
       keys.add(gate.frame);
@@ -121,7 +136,7 @@ interface Door {
   /** Gate only: item, how it leaves the cell, and the frame model with its size. */
   gate: (typeof GATES)[keyof typeof GATES];
   open: boolean;
-  /** 0 closed, 1 open; a gate and a sliding door move, a wooden door jumps (the old game swapped the block). */
+  /** 0 closed, 1 open; every look moves (a wooden door swings, a gate rises or sinks, a sliding door parts). */
   t: number;
   /** Seconds a gate needs to leave the cell. */
   seconds: number;
@@ -141,6 +156,8 @@ export class InteriorDoors {
   private phase = new Map<string, number>();
   /** Seconds a sliding door needs to open or close: as long as its sound plays (`Game` sets it from the decoded file). */
   slideSeconds = 1.5;
+  /** Seconds a wooden door needs to swing open: as long as its sound plays (`Game` sets it from the decoded file). */
+  swingSeconds = DOOR_SECONDS;
 
   constructor(
     private readonly props: PropRenderer,
@@ -177,15 +194,11 @@ export class InteriorDoors {
     this.pushMoving();
   }
 
-  /** Opens or closes a door. A wooden door changes at once, a gate slides (`update`). */
+  /** Opens or closes a door; it moves over the next frames (`update`). */
   set(uid: string, open: boolean): void {
     const d = this.doors.get(uid);
     if (!d || d.open === open) return;
     d.open = open;
-    if (d.look === "door") {
-      d.t = open ? 1 : 0;
-      this.pushStill();
-    }
   }
 
   isClosed(uid: string): boolean {
@@ -194,27 +207,25 @@ export class InteriorDoors {
   }
 
   /**
-   * Can the party step into the door's cell? A sliding door lets them through once it is open far enough, and not a moment longer than it is meant to be open: the leaf
-   * that starts to close is in the way at once. The other looks open at once.
+   * Can the party step into the door's cell? A sliding or wooden door lets them through once it is open far enough, and not a moment longer than it is meant to be open: the
+   * leaf that starts to close is in the way at once. A gate opens at once.
    */
   isPassable(uid: string): boolean {
     const d = this.doors.get(uid);
     if (!d) return true;
-    if (d.look !== "slide") return d.open;
-    return d.open && d.t >= SLIDE_PASSABLE;
+    if (d.look === "gate") return d.open;
+    return d.open && d.t >= (d.look === "slide" ? SLIDE_PASSABLE : DOOR_PASSABLE);
   }
 
   update(dt: number): void {
     let moving = false;
     let changed = false;
     for (const d of this.doors.values()) {
-      if (d.look === "gate" || d.look === "slide") {
-        const target = d.open ? 1 : 0;
-        if (d.t !== target) {
-          const seconds = d.look === "slide" ? Math.max(0.2, this.slideSeconds) : d.seconds;
-          d.t = Math.min(1, Math.max(0, d.t + Math.sign(target - d.t) * (dt / seconds)));
-          moving = true;
-        }
+      const target = d.open ? 1 : 0;
+      if (d.t !== target) {
+        const seconds = d.look === "slide" ? Math.max(0.2, this.slideSeconds) : d.look === "door" ? Math.max(0.2, this.swingSeconds) : d.seconds;
+        d.t = Math.min(1, Math.max(0, d.t + Math.sign(target - d.t) * (dt / seconds)));
+        moving = true;
       }
       const phase = d.t === 0 ? 0 : d.t === 1 ? 2 : 1;
       if (this.phase.get(d.uid) !== phase) changed = true;
@@ -260,6 +271,34 @@ export class InteriorDoors {
     return out;
   }
 
+  /**
+   * The leaf of a wooden door turned by `t` of its way about the hinge axis. The instance turns about its own origin, so it is moved by what the hinge's offset becomes
+   * under that turn: `hinge - R(angle) hinge`, in the leaf's frame, then carried to the world by the door's yaw and size.
+   */
+  private leafAt(d: Door, t: number): PropInstance {
+    const angle = DOOR_SWING * t;
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    // Babylon's yaw: x' = x cos + z sin, z' = -x sin + z cos (the hinge lies on the leaf's x axis, so its z is 0)
+    const dx = DOOR_HINGE_X * (1 - c);
+    const dz = DOOR_HINGE_X * s;
+    const yaw = d.yaw * RAD;
+    const cy = Math.cos(yaw);
+    const sy = Math.sin(yaw);
+    const wx = dx * DOOR_SCALE[0];
+    const wz = dz * DOOR_SCALE[2];
+    return {
+      model: DOOR_LEAF,
+      x: d.x + wx * cy + wz * sy,
+      y: -PROP_SINK,
+      z: d.z - wx * sy + wz * cy,
+      rotY: yaw + angle,
+      scale: DOOR_SCALE[0],
+      scaleXYZ: DOOR_SCALE,
+      atOrigin: true,
+    };
+  }
+
   private pushStill(): void {
     const list: PropInstance[] = [];
     for (const d of this.doors.values()) {
@@ -270,7 +309,9 @@ export class InteriorDoors {
         continue;
       }
       if (d.look === "door") {
-        list.push({ model: d.open ? DOOR_OPEN : DOOR_CLOSED, x: d.x, y: 0, z: d.z, rotY: d.yaw * RAD, scale: DOOR_SCALE[0], scaleXYZ: DOOR_SCALE });
+        // the frame always stands; the leaf stands still when it is shut or wide open, and is drawn every frame under the other owner while it swings
+        list.push({ model: DOOR_FRAME, x: d.x, y: 0, z: d.z, rotY: d.yaw * RAD, scale: DOOR_SCALE[0], scaleXYZ: DOOR_SCALE });
+        if (d.t === 0 || d.t === 1) list.push(this.leafAt(d, d.t));
         continue;
       }
       // the frame is a wall piece with the doorway in it; the glTF one stands turned by half a circle like the other glTF blocks
@@ -292,7 +333,10 @@ export class InteriorDoors {
         list.push(...this.slideParts(d, d.t, false, true));
         continue;
       }
-      if (d.look !== "gate") continue;
+      if (d.look === "door") {
+        list.push(this.leafAt(d, d.t));
+        continue;
+      }
       const gate = this.gateAt(d, d.t);
       if (gate) list.push(gate);
     }
