@@ -35,12 +35,6 @@ ABILITY_COLUMNS = [
 ]
 
 
-# monster id -> cells that replace the workbook's (the workbook stays the user's file; set the cell there and this entry can go)
-OVERRIDES = {
-    69: {"ranged": True},  # Terminator: "Ranged Attack" (spaceship feedback, point 8)
-}
-
-
 def find(head, text):
     for i, h in enumerate(head):
         if h and text in str(h).lower():
@@ -101,9 +95,6 @@ def main() -> int:
         age = row[col["aging"]]
         m["aging"] = 1 if isinstance(age, str) and age.strip().lower() == "x" else number(age)
         out[str(int(row[0]))] = m
-    # corrections of the user that the workbook does not carry yet (6. 11. 2026, spaceship feedback): the terminator shoots from a distance
-    for monster_id, fixes in OVERRIDES.items():
-        out[str(monster_id)].update(fixes)
     OUT.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"monsters: {len(out)}")
     return 0
