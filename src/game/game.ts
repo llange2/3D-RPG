@@ -2383,8 +2383,8 @@ export class Game {
             if (e.uid) this.state.opened.add(e.uid);
             // the sound follows what is drawn: a wooden door that was picked open must not clank like a gate
             const look = rt ? doorLook(rt.map, a.x, a.y) : "door";
-            // a wooden door swings as long as its squeak lasts
-            if (look === "door") this.interiorView.swingSeconds = this.audio.durationOf(doorSound("door"), 2.672);
+            // a wooden door swings as long as its squeak can be heard (the file runs on in silence)
+            if (look === "door") this.interiorView.swingSeconds = this.audio.audibleDurationOf(doorSound("door"), 1.571);
             this.interiorView.setDoor(doorUid, true);
             this.audio.play(doorSound(look));
             if (e.state === "unlocked") ui.log("The lock clicks open.", "good");

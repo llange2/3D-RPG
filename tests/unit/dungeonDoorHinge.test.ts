@@ -85,14 +85,14 @@ describe("the wooden dungeon door swings on its hinges", () => {
     const r = recorder();
     const doors = new InteriorDoors(r.props, {});
     doors.show(map, content, new Set(), "t");
-    doors.swingSeconds = 2.672;
+    doors.swingSeconds = 1.571;
     doors.set(door.uid, true);
     expect(doors.isPassable(door.uid)).toBe(false);
-    doors.update(2.672 * DOOR_PASSABLE - 0.05);
+    doors.update(1.571 * DOOR_PASSABLE - 0.05);
     expect(doors.isPassable(door.uid)).toBe(false);
     doors.update(0.1);
     expect(doors.isPassable(door.uid)).toBe(true);
-    doors.update(2.672 * (1 - DOOR_PASSABLE) - 0.05 + 0.01);
+    doors.update(1.571 * (1 - DOOR_PASSABLE) - 0.05 + 0.01);
     // done within the length of the sound: the leaf has gone back to the still owner and stands wide open
     const open = r.all(LEAF);
     expect(open).toHaveLength(1);

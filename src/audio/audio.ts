@@ -233,6 +233,28 @@ export class AudioManager {
     return this.buffers.get(name)?.duration ?? fallback;
   }
 
+  /**
+   * Like `durationOf`, without the silence at the end of the file: what can be heard, for things that must move exactly as long as the sound is audible
+   * (the squeaky door's file runs 1.1 s on in digital silence). Samples below `threshold` (about -60 dB) count as silence.
+   */
+  audibleDurationOf(id: number, fallback: number, threshold = 0.001): number {
+    const entry = SOUNDS[id];
+    if (!entry) return fallback;
+    const buffer = this.buffers.get(filesOf(entry)[0]!);
+    if (!buffer) return fallback;
+    let last = 0;
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      const data = buffer.getChannelData(c);
+      for (let i = data.length - 1; i > last; i--) {
+        if (Math.abs(data[i]!) > threshold) {
+          last = i;
+          break;
+        }
+      }
+    }
+    return (last + 1) / buffer.sampleRate;
+  }
+
   /** Plays a sound effect by its old id (e.g. 9016 = melee hit). */
   play(id: number, volume = 1): void {
     this.requests++;
