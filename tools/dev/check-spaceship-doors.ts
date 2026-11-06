@@ -41,6 +41,8 @@ try {
   await sleep(6000);
   // the terminators shoot a level 1 party dead within a few steps: god mode (the same module the game runs, through the dev server)
   await evalJs(`import("/src/sim/cheats.ts").then((m) => { m.cheats.god = true; })`);
+  // (no robot is alive for the door tests; the one that tests the monsters comes back to life below)
+  await evalJs(`(() => { for (const m of __game.game.enc.monsters) m.hp = 0; return 0; })()`);
   // the light of the ship on, so that the doors can be seen
   await evalJs(`(() => { __game.state.opened.add("ship:life"); __game.game.syncShip(true); return 0; })()`);
   type Door = { uid: string; x: number; y: number; axis: string; airlock: boolean };
@@ -97,6 +99,24 @@ try {
   await go(quiet.x + qx * 3, quiet.y + qy * 3, quiet.axis === "x" ? "W" : "N");
   await sleep(1500);
   await shot("9b-back-side.png");
+  // a monster that has noticed the party opens a shut door: one that is asleep behind it does not (the first robot of the level stands in for both)
+  const other = doors.filter((d) => !d.airlock && d.uid !== door.uid && d.uid !== quiet.uid)[0]!;
+  const ox = other.axis === "x" ? 1 : 0;
+  const oy = other.axis === "x" ? 0 : 1;
+  const ofacing = other.axis === "x" ? "E" : "S";
+  await evalJs(`(() => { const e = __game.game.enc; for (const m of e.monsters.slice(1)) m.hp = 0; const m = e.monsters[0]; m.hp = 50; m.x = ${other.x + ox}; m.y = ${other.y + oy}; delete m.alerted; return 0; })()`);
+  await go(other.x - ox * 3, other.y - oy * 3, ofacing);
+  await sleep(1500);
+  const door2 = () => evalJs<string>(`JSON.stringify({ open: __game.state.opened.has("${other.uid}"), alerted: __game.game.enc.monsters[0].alerted ?? false, monster: [__game.game.enc.monsters[0].x, __game.game.enc.monsters[0].y] })`);
+  console.log("asleep behind the shut door:", await door2());
+  await evalJs(`(() => { __game.game.enc.monsters[0].alerted = true; return 0; })()`);
+  for (let i = 0; i < 4; i++) {
+    await go(other.x - ox * 3, other.y - oy * 3, ofacing);
+    await sleep(1300);
+    console.log(`awake, turn ${i + 1}:`, await door2());
+    if (i === 0) await shot("11-monster-opens-door.png");
+  }
+  await shot("12-monster-came-through.png");
   // an airlock: opened by hand (both levers pulled), it stays open when the party goes away
   const lock = doors.find((d) => d.airlock)!;
   const lx = lock.axis === "x" ? 1 : 0;

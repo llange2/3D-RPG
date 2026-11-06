@@ -35,6 +35,11 @@ export interface GridView {
    * whose cell the party may enter): nobody reaches across it, neither with a blade nor with a shot.
    */
   wallBetween?(x0: number, y0: number, x1: number, y1: number): boolean;
+  /**
+   * A closed door that a monster which has noticed the party opens on its way (the sliding doors of the spaceship, not its airlocks). `walkable` and `opaque` still treat it as
+   * shut: a monster behind it knows nothing of the party until it has noticed it by another way, and only then the door is no obstacle (user, 6. 11. 2026).
+   */
+  opensDoor?(x: number, y: number): boolean;
 }
 
 export interface MonsterInstance {
@@ -55,6 +60,11 @@ export interface MonsterInstance {
   pulled?: boolean;
   /** The share (in percent) of the sheet's XP this monster gives; 100 when unset. The monsters of a Monster Hut give more or less by world size. */
   xpPercent?: number;
+  /**
+   * Set for good the first time the monster is awake: it has a way to the party within the action radius (a shut door gives none, so a monster behind one stays asleep). From then
+   * on it opens the doors in its way (`GridView.opensDoor`).
+   */
+  alerted?: boolean;
 }
 
 /** The XP the party gets for this monster. */
@@ -72,6 +82,8 @@ export interface Encounter {
 
 export type CombatEvent =
   | { type: "monster_move"; uid: string; from: [number, number]; to: [number, number] }
+  /** The monster spends its step on opening the door on the next tile of its way (`GridView.opensDoor`); the game opens it, the monster walks through on its next step. */
+  | { type: "monster_open_door"; uid: string; at: [number, number] }
   /** Gravity: the monster is drawn to the party at once (a quick slide, no walking). */
   | { type: "monster_pull"; uid: string; from: [number, number]; to: [number, number] }
   | { type: "monster_attack"; uid: string; target: number; damage: number; ranged: boolean; damageType: DamageType; conditions: Condition[]; drained?: number; aged?: number }
@@ -297,6 +309,12 @@ export function isPhased(m: MonsterInstance): boolean {
   return (m.phased ?? 0) > 0;
 }
 
+/** The map as one monster sees it: a monster that has noticed the party walks through the doors it can open. */
+function viewOf(view: GridView, m: MonsterInstance): GridView {
+  const opens = view.opensDoor;
+  return m.alerted && opens ? { ...view, walkable: (x, y) => view.walkable(x, y) || opens(x, y) } : view;
+}
+
 function scan(view: GridView, enc: Encounter, px: number, py: number, radius: number): Scanned[] {
   const found: Scanned[] = [];
   for (const monster of enc.monsters) {
@@ -304,7 +322,10 @@ function scan(view: GridView, enc: Encounter, px: number, py: number, radius: nu
     // the square the party shoots into and the search box of `wayToPlayer` (a circle left monsters asleep in the corners that the party could already hit)
     if (Math.max(Math.abs(monster.x - px), Math.abs(monster.y - py)) > radius) continue;
     // the search that moves the monster: whoever has a way to go is awake (the shorter search of the old game missed ways that were there)
-    const path = wayToPlayer(view, monsterById(monster.defId), monster.x, monster.y, px, py, radius, undefined, MOVE_STEP_LIMIT);
+    let path = wayToPlayer(view, monsterById(monster.defId), monster.x, monster.y, px, py, radius, undefined, MOVE_STEP_LIMIT);
+    // the first way found wakes it for good; before that a shut door is a wall to it, afterwards a door it can open is not
+    if (path) monster.alerted = true;
+    else if (monster.alerted) path = wayToPlayer(viewOf(view, monster), monsterById(monster.defId), monster.x, monster.y, px, py, radius, undefined, MOVE_STEP_LIMIT);
     found.push({ monster, path, steps: path ? path.length : 9999 });
   }
   return found.sort((a, b) => a.steps - b.steps);
@@ -383,10 +404,15 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
     // no way at all, or already next to the party (the way is empty)
     if (m.immobile || !s.path || s.path.length === 0) continue;
     const other = (x: number, y: number) => enc.monsters.some((o) => o !== m && o.hp > 0 && o.x === x && o.y === y);
-    const first = wayToPlayer(view, monsterById(m.defId), m.x, m.y, px, py, radius, other, MOVE_STEP_LIMIT)?.[0];
+    const first = wayToPlayer(viewOf(view, m), monsterById(m.defId), m.x, m.y, px, py, radius, other, MOVE_STEP_LIMIT)?.[0];
     if (!first) continue;
     const [nx, ny] = first;
     if ((nx === px && ny === py) || occupied(nx, ny)) continue;
+    // a shut door on the way: the monster spends this step on opening it (the game opens it and lets it walk through on the next one)
+    if (!view.walkable(nx, ny) && view.opensDoor?.(nx, ny)) {
+      events.push({ type: "monster_open_door", uid: m.uid, at: [nx, ny] });
+      continue;
+    }
     events.push({ type: "monster_move", uid: m.uid, from: [m.x, m.y], to: [nx, ny] });
     m.x = nx;
     m.y = ny;
