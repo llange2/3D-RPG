@@ -48,34 +48,66 @@ export function hasRoundWalls(map: InteriorMap): boolean {
   return map.theme.id === "cyber" && map.kind === "dungeon";
 }
 
-export function roundCorners(map: InteriorMap): RoundCorner[] {
-  if (!hasRoundWalls(map)) return [];
-  const w = map.width;
-  const at = (x: number, y: number): number => (x < 0 || y < 0 || x >= w || y >= map.height ? CELL.SOLID : map.cells[y * w + x]!);
+type At = (x: number, y: number) => number;
+
+/** The corners of the cell `x, y` that a model rounds: a floor cell with a wall in the corner and the walls on both sides running on; a wall cell whose corner reaches into the room, with the floor on both sides running on. */
+function roundedAt(at: At, x: number, y: number): CornerSide[] {
+  const here = at(x, y);
+  if (here !== CELL.FLOOR && here !== CELL.SOLID) return [];
+  const inner = here === CELL.FLOOR;
+  const found: CornerSide[] = [];
+  for (const corner of Object.keys(SIDES) as CornerSide[]) {
+    const [a, b] = SIDES[corner];
+    const cell = (s: Side): number => at(x + STEP[s][0], y + STEP[s][1]);
+    // the cell beside `x + dx`, `y + dy` in two steps
+    const diag = (s: Side, t: Side): number => at(x + STEP[s][0] + STEP[t][0], y + STEP[s][1] + STEP[t][1]);
+    const [oa, ob] = [OPPOSITE[a], OPPOSITE[b]];
+    const near = inner ? CELL.SOLID : CELL.FLOOR;
+    const far = inner ? CELL.FLOOR : CELL.SOLID;
+    if (cell(a) === near && cell(b) === near && diag(a, b) === near && cell(oa) === far && cell(ob) === far && diag(a, ob) === near && diag(b, oa) === near) found.push(corner);
+  }
+  return found;
+}
+
+/**
+ * The corners of the cell `x, y` that are square, rounded or not: a floor cell with walls on two sides and the wall between them, a wall cell with floor on two sides and the
+ * floor between them (the straightness of the walls beside it is not asked).
+ */
+export function squareCornersAt(at: At, x: number, y: number): CornerSide[] {
+  const here = at(x, y);
+  if (here !== CELL.FLOOR && here !== CELL.SOLID) return [];
+  const near = here === CELL.FLOOR ? CELL.SOLID : CELL.FLOOR;
+  return (Object.keys(SIDES) as CornerSide[]).filter((corner) => {
+    const [a, b] = SIDES[corner];
+    return at(x + STEP[a][0], y + STEP[a][1]) === near && at(x + STEP[b][0], y + STEP[b][1]) === near && at(x + STEP[a][0] + STEP[b][0], y + STEP[a][1] + STEP[b][1]) === near;
+  });
+}
+
+/** True when the cell has exactly one square corner and no model rounds it (a step of one cell in a wall, a corridor beside a corner). */
+export function unroundedAt(at: At, x: number, y: number): boolean {
+  return squareCornersAt(at, x, y).length === 1 && roundedAt(at, x, y).length !== 1;
+}
+
+/** The cells of a grid as a lookup that reads the outside as wall. */
+export function gridAt(cells: ArrayLike<number>, width: number, height: number): At {
+  return (x, y) => (x < 0 || y < 0 || x >= width || y >= height ? CELL.SOLID : cells[y * width + x]!);
+}
+
+export function roundCornersIn(cells: ArrayLike<number>, width: number, height: number): RoundCorner[] {
+  const at = gridAt(cells, width, height);
   const out: RoundCorner[] = [];
-  for (let y = 0; y < map.height; y++) {
-    for (let x = 0; x < w; x++) {
-      const here = at(x, y);
-      if (here !== CELL.FLOOR && here !== CELL.SOLID) continue;
-      const inner = here === CELL.FLOOR;
-      const found: CornerSide[] = [];
-      for (const corner of Object.keys(SIDES) as CornerSide[]) {
-        const [a, b] = SIDES[corner];
-        const cell = (s: Side): number => at(x + STEP[s][0], y + STEP[s][1]);
-        // the cell beside `x + dx`, `y + dy` in two steps
-        const diag = (s: Side, t: Side): number => at(x + STEP[s][0] + STEP[t][0], y + STEP[s][1] + STEP[t][1]);
-        const [oa, ob] = [OPPOSITE[a], OPPOSITE[b]];
-        // a floor cell with a wall in the corner and the walls on both sides running on; a wall cell whose corner reaches into the room, with the
-        // floor on both sides running on
-        const near = inner ? CELL.SOLID : CELL.FLOOR;
-        const far = inner ? CELL.FLOOR : CELL.SOLID;
-        if (cell(a) === near && cell(b) === near && diag(a, b) === near && cell(oa) === far && cell(ob) === far && diag(a, ob) === near && diag(b, oa) === near) found.push(corner);
-      }
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const found = roundedAt(at, x, y);
       // two corners in one cell (a pillar, a diagonal) stay square
-      if (found.length === 1) out.push({ kind: inner ? "inner" : "outer", x, y, corner: found[0]!, yaw: cornerYaw(found[0]!) });
+      if (found.length === 1) out.push({ kind: at(x, y) === CELL.FLOOR ? "inner" : "outer", x, y, corner: found[0]!, yaw: cornerYaw(found[0]!) });
     }
   }
   return out;
+}
+
+export function roundCorners(map: InteriorMap): RoundCorner[] {
+  return hasRoundWalls(map) ? roundCornersIn(map.cells, map.width, map.height) : [];
 }
 
 /** The wall faces of floor cells that the models cover, as `x,y,N|E|S|W` (the cell the face belongs to and the side it looks away from). */

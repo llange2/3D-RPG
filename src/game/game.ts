@@ -16,6 +16,7 @@ import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { sectionAt } from "../interiors/spaceship";
+import { ENDING_TEXT } from "../data/ship-texts";
 import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
@@ -2251,7 +2252,7 @@ export class Game {
     const confirm = outcome.effects.find((e) => e.type === "confirm");
     if (confirm?.type === "confirm") {
       this.player.locked = true;
-      const yes = await this.ui.confirm(confirm.title, confirm.question, confirm.yes, confirm.no, a.params.terminal === "status" ? "computer" : "");
+      const yes = await this.ui.confirm(confirm.title, confirm.question, confirm.yes, confirm.no, a.params.terminal === "status" || a.params.terminal === "console" ? "computer" : "");
       this.player.locked = false;
       outcome = resolveAction(a, { ...ctx, answer: yes ? "yes" : null });
     }
@@ -2273,7 +2274,12 @@ export class Game {
       const turnsStone = a.kind === "head" || (a.kind === "lever" && !!this.interior?.content.actions.some((h) => h.kind === "head"));
       if (a.kind !== "gong" && a.params.terminal === undefined) this.audio.play(turnsStone ? 9050 : a.kind === "lever" ? 9034 : 9014, turnsStone ? 0.9 : 0.6);
       // what was done in the spaceship: its light, its glow and its hum follow
-      if (a.params.terminal !== undefined) this.syncShip();
+      if (a.params.terminal !== undefined) {
+        this.syncShip();
+        // the sound goes with the light that comes on now, not after the message has been closed (6. 11. 2026: the light came first and the sound after it)
+        for (const e of outcome.effects) if (e.type === "sound") this.audio.play(e.id);
+        outcome = { ...outcome, effects: outcome.effects.filter((e) => e.type !== "sound") };
+      }
     }
     if (opening) {
       this.audio.play(9007);
@@ -2355,6 +2361,8 @@ export class Game {
             rt.map.cells[a.y * rt.map.width + a.x] = CELL.FLOOR;
             this.state.broken.add(a.uid);
             this.interiorView.wallBroken(a.uid);
+            // a cave's rock has no broken model: the stone goes down into the floor as long as the sound lasts, like the seal of an end room
+            if (rt.map.kind === "cave") this.interiorView.sinkWall(a.x, a.y, this.audio.durationOf(9050, 1.6));
             this.audio.play(9050);
           }
           break;
@@ -2526,8 +2534,43 @@ export class Game {
       document.body.appendChild(video);
       void video.play().catch(done);
     });
-    await this.ui.message("The simulation ends. The world you walked through was a game, and you have won it. You may keep playing: the islands are still there.", this.interior?.poi.name ?? "");
+    await this.endingScroll();
     this.player.locked = false;
+  }
+
+  /**
+   * After the movie: a black screen and the closing words rise from the bottom like credits (6. 11. 2026). A click, Enter, Space or Escape ends it early.
+   */
+  private endingScroll(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const screen = document.createElement("div");
+      screen.style.cssText = "position:fixed;inset:0;background:#000;z-index:9999;overflow:hidden;cursor:pointer";
+      const text = document.createElement("div");
+      text.style.cssText =
+        "position:absolute;left:50%;top:0;width:min(44em,86vw);text-align:center;white-space:pre-line;color:#e9dfc0;font-family:var(--font-head);font-size:clamp(20px,2.6vw,34px);line-height:1.8;letter-spacing:0.02em";
+      text.textContent = ENDING_TEXT;
+      screen.appendChild(text);
+      document.body.appendChild(screen);
+      const from = window.innerHeight;
+      const to = -text.offsetHeight;
+      // (about 60 pixels a second: the three sentences take as long to leave the screen as they need to be read)
+      const run = text.animate([{ transform: `translate(-50%, ${from}px)` }, { transform: `translate(-50%, ${to}px)` }], { duration: ((from - to) / 60) * 1000, easing: "linear", fill: "forwards" });
+      const done = (): void => {
+        window.removeEventListener("keydown", onKey, true);
+        run.cancel();
+        screen.remove();
+        resolve();
+      };
+      const onKey = (e: KeyboardEvent): void => {
+        if (e.key !== "Enter" && e.key !== " " && e.key !== "Escape") return;
+        e.preventDefault();
+        e.stopPropagation();
+        done();
+      };
+      window.addEventListener("keydown", onKey, true);
+      screen.onclick = done;
+      void run.finished.then(done, () => undefined);
+    });
   }
 
   /**

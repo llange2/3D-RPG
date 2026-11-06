@@ -233,7 +233,7 @@ describe("the spaceship (quest document 1.5, quest_7)", () => {
     const party = createDefaultParty();
     const opened = new Set<string>();
     const ctx: ActionContext = { party, rootSeed: world.rootSeed, content, opened, monsterThemes: {}, tier: 5 };
-    const ends = () => resolveAction(consoleAction, ctx).effects.some((e) => e.type === "ending");
+    const ends = () => resolveAction(consoleAction, { ...ctx, answer: "yes" }).effects.some((e) => e.type === "ending");
     // nothing works yet
     expect(resolveAction(consoleAction, ctx).effects[0]).toMatchObject({ text: "Ship not fully operational" });
     expect(resolveAction(consoleAction, ctx).effects.some((e) => e.type === "sound" && e.id === 9014)).toBe(true);
@@ -245,6 +245,9 @@ describe("the spaceship (quest document 1.5, quest_7)", () => {
     expect(ends()).toBe(false);
     opened.add(ENGINES_FLAG);
     expect(ends()).toBe(true);
+    // the heroes are asked before the card goes in: without an answer nothing ends, a no leaves everything as it was
+    expect(resolveAction(consoleAction, ctx).effects.map((e) => e.type)).toEqual(["confirm"]);
+    expect(resolveAction(consoleAction, { ...ctx, answer: null }).effects).toEqual([]);
     // the systems without the card: denied, with the slot's word
     const poor = createDefaultParty();
     const without = resolveAction(consoleAction, { ...ctx, party: poor });

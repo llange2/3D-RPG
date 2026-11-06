@@ -27,7 +27,8 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?:
   88: { model: "obj_well_yellow", scale: 1.5 },
   // the user's models of the spaceship (quest document 1.5). The prop renderer rests a model's lowest point on the floor whatever the file's origin is, so none needs a `lift`
   // (the first version lifted them by half their height and they hovered)
-  [CRATE_ITEM]: { model: "obj_futuristic_box", scale: 1.6 },
+  // (the crates are 20 % bigger than the first version's 1.6)
+  [CRATE_ITEM]: { model: "obj_futuristic_box", scale: 1.92 },
   // the broken crystal is as big as the intact one it turns into (item 67, 0.87 x 2.0 x 0.86 in the original set; the file is 0.43 x 0.95 x 0.43), and it rests on the floor the same way
   [BROKEN_CRYSTAL_ITEM]: { model: "obj_power_crystal_broken", scale: 2.03, scale3: [2.03, 2.1, 2.0] },
   [CONSOLE_ITEM]: { model: "obj_spaceship_console", scale: CONSOLE_SCALE },

@@ -9,6 +9,8 @@ const WIND_STEP = "wind_ambience";
 const WIND_SLICE = 0.5;
 /** A step takes 0.22 s (`STEP_SECONDS` in game/player.ts): the next slice starts that far on in the loop. */
 const WIND_ADVANCE = 0.22;
+/** Background loops that start at a moment the player causes (9, the hum of the spaceship's engines): decoded in advance so that they sound at once. */
+const BUFFERED_AMBIENT: ReadonlySet<number> = new Set([9]);
 
 export class AudioManager {
   musicVolume = 0.45;
@@ -29,6 +31,8 @@ export class AudioManager {
   private readonly loading = new Map<string, Promise<AudioBuffer | null>>();
   /** The looping background sounds that play now (fountain, birds, wind), by their old sound id. */
   private readonly ambient = new Map<number, HTMLAudioElement>();
+  /** The loops of `BUFFERED_AMBIENT` that play from a decoded buffer. */
+  private readonly ambientBuffers = new Map<number, { source: AudioBufferSourceNode; gain: GainNode }>();
   /** What the surroundings ask for, kept for the moment the page is unlocked by the first click or key. */
   private wanted: ReadonlyMap<number, number> = new Map();
   /** Where in the wind loop the next step of a levitating party cuts its slice from, in seconds. */
@@ -122,11 +126,42 @@ export class AudioManager {
       audio.pause();
       this.ambient.delete(id);
     }
+    for (const [id, node] of this.ambientBuffers) {
+      if (levels.has(id)) continue;
+      node.source.stop();
+      this.ambientBuffers.delete(id);
+    }
     if (!this.supported || !this.unlocked) return;
     for (const [id, level] of levels) {
       const entry = SOUNDS[id];
       if (typeof entry !== "string") continue;
       const volume = Math.max(0, Math.min(1, this.sfxVolume * level));
+      // a loop that has to start the moment something is done (the hum of the engines) plays from memory, like the effects: a new `Audio` element needs its file first
+      if (BUFFERED_AMBIENT.has(id) && this.context) {
+        const buffer = this.buffers.get(entry);
+        if (buffer) {
+          const old = this.ambient.get(id);
+          if (old) {
+            old.pause();
+            this.ambient.delete(id);
+          }
+          const node = this.ambientBuffers.get(id);
+          if (node) node.gain.gain.value = volume;
+          else {
+            const source = this.context.createBufferSource();
+            source.buffer = buffer;
+            source.loop = true;
+            const gain = this.context.createGain();
+            gain.gain.value = volume;
+            source.connect(gain).connect(this.context.destination);
+            source.start();
+            this.ambientBuffers.set(id, { source, gain });
+          }
+          continue;
+        }
+        // not decoded yet: the element starts it for now
+        void this.buffer(entry);
+      }
       const playing = this.ambient.get(id);
       if (playing) {
         playing.volume = volume;
@@ -147,6 +182,10 @@ export class AudioManager {
       for (const name of filesOf(entry)) void this.buffer(name);
     }
     void this.buffer(WIND_STEP);
+    for (const id of BUFFERED_AMBIENT) {
+      const entry = SOUNDS[id];
+      if (typeof entry === "string") void this.buffer(entry);
+    }
   }
 
   private buffer(name: string): Promise<AudioBuffer | null> {

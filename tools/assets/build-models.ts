@@ -60,6 +60,11 @@ export interface ModelSpec {
   texture?: string;
   /** Names of glTF nodes to leave out (a model that carries a floor slab the game draws itself). */
   drop?: string[];
+  /**
+   * Leave out the triangles that lie flat at the bottom or the top of the model. The rounded inner corner of the spaceship has a cap there over the room's side of its
+   * arc, and the floor quad and the ceiling quad of its cell lie in the same planes: the cap showed the wall's texture in the ceiling (and the floor) of the curve.
+   */
+  dropFlat?: boolean;
   /** Keep the triangle budget in the `original` profile too (models the game instances by the hundred). */
   capped?: boolean;
   /**
@@ -203,9 +208,38 @@ function triCount(doc: Document): number {
   return tris;
 }
 
+/** Removes every triangle whose three corners lie in the lowest or the highest horizontal plane of its primitive (`ModelSpec.dropFlat`). */
+function dropFlatTriangles(doc: Document): void {
+  const v: number[] = [];
+  for (const mesh of doc.getRoot().listMeshes()) {
+    for (const prim of mesh.listPrimitives() as Primitive[]) {
+      const pos = prim.getAttribute("POSITION");
+      const idx = prim.getIndices();
+      if (!pos || !idx) continue;
+      let min = Infinity;
+      let max = -Infinity;
+      for (let i = 0; i < pos.getCount(); i++) {
+        const y = pos.getElement(i, v)[1]!;
+        min = Math.min(min, y);
+        max = Math.max(max, y);
+      }
+      const eps = 1e-4;
+      const kept: number[] = [];
+      for (let k = 0; k < idx.getCount(); k += 3) {
+        const tri = [idx.getScalar(k), idx.getScalar(k + 1), idx.getScalar(k + 2)] as const;
+        const ys = tri.map((i) => pos.getElement(i, v)[1]!);
+        const flat = Math.abs(ys[0]! - ys[1]!) < eps && Math.abs(ys[0]! - ys[2]!) < eps && (Math.abs(ys[0]! - min) < eps || Math.abs(ys[0]! - max) < eps);
+        if (!flat) kept.push(...tri);
+      }
+      idx.setArray(new Uint32Array(kept));
+    }
+  }
+}
+
 async function processDoc(doc: Document, spec: ModelSpec, profile: ModelProfile): Promise<void> {
   doc.setLogger(new Logger(Logger.Verbosity.WARN));
   for (const node of doc.getRoot().listNodes()) if (spec.drop?.includes(node.getName())) node.dispose();
+  if (spec.dropFlat) dropFlatTriangles(doc);
   if (spec.rotateX || spec.rotateY) {
     // a rotation on the nodes that hang directly under the scene: the geometry stays as it is, bounds and ground top read the world matrix
     const half = (deg: number) => [Math.sin((deg * Math.PI) / 360), Math.cos((deg * Math.PI) / 360)] as const;
@@ -668,7 +702,8 @@ function campaignItemModels(): ModelSpec[] {
     // the bone pile (70) keeps its 10 000 triangles: its texture is a baked atlas, any simplification (even to 3000) shatters it
     const spec = { ...S(`ci_${n}`, item.source, n === 70 ? 10000 : closeUp ? 3000 : big ? 1800 : 800, big || closeUp ? 512 : 256), ...REPLACED_ITEMS[n] };
     // the rounded corners of the spaceship: their .mtl points at a path on the author's disk (the outer one at the dungeon ceiling by mistake); both wear the cyber wall
-    specs.push(n === 84 || n === 85 ? { ...spec, texture: "textures/tex_cyber_wall.jpg" } : spec);
+    // (the inner one without its flat caps: they lay in the ceiling and the floor of the curve and showed the wall's texture there)
+    specs.push(n === 84 || n === 85 ? { ...spec, texture: "textures/tex_cyber_wall.jpg", ...(n === 84 ? { dropFlat: true } : {}) } : spec);
   }
   return specs;
 }

@@ -17,7 +17,7 @@ import {
   STORAGE_BAY,
 } from "../data/quest-table";
 import { CODE_LINES_PER_PAGE, CODE_TITLE } from "../data/ship-texts";
-import { monsterGroup } from "../data/tables";
+import { MONSTERS, monsterGroup } from "../data/tables";
 import { CELL, type InteriorMap } from "../interiors/types";
 import { stillOpen } from "../interiors/castle";
 import { Builder } from "../interiors/builder";
@@ -158,11 +158,15 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
 
   // the bridge's guards, the other sections' robots, two orbs in each section but the bridge
   // (the terminators have their own share: the other robots come first in the other sections, a terminator is rare there)
-  const allRobots = ref.look.monsters.filter((id) => monsterGroup(id) === "robot");
-  const robots = allRobots.some((id) => id !== TERMINATOR) ? allRobots.filter((id) => id !== TERMINATOR) : allRobots;
+  // (every robot of the game turns up somewhere in the four sections, not only the ones of the place's look (user, 6. 11. 2026: there were only ED-409 and terminators):
+  // the robots are dealt from a shuffled deck that is refilled when it is empty, so each of them comes before any is dealt twice)
+  const robots = Object.keys(MONSTERS).map(Number).filter((id) => monsterGroup(id) === "robot" && id !== TERMINATOR);
+  let deck: number[] = [];
   const pickRobot = (s: number): number => {
     if (s === BRIDGE) return TERMINATOR;
-    return rng.int(100) < RARE_TERMINATOR_PERCENT || robots.length === 0 ? TERMINATOR : robots[rng.int(robots.length)]!;
+    if (rng.int(100) < RARE_TERMINATOR_PERCENT || robots.length === 0) return TERMINATOR;
+    if (deck.length === 0) deck = rng.shuffle([...robots]);
+    return deck.pop()!;
   };
   for (let s = 0; s < SECTIONS; s++) {
     const rooms = layout.rooms[s]!;
