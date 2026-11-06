@@ -29,8 +29,8 @@ const DOOR_HINGE_X = 0.5945;
 const DOOR_SWING = -Math.PI / 2;
 /** How far a wooden door is open before the party may walk through (the leaf has then left the middle of the doorway). */
 export const DOOR_PASSABLE = 0.7;
-/** Seconds a wooden door needs until `Game` has read the length of its sound: the squeak of the old game's 9052 (`squeaky_door`). */
-const DOOR_SECONDS = 2.672;
+/** Seconds a wooden door needs until `Game` has measured its sound: the audible part of the squeak of the old game's 9052 (`squeaky_door`; its file is 2.672 s long, the last 1.1 s are silence). */
+const DOOR_SECONDS = 1.571;
 /** The prop renderer sinks every model by this much below its base (`PropRenderer.load`); the leaf is placed by its origin, so it gets the same sink as the frame has. */
 const PROP_SINK = 0.02;
 
