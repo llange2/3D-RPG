@@ -10,6 +10,9 @@ import { monsterGroup } from "./tables";
  */
 export const ROBOT_SOUND = { alarm: 9057, target: 9058, laser: 9059, launch: 9060, powerOff: 9061, step: 9062, hit: 9063 } as const;
 
+/** The pause in seconds between the two steps of a robot, after the first one has died away. */
+export const ROBOT_STEP_PAUSE = 0.06;
+
 const IRON_WIZARD = 35;
 const TERMINATOR = 69;
 const TITANIC_AUTOMATO = 88;
