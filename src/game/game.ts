@@ -3079,6 +3079,16 @@ export class Game {
     return seconds;
   }
 
+  /**
+   * How long a monster needs for one tile: `MONSTER_STEP_SECONDS`, except for the robots that take two steps per tile, which walk as long as both step sounds last (the first one
+   * until it has died away, the pause, the second one), so that the walk and the steps end together.
+   */
+  private monsterStepSeconds(defId: number): number {
+    const steps = robotStepSounds(defId);
+    if (steps === 0) return MONSTER_STEP_SECONDS;
+    return this.audio.audibleDurationOf(ROBOT_SOUND.step, 0.5) * steps + ROBOT_STEP_PAUSE * (steps - 1);
+  }
+
   /** Runs `run` after `seconds` unless the scene has changed by then. */
   private later(seconds: number, run: () => void): void {
     if (seconds <= 0) {
@@ -3119,11 +3129,13 @@ export class Game {
       switch (e.type) {
         case "monster_move": {
           const defId = this.enc.monsters.find((x) => x.uid === e.uid)?.defId ?? 0;
+          // a robot with two steps per tile walks as long as the two steps last (`monsterStepSeconds`)
+          const seconds = this.monsterStepSeconds(defId);
           at(answer, () => {
             const m = this.enc.monsters.find((x) => x.uid === e.uid);
             if (!m) return;
             const p = this.monsterWorld(m);
-            this.monsters.moveTo(m.uid, p.x, p.y, p.z);
+            this.monsters.moveTo(m.uid, p.x, p.y, p.z, seconds);
           });
           // two steps on every tile (Titanic Automato, ED-409): the second one starts when the first has died away, after a very short pause, so that they sound as two steps
           const steps = robotStepSounds(defId);
@@ -3155,7 +3167,7 @@ export class Game {
           const target = party.characters[e.target]!;
           const attackerId = this.enc.monsters.find((x) => x.uid === e.uid)?.defId ?? 1;
           const name = monsterById(attackerId).name;
-          const start = answer + (walkers.has(e.uid) ? MONSTER_STEP_SECONDS : 0);
+          const start = answer + (walkers.has(e.uid) ? this.monsterStepSeconds(attackerId) : 0);
           const flight = e.ranged ? this.launchMonsterShot(e.uid, e.damageType, start) : 0;
           at(start, () => this.monsters.attack(e.uid));
           // a robot fires its laser or launches its missile as the shot leaves
