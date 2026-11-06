@@ -27,7 +27,7 @@ import { ChunkManager } from "../render/chunkManager";
 import { LAMP_RANGE, VIEW_DISTANCES, VIEW_TILES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
 import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
-import { ROBOT_SOUND, fliesAsMissile, isRobot, robotAttackSound, robotStepSounds, robotWakeSound } from "../data/robot-sounds";
+import { ROBOT_SOUND, ROBOT_STEP_PAUSE, fliesAsMissile, isRobot, robotAttackSound, robotStepSounds, robotWakeSound } from "../data/robot-sounds";
 import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/environment";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
@@ -3125,9 +3125,10 @@ export class Game {
             const p = this.monsterWorld(m);
             this.monsters.moveTo(m.uid, p.x, p.y, p.z);
           });
-          // two steps on every tile (Titanic Automato, ED-409): the second one halfway through the step
+          // two steps on every tile (Titanic Automato, ED-409): the second one starts when the first has died away, after a very short pause, so that they sound as two steps
           const steps = robotStepSounds(defId);
-          for (let n = 0; n < steps; n++) at(answer + (MONSTER_STEP_SECONDS * n) / steps, () => this.audio.play(ROBOT_SOUND.step, 0.8));
+          const stride = this.audio.audibleDurationOf(ROBOT_SOUND.step, 0.5) + ROBOT_STEP_PAUSE;
+          for (let n = 0; n < steps; n++) at(answer + stride * n, () => this.audio.play(ROBOT_SOUND.step, 0.8));
           break;
         }
         case "monster_open_door": {

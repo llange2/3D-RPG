@@ -12,6 +12,9 @@ const WIND_ADVANCE = 0.22;
 /** Background loops that start at a moment the player causes (9, the hum of the spaceship's engines): decoded in advance so that they sound at once. */
 const BUFFERED_AMBIENT: ReadonlySet<number> = new Set([9]);
 
+/** Sounds whose file is quiet (peak -18 dB): played with this gain on top of the volume. The robot powering off is twice as loud as its file (user, 6. 11. 2026). */
+const SOUND_GAIN: Readonly<Record<number, number>> = { 9061: 2 };
+
 export class AudioManager {
   musicVolume = 0.45;
   sfxVolume = 0.7;
@@ -269,7 +272,8 @@ export class AudioManager {
       this.footToggle.set(id, flip);
       name = entry.alternate[flip ? 0 : 1];
     }
-    const level = Math.max(0, Math.min(1, this.sfxVolume * volume * (id === 9006 ? 0.5 : 1)));
+    // (a sound with a gain above 1 is a quiet file made louder: the web audio gain node takes it, the cap is only there against a mistake)
+    const level = Math.max(0, Math.min(SOUND_GAIN[id] ? 4 : 1, this.sfxVolume * volume * (id === 9006 ? 0.5 : 1) * (SOUND_GAIN[id] ?? 1)));
     const ctx = this.context;
     if (ctx) {
       const ready = this.buffers.get(name);
