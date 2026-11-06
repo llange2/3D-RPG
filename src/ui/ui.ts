@@ -364,8 +364,8 @@ export class UI {
     );
   }
 
-  confirm(title: string, text: string, yes = "Yes", no = "No"): Promise<boolean> {
-    return this.ask(title, text, [{ label: yes, value: true, primary: true }, { label: no, value: false }], false);
+  confirm(title: string, text: string, yes = "Yes", no = "No", skin = ""): Promise<boolean> {
+    return this.ask(title, text, [{ label: yes, value: true, primary: true }, { label: no, value: false }], false, undefined, skin);
   }
 
   message(text: string, title = "", button = "OK"): Promise<void> {

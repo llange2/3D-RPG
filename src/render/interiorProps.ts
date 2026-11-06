@@ -1,5 +1,6 @@
 import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
+import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
 import { isGlbItem, itemModelKey, itemProp } from "./itemProps";
@@ -16,7 +17,7 @@ import type { PropInstance } from "./terrainMesher";
 export const ALTAR_SCALE = 0.9;
 
 /** Old item id -> the interior view's own model and its scale, for the objects it has had since before the themes. */
-export const OWN_MODELS: Record<number, { model: string; scale: number }> = {
+export const OWN_MODELS: Record<number, { model: string; scale: number; lift?: number }> = {
   1: { model: "obj_chest", scale: 0.85 },
   74: { model: "obj_chest_iron", scale: 0.85 },
   72: { model: "obj_chest_noble", scale: 0.85 },
@@ -24,6 +25,10 @@ export const OWN_MODELS: Record<number, { model: string; scale: number }> = {
   35: { model: "obj_altar", scale: ALTAR_SCALE },
   37: { model: "obj_well_red", scale: 1.5 },
   88: { model: "obj_well_yellow", scale: 1.5 },
+  // the user's models of the spaceship (quest document 1.5): centred on their middle, so `lift` (half their height times the scale) stands them on the floor
+  [CRATE_ITEM]: { model: "obj_futuristic_box", scale: 1.6, lift: 0.37 },
+  [BROKEN_CRYSTAL_ITEM]: { model: "obj_power_crystal_broken", scale: 1, lift: 0.48 },
+  [CONSOLE_ITEM]: { model: "obj_spaceship_console", scale: 2, lift: 0.62 },
 };
 
 /**
@@ -61,14 +66,21 @@ export function themeModelKeys(content: MapContent): string[] {
     if (item === null) continue;
     const key = OWN_MODELS[item]?.model ?? itemModelKey(item);
     if (key) keys.add(key);
+    // a broken crystal that is mended is the intact one
+    if (item === BROKEN_CRYSTAL_ITEM) {
+      const whole = itemModelKey(POWER_CRYSTAL_ITEM);
+      if (whole) keys.add(whole);
+    }
   }
   return [...keys];
 }
 
 /** The prop for a themed object, or null when the action shows nothing of the theme (then the view picks a chest or well by chance). `bearing` is degrees, 0 = north. */
 export function themedProp(a: ActionInstance, x: number, z: number, bearing: number, staticInfo: Record<string, StaticModelInfo>, opened: ReadonlySet<string> = new Set(), content?: MapContent): PropInstance | null {
-  const item = shownItem(a);
+  let item = shownItem(a);
   if (item === null) return null;
+  // the broken crystal of the engine room or of life support is the intact one once the party has mended it
+  if (item === BROKEN_CRYSTAL_ITEM && opened.has(a.params.reactor === "life" ? LIFE_FLAG : ENGINE_CRYSTAL_FLAG)) item = POWER_CRYSTAL_ITEM;
   // a head of the ring is there while its lever says so; a head of the row looks the way it was turned
   // the statues of a castle stand in a corner of the keep and face the inside at an angle of 45 degrees
   if (typeof a.params.bearing === "number") bearing = a.params.bearing;
@@ -93,6 +105,6 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   // a pulled lever has turned half a circle, so that its handle lies on the other side (the campaign turns its levers the same way)
   if (a.kind === "lever" && leverPulled(a, opened)) bearing += 180;
   const own = OWN_MODELS[item];
-  if (own) return { model: own.model, x, y: 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale };
+  if (own) return { model: own.model, x, y: own.lift ?? 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale };
   return itemProp(item, bearing, x, z, staticInfo);
 }

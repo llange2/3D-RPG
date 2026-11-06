@@ -1,5 +1,6 @@
 import { runeActive } from "../actions/quests";
 import { heapGone } from "../actions/registry";
+import { ENGINE_CRYSTAL_FLAG, LIFE_FLAG } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
 import { shownItem } from "./interiorProps";
@@ -47,6 +48,14 @@ export const MASCOT_ORB_LAMP: LampKind = { y: 1.2, color: [1, 0.78, 0.25], range
 export const MASCOT_ORB_KEY = "mo:";
 export const GOLD_LAMP: LampKind = { y: 0.9, color: [1, 0.8, 0.3], range: 4.5, intensity: 2.2 };
 export const LOOT_LAMP: LampKind = { y: 0.6, color: [1, 0.8, 0.3], range: 4, intensity: 1.9 };
+/**
+ * The power crystals of the spaceship (quest document 1.5): weak while the ship is dead, strong (three cells around, blue) once the crystal of their section has been mended.
+ * The broken crystal gives no light before it is mended.
+ */
+export const SHIP_CRYSTAL_WEAK: LampKind = { y: 1.4, color: [0.15, 0.6, 1], range: 4.5, intensity: 1.1 };
+export const SHIP_CRYSTAL_STRONG: LampKind = { y: 1.4, color: [0.15, 0.6, 1], range: 9, intensity: 4.5 };
+/** The console of the bridge is lit (document 1.5: "soll beleuchtet sein"). */
+export const CONSOLE_LAMP: LampKind = { y: 1.4, color: [0.35, 0.85, 1], range: 8, intensity: 3.2 };
 /** The computer terminal of the spaceship glows blue (point 4). */
 export const COMPUTER_LAMP: LampKind = { y: 1.3, color: [0.3, 0.55, 1], range: 5, intensity: 2.3 };
 
@@ -119,6 +128,16 @@ export function crystalLamps(content: MapContent, opened: ReadonlySet<string> = 
     if (a.kind === "rune") {
       if (a.params.need === "moan") continue;
       if (!runeActive(a, content, opened)) continue;
+    }
+    // the crystals of the spaceship's engine room and life support: weak until their section is mended, strong after (the broken one only after)
+    if (typeof a.params.reactor === "string") {
+      const mended = opened.has(a.params.reactor === "life" ? LIFE_FLAG : ENGINE_CRYSTAL_FLAG);
+      if (mended || a.params.terminal !== "crystal") out.push(lampSource(mended ? SHIP_CRYSTAL_STRONG : SHIP_CRYSTAL_WEAK, cellCenterX(a.x), cellCenterZ(a.y), lampKeyOf(a)));
+      continue;
+    }
+    if (a.params.terminal === "console") {
+      out.push(lampSource(CONSOLE_LAMP, cellCenterX(a.x), cellCenterZ(a.y), lampKeyOf(a)));
+      continue;
     }
     const element = elementOf(a);
     const item = element !== null ? TRAP_OBJECT[element] : shownItem(a);

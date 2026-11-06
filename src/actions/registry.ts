@@ -221,7 +221,7 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
   tube: {
     kind: "tube",
     legacyIds: [],
-    // a transporter tube of the spaceship (the way back to the pyramid), or the tube of the control deck that ends the game
+    // a transporter tube of the spaceship: the way back to the pyramid
     trigger: "interact",
     persistence: "repeat",
     minimap: "tex_mm_event",

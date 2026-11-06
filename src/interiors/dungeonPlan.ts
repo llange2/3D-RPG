@@ -5,6 +5,7 @@ import {
   CARD_COLORS,
   KEY_COLORS,
   MAX_ITEMS_PER_ROOM,
+  ORBS_IN_SPACESHIP,
   ORBS_IN_WORLD,
   ORBS_PER_SECTION,
   PEARLS_IN_WORLD,
@@ -32,7 +33,7 @@ import type { DungeonRef } from "./types";
  */
 
 /** The orbs that lie in the dungeons: the rest of the 31 are in the spaceship. */
-const DUNGEON_ORBS = ORBS_IN_WORLD - ORBS_PER_SECTION * SECTIONS;
+const DUNGEON_ORBS = ORBS_IN_WORLD - ORBS_IN_SPACESHIP;
 
 const isDungeon = (p: Poi) => p.kind === "dungeon";
 
@@ -62,6 +63,18 @@ function pickPyramids(rng: Rng, dungeons: readonly Poi[]): Poi[] {
     if (!any) break;
   }
   return out;
+}
+
+/**
+ * Which pyramid opens which section (quest document 1.5): by chance, except that the bridge (section 0) is entered from a pyramid on the hardest territory, the level 5
+ * island (the highest level there is, if the world has none). The stream of the plan is not touched, the order has its own.
+ */
+function sectionOrder(rootSeed: SeedState, pyramids: Poi[]): Poi[] {
+  const rng = rngFor(rootSeed, LAYER.INTERIOR, "pyramid-sections");
+  const hardest = Math.max(...pyramids.map((p) => p.tier));
+  const bridge = rng.shuffle(pyramids.filter((p) => p.tier === hardest))[0];
+  if (!bridge) return pyramids;
+  return [bridge, ...rng.shuffle(pyramids.filter((p) => p !== bridge))];
 }
 
 /** The deck of quests a kind of place draws from; a deck is shuffled again every time it is used up, so a world shows every quest. */
@@ -97,7 +110,7 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
   const perRoom = MAX_ITEMS_PER_ROOM[size] ?? 1;
 
   // 1. the pyramids and their cards
-  const pyramids = pickPyramids(rng, places.filter(isDungeon));
+  const pyramids = sectionOrder(rootSeed, pickPyramids(rng, places.filter(isDungeon)));
   const pyramidIds = new Set(pyramids.map((p) => p.id));
   const ordinary = places.filter((p) => !pyramidIds.has(p.id));
   const dungeons = ordinary.filter(isDungeon);

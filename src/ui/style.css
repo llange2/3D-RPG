@@ -128,13 +128,16 @@ html.loading-on #game-cursor { display: none; }
   padding: 10px 18px 12px; filter: drop-shadow(0 8px 24px #000c);
   font-size: 18px; line-height: 1.35;
 }
-/* the message box of the spaceship's computers (quest document 1.5): the same box on a screen instead of the scroll (computer_screen.webp is 512x364) */
+/* the message box of the spaceship's computers (quest document 1.5): the same box on a screen instead of the scroll. computer_screen.webp is 1024x728, twice the size it shows
+   (the bezel is 80 px in the picture and 40 px on the screen), and the screen is big: the code words of the mini quests need many lines (about 17 on one page) */
 .parchment.computer {
   --roll-l: 40px; --roll-r: 40px; --edge-t: 40px; --edge-b: 40px; color: #8ff0ff;
   border-width: var(--edge-t) var(--roll-r) var(--edge-b) var(--roll-l);
-  border-image: url("/assets/ui/computer_screen.webp") 40 40 40 40 fill / 1 / 0 stretch;
-  font-family: "Consolas", "Lucida Console", monospace; text-shadow: 0 0 6px #1cd6ff88; filter: drop-shadow(0 8px 24px #000c);
+  border-image: url("/assets/ui/computer_screen.webp") 80 80 80 80 fill / 1 / 0 stretch;
+  width: min(960px, 94vw); min-height: min(580px, 90vh); display: flex; flex-direction: column; justify-content: flex-start;
+  font-family: "Consolas", "Lucida Console", monospace; font-size: 15px; line-height: 1.3; text-shadow: 0 0 6px #1cd6ff88; filter: drop-shadow(0 8px 24px #000c);
 }
+.parchment.computer .buttons { margin-top: auto; padding-top: 12px; }
 .parchment.computer h2 { color: #2fd8ff; font-family: inherit; text-transform: uppercase; letter-spacing: 0.12em; font-size: 20px; }
 .parchment.computer .btn { color: #8ff0ff; background: linear-gradient(180deg, #123a48, #0a222c); border-color: #2fd8ff; font-family: inherit; }
 .parchment.computer .btn:hover:not(:disabled) { color: #fff; border-color: #7be9ff; }

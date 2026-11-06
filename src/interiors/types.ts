@@ -156,7 +156,7 @@ export interface DungeonRef {
   seth?: boolean;
   /** The room of the machines, set by the layout: behind a door, with the cell in front of the door where Seth stands. */
   machines?: { x: number; y: number; w: number; h: number; cx: number; cy: number; door: { x: number; y: number }; front: { x: number; y: number } };
-  /** A pyramid: the section of the spaceship it opens (0 is the control deck). */
+  /** A pyramid: the section of the spaceship it opens (0 is the bridge). */
   section?: number;
   /**
    * The end room, set by the layout generator. It is floor but out of reach until the quest is solved: either behind a wall cell (`seal`) that
@@ -218,20 +218,28 @@ export interface ShowcaseLayout {
   lines: LightLine[];
 }
 
-/** The spaceship under the pyramids (`interiors/spaceship.ts`): five sections side by side, the front one (0) is the control deck. */
+/**
+ * The spaceship under the pyramids (`interiors/spaceship.ts`, quest document 1.5): five sections of equal size in a grid, the bridge in front (0), the control room behind
+ * it with life support under it (the numbers of `SECTION_NAMES`), then the storage bay and the engine room, shut off from each other by four airlocks.
+ */
 export interface SpaceshipLayout {
   sections: number;
-  /** The width of a section in cells. */
+  /** The width and the height of a section in cells. */
   width: number;
-  /** The transporter tube of every section: the cell it stands on and the cell in front of it. The tube of section 0 is in the middle of the control deck. */
+  height: number;
+  /** The top left cell of every section. */
+  origins: { x: number; y: number }[];
+  /** The transporter tube of every section: the cell it stands on and the cell in front of it (the way in from the pyramid that opens the section, and out again). */
   tubes: { x: number; y: number; front: { x: number; y: number } }[];
-  /** The tube in the middle of the control deck: with the black key card it ends the game. */
-  final: { x: number; y: number; front: { x: number; y: number } };
-  /** The airlock between a section and the next: the cell it shuts and the niches of its two levers. */
-  locks: { door: { x: number; y: number }; a: { x: number; y: number }; b: { x: number; y: number }; from: number }[];
-  /** The control deck and the rooms of every section. */
-  deck: { x: number; y: number; w: number; h: number };
+  /** The console in the middle of the bridge's hall: with life support, the engines running and the black key card it ends the game. */
+  console: { x: number; y: number; front: { x: number; y: number } };
+  /** The airlock between two sections: the cell it shuts, the niches of its two levers and the sections it joins (`axis` x: they lie side by side, y: one under the other). */
+  locks: { door: { x: number; y: number }; a: { x: number; y: number }; b: { x: number; y: number }; from: number; to: number; axis: "x" | "y" }[];
+  /** The big hall of the bridge and the rooms of every section. */
+  hall: { x: number; y: number; w: number; h: number };
   rooms: { x: number; y: number; w: number; h: number }[][];
+  /** The code words of the mini quests of the world, by level of the place (the computers of the control room show them). Made by `generateInterior`, from the plan of the world. */
+  codeWords: { tier: number; place: string; words: string[] }[];
 }
 
 export interface InteriorMap {

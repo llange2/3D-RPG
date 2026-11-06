@@ -17,6 +17,8 @@ import type { Attribute, Character, Condition, Item, Party } from "../sim/types"
 import type { ActionInstance, MapContent } from "./types";
 import { FACING_NAMES, gongsStruck, headFacing, ringSolved, rotationSolved, runeActive, sameAnswer, turnHead } from "./quests";
 import { answerMatches } from "../data/riddles";
+import { CRATE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL } from "../data/quest-table";
+import * as SHIP from "../data/ship-texts";
 import { trapElementOf, type ServiceKind } from "./registry";
 
 export type Effect =
@@ -56,7 +58,7 @@ export type Effect =
   | { type: "king"; alignment: "good" | "neutral" | "evil" }
   /** The party stands before the Skull Miser: the game takes the silver skulls, if there are any, and pays. */
   | { type: "skulls" }
-  /** The party steps into the tube of the control deck with the black key card: the game is won. */
+  /** The party uses the console of the bridge (engines and life support running, black key card in the backpack): the game is won. */
   | { type: "ending" }
   /** A hero got a condition from a chalice. */
   | { type: "condition"; character: number; condition: Condition }
@@ -342,6 +344,12 @@ interface Vessel {
   /** The question that goes with it in the dialog, after the hint. */
   pick: string;
   done: (name: string, attr: string, amount: number) => string;
+  /** A vessel with products of its own (the crates of the spaceship): what the package of each attribute and element says, instead of a colour and a clue. */
+  attrLooks?: Readonly<Record<Attribute, Look>>;
+  resLooks?: Readonly<Record<(typeof ELEMENTS)[number], Look>>;
+  resDone?: (name: string, element: string, amount: number) => string;
+  /** Experience: the hint, the question and the words after it. */
+  xp?: { hint: (serum: string) => string; pick: string; done: (name: string, amount: number) => string };
 }
 
 /** How a gift of attribute points looks: the colour of the stuff, and one thing in it that gives the attribute away to anyone who thinks about it. */
@@ -368,7 +376,7 @@ const WELL_VESSEL: Vessel = {
   pick: "Who wants to drink from the well?",
   done: (name, attr, amount) => `${name} drinks from the well and is filled with strength: ${attr} +${amount}.`,
 };
-const VESSELS: Readonly<Record<number, Vessel>> = {
+const VESSELS: Record<number, Vessel> = {
   37: WELL_VESSEL,
   88: WELL_VESSEL,
   5: {
@@ -382,6 +390,21 @@ const VESSELS: Readonly<Record<number, Vessel>> = {
     done: (name, attr, amount) => `${name} touches the crystals and is filled with strength: ${attr} +${amount}.`,
   },
 };
+/** The crate of the spaceship's storage bay (quest_7): a package with one pill, or a serum; what the packaging reads is the hint (`ship-texts.ts`). */
+const CRATE_VESSEL: Vessel = {
+  hint: (l) => `You find a package with a single pill inside it. The packaging reads '${l.colour}'.`,
+  pick: "Who wants to try the pill?",
+  done: (name, attr, amount) => `${name} swallows the pill and feels stronger: ${attr} +${amount}.`,
+  attrLooks: Object.fromEntries(Object.entries(SHIP.PILL_NAMES).map(([k, v]) => [k, { colour: v, clue: "" }])) as unknown as Readonly<Record<Attribute, Look>>,
+  resLooks: Object.fromEntries(Object.entries(SHIP.PILL_NAMES_RESISTANCE).map(([k, v]) => [k, { colour: v, clue: "" }])) as unknown as Readonly<Record<(typeof ELEMENTS)[number], Look>>,
+  resDone: (name, element, amount) => `${name} swallows the pill and feels protected: ${element} resistance +${amount}%.`,
+  xp: {
+    hint: (serum) => `You find an injector filled with a faintly glowing serum. The label reads '${serum}'.`,
+    pick: "Who wants to take the serum?",
+    done: (name, amount) => `${name} presses the injector to the neck. Memories that are not theirs flood the mind: ${thousands(amount)} experience points.`,
+  },
+};
+VESSELS[CRATE_ITEM] = CRATE_VESSEL;
 const vesselOf = (p: ActionInstance["params"]): Vessel => VESSELS[Number(p.item ?? p.chest)] ?? CHALICE_VESSEL;
 
 /**
@@ -407,14 +430,19 @@ export function chaliceGift(p: ActionInstance["params"]): ChaliceGift {
   if (p.bonus === "res") {
     const element = p.element as (typeof ELEMENTS)[number];
     const vessel = vesselOf(p);
-    const hint = vessel.hint(RESISTANCE_LOOKS[element]);
+    const hint = vessel.hint((vessel.resLooks ?? RESISTANCE_LOOKS)[element]);
     return { kind: "res", element, amount, hint, question: `${hint} ${vessel.pick}` };
   }
   if (p.bonus === "attr") {
     const attribute = p.attr as Attribute;
     const vessel = vesselOf(p);
-    const hint = vessel.hint(ATTRIBUTE_LOOKS[attribute]);
+    const hint = vessel.hint((vessel.attrLooks ?? ATTRIBUTE_LOOKS)[attribute]);
     return { kind: "attr", attribute, amount, hint, question: `${hint} ${vessel.pick}` };
+  }
+  if (p.bonus === "xp" && vesselOf(p).xp) {
+    const xp = vesselOf(p).xp!;
+    const hint = xp.hint(SHIP.SERUM_NAMES[Number(p.serum ?? 0) % SHIP.SERUM_NAMES.length]!);
+    return { kind: "xp", amount, hint, question: `${hint} ${xp.pick}` };
   }
   if (p.bonus === "xp") {
     const hint = "You see a chalice filled with a deep violet liquid. Old, yellowed scrolls seem to dissolve in it, and a faint murmur of voices rises from the brew.";
@@ -437,6 +465,46 @@ function answerIsRight(given: string, p: ActionInstance["params"]): boolean {
   if (/^-?\d+$/.test(answer)) return given.trim() === answer;
   const aliases = typeof p.aliases === "string" && p.aliases !== "" ? p.aliases.split(",") : [];
   return answerMatches(given, { answer, aliases }) || sameAnswer(given, answer);
+}
+
+/**
+ * The things of the spaceship that answer to what has been done (quest_7, quest document 1.5): the status computer of the control room (and the question whether to activate the
+ * engines), the broken power crystals of the engine room and of life support, and the console of the bridge that ends the game. What has been done is in `ctx.opened`
+ * (`LIFE_FLAG`, `ENGINE_CRYSTAL_FLAG`, `ENGINES_FLAG`).
+ */
+function shipTerminal(action: ActionInstance, ctx: ActionContext): ActionOutcome {
+  const p = action.params;
+  const { party } = ctx;
+  const opened = ctx.opened ?? NONE;
+  const life = opened.has(LIFE_FLAG);
+  const crystal = opened.has(ENGINE_CRYSTAL_FLAG);
+  const engines = opened.has(ENGINES_FLAG);
+  const status = SHIP.shipStatus(life, crystal, engines);
+  if (p.terminal === "status") {
+    // both systems work and the engines are still off: the computer offers to start them
+    if (life && crystal && !engines) {
+      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Control Room", question: `${status}\n\n${SHIP.ACTIVATE_ENGINES}`, yes: "Activate", no: "Leave" }], consumed: false };
+      if (ctx.answer === null) return { effects: [{ type: "text", text: status }], consumed: false };
+      return { effects: [{ type: "text", text: `${SHIP.shipStatus(life, crystal, true)}\n\n${SHIP.ENGINES_STARTED}` }], consumed: false, state: { add: [ENGINES_FLAG], remove: [] } };
+    }
+    return { effects: [{ type: "text", text: status }], consumed: false };
+  }
+  if (p.terminal === "crystal") {
+    const flag = p.reactor === "life" ? LIFE_FLAG : ENGINE_CRYSTAL_FLAG;
+    if (opened.has(flag)) return { effects: [{ type: "text", text: SHIP.CRYSTAL_MENDED }], consumed: false };
+    if (!carriedItems(party).some((i) => i.type === POWER_CRYSTAL)) return { effects: [{ type: "text", text: SHIP.CRYSTAL_BROKEN }], consumed: false };
+    if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Broken crystal", question: SHIP.CRYSTAL_SAME_SIZE, yes: "Replace it", no: "Leave" }], consumed: false };
+    if (ctx.answer === null) return { effects: [], consumed: false };
+    if (!takeOne(party, POWER_CRYSTAL)) return { effects: [], consumed: false };
+    // the crystal is used up and the broken one is intact now; in life support the light of the whole ship comes on, with its own sound
+    const effects: Effect[] = [{ type: "text", text: p.reactor === "life" ? SHIP.CRYSTAL_SNAPPED_LIFE : SHIP.CRYSTAL_SNAPPED_ENGINE }];
+    if (p.reactor === "life") effects.push({ type: "sound", id: 9055 });
+    return { effects, consumed: false, state: { add: [flag], remove: [] } };
+  }
+  // the console: life support and the engines have to work and the party needs the black key card
+  if (!life || !engines) return { effects: [{ type: "text", text: SHIP.CONSOLE_NOT_READY }, { type: "sound", id: 9014 }], consumed: false };
+  if (!carriedItems(party).some((i) => i.type === "quest_black_keycard")) return { effects: [{ type: "text", text: SHIP.CONSOLE_NO_CARD }, { type: "sound", id: 9014 }], consumed: false };
+  return { effects: [{ type: "text", text: SHIP.CONSOLE_STARTS }, { type: "ending" }], consumed: false };
 }
 
 /**
@@ -637,13 +705,13 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           effects.push({ type: "text", text: `${drinker.name} drinks. A surge of experience runs through ${drinker.name}: ${gift.amount === 1 ? "a level" : `${gift.amount} levels`} gained.` });
         } else if (gift.kind === "res") {
           drinker[RESISTANCE_FIELD[gift.element]] += gift.amount;
-          effects.push({ type: "text", text: `${drinker.name} drinks and feels protected: ${gift.element} resistance +${gift.amount}%.` }, { type: "resistance", character: ctx.hero, element: gift.element, amount: gift.amount });
+          effects.push({ type: "text", text: vesselOf(p).resDone?.(drinker.name, gift.element, gift.amount) ?? `${drinker.name} drinks and feels protected: ${gift.element} resistance +${gift.amount}%.` }, { type: "resistance", character: ctx.hero, element: gift.element, amount: gift.amount });
         } else if (gift.kind === "attr") {
           drinker[gift.attribute] += gift.amount;
           effects.push({ type: "text", text: vesselOf(p).done(drinker.name, gift.attribute.toUpperCase(), gift.amount) }, { type: "attribute", character: ctx.hero, attribute: gift.attribute, amount: gift.amount });
         } else {
           drinker.xp += gift.amount;
-          effects.push({ type: "text", text: `${drinker.name} drinks. A great wisdom flows through ${drinker.name}: ${thousands(gift.amount)} experience points.` });
+          effects.push({ type: "text", text: vesselOf(p).xp?.done(drinker.name, gift.amount) ?? `${drinker.name} drinks. A great wisdom flows through ${drinker.name}: ${thousands(gift.amount)} experience points.` });
         }
         return { effects, consumed: true };
       }
@@ -671,11 +739,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "tube": {
-      // the tube of the control deck needs the black key card; the others lead back to the pyramid
-      if (p.final === true) {
-        if (!carriedItems(party).some((i) => i.type === "quest_black_keycard")) return { effects: [{ type: "text", text: "The tube stays dark. A slot in its frame asks for a black key card." }], consumed: false };
-        return { effects: [{ type: "text", text: "The black key card slides into the slot. The tube lights up, and you step into it." }, { type: "ending" }], consumed: false };
-      }
+      // a transporter tube leads back to the pyramid (the game is ended by the console of the bridge, `shipTerminal`)
       return { effects: [{ type: "transfer", mode: "poi_exit", tier: ctx.tier }], consumed: false };
     }
 
@@ -771,6 +835,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "lore":
+      // the computers, the broken crystals and the console of the spaceship know what the party has done in it
+      if (p.terminal === "status" || p.terminal === "crystal" || p.terminal === "console") return shipTerminal(action, ctx);
       // a quest's hint carries its own words; the plain ones are lines of the old game's pool
       effects.push({ type: "text", text: typeof p.text === "string" ? p.text : loreLine(String(p.pool ?? "dungeon"), Number(p.line ?? 0)) });
       return { effects, consumed: false };

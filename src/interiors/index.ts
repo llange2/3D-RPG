@@ -10,6 +10,7 @@ import { generateDungeon } from "./dungeon";
 import { COINS_PER_CASTLE, PEARLS_PER_CASTLE, planDungeon } from "./dungeonPlan";
 import { generateCastle } from "./castle";
 import { generateShowcase, SHOWCASE_ID } from "./showcase";
+import { codeWordsOf } from "./codeWords";
 import { generateSpaceship } from "./spaceship";
 import { generateTown } from "./town";
 import type { InteriorMap } from "./types";
@@ -37,7 +38,7 @@ export function generateInterior(world: World, poi: Poi, floor = 0): InteriorMap
   switch (poi.kind) {
     case "dungeon":
       // the inside of a pyramid is the spaceship, the same level behind all five, made from the seed of the world alone
-      if (dungeon?.quest === "spaceship") return generateSpaceship(rngFor(world.rootSeed, LAYER.INTERIOR, "spaceship"), { ...ctx, key: "spaceship:0" }, dungeon.section ?? 0);
+      if (dungeon?.quest === "spaceship") return generateSpaceship(rngFor(world.rootSeed, LAYER.INTERIOR, "spaceship"), { ...ctx, key: "spaceship:0" }, dungeon.section ?? 0, codeWordsOf(world));
       return generateDungeon(rng, ctx);
     case "cave":
       return generateCave(rng, ctx);
