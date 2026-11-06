@@ -3,7 +3,7 @@ import { MONSTER_IDS, MONSTERS } from "../data/tables";
 import { caravansOf } from "./caravans";
 import { wrapDist2 } from "./islands";
 import { overworldMascotSpots } from "./mascots";
-import { SAFE_RADIUS, inSafeZone, safeSpots } from "./safezone";
+import { SAFE_RADIUS, inSafeZone, nearTownExit, safeSpots } from "./safezone";
 import { DECO, GROUND, wrapDelta, type WorldSize } from "./types";
 import type { World } from "./world";
 
@@ -213,7 +213,7 @@ function slotsAround(world: World, id: string, hx: number, hy: number, island: n
     if (world.islandAt(x, y)?.index !== island) continue;
     const t = world.tile(x, y);
     if (t.ground !== GROUND.LAND || t.deco !== DECO.NONE || t.poiId !== null) continue;
-    if (inSafeZone(world, x, y)) continue;
+    if (inSafeZone(world, x, y) || nearTownExit(world, x, y)) continue;
     if (out.some((s) => Math.max(Math.abs(s.x - cx), Math.abs(s.y - cy)) < 2)) continue;
     if (world.poiAtEntrance(x, y) !== null || !world.isOpenGround(x, y)) continue;
     out.push({ x: cx, y: cy });

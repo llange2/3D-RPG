@@ -1,5 +1,6 @@
 import "./style.css";
 import { BASE_CLASS } from "../data/tables";
+import { resistanceTone } from "../data/resistance-tone";
 import { clockText } from "../sim/party";
 import { armor, isAlive, worstCondition } from "../sim/character";
 import type { Character, Party } from "../sim/types";
@@ -13,6 +14,16 @@ import { LoadingScreen } from "./loadingScreen";
 import { GAME_ACTIONS, KEYS_PER_ACTION, MENU_KEY, keyLabel, normalizeKey, type GameAction, type KeyBindings } from "../game/keybindings";
 
 export type LogKind = "info" | "good" | "bad" | "combat" | "loot";
+
+/** One kind of monster in the Identify Monster report. */
+export interface IdentifyRow {
+  name: string;
+  maxHp: number;
+  armor: number;
+  attacks: number;
+  abilities: string;
+  resistances: { physical: number; fire: number; ice: number; acid: number; magic: number };
+}
 
 export interface HudInfo {
   place: string;
@@ -375,6 +386,96 @@ export class UI {
   /** What a computer of the spaceship shows: the same box as `message`, on the ComputerScreen instead of the scroll (quest document 1.5). */
   computerMessage(text: string, title = "", button = "OK"): Promise<void> {
     return this.ask(title, text, [{ label: button, value: undefined as void, primary: true }], undefined as void, true, "computer");
+  }
+
+  /**
+   * The report of the Identify Monster spell: each kind of monster once, with what it can do and its resistances, every one coloured by how high it is
+   * (green up to 0.2, orange below 0.7, red from there on; `resistanceTone`).
+   */
+  identifyReport(rows: IdentifyRow[], title = "Identify Monster"): Promise<void> {
+    const names: [keyof IdentifyRow["resistances"], string][] = [["physical", "Physical"], ["fire", "Fire"], ["ice", "Ice"], ["acid", "Acid"], ["magic", "Magic"]];
+    return this.modal<void>(
+      (close) =>
+        h(
+          "div",
+          { class: "parchment identify" },
+          h("h2", { text: title }),
+          ...rows.map((r) =>
+            h(
+              "div",
+              { class: "id-monster" },
+              h("div", { class: "id-name", text: r.name }),
+              h("div", { class: "id-stats", text: `${r.maxHp} hit points, armor ${r.armor}, ${r.attacks} attack${r.attacks === 1 ? "" : "s"} a round${r.abilities ? `, ${r.abilities}` : ""}` }),
+              h(
+                "div",
+                { class: "id-res" },
+                "Resistances: ",
+                ...names.flatMap(([key, label], i) => [i > 0 ? ", " : "", h("span", { class: `res-${resistanceTone(r.resistances[key])}`, text: `${label} ${Number(r.resistances[key].toFixed(2))}` })]),
+              ),
+            ),
+          ),
+          h("div", { class: "buttons" }, h("button", { class: "btn primary", text: "OK", onclick: () => close(undefined as void) })),
+        ),
+      { dismissWith: undefined as void },
+    );
+  }
+
+  /**
+   * The console of the spaceship's bridge: its screen writes `text` like a typewriter and asks yes or no (6. 11. 2026). At every `marker` in the text a block cursor blinks three
+   * times before the writing goes on. The buttons wait until everything is written; a click on the text writes the rest at once. Without `animate` the text stands there
+   * at once (the party has read it before). Escape and a click outside answer no.
+   */
+  terminal(title: string, text: string, marker: string, animate: boolean, yes = "Yes", no = "No"): Promise<boolean> {
+    const CHAR_MS = 24;
+    const BLINK_MS = 230;
+    const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+    return this.modal<boolean>(
+      (close) => {
+        const plain = text.split(marker).join("");
+        // the box keeps its size while the text grows: the whole text is there from the start, invisible, and the typed text lies over it
+        const ghost = h("p", { class: "term-line term-ghost", text: plain });
+        const typed = h("span", {});
+        const cursor = h("span", { class: "term-cursor", text: "█", style: "visibility:hidden" });
+        const live = h("p", { class: "term-line term-live" }, typed, cursor);
+        const buttons = h(
+          "div",
+          { class: "buttons", ...(animate ? { style: "visibility:hidden" } : {}) },
+          h("button", { class: "btn primary", text: yes, onclick: () => close(true) }),
+          h("button", { class: "btn", text: no, onclick: () => close(false) }),
+        );
+        let skipped = !animate;
+        const body = h("div", { class: "term-body", onclick: () => (skipped = true) }, ghost, live);
+        if (!animate) typed.textContent = plain;
+        else {
+          const run = async (): Promise<void> => {
+            // (the box is on the screen only after this function has returned; a short pause before the first letter)
+            await wait(350);
+            const parts = text.split(marker);
+            for (let i = 0; i < parts.length && !skipped; i++) {
+              for (const ch of parts[i]!) {
+                if (skipped || !typed.isConnected) break;
+                typed.textContent += ch;
+                await wait(ch === "\n" ? CHAR_MS * 6 : CHAR_MS);
+              }
+              if (i === parts.length - 1) break;
+              // the cursor blinks three times: on, off, on, off, on, off
+              for (let n = 0; n < 6 && !skipped && typed.isConnected; n++) {
+                cursor.style.visibility = n % 2 === 0 ? "visible" : "hidden";
+                await wait(BLINK_MS);
+              }
+              cursor.style.visibility = "hidden";
+            }
+            if (!typed.isConnected) return;
+            typed.textContent = plain;
+            cursor.style.visibility = "hidden";
+            buttons.style.visibility = "visible";
+          };
+          void run();
+        }
+        return h("div", { class: "parchment computer terminal" }, h("h2", { text: title }), body, buttons);
+      },
+      { dismissWith: false },
+    );
   }
 
   /** Parchment list; resolves with the chosen value or null when dismissed. */

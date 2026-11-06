@@ -89,7 +89,7 @@ export type CombatEvent =
   | { type: "monster_attack"; uid: string; target: number; damage: number; ranged: boolean; damageType: DamageType; conditions: Condition[]; drained?: number; aged?: number }
   /** A Troll or a Vampire heals a share of its health at the end of a monster turn. */
   | { type: "monster_regen"; uid: string; amount: number }
-  | { type: "party_attack"; attacker: number | null; kind: "melee" | "ranged" | "magic"; uid: string; defId: number; damage: number; shots?: number }
+  | { type: "party_attack"; attacker: number | null; kind: "melee" | "ranged" | "magic"; uid: string; defId: number; damage: number; shots?: number; /** The element of an area spell's hit on this monster (Elemental Storm: one for each). */ element?: string }
   /** The Wolf mascot finishes off a monster the party has wounded below `WOLF_EXECUTE_BELOW` of its health. */
   | { type: "wolf_kill"; uid: string; defId: number }
   | { type: "monster_dead"; uid: string; defId: number; x: number; y: number; xp: number; loot: { gold: number; item: Item | null } }
@@ -749,7 +749,28 @@ export function spellInLine(party: Party, view: GridView, enc: Encounter, px: nu
 }
 
 /** Spells with a rule of their own for whom they hit and how hard. */
-export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death";
+export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm";
+
+/** The elements Elemental Storm throws; every monster gets one of them at random. */
+export const ELEMENTAL_STORM_ELEMENTS: readonly string[] = ["fire", "ice", "acid"];
+
+/**
+ * Meteor Shower (fire) and Elemental Storm (a random element for each monster): they need no target, they hit every monster within the action radius, wall or no wall
+ * (the storm comes from the sky, the 6. 11. 2026 playtest). `magic.damage` is what the spell rolled, the resistance of each monster takes its share.
+ */
+export function areaSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, kind: "meteor_shower" | "elemental_storm", magic: { damage: number; type: string }): CombatEvent[] {
+  const events: CombatEvent[] = [];
+  const caught = enc.monsters.filter((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= MONSTER_ACTION_RADIUS);
+  for (const m of caught) {
+    const element = kind === "meteor_shower" ? "fire" : ELEMENTAL_STORM_ELEMENTS[rng.int(ELEMENTAL_STORM_ELEMENTS.length)]!;
+    const damage = spellDamageToMonster(monsterById(m.defId), magic.damage, element);
+    m.hp -= damage;
+    events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage, element });
+    killIfDead(party, enc, m, rng, events);
+  }
+  finishSpell(party, view, enc, px, py, rng, events);
+  return events;
+}
 
 /** Star Burst: everything within this many tiles of the target. */
 export const STAR_BURST_RADIUS = 3;
@@ -871,15 +892,23 @@ export interface MonsterReport {
   armor: number;
   attacks: number;
   abilities: string;
+  /** How much of each kind of damage the monster shrugs off (0 = all of it hurts, 1 = nothing does). */
+  resistances: { physical: number; fire: number; ice: number; acid: number; magic: number };
 }
 
-/** Identify Monster: what the party learns about every monster within the action radius. */
+/**
+ * Identify Monster: what the party learns about the monsters within the action radius. Every kind of monster is listed once, the nearest of it first (the report
+ * of a pack of ten goblins is one line, 6. 11. 2026); its hit points are the one the report was made of.
+ */
 export function identifyMonsters(enc: Encounter, px: number, py: number): MonsterReport[] {
+  const seen = new Set<number>();
   return enc.monsters
     .filter((m) => m.hp > 0 && Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= MONSTER_ACTION_RADIUS)
     .sort((a, b) => (a.x - px) ** 2 + (a.y - py) ** 2 - ((b.x - px) ** 2 + (b.y - py) ** 2))
+    .filter((m) => !seen.has(m.defId) && seen.add(m.defId))
     .map((m) => {
       const def = monsterById(m.defId);
-      return { uid: m.uid, defId: m.defId, name: def.name, hp: m.hp, maxHp: def.health, armor: def.armor, attacks: def.no_of_attacks, abilities: def.special_abilties ?? "" };
+      const resistances = { physical: def.res_physical, fire: def.res_fire, ice: def.res_ice, acid: def.res_acid, magic: def.res_magic };
+      return { uid: m.uid, defId: m.defId, name: def.name, hp: m.hp, maxHp: def.health, armor: def.armor, attacks: def.no_of_attacks, abilities: def.special_abilties ?? "", resistances };
     });
 }

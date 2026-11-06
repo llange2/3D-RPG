@@ -46,8 +46,12 @@ export const CONSOLE_NO_CARD = "A slot beside the screen glows red. The console 
 /** The words that rise over the black screen after the outro movie. */
 export const ENDING_TEXT =
   "You are still startled by the discovery that underneath this world lay this strange vessel, which took you above the sky.\nYou admire the stars rushing by and wonder, where it will take you next.\n\nCongratulation on your victory!";
-export const INSERT_CARD = "A slot beside the screen glows softly. Your heroes hold the black key card. Do you want to insert it?";
-export const CONSOLE_STARTS = "The black key card slides into the slot. The console wakes up, the screens fill with symbols, and the world around you begins to dissolve.";
+/** The title of the console's screen. */
+export const TERMINAL_TITLE = "Monitoring-Ship Omega-V";
+/** What the console writes, like a typewriter (6. 11. 2026): at every `|` a cursor blinks three times before the text goes on (`TERMINAL_CURSOR`). */
+export const TERMINAL_TEXT =
+  "Authentification... |accepted.\nChecking life-systems... |ok.\nChecking engines ... |active.\n\nWould you like to initiate the emergency start sequence?\n\nThis can not be aborted.";
+export const TERMINAL_CURSOR = "|";
 
 /** The computers of the control room that list the code words of the mini quests. */
 export const CODE_TITLE = "Code words for surface entities";

@@ -427,7 +427,7 @@
  },
  "72": {
   "name": "Meteor Shower",
-  "description": "Does 100 fire damage to all monsters.",
+  "description": "Does 100 fire damage to all monsters. Works only outside.",
   "explanation": "",
   "status": "done"
  },

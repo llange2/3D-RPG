@@ -21,6 +21,10 @@ DOCS = ROOT.parent / "old_code" / "documentation"
 OUT = ROOT / "src" / "data"
 
 
+# What the user added to the descriptions of the sheet (the workbook in old_code is read-only, 6. 11. 2026): spell id -> sentence appended.
+DESCRIPTION_ADDITIONS = {72: "Works only outside."}  # Meteor Shower
+
+
 def clean(value):
     return value.strip() if isinstance(value, str) else value
 
@@ -33,9 +37,13 @@ def export_spells() -> int:
         d = dict(zip(head, row))
         if d["ID"] is None:
             continue
-        out[str(int(d["ID"]))] = {
+        spell_id = int(d["ID"])
+        description = clean(d["Description"])
+        if spell_id in DESCRIPTION_ADDITIONS and DESCRIPTION_ADDITIONS[spell_id] not in description:
+            description = f"{description} {DESCRIPTION_ADDITIONS[spell_id]}"
+        out[str(spell_id)] = {
             "name": clean(d["Name"]),
-            "description": clean(d["Description"]),
+            "description": description,
             "explanation": clean(d.get("Explanation")) or "",
             "status": clean(d["Comment"]) or "",
         }

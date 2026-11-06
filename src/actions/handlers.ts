@@ -17,7 +17,7 @@ import type { Attribute, Character, Condition, Item, Party } from "../sim/types"
 import type { ActionInstance, MapContent } from "./types";
 import { FACING_NAMES, gongsStruck, headFacing, ringSolved, rotationSolved, runeActive, sameAnswer, turnHead } from "./quests";
 import { answerMatches } from "../data/riddles";
-import { CRATE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL } from "../data/quest-table";
+import { CONSOLE_SEEN_FLAG, CRATE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL } from "../data/quest-table";
 import * as SHIP from "../data/ship-texts";
 import { trapElementOf, type ServiceKind } from "./registry";
 
@@ -58,8 +58,11 @@ export type Effect =
   | { type: "king"; alignment: "good" | "neutral" | "evil" }
   /** The party stands before the Skull Miser: the game takes the silver skulls, if there are any, and pays. */
   | { type: "skulls" }
-  /** The party uses the console of the bridge (engines and life support running, black key card in the backpack): the game is won. */
-  | { type: "ending" }
+  /**
+   * The party uses the console of the bridge (engines and life support running, black key card in the backpack): its screen asks whether to start the emergency
+   * sequence, and a yes wins the game. `animate` is true the first time, when the text is written like a typewriter.
+   */
+  | { type: "terminal"; animate: boolean }
   /** A hero got a condition from a chalice. */
   | { type: "condition"; character: number; condition: Condition }
   /** A sound of the old table (`audio/sound-table.ts`) the object makes, apart from what its other effects play. */
@@ -504,10 +507,9 @@ function shipTerminal(action: ActionInstance, ctx: ActionContext): ActionOutcome
   // the console: life support and the engines have to work and the party needs the black key card
   if (!life || !engines) return { effects: [{ type: "text", text: SHIP.CONSOLE_NOT_READY }, { type: "sound", id: 9014 }], consumed: false };
   if (!carriedItems(party).some((i) => i.type === "quest_black_keycard")) return { effects: [{ type: "text", text: SHIP.CONSOLE_NO_CARD }, { type: "sound", id: 9014 }], consumed: false };
-  // the card ends the game: the heroes are asked first (6. 11. 2026)
-  if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Console", question: SHIP.INSERT_CARD, yes: "Insert it", no: "Not yet" }], consumed: false };
-  if (ctx.answer === null) return { effects: [], consumed: false };
-  return { effects: [{ type: "text", text: SHIP.CONSOLE_STARTS }, { type: "ending" }], consumed: false };
+  // the screen writes its question (the game asks yes or no and ends the game on a yes); the text is typed only the first time (6. 11. 2026)
+  const seen = opened.has(CONSOLE_SEEN_FLAG);
+  return { effects: [{ type: "terminal", animate: !seen }], consumed: false, ...(seen ? {} : { state: { add: [CONSOLE_SEEN_FLAG], remove: [] } }) };
 }
 
 /**

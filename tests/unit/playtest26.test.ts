@@ -42,8 +42,8 @@ describe("the wild groups of the 26th playtest (onyx-peak-786, small)", () => {
         const n = perIsland.get(isl.index) ?? 0;
         // one group to 90 tiles of land, at least one; a few may find no place
         expect(n, `${size} island ${isl.index} (${isl.area} tiles)`).toBeLessThanOrEqual(Math.max(1, Math.round(isl.area / 90)));
-        // (a speck of rock and trees of a few dozen tiles may have no ground to stand on at all)
-        if (isl.area >= 90) expect(n, `${size} island ${isl.index} (${isl.area} tiles)`).toBeGreaterThanOrEqual(Math.max(1, Math.round(isl.area / 90) - 3));
+        // (a speck of rock and trees of a few dozen tiles may have no ground to stand on at all; the exit of a town and its shelter take ground too, 6. 11. 2026: four fewer on a small island)
+        if (isl.area >= 90) expect(n, `${size} island ${isl.index} (${isl.area} tiles)`).toBeGreaterThanOrEqual(Math.max(1, Math.round(isl.area / 90) - 4));
       }
     }
   });

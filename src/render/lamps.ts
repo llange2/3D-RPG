@@ -20,6 +20,8 @@ export interface LampSource extends LampKind {
   z: number;
   /** What the lamp is, so that a light of the pool stays with the same lamp from one frame to the next (a lamp that moves, a monster, keeps its key). */
   key: string;
+  /** Seconds the light needs to fade in and out, instead of `LAMP_FADE` (a laser bolt lives for half a second and must shine from the start). */
+  fade?: number;
 }
 
 /** The crystals shine in their own colour, strongly, one to two cells around (30th playtest, point 5); the texture of both is a teal. */
