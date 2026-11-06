@@ -61,7 +61,7 @@ export type CardColor = (typeof CARD_COLORS)[number];
 
 export const keyType = (c: KeyColor): string => `quest_key_${c}`;
 export const cardType = (c: CardColor): string => `quest_${c}_keycard`;
-/** The black key card: the king hands it over for the orbs, it works the transport tube of the control deck. */
+/** The black key card: the king hands it over for the orbs, it works the console of the spaceship's bridge. */
 export const BLACK_CARD = "quest_black_keycard";
 export const ORB = "quest_orb";
 /** The silver skull the Skull Miser buys, and how many of them end his quest. */
@@ -109,6 +109,32 @@ export const QUEST_PROP: Readonly<Record<string, number>> = {
 export const ORBS_IN_WORLD = 31;
 export const ORBS_PER_SECTION = 2;
 export const SECTIONS = 5;
+/**
+ * The sections of the spaceship (quest document 1.5, quest_7), by the number a pyramid opens. The order is the one of the document: the bridge in front, behind
+ * it the control room with life support beside it, then the storage bay and the engine room at the end.
+ */
+export const SECTION_NAMES = ["Bridge", "Control Room", "Life Support", "Storage Bay", "Engine Room"] as const;
+export const BRIDGE = 0;
+export const CONTROL_ROOM = 1;
+export const LIFE_SUPPORT = 2;
+export const STORAGE_BAY = 3;
+export const ENGINE_ROOM = 4;
+/** The bridge holds no orbs (document 1.5): 2 in each of the other four sections, so 8 in the ship and the other 23 on the level 5 dungeons. */
+export const ORBS_IN_SPACESHIP = ORBS_PER_SECTION * (SECTIONS - 1);
+/** The power crystal (quest item): the two spare ones lie in crates of the storage bay and mend the broken crystals of the engine room and of life support. */
+export const POWER_CRYSTAL = "quest_power_crystal";
+/** What the party has done in the ship, kept in `state.opened`: the crystal of life support, the crystal of the engine room (the engines are then "functional"); the engines activated are `ENGINES_FLAG` ("ready"). */
+export const LIFE_FLAG = "ship:life";
+export const ENGINE_CRYSTAL_FLAG = "ship:engine";
+/**
+ * The objects of the spaceship that have no old item (the user's models, quest document 1.5). They are pseudo item numbers above the old table, so that
+ * the actions keep their `item` param: the crate of the storage bay, the broken power crystal and the console of the bridge (`OWN_MODELS` in `render/interiorProps.ts`).
+ */
+export const CRATE_ITEM = 301;
+export const BROKEN_CRYSTAL_ITEM = 302;
+export const CONSOLE_ITEM = 303;
+/** The intact power crystal is old item 67. */
+export const POWER_CRYSTAL_ITEM = 67;
 export const ORBS_FOR_KING = 11;
 
 /** Keys and key cards a single end room may hold, by world size (document: "0 bis 3 je nach Weltgröße"). */

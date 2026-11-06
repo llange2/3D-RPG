@@ -1,4 +1,4 @@
-import { ORBS_FOR_KING, PEARL, PEARLS_IN_WORLD, SKULLS_FOR_RING, type QuestId } from "../data/quest-table";
+import { ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ORBS_FOR_KING, PEARL, PEARLS_IN_WORLD, POWER_CRYSTAL, SKULLS_FOR_RING, type QuestId } from "../data/quest-table";
 import { MONSTERS, QUEST_ITEMS } from "../data/tables";
 import type { Poi } from "../world/types";
 import type { World } from "../world/world";
@@ -104,6 +104,17 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
   if (opened.has(PIRATE_MET) || pearlsGiven > 0 || pearlsCarried > 0) {
     if (pearlsGiven >= PEARLS_IN_WORLD) done.push(`Brought all ${PEARLS_IN_WORLD} Pearls of Youth and Beauty to the pirate queen.`);
     else open.push(`Bring Pearls of Youth and Beauty to the pirate queen, whose ship sails the largest ocean: ${pearlsGiven}/${PEARLS_IN_WORLD} handed in${pearlsCarried > 0 ? `, you carry ${pearlsCarried}` : ""}.`);
+  }
+
+  // the spaceship (quest_7, quest document 1.5): known once the party has been inside a pyramid or carries a power crystal
+  const inShip = pois.some((p) => visited.has(p.id) && world.dungeonRef(p.id)?.quest === "spaceship");
+  if (inShip || input.carried(POWER_CRYSTAL) > 0) {
+    if (opened.has(LIFE_FLAG)) done.push("Mended the power crystal of life support: the lights of the spaceship are on.");
+    else open.push("Replace the broken power crystal of life support with an intact one. Two spare crystals lie in crates of the storage bay.");
+    if (opened.has(ENGINES_FLAG)) done.push("Started the engines of the spaceship.");
+    else if (opened.has(ENGINE_CRYSTAL_FLAG)) open.push("Activate the engines at the status computer of the control room.");
+    else open.push("Replace the broken power crystal of the engine room with an intact one.");
+    if ((opened.has(LIFE_FLAG) && opened.has(ENGINES_FLAG)) || input.carried("quest_black_keycard") > 0) open.push("Start the console of the bridge: it needs life support, the engines and the black key card.");
   }
 
   // the kings and the orbs

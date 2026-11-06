@@ -15,7 +15,7 @@ import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
-import { BLACK_CARD, COMPUTER_ITEM, ENGINES_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
+import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
@@ -304,6 +304,10 @@ export class Game {
   private lastAutosave = 0;
   private lootOwner = "loot";
   private lightLevel = 1;
+  /** The light of the spaceship (quest_7): 0 is the dark red emergency light it starts with, 1 daylight once life support runs. It moves at the speed of the `light_on` sound. */
+  private shipLight = 0;
+  private shipTarget = 0;
+  private shipFade = 1.44;
   private lamps: LampSource[] = [];
   /** The gold light of every pile of loot on the map (`renderLoot`). */
   private lootLamps: LampSource[] = [];
@@ -816,6 +820,7 @@ export class Game {
       this.enc = createEncounter();
       this.interiorView.show(map, content, this.state.opened, this.state.broken);
       this.setLamps(crystalLamps(content, this.state.opened), true);
+      this.syncShip(true);
       this.sky.setVisible(map.theme.open);
       this.spawnInteriorMonsters();
       this.spawnPersonas();
@@ -2242,7 +2247,7 @@ export class Game {
     const confirm = outcome.effects.find((e) => e.type === "confirm");
     if (confirm?.type === "confirm") {
       this.player.locked = true;
-      const yes = await this.ui.confirm(confirm.title, confirm.question, confirm.yes, confirm.no);
+      const yes = await this.ui.confirm(confirm.title, confirm.question, confirm.yes, confirm.no, a.params.terminal === "status" ? "computer" : "");
       this.player.locked = false;
       outcome = resolveAction(a, { ...ctx, answer: yes ? "yes" : null });
     }
@@ -2262,7 +2267,9 @@ export class Game {
       // (a lever that turns a stone head, and the head that is turned by hand, grind like stone, 36th playtest, points 12 and 22)
       // (every lever of quest 1 grinds, also the four that move no statue: their target is empty, 38th playtest, point 3)
       const turnsStone = a.kind === "head" || (a.kind === "lever" && !!this.interior?.content.actions.some((h) => h.kind === "head"));
-      if (a.kind !== "gong") this.audio.play(turnsStone ? 9050 : a.kind === "lever" ? 9034 : 9014, turnsStone ? 0.9 : 0.6);
+      if (a.kind !== "gong" && a.params.terminal === undefined) this.audio.play(turnsStone ? 9050 : a.kind === "lever" ? 9034 : 9014, turnsStone ? 0.9 : 0.6);
+      // what was done in the spaceship: its light, its glow and its hum follow
+      if (a.params.terminal !== undefined) this.syncShip();
     }
     if (opening) {
       this.audio.play(9007);
@@ -2291,7 +2298,7 @@ export class Game {
       switch (e.type) {
         case "text":
           // a computer of the spaceship (item 68) shows its text on the ComputerScreen, everything else on the scroll
-          if (a.kind === "lore") await (Number(a.params.item) === COMPUTER_ITEM ? ui.computerMessage(e.text, rt?.poi.name ?? "") : ui.message(e.text, rt?.poi.name ?? ""));
+          if (a.kind === "lore") await (Number(a.params.item) === COMPUTER_ITEM || Number(a.params.item) === CONSOLE_ITEM ? ui.computerMessage(e.text, rt?.poi.name ?? "") : ui.message(e.text, rt?.poi.name ?? ""));
           else ui.log(e.text, e.tone ?? (a.kind === "trap" ? "bad" : "info"));
           break;
         case "gold":
@@ -2484,7 +2491,7 @@ export class Game {
       const card = questItem(BLACK_CARD);
       if (card && !giveItem(party, card) && this.interior) this.dropLoot(this.player.tx, this.player.ty, 0, [card]);
       this.player.locked = true;
-      await this.ui.message(`The king holds ${total} orbs. Power surges through his hall, and far away the walls of the other two castles crumble to dust. He hands you the black key card: "Take it. The transport tube of the mothership control deck obeys no other."`, this.interior?.poi.name ?? "");
+      await this.ui.message(`The king holds ${total} orbs. Power surges through his hall, and far away the walls of the other two castles crumble to dust. He hands you the black key card: "Take it. The console on the bridge of the mothership obeys no other."`, this.interior?.poi.name ?? "");
       this.player.locked = false;
     } else if (!winner) {
       this.ui.log(`The king holds ${total} of the ${ORBS_FOR_KING} orbs he wants.`, "info");
@@ -2493,7 +2500,7 @@ export class Game {
   }
 
   /**
-   * The end of the game: the party steps into the transport tube of the control deck with the black key card. The outro of the old game plays if the file
+   * The end of the game: the party uses the console of the bridge with life support and the engines running and the black key card. The outro of the old game plays if the file
    * `assets/ui/outro.mp4` is there (it is 88 MB and kept out of git: `public/assets/ui/outro.mp4` is copied in by hand from `old_code/resources/movies/Game Outro.mp4`), then a last message.
    */
   private async playEnding(): Promise<void> {
@@ -4690,6 +4697,10 @@ export class Game {
     const lit = hasEffect(party, "light");
     // the party's own light: a ring of three cells (six with the Light spell). It is all there is underground, and it takes over from the sun at night
     const ring = lit ? TORCH_LIT : TORCH;
+    if (this.mode === "interior" && this.interior?.map.spaceship) {
+      this.shipAtmosphere(dt, ring);
+      return;
+    }
     if (this.mode === "interior" && this.interior) {
       const t = this.interior.map.theme;
       const k = 1 - Math.exp(-dt * 3);
@@ -4738,6 +4749,45 @@ export class Game {
     });
     this.sky.set(theme.sky.horizon, this.lightLevel);
     this.props.setDaylight(this.lightLevel);
+  }
+
+  /**
+   * What the party has done in the spaceship changes the whole ship (quest document 1.5): the light of life support turns the red emergency light into daylight, the crystals glow
+   * strongly, the hum of the engines starts. `initial`: the party has just come in, the light is as it was left (no fading).
+   */
+  private syncShip(initial = false): void {
+    const rt = this.interior;
+    if (!rt?.map.spaceship) return;
+    this.shipTarget = this.state.opened.has(LIFE_FLAG) ? 1 : 0;
+    if (initial) this.shipLight = this.shipTarget;
+    else this.shipFade = this.audio.durationOf(9055, 1.44);
+    this.lamps = crystalLamps(rt.content, this.state.opened);
+    this.interiorView.refreshObjects();
+    this.updateAmbient();
+  }
+
+  /** The atmosphere of the spaceship: red and dark while life support is dead, daylight after it was mended (the fade lasts as long as the sound). */
+  private shipAtmosphere(dt: number, ring: { intensity: number; range: number }): void {
+    const step = dt / Math.max(0.05, this.shipFade);
+    this.shipLight = this.shipLight < this.shipTarget ? Math.min(this.shipTarget, this.shipLight + step) : Math.max(this.shipTarget, this.shipLight - step);
+    const s = this.shipLight;
+    const mix = (from: string, to: string): string => {
+      const a = hex(from);
+      const b = hex(to);
+      return toHex({ r: a.r + (b.r - a.r) * s, g: a.g + (b.g - a.g) * s, b: a.b + (b.b - a.b) * s });
+    };
+    const fog = this.interior!.map.theme.fog;
+    this.r.setAtmosphere({
+      fogColor: mix("#1c0503", "#9fb2c0"),
+      fogDensity: fog.density * (1 - 0.6 * s),
+      fogRange: null,
+      light: s,
+      ambient: mix("#ff2a18", "#ffffff"),
+      underground: false,
+      torchColor: mix("#ff4a30", "#ffd18c"),
+      torch: { intensity: ring.intensity * (1 - s), range: ring.range },
+    });
+    this.props.setDaylight(s);
   }
 
   /** Campaign objects that give light, with their cells in this map's own grid. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMapContent, validateContent } from "../../src/actions";
-import { MAX_ITEMS_PER_ROOM, ORBS_IN_WORLD, ORBS_PER_SECTION, SECTIONS } from "../../src/data/quest-table";
+import { MAX_ITEMS_PER_ROOM, ORBS_IN_SPACESHIP, ORBS_IN_WORLD, SECTIONS } from "../../src/data/quest-table";
 import { checkKeyChain, generateInterior, planDungeon } from "../../src/interiors";
 import { WORLD_SIZE_NAMES } from "../../src/world/types";
 import { World } from "../../src/world/world";
@@ -9,7 +9,7 @@ const places = (world: World) => world.allPois().filter((p) => p.kind === "dunge
 
 describe("the quest plan of a world (quest document 1.2)", () => {
   for (const size of WORLD_SIZE_NAMES) {
-    it(`${size}: five pyramids, keys in level 1 and 2, key cards in level 4 and 5 dungeons, 21 orbs on level 5, a chain without holes`, () => {
+    it(`${size}: five pyramids, keys in level 1 and 2, key cards in level 4 and 5 dungeons, 23 orbs on level 5, the bridge on the hardest territory, a chain without holes`, () => {
       for (const seed of ["plan-a", "plan-b", "plan-c"]) {
         const world = new World(seed, size);
         const all = places(world);
@@ -18,6 +18,8 @@ describe("the quest plan of a world (quest document 1.2)", () => {
         expect(pyramids.length, `${seed} ${size}`).toBe(SECTIONS);
         expect(pyramids.every((r) => r.poi.kind === "dungeon" && r.poi.size === 3)).toBe(true);
         expect(new Set(pyramids.map((r) => r.ref.section)).size).toBe(SECTIONS);
+        // the pyramid of the bridge (section 0) stands on the hardest territory of the pyramids
+        expect(pyramids.find((r) => r.ref.section === 0)!.poi.tier, `${seed} ${size}`).toBe(Math.max(...pyramids.map((r) => r.poi.tier)));
         // spread over the islands: no island holds more than one while another has a dungeon to spare
         const perIsland = new Map<number, number>();
         for (const r of pyramids) perIsland.set(r.poi.region.rx, (perIsland.get(r.poi.region.rx) ?? 0) + 1);
@@ -34,7 +36,7 @@ describe("the quest plan of a world (quest document 1.2)", () => {
         expect(new Set(keys).size).toBe(keys.length);
         expect(refs.filter((r) => r.ref.requires?.startsWith("quest_key_")).length).toBe(keys.length);
         const orbsInDungeons = refs.reduce((n, r) => n + (r.ref.klass === "C" ? 0 : r.ref.orbs), 0);
-        expect(orbsInDungeons).toBe(ORBS_IN_WORLD - ORBS_PER_SECTION * SECTIONS);
+        expect(orbsInDungeons).toBe(ORBS_IN_WORLD - ORBS_IN_SPACESHIP);
         expect(refs.every((r) => r.ref.klass === "C" || r.ref.orbs === 0 || (r.poi.kind === "dungeon" && r.poi.tier >= 4))).toBe(true);
         // the orbs are spread: no level 5 dungeon holds more than one over the least
         const holders = refs.filter((r) => r.ref.klass !== "C" && r.ref.orbs > 0).map((r) => r.ref.orbs);

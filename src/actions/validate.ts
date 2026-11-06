@@ -3,7 +3,9 @@ import { FORBIDDEN_PROPS } from "../data/dungeon-themes";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { questIssues } from "./questChecks";
+import { BRIDGE, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPPORT, ORBS_PER_SECTION, POWER_CRYSTAL, STORAGE_BAY } from "../data/quest-table";
 import { MONSTERS, monsterGroup } from "../data/tables";
+import { sectionAt } from "../interiors/spaceship";
 import { analyzeTopology, type Topology } from "../interiors/topology";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { ACTION_DEFS, blocksCell } from "./registry";
@@ -106,28 +108,48 @@ export function castleIssues(map: InteriorMap, content: MapContent): string[] {
 }
 
 /**
- * What the spaceship demands: a transporter tube in every section and the final one in the control deck, an airlock with two levers between the sections,
- * two orbs in every section, robots only, a word that the hints spell.
+ * What the spaceship demands (quest document 1.5): a transporter tube in every section, an airlock with two levers for each of the four links, two orbs in every section but
+ * the bridge, ten crates in the storage bay, four crystals and a broken one in the engine room and in life support, the status computer and the code words in the control
+ * room, the console on the bridge, robots only.
  */
 export function spaceshipIssues(map: InteriorMap, content: MapContent): string[] {
   const issues: string[] = [];
   const layout = map.spaceship!;
   const of = (k: string) => content.actions.filter((a) => a.kind === k);
-  const sectionOf = (x: number) => Math.min(layout.sections - 1, Math.max(0, Math.floor((x - 1) / layout.width)));
+  const sec = (a: { x: number; y: number }) => sectionAt(layout, a.x, a.y);
   const tubes = of("tube");
-  if (tubes.length !== layout.sections + 1 || tubes.filter((t) => t.params.final === true).length !== 1) issues.push(`${map.key}: ${tubes.length} tubes`);
+  if (tubes.length !== layout.sections) issues.push(`${map.key}: ${tubes.length} tubes`);
   const locks = of("door").filter((d) => d.params.airlock === true);
-  if (locks.length !== layout.sections - 1) issues.push(`${map.key}: ${locks.length} airlocks`);
+  if (locks.length !== layout.locks.length || locks.length !== 4) issues.push(`${map.key}: ${locks.length} airlocks`);
   for (const lock of locks) if (of("lever").filter((l) => l.params.airlock === lock.uid).length !== 2) issues.push(`${lock.uid}: not two levers`);
   for (let s = 0; s < layout.sections; s++) {
-    const orbs = of("treasure").filter((a) => a.params.quest === "quest_orb" && sectionOf(a.x) === s).reduce((n, a) => n + Number(a.params.count ?? 1), 0);
-    if (orbs !== 2) issues.push(`${map.key}: section ${s} holds ${orbs} orbs`);
-    if (!tubes.some((t) => t.params.final !== true && sectionOf(t.x) === s)) issues.push(`${map.key}: no tube in section ${s}`);
+    const orbs = of("treasure").filter((a) => a.params.quest === "quest_orb" && sec(a) === s).reduce((n, a) => n + Number(a.params.count ?? 1), 0);
+    const want = s === BRIDGE ? 0 : ORBS_PER_SECTION;
+    if (orbs !== want) issues.push(`${map.key}: section ${s} holds ${orbs} orbs, not ${want}`);
+    if (!tubes.some((t) => sec(t) === s)) issues.push(`${map.key}: no tube in section ${s}`);
   }
+  // the storage bay: ten crates, eight with pills or serum and two with a power crystal
+  const crates = content.actions.filter((a) => a.params.item === CRATE_ITEM || a.params.chest === CRATE_ITEM);
+  if (crates.length !== 10 || crates.some((c) => sec(c) !== STORAGE_BAY)) issues.push(`${map.key}: ${crates.length} crates`);
+  if (crates.filter((c) => c.params.quest === POWER_CRYSTAL).length !== 2) issues.push(`${map.key}: not two crates with a power crystal`);
+  if (crates.filter((c) => c.kind === "chalice" && c.params.bonus === "xp").length !== 2) issues.push(`${map.key}: not two crates with experience`);
+  if (crates.filter((c) => c.kind === "chalice" && c.params.bonus === "attr" && c.params.amount === 15).length !== 3) issues.push(`${map.key}: not three crates with attribute points`);
+  if (crates.filter((c) => c.kind === "chalice" && c.params.bonus === "res" && c.params.amount === 30).length !== 3) issues.push(`${map.key}: not three crates with resistance points`);
+  // the engine room and life support: four intact crystals and a broken one each
+  for (const [s, reactor] of [[ENGINE_ROOM, "engine"], [LIFE_SUPPORT, "life"]] as const) {
+    const mine = content.actions.filter((a) => a.params.reactor === reactor);
+    if (mine.length !== 5 || mine.some((a) => sec(a) !== s)) issues.push(`${map.key}: ${mine.length} crystals for ${reactor}`);
+    if (mine.filter((a) => a.params.terminal === "crystal").length !== 1) issues.push(`${map.key}: no broken crystal for ${reactor}`);
+  }
+  // the control room: one status computer and one computer for every page of code words
+  const computers = content.actions.filter((a) => a.kind === "lore" && (a.params.terminal === "status" || a.params.terminal === "codes"));
+  if (computers.some((c) => sec(c) !== CONTROL_ROOM)) issues.push(`${map.key}: a computer of the control room stands elsewhere`);
+  if (computers.filter((c) => c.params.terminal === "status").length !== 1) issues.push(`${map.key}: not one status computer`);
+  const levels = new Set(layout.codeWords.map((c) => c.tier));
+  if (computers.filter((c) => c.params.terminal === "codes").length < levels.size) issues.push(`${map.key}: a level with mini quests has no computer`);
+  const consoles = content.actions.filter((a) => a.params.terminal === "console");
+  if (consoles.length !== 1 || sec(consoles[0]!) !== BRIDGE) issues.push(`${map.key}: not one console on the bridge`);
   for (const sp of content.spawns) for (const id of sp.monsterIds) if (monsterGroup(id) !== "robot") issues.push(`${sp.uid}: ${MONSTERS[id]?.name ?? id} is no robot`);
-  const hints = of("lore").filter((a) => typeof a.params.letter === "string").sort((p, q) => Number(p.params.order) - Number(q.params.order));
-  const answer = of("riddle")[0];
-  if (!answer || hints.map((h) => String(h.params.letter)).join("").toLowerCase() !== answer.params.answer) issues.push(`${map.key}: the hints do not spell the word of the computer`);
   return issues;
 }
 

@@ -24,6 +24,8 @@ export interface Atmosphere {
   ambient: string;
   /** No sky overhead (dungeons, caves): the day does not reach here, the hemisphere keeps only a faint glow. */
   underground: boolean;
+  /** The colour of the party's light (default: the warm torch). The spaceship's red emergency light tints it. */
+  torchColor?: string;
   /** The light the party carries: it lights a ring around the party and nothing beyond (`range` in world units, a cell is 3). Intensity 0 = none. */
   torch: { intensity: number; range: number };
 }
@@ -83,6 +85,9 @@ export function readViewDistance(stored: ViewDistance = "medium"): ViewDistance 
 
 const hex = (c: string): Color3 => Color3.FromHexString(c);
 
+/** The warm colour of the party's light. */
+const TORCH_COLOUR = new Color3(1, 0.82, 0.55);
+
 /** Colour of the old game's daylight (see `setAtmosphere`). */
 const DAYLIGHT = new Color3(1.15, 0.85, 0.68);
 const DUNGEON_GROUND = new Color3(0.28, 0.26, 0.24);
@@ -114,7 +119,7 @@ export function createRenderer(canvas: HTMLCanvasElement, resolution: Resolution
   const torch = new PointLight("torch", new Vector3(0, 2, 0), scene);
   torch.range = 22;
   torch.intensity = 0;
-  torch.diffuse = new Color3(1, 0.82, 0.55);
+  torch.diffuse = TORCH_COLOUR;
   const lamps = Array.from({ length: LAMP_LIGHTS }, (_, i) => {
     const lamp = new PointLight(`lamp${i}`, new Vector3(0, 3, 0), scene);
     lamp.intensity = 0;
@@ -155,6 +160,7 @@ export function createRenderer(canvas: HTMLCanvasElement, resolution: Resolution
       const amb = hex(a.ambient);
       torch.intensity = a.torch.intensity;
       torch.range = a.torch.range;
+      torch.diffuse = a.torchColor ? hex(a.torchColor) : TORCH_COLOUR;
       if (a.underground) {
         // underground: only the party's light shows anything. Beyond it the stones are barely to be made out, as in the old
         // game without the Light spell (screenshot 17 of the old game is nearly black, 18 shows the lit ring around the party)
