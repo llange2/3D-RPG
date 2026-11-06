@@ -303,14 +303,15 @@ export class MonsterRenderer {
     g?.start(true, view.npc ? 1 : 0.8 + (view.bobSeed % 0.4));
   }
 
-  /** Walks the monster to a new position (world coordinates). */
-  moveTo(uid: string, x: number, y: number, z: number): void {
+  /** Walks the monster to a new position (world coordinates); `seconds` for a walk that takes longer than `MONSTER_STEP_SECONDS` (the robots with two steps per tile). */
+  moveTo(uid: string, x: number, y: number, z: number, seconds?: number): void {
     const v = this.views.get(uid);
     if (!v) return;
     const yy = y + v.lift;
     v.from = { x: v.holder.position.x, y: v.holder.position.y, z: v.holder.position.z };
     v.to = { x, y: yy, z };
     v.t = 0;
+    v.slide = seconds ?? null;
     if (v.animated && !v.walking) {
       v.walking = true;
       for (const g of v.groups) g.stop();
