@@ -869,6 +869,16 @@ export class InteriorView {
     return this.doors.isClosed(uid);
   }
 
+  /** Can the party step into the cell of this door? A sliding door that is still opening cannot be walked through yet (`InteriorDoors.isPassable`). */
+  isDoorPassable(uid: string): boolean {
+    return this.doors.isPassable(uid);
+  }
+
+  /** Seconds a sliding door needs to open or close (the length of its sound). */
+  set slideSeconds(seconds: number) {
+    this.doors.slideSeconds = seconds;
+  }
+
   /** A pit went off: the floor under it is cut out and the pit model takes its place. It stays open. */
   openPit(uid: string): void {
     if (this.traps.openPit(uid)) this.buildMesh();

@@ -3,7 +3,7 @@ import type { ActionInstance, MapContent } from "../actions/types";
 import { FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import type { GateDirection } from "../campaign/types";
 import type { StaticModelInfo } from "./assets";
-import { cellCenterX, cellCenterZ } from "./interiorMesher";
+import { CELL_SIZE, cellCenterX, cellCenterZ, wallHeightOf } from "./interiorMesher";
 import { gateTravel, itemModelKey, itemProp } from "./itemProps";
 import type { PropRenderer } from "./props";
 import type { PropInstance } from "./terrainMesher";
@@ -11,12 +11,29 @@ import type { PropInstance } from "./terrainMesher";
 /**
  * The doors of generated dungeons and castles are the ones of the hand-built maps: a wooden door in its frame (blocks 16 and 15 of
  * the old editor, Temple of Moo) or a frame with an iron gate in it (blocks 47 and 41 with the items 81 and 80, Fountain Head Cavern
- * and the castles). A dungeon has both kinds, a castle only gates.
+ * and the castles). A dungeon has both kinds, a castle only gates. The spaceship has sliding doors only (`slide`): the user's lock model that always stands in the
+ * corridor, with two leaves that part in its middle (6. 11. 2026).
  */
-export type DoorLook = "door" | "gate";
+export type DoorLook = "door" | "gate" | "slide";
 
 const DOOR_CLOSED = "blk_door_closed";
 const DOOR_OPEN = "blk_door_open";
+
+/** The sliding door: the frame (the user's `Space_lock.glb`) and the two leaves (boxes with the halves of the user's picture of a double door, `tools/assets/gen-space-doors.ts`). */
+const SLIDE_FRAME = "obj_space_lock";
+const SLIDE_LEFT = "obj_space_door_left";
+const SLIDE_RIGHT = "obj_space_door_right";
+/**
+ * Measured on the triangles of the frame (its own units, 0.867 wide, 0.953 high): the opening is 0.324 wide and its lower edge lies 0.0458 over the model's lowest point.
+ * The leaves are 0.172 wide, so that each one covers half of the opening and reaches a little behind the rim, and slide that far into the wall when the door opens.
+ */
+const SLIDE_LEAF_WIDTH = 0.172;
+const SLIDE_LEAF_LIFT = 0.0458;
+/** Frame and leaves are scaled alike: the frame fills the cell's width and the wall's height (like the frames of the old maps), the depth follows the width. */
+const SLIDE_WIDTH_UNITS = 0.8667;
+const SLIDE_HEIGHT_UNITS = 0.9531;
+/** How far a sliding door is open before the party may walk through (the leaves have then cleared the opening almost completely). */
+export const SLIDE_PASSABLE = 0.75;
 
 /** What a gate is made of per kind of map: its frame, its size (add_block 47 and 41), the gate item and where the gate goes when it opens. */
 const GATES = {
@@ -39,13 +56,15 @@ const RAD = Math.PI / 180;
 
 /** Which look a door has. Only the map kind and the cell decide, so the look never needs to be saved and the generator stays untouched. */
 export function doorLook(map: InteriorMap, x: number, y: number): DoorLook {
+  // the airlocks and the doors of the spaceship slide
+  if (map.spaceship) return "slide";
   // castles and towns have iron gates only; so has the cyber theme, where wooden doors make no sense
   if (map.kind === "fortress" || map.kind === "town" || map.theme.id === "cyber") return "gate";
   return ((hash2(0x44, x, y) >>> 12) & 1) === 0 ? "door" : "gate";
 }
 
-/** What opening sounds like: the wooden door squeaks (the old game's 9052), the iron gate clanks (9034). */
-export const doorSound = (look: DoorLook): number => (look === "gate" ? 9034 : 9052);
+/** What opening sounds like: the wooden door squeaks (the old game's 9052), the iron gate clanks (9034), a sliding door of the spaceship hisses (9056, closing sounds the same). */
+export const doorSound = (look: DoorLook): number => (look === "slide" ? 9056 : look === "gate" ? 9034 : 9052);
 
 /**
  * Direction of travel through a door cell, from the corridor into the room (`Mouth.facing`). The action only keeps the axis, so the
@@ -74,7 +93,12 @@ export function doorModelKeys(map: InteriorMap, content: MapContent): string[] {
   const keys = new Set<string>();
   for (const a of content.actions) {
     if (a.kind !== "door") continue;
-    if (doorLook(map, a.x, a.y) === "door") {
+    const look = doorLook(map, a.x, a.y);
+    if (look === "slide") {
+      keys.add(SLIDE_FRAME);
+      keys.add(SLIDE_LEFT);
+      keys.add(SLIDE_RIGHT);
+    } else if (look === "door") {
       keys.add(DOOR_CLOSED);
       keys.add(DOOR_OPEN);
     } else {
@@ -97,10 +121,12 @@ interface Door {
   /** Gate only: item, how it leaves the cell, and the frame model with its size. */
   gate: (typeof GATES)[keyof typeof GATES];
   open: boolean;
-  /** 0 closed, 1 open; a gate slides, a wooden door jumps (the old game swapped the block). */
+  /** 0 closed, 1 open; a gate and a sliding door move, a wooden door jumps (the old game swapped the block). */
   t: number;
   /** Seconds a gate needs to leave the cell. */
   seconds: number;
+  /** Sliding door only: the size of frame and leaves. */
+  scale: [number, number, number];
 }
 
 /**
@@ -113,6 +139,8 @@ export class InteriorDoors {
   private owner = "";
   /** What each door looked like in the last drawn frame (0 closed, 1 moving, 2 open), to know when the still parts must be rebuilt. */
   private phase = new Map<string, number>();
+  /** Seconds a sliding door needs to open or close: as long as its sound plays (`Game` sets it from the decoded file). */
+  slideSeconds = 1.5;
 
   constructor(
     private readonly props: PropRenderer,
@@ -124,6 +152,8 @@ export class InteriorDoors {
     this.owner = owner;
     const gate = GATES[gateSetOf(map)];
     const travel = gateTravel(gate.item, gate.direction);
+    const wide = CELL_SIZE / SLIDE_WIDTH_UNITS;
+    const slideScale: [number, number, number] = [wide, wallHeightOf(map) / SLIDE_HEIGHT_UNITS, wide];
     for (const a of content.actions) {
       if (a.kind !== "door") continue;
       const look = doorLook(map, a.x, a.y);
@@ -140,6 +170,7 @@ export class InteriorDoors {
         open,
         t: open ? 1 : 0,
         seconds: travel?.seconds ?? 1,
+        scale: slideScale,
       });
     }
     this.pushStill();
@@ -162,14 +193,26 @@ export class InteriorDoors {
     return !!d && !d.open;
   }
 
+  /**
+   * Can the party step into the door's cell? A sliding door lets them through once it is open far enough, and not a moment longer than it is meant to be open: the leaf
+   * that starts to close is in the way at once. The other looks open at once.
+   */
+  isPassable(uid: string): boolean {
+    const d = this.doors.get(uid);
+    if (!d) return true;
+    if (d.look !== "slide") return d.open;
+    return d.open && d.t >= SLIDE_PASSABLE;
+  }
+
   update(dt: number): void {
     let moving = false;
     let changed = false;
     for (const d of this.doors.values()) {
-      if (d.look === "gate") {
+      if (d.look === "gate" || d.look === "slide") {
         const target = d.open ? 1 : 0;
         if (d.t !== target) {
-          d.t = Math.min(1, Math.max(0, d.t + Math.sign(target - d.t) * (dt / d.seconds)));
+          const seconds = d.look === "slide" ? Math.max(0.2, this.slideSeconds) : d.seconds;
+          d.t = Math.min(1, Math.max(0, d.t + Math.sign(target - d.t) * (dt / seconds)));
           moving = true;
         }
       }
@@ -198,10 +241,34 @@ export class InteriorDoors {
     return itemProp(d.gate.item, d.yaw, d.x, d.z, this.staticInfo, travel.from + (travel.to - travel.from) * t);
   }
 
+  /**
+   * The frame of a sliding door (always there) and its two leaves at `t` (0 shut, 1 open: they have slid into the wall, a leaf's width to each side, and are hidden by the
+   * frame's faces). Seen from the corridor, the left leaf moves left and the right one right. `still` leaves out the leaves of a door that is on its way.
+   */
+  private slideParts(d: Door, t: number, frame: boolean, leaves: boolean): PropInstance[] {
+    const out: PropInstance[] = [];
+    const rotY = d.yaw * RAD;
+    if (frame) out.push({ model: SLIDE_FRAME, x: d.x, y: 0, z: d.z, rotY, scale: d.scale[0], scaleXYZ: d.scale });
+    if (!leaves) return out;
+    // the unit vector of the door's width: the frame's x axis turned by the yaw
+    const ux = Math.cos(rotY);
+    const uz = -Math.sin(rotY);
+    for (const side of [-1, 1] as const) {
+      const lateral = side * (SLIDE_LEAF_WIDTH / 2 + SLIDE_LEAF_WIDTH * t) * d.scale[0];
+      out.push({ model: side < 0 ? SLIDE_LEFT : SLIDE_RIGHT, x: d.x + ux * lateral, y: SLIDE_LEAF_LIFT * d.scale[1], z: d.z + uz * lateral, rotY, scale: d.scale[0], scaleXYZ: d.scale });
+    }
+    return out;
+  }
+
   private pushStill(): void {
     const list: PropInstance[] = [];
     for (const d of this.doors.values()) {
       this.phase.set(d.uid, d.t === 0 ? 0 : d.t === 1 ? 2 : 1);
+      if (d.look === "slide") {
+        // the leaves of an open door are inside the wall; one that moves is drawn every frame under the other owner
+        list.push(...this.slideParts(d, d.t, true, d.t === 0));
+        continue;
+      }
       if (d.look === "door") {
         list.push({ model: d.open ? DOOR_OPEN : DOOR_CLOSED, x: d.x, y: 0, z: d.z, rotY: d.yaw * RAD, scale: DOOR_SCALE[0], scaleXYZ: DOOR_SCALE });
         continue;
@@ -220,7 +287,12 @@ export class InteriorDoors {
   private pushMoving(): void {
     const list: PropInstance[] = [];
     for (const d of this.doors.values()) {
-      if (d.look !== "gate" || d.t <= 0 || d.t >= 1) continue;
+      if (d.t <= 0 || d.t >= 1) continue;
+      if (d.look === "slide") {
+        list.push(...this.slideParts(d, d.t, false, true));
+        continue;
+      }
+      if (d.look !== "gate") continue;
       const gate = this.gateAt(d, d.t);
       if (gate) list.push(gate);
     }

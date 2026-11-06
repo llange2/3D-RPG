@@ -139,5 +139,6 @@
  * computers with the code words of the mini quests, terminators; 8 orbs in the ship (none on the bridge) and 23 on the level 5 dungeons; the pyramid of the bridge stands on the hardest territory (`sectionOrder`).
  * 49 = the spaceship's objects (user, 6. 11. 2026): nothing in the room of a section's tube, crystals, orbs and crates spread over the rooms, objects never shut a passage (`blocksPassage`), two cells round the console free.
  * 50 = the spaceship (user, 6. 11. 2026): every robot of the game turns up in the four sections after the bridge (not only the ED-409), steps of one cell in its walls are smoothed away so that the round corner models fit (`straightenCorners`).
+ * 51 = the spaceship's doors (user, 6. 11. 2026): a sliding door in each corridor that leaves a room, shut behind the party again (`actions/spaceship.ts`, param `slide`); the airlocks look the same but stay open.
  */
-export const GEN_VERSION = 50;
+export const GEN_VERSION = 51;
