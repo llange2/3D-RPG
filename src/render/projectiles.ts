@@ -2,9 +2,9 @@ import type { PropRenderer } from "./props";
 import type { PropInstance } from "./terrainMesher";
 
 /** What flies: the old attack animations 9023 (arrow), 9019 (fireball), 9018 (ice), 9021 (magic), 9022 (physical), 9020 (poison cloud). */
-export type ProjectileKind = "arrow" | "fire" | "ice" | "magic" | "physical" | "acid";
+export type ProjectileKind = "arrow" | "fire" | "ice" | "magic" | "physical" | "acid" | "missile";
 
-export const PROJECTILE_MODELS = ["proj_arrow", "proj_fire", "proj_ice", "proj_magic", "proj_physical", "proj_poison"];
+export const PROJECTILE_MODELS = ["proj_arrow", "proj_fire", "proj_ice", "proj_magic", "proj_physical", "proj_poison", "proj_missile"];
 
 interface Pose {
   model: string;
@@ -25,6 +25,8 @@ const POSES: Record<ProjectileKind, Pose> = {
   magic: { model: "proj_magic", scale: 0.5, pitch: 0, roll: 0 },
   physical: { model: "proj_physical", scale: 0.55, pitch: -90, roll: 0 },
   acid: { model: "proj_poison", scale: 0.45, pitch: 0, roll: 0 },
+  // the Titanic Automato's missile (the user's file, 0.95 long, its nose at +y like the icicle's tip: pitched by +90 degrees it flies point first)
+  missile: { model: "proj_missile", scale: 1, pitch: 90, roll: 0 },
 };
 
 export interface Point {

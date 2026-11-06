@@ -11,7 +11,7 @@ import { preloadItemIcons } from "../ui/itemIcons";
 import { setTextureQuality } from "../render/assets";
 import { readSettings } from "./settings";
 import { splitLegacySaves } from "./state";
-import { parseWorldSize, type WorldSize } from "../world/types";
+import { parseDungeonDensity, parseWorldSize, type WorldSize } from "../world/types";
 
 async function main(): Promise<void> {
   const params = new URLSearchParams(location.search);
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   const seed = params.get("seed") ?? "";
   if (params.get("bench") === "1") {
     if (params.get("scenario") === "campaign") await game.newCampaign(seed || "bench");
-    else await game.newGame(seed || "bench", false, parseWorldSize(params.get("size")));
+    else await game.newGame(seed || "bench", false, parseWorldSize(params.get("size")), parseDungeonDensity(params.get("dungeons")));
     (window as unknown as { __bench: unknown }).__bench = { done: false };
     const result = await runBenchmark(game, params.get("scenario") ?? "overworld");
     (window as unknown as { __bench: unknown }).__bench = { done: true, result };
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
       return;
     }
     // `?outside=1` begins on the road in front of the town, for the tools that measure the overworld; a player begins in the town's streets
-    await game.newGame(seed || "test", params.get("outside") !== "1", parseWorldSize(params.get("size")));
+    await game.newGame(seed || "test", params.get("outside") !== "1", parseWorldSize(params.get("size")), parseDungeonDensity(params.get("dungeons")));
     return;
   }
   await game.start(seed);

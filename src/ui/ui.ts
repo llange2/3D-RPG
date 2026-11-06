@@ -5,7 +5,7 @@ import { armor, isAlive, worstCondition } from "../sim/character";
 import type { Character, Party } from "../sim/types";
 import { assetPath, clear, h } from "./dom";
 import { thousands } from "../core/format";
-import { DEFAULT_WORLD_SIZE, WORLD_SIZES, WORLD_SIZE_NAMES, type WorldSize } from "../world/types";
+import { DEFAULT_WORLD_SIZE, DUNGEON_DENSITIES, DUNGEON_DENSITY_NAMES, TITLE_DUNGEON_DENSITY, WORLD_SIZES, WORLD_SIZE_NAMES, type DungeonDensity, type WorldSize } from "../world/types";
 import { hitEffect, portraitImage, protectionEffect, type AvatarEffect } from "./avatarFx";
 import { conditionTitle, shownCondition } from "./conditionInfo";
 import { mascotPortrait } from "./panels";
@@ -35,7 +35,7 @@ const TITLE_IMAGE = { w: 1600, h: 995 };
 const TITLE_ROCK_Y = 0.69;
 
 /** What the title screen resolves with: a new game (endless world or campaign, with its seed) or one of the saves it was given. */
-export type TitleChoice<S> = { action: "new" | "campaign"; seed: string; size: WorldSize } | { action: "load"; save: S };
+export type TitleChoice<S> = { action: "new" | "campaign"; seed: string; size: WorldSize; dungeons: DungeonDensity } | { action: "load"; save: S };
 
 export interface Option<T> {
   label: string;
@@ -592,7 +592,7 @@ export class UI {
    * entries first, then the saves made by hand). The title does not know where saves are kept; the caller hands in what it
    * found and gets the chosen one back.
    */
-  title<S>(options: { seed: string; size?: WorldSize; saves: Option<S>[]; onOptions?: () => void }): Promise<TitleChoice<S>> {
+  title<S>(options: { seed: string; size?: WorldSize; dungeons?: DungeonDensity; saves: Option<S>[]; onOptions?: () => void }): Promise<TitleChoice<S>> {
     return new Promise((resolve) => {
       const { saves } = options;
       const input = h("input", { type: "text", value: options.seed, placeholder: "world seed" }) as HTMLInputElement;
@@ -614,6 +614,20 @@ export class UI {
         });
         return button;
       });
+      // how many caves and dungeons the world has: one of three switches under the size (towns, castles and pyramids do not change)
+      let dungeons: DungeonDensity = options.dungeons ?? TITLE_DUNGEON_DENSITY;
+      const dungeonButtons = DUNGEON_DENSITY_NAMES.map((name) => {
+        const info = DUNGEON_DENSITIES[name];
+        return h("button", {
+          class: `btn toggle${name === dungeons ? " on" : ""}`,
+          text: info.label,
+          title: name === "maximum" ? "Every cave and dungeon the world has room for" : `${Math.round(info.share * 100)} % of the caves and dungeons; towns, castles and pyramids stay`,
+          onclick: () => {
+            dungeons = name;
+            dungeonButtons.forEach((b, i) => b.classList.toggle("on", DUNGEON_DENSITY_NAMES[i] === dungeons));
+          },
+        });
+      });
       const backButton = () => h("button", { class: "btn", text: "Back", onclick: () => show("main") });
       const pages: Record<TitlePage, () => HTMLElement[]> = {
         main: () => [
@@ -625,11 +639,17 @@ export class UI {
           h(
             "div",
             { class: "seedbox" },
-            h("div", { class: "seedrow" }, h("span", { text: "Seed" }), input, h("button", { class: "btn", text: "Random", onclick: () => (input.value = randomSeed()) })),
+            // three rows of the same two columns, so that the first letters of "Seed", "World size" and "Dungeons" stand on one line
+            h("span", { class: "rowlabel", text: "Seed" }),
+            h("div", { class: "seedrow" }, input, h("button", { class: "btn", text: "Random", onclick: () => (input.value = randomSeed()) })),
+            h("span", { class: "rowlabel", text: "World size" }),
             h("div", { class: "sizerow" }, ...sizeButtons),
+            h("span", { class: "rowlabel", text: "Dungeons" }),
+            h("div", { class: "sizerow" }, ...dungeonButtons),
           ),
-          h("button", { class: "btn primary", text: "New game", onclick: () => done({ action: "new", seed: seed(), size }) }),
-          h("button", { class: "btn", text: "New campaign (the 34 hand-built maps)", onclick: () => done({ action: "campaign", seed: seed(), size }) }),
+          h("button", { class: "btn primary", text: "New game", onclick: () => done({ action: "new", seed: seed(), size, dungeons }) }),
+          // ("New campaign", the 34 hand-built maps of the old game, has been taken off the menu on 6. 11. 2026; the campaign itself stays in the code: `Game.newCampaign`,
+          // the `campaign` action of `TitleChoice` and `?scenario=campaign` still start it, and saved campaigns still load)
           backButton(),
         ],
         load: () => [
@@ -674,7 +694,7 @@ export class UI {
         resolve(choice);
       };
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") done({ action: "new", seed: seed(), size });
+        if (e.key === "Enter") done({ action: "new", seed: seed(), size, dungeons });
       });
       window.addEventListener("keydown", onKey);
       window.addEventListener("resize", placeMenu);

@@ -27,6 +27,7 @@ import { ChunkManager } from "../render/chunkManager";
 import { LAMP_RANGE, VIEW_DISTANCES, VIEW_TILES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
 import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
+import { ROBOT_SOUND, fliesAsMissile, isRobot, robotAttackSound, robotStepSounds, robotWakeSound } from "../data/robot-sounds";
 import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/environment";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
@@ -52,7 +53,7 @@ import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport
 import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
-  battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters,
+  alertMonsters, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters,
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS,
   type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
@@ -63,7 +64,7 @@ import { pickGateSpot, safeCells, type Spot } from "./spellSites";
 import { pickFromBackpack } from "../ui/itemSpells";
 import { visibleCells } from "../sim/vision";
 import type { Character, Place, TimedEffect } from "../sim/types";
-import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, GROUND, WORLD_SIZES, isTileWalkable, parseWorldSize, poiEntrances, wrap, wrapDelta, type Poi, type PoiKind, type TileInfo, type WorldSize } from "../world/types";
+import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, FULL_DUNGEON_DENSITY, GROUND, TITLE_DUNGEON_DENSITY, WORLD_SIZES, isTileWalkable, parseDungeonDensity, parseWorldSize, poiEntrances, wrap, wrapDelta, type DungeonDensity, type Poi, type PoiKind, type TileInfo, type WorldSize } from "../world/types";
 import { chunkSpawns, type OverworldSpawn } from "../world/spawns";
 import { World } from "../world/world";
 import { MinimapIcons } from "./minimapIcons";
@@ -477,11 +478,12 @@ export class Game {
     this.ui.setHudVisible(false);
     this.audio.setAmbient(new Map());
     this.audio.playMusic(9000);
-    const choice = await this.ui.title({ seed: defaultSeed || randomSeed(), size: parseWorldSize(new URLSearchParams(location.search).get("size")), saves: this.titleSaves(), onOptions: () => void this.optionsMenu() });
+    const params = new URLSearchParams(location.search);
+    const choice = await this.ui.title({ seed: defaultSeed || randomSeed(), size: parseWorldSize(params.get("size")), dungeons: params.has("dungeons") ? parseDungeonDensity(params.get("dungeons")) : TITLE_DUNGEON_DENSITY, saves: this.titleSaves(), onOptions: () => void this.optionsMenu() });
     this.audio.play(9001);
     if (choice.action === "load") await this.loadFromFile(choice.save);
     else if (choice.action === "campaign") await this.newCampaign(choice.seed);
-    else await this.newGame(choice.seed, true, choice.size);
+    else await this.newGame(choice.seed, true, choice.size, choice.dungeons);
   }
 
   /**
@@ -515,11 +517,11 @@ export class Game {
   }
 
   /** `inTown`: begin on the street in front of the inn of Starthaven (what a player gets); false begins outside on the road, for the tools that measure the overworld. */
-  async newGame(seed: string, inTown = true, size: WorldSize = DEFAULT_WORLD_SIZE): Promise<void> {
-    this.setSeedInUrl(seed, size);
-    this.world = new World(seed, size);
+  async newGame(seed: string, inTown = true, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY): Promise<void> {
+    this.setSeedInUrl(seed, size, dungeons);
+    this.world = new World(seed, size, dungeons);
     const start = this.world.startPosition();
-    this.state = newGameState(seed, start, size);
+    this.state = newGameState(seed, start, size, dungeons);
     // a new game begins in Starthaven, on the street in front of the inn, with the back to its door
     const town = inTown ? this.world.poiById(START_TOWN_ID) : null;
     if (town) {
@@ -535,8 +537,9 @@ export class Game {
 
   private async loadFromFile(file: ReturnType<typeof readSave> & object): Promise<void> {
     const size = parseWorldSize(file.state.size);
-    this.setSeedInUrl(file.seed, size);
-    this.world = new World(file.seed, size);
+    const dungeons = parseDungeonDensity(file.state.dungeons);
+    this.setSeedInUrl(file.seed, size, dungeons);
+    this.world = new World(file.seed, size, dungeons);
     this.state = fromSaveFile(file);
     this.over = false;
     if (file.genVersion !== GEN_VERSION) {
@@ -580,10 +583,11 @@ export class Game {
     return { x, y };
   }
 
-  private setSeedInUrl(seed: string, size: WorldSize = DEFAULT_WORLD_SIZE): void {
+  private setSeedInUrl(seed: string, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY): void {
     const params = new URLSearchParams(location.search);
     params.set("seed", seed);
     params.set("size", size);
+    params.set("dungeons", dungeons);
     history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
   }
 
@@ -634,12 +638,12 @@ export class Game {
     return !!e && e.x === x && e.y === y;
   }
 
-  private gridView(): GridView {
+  private gridView(settled = false): GridView {
     if (this.mode === "interior" && this.interior) {
       const rt = this.interior;
       const { map } = rt;
       return {
-        walkable: (x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !rt.blocked.has(y * map.width + x) && !rt.noMonster?.has(y * map.width + x) && !this.isClosedDoor(x, y) && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y),
+        walkable: (x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !rt.blocked.has(y * map.width + x) && !rt.noMonster?.has(y * map.width + x) && !this.isClosedDoor(x, y, settled) && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y),
         water: () => false,
         // campaign maps have open ground that blocks nothing (water) and tiles that do (mountains, forests)
         opaque: (x, y) => {
@@ -647,7 +651,7 @@ export class Game {
           const i = y * map.width + x;
           const cell = map.cells[i];
           if (cell === CELL.LOW && map.styles) return !!map.styles.list[map.styles.cell[i]!]?.model;
-          return cell !== CELL.FLOOR || this.isClosedDoor(x, y);
+          return cell !== CELL.FLOOR || this.isClosedDoor(x, y, settled);
         },
         // the old game kept monsters from shooting past any item that blocks a cell (a closed gate above all), and here the
         // party's arrows and spells stop there as well; generated interiors keep their own rule, where only walls and closed
@@ -681,10 +685,39 @@ export class Game {
     };
   }
 
-  private isClosedDoor(x: number, y: number): boolean {
+  /** `settled`: a door that is open in the state counts as open although its leaves are still moving (who is woken by an opening door does not wait for the animation). */
+  private isClosedDoor(x: number, y: number, settled = false): boolean {
     const a = this.interior?.actionAt.get(this.cellIndex(x, y));
     // a sliding door that is still opening is in the way as well (`InteriorView.isDoorPassable`)
-    return !!a && a.kind === "door" && (!this.state.opened.has(a.uid) || !this.interiorView.isDoorPassable(a.uid));
+    return !!a && a.kind === "door" && (!this.state.opened.has(a.uid) || (!settled && !this.interiorView.isDoorPassable(a.uid)));
+  }
+
+  /**
+   * The party has opened a door of the spaceship: the monsters in reach that now have a way to the party wake up and come for it (user, 6. 11. 2026). Before, they woke at their
+   * first turn, which came only with the next step of the party, when the door had shut again behind it.
+   */
+  private wakeMonstersBehindDoor(): void {
+    if (this.mode !== "interior" || !this.interior?.map.spaceship || this.enc.monsters.length === 0) return;
+    alertMonsters(this.gridView(true), this.enc, this.player.tx, this.player.ty);
+    this.announceAwakeRobots();
+  }
+
+  /** The robots that have been woken (`MonsterInstance.alerted`) and have not announced it yet. */
+  private readonly announcedRobots = new WeakSet<MonsterInstance>();
+
+  /**
+   * A robot that wakes up says so, once: an alarm (Iron Wizard, Terminator) or "target acquired" (Titanic Automato, ED-409). Several robots that wake together make each
+   * noise once, not as many times as they are.
+   */
+  private announceAwakeRobots(): void {
+    const sounds = new Set<number>();
+    for (const m of this.enc.monsters) {
+      if (!m.alerted || m.hp <= 0 || this.announcedRobots.has(m)) continue;
+      this.announcedRobots.add(m);
+      const sound = robotWakeSound(m.defId);
+      if (sound !== null) sounds.add(sound);
+    }
+    for (const sound of sounds) this.audio.play(sound);
   }
 
   /** How far away from a sliding door of the spaceship (in cells, the larger of the two distances) the party must be for the door to close: one cell further than it takes to open it. */
@@ -2311,7 +2344,10 @@ export class Game {
       // (a lever that turns a stone head, and the head that is turned by hand, grind like stone, 36th playtest, points 12 and 22)
       // (every lever of quest 1 grinds, also the four that move no statue: their target is empty, 38th playtest, point 3)
       const turnsStone = a.kind === "head" || (a.kind === "lever" && !!this.interior?.content.actions.some((h) => h.kind === "head"));
-      if (a.kind !== "gong" && a.params.terminal === undefined) this.audio.play(turnsStone ? 9050 : a.kind === "lever" ? 9034 : 9014, turnsStone ? 0.9 : 0.6);
+      // (an airlock's lever hisses like the sliding doors of the spaceship, 9056, 6. 11. 2026; the second lever opens the lock, whose own effect plays that sound, so it is not played twice)
+      const airlockLever = a.kind === "lever" && typeof a.params.airlock === "string";
+      const lockOpens = outcome.effects.some((e) => e.type === "door" && e.state === "opened");
+      if (a.kind !== "gong" && a.params.terminal === undefined && !(airlockLever && lockOpens)) this.audio.play(turnsStone ? 9050 : airlockLever ? 9056 : a.kind === "lever" ? 9034 : 9014, turnsStone ? 0.9 : 0.6);
       // what was done in the spaceship: its light, its glow and its hum follow
       if (a.params.terminal !== undefined) {
         this.syncShip();
@@ -2396,6 +2432,9 @@ export class Game {
             this.interiorView.setDoor(doorUid, true);
             this.audio.play(doorSound(look));
             if (e.state === "unlocked") ui.log("The lock clicks open.", "good");
+            // the monsters behind a sliding door of the spaceship are awake as soon as it is open
+            this.state.opened.add(doorUid);
+            this.wakeMonstersBehindDoor();
           } else this.audio.play(9014);
           break;
         case "wall":
@@ -2404,8 +2443,9 @@ export class Game {
             this.state.broken.add(a.uid);
             this.interiorView.wallBroken(a.uid);
             // a cave's rock has no broken model: the stone goes down into the floor as long as the sound lasts, like the seal of an end room
-            if (rt.map.kind === "cave") this.interiorView.sinkWall(a.x, a.y, this.audio.durationOf(9050, 1.6));
-            this.audio.play(9050);
+            // (a broken wall falls apart with the noise of the pit's stones, 9007, 6. 11. 2026; the end room's seal keeps the grinding of 9050)
+            if (rt.map.kind === "cave") this.interiorView.sinkWall(a.x, a.y, this.audio.durationOf(9007, 1.6));
+            this.audio.play(9007);
           }
           break;
         case "confirm":
@@ -3030,7 +3070,7 @@ export class Game {
     const m = this.enc.monsters.find((x) => x.uid === uid);
     if (!m) return 0;
     const seconds = flightSeconds(Math.hypot(m.x - this.player.tx, m.y - this.player.ty));
-    const kind = monsterProjectile(damageType);
+    const kind = fliesAsMissile(m.defId) ? "missile" : monsterProjectile(damageType);
     this.later(delay, () => {
       const from = this.monsters.anchor(uid);
       // aimed at the camera, a little lower so that the last frames are not cut off by the near plane
@@ -3071,16 +3111,25 @@ export class Game {
     // would leave a tile the monster has not reached yet (and come out of nowhere, before the monster is seen)
     const walkers = new Set(events.flatMap((e) => (e.type === "monster_move" ? [e.uid] : [])));
     let defeat = false;
+    // a robot that woke up in this turn announces itself before it moves
+    this.announceAwakeRobots();
+    // one noise per robot and turn: a blow that hits all heroes or a second shot is one launch or one laser, not several at once
+    const sounded = new Set<string>();
     for (const e of events) {
       switch (e.type) {
-        case "monster_move":
+        case "monster_move": {
+          const defId = this.enc.monsters.find((x) => x.uid === e.uid)?.defId ?? 0;
           at(answer, () => {
             const m = this.enc.monsters.find((x) => x.uid === e.uid);
             if (!m) return;
             const p = this.monsterWorld(m);
             this.monsters.moveTo(m.uid, p.x, p.y, p.z);
           });
+          // two steps on every tile (Titanic Automato, ED-409): the second one halfway through the step
+          const steps = robotStepSounds(defId);
+          for (let n = 0; n < steps; n++) at(answer + (MONSTER_STEP_SECONDS * n) / steps, () => this.audio.play(ROBOT_SOUND.step, 0.8));
           break;
+        }
         case "monster_open_door": {
           // the state is written at once (the door is open for the next step), the door moves with the monsters' turn
           const door = this.interior?.actionAt.get(this.cellIndex(e.at[0], e.at[1]));
@@ -3103,10 +3152,17 @@ export class Game {
           break;
         case "monster_attack": {
           const target = party.characters[e.target]!;
-          const name = monsterById(this.enc.monsters.find((x) => x.uid === e.uid)?.defId ?? 1).name;
+          const attackerId = this.enc.monsters.find((x) => x.uid === e.uid)?.defId ?? 1;
+          const name = monsterById(attackerId).name;
           const start = answer + (walkers.has(e.uid) ? MONSTER_STEP_SECONDS : 0);
           const flight = e.ranged ? this.launchMonsterShot(e.uid, e.damageType, start) : 0;
           at(start, () => this.monsters.attack(e.uid));
+          // a robot fires its laser or launches its missile as the shot leaves
+          const shot = robotAttackSound(attackerId);
+          if (shot !== null && !sounded.has(e.uid)) {
+            sounded.add(e.uid);
+            at(start, () => this.audio.play(shot));
+          }
           at(start + flight, () => {
             if (e.damage > 0) {
               this.ui.log(`${name} ${e.ranged ? "shoots" : "hits"} ${target.name} for ${e.damage}.`, "combat");
@@ -3140,7 +3196,8 @@ export class Game {
             if (e.damage > 0) {
               this.ui.log(`${who} ${e.kind === "magic" ? "burns" : e.kind === "ranged" ? "shoots" : "hits"} ${def.name} for ${e.damage}.`, "combat");
               if (e.kind === "melee") this.audio.play(9016);
-              this.audio.play(9033, 0.6);
+              // (a robot that is hit clangs instead of crying out)
+              this.audio.play(isRobot(e.defId) ? ROBOT_SOUND.hit : 9033, 0.6);
             } else {
               this.ui.log(`${who} misses.`, "combat");
               this.audio.play(9017);
@@ -3166,7 +3223,7 @@ export class Game {
           const epoch = this.fxEpoch;
           at(landing(e.uid), () => {
             this.ui.log(`${def.name} is defeated. +${thousands(e.xp)} xp`, "good");
-            this.audio.play(9045);
+            this.audio.play(isRobot(e.defId) ? ROBOT_SOUND.powerOff : 9045);
             // the pile appears when the body is gone: at once for a model without a death clip, after the clip for one with
             this.monsters.die(e.uid, () => this.releaseLoot(e.x, e.y, epoch));
             for (const c of party.characters) if (c.xp > 0 && xpReady(c)) this.ui.toast(`${c.name} can advance a level!`);
@@ -4236,7 +4293,11 @@ export class Game {
     // the showcase comes first: a dark hall with every monster, person and object of the game (`interiors/showcase.ts`)
     const options: Option<string>[] = [
       { label: "Showcase: all monsters and objects", value: SHOWCASE_ID, note: "Dungeon" },
-      ...teleportTargets(this.world.allPois()).map(({ poi, kind }) => ({ label: `${kind}: ${poi.name}`, value: poi.id, note: `Level ${poi.tier}` })),
+      // (a pyramid names the section of the spaceship it leads to: "Pyramid: Name (Bridge)")
+      ...teleportTargets(this.world.allPois()).map(({ poi, kind }) => {
+        const section = kind === "Pyramid" ? this.world.dungeonRef(poi.id)?.section : undefined;
+        return { label: `${kind}: ${poi.name}${section !== undefined ? ` (${SECTION_NAMES[section] ?? `section ${section}`})` : ""}`, value: poi.id, note: `Level ${poi.tier}` };
+      }),
     ];
     const id = await this.ui.choose("Teleport to Level", "The party appears at the entrance. Keys and key cards are not needed.", options);
     const poi = id === null ? null : this.world.poiById(id);

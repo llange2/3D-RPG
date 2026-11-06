@@ -15,7 +15,7 @@ if (!outDir) throw new Error("usage: tsx tools/dev/sheet-projectiles.ts <outDir>
 const base = process.argv[3] ?? "http://localhost:5173/";
 mkdirSync(outDir, { recursive: true });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const kinds = ["arrow", "fire", "ice", "magic", "physical", "acid"];
+const kinds = ["arrow", "fire", "ice", "magic", "physical", "acid", "missile"];
 
 const browser = await puppeteer.launch({
   executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -27,22 +27,27 @@ try {
   const page = await browser.newPage();
   await page.goto(`${base}?autostart=1&outside=1&seed=test`, { waitUntil: "load", timeout: 60000 });
   await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
-  await sleep(3000);
+  await sleep(6000);
   // the open meadow around the start: daylight, nothing in the way
   const tiles: Buffer[] = [];
   for (const kind of kinds) {
     // 12 tiles of flight take 1.56 s; across the view 6 units in front of the camera
+    // (across the view, whichever way the party looks: 7 units ahead, from the left side to the right one)
     await page.evaluate(`(() => {
       const g = __game.game.internals;
       const c = g.r.camera.position;
-      g.projectiles.launch(${JSON.stringify(kind)}, { x: c.x - 9, y: c.y - 0.5, z: c.z + 7 }, { x: c.x + 27, y: c.y - 0.5, z: c.z + 7 });
+      const yaw = g.r.camera.rotation.y;
+      const f = { x: Math.sin(yaw), z: Math.cos(yaw) };
+      const r = { x: f.z, z: -f.x };
+      const at = (side) => ({ x: c.x + f.x * 7 + r.x * side, y: c.y - 0.5, z: c.z + f.z * 7 + r.z * side });
+      g.projectiles.launch(${JSON.stringify(kind)}, at(-9), at(27));
     })()`);
     await sleep(380);
     const shot = (await page.screenshot({ clip: { x: 440, y: 290, width: 400, height: 200 } })) as Buffer;
     tiles.push(Buffer.from(await sharp(shot).png().toBuffer()));
     await sleep(1500);
   }
-  const sheet = sharp({ create: { width: 1200, height: 400, channels: 3, background: "#222" } }).composite(tiles.map((input, i) => ({ input, left: (i % 3) * 400, top: Math.floor(i / 3) * 200 })));
+  const sheet = sharp({ create: { width: 1200, height: 600, channels: 3, background: "#222" } }).composite(tiles.map((input, i) => ({ input, left: (i % 3) * 400, top: Math.floor(i / 3) * 200 })));
   await sheet.png().toFile(join(outDir, "projectiles.png"));
   console.log("saved", join(outDir, "projectiles.png"), "order:", kinds.join(", "));
 } finally {

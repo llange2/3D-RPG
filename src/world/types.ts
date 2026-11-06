@@ -61,6 +61,26 @@ export const WORLD_SIZES: Record<WorldSize, { label: string; width: number; heig
 };
 export const WORLD_SIZE_NAMES = Object.keys(WORLD_SIZES) as WorldSize[];
 export const DEFAULT_WORLD_SIZE: WorldSize = "default";
+/**
+ * How many caves and dungeons a world keeps (6. 11. 2026, "Dungeons" on the title screen): `maximum` is every one the generator places, `default` three quarters of the
+ * ordinary ones and `few` half of them. Towns, the three castles and the five pyramids are never thinned out (`world/density.ts`).
+ */
+export type DungeonDensity = "few" | "default" | "maximum";
+export const DUNGEON_DENSITIES: Record<DungeonDensity, { label: string; share: number }> = {
+  few: { label: "Few", share: 0.5 },
+  default: { label: "Default", share: 0.75 },
+  maximum: { label: "Maximum", share: 1 },
+};
+export const DUNGEON_DENSITY_NAMES = Object.keys(DUNGEON_DENSITIES) as DungeonDensity[];
+/** What a world without a stated density has (old saves, tools, tests): all of its places, as it always was. */
+export const FULL_DUNGEON_DENSITY: DungeonDensity = "maximum";
+/** What the title screen has switched on at first. */
+export const TITLE_DUNGEON_DENSITY: DungeonDensity = "default";
+
+export function parseDungeonDensity(text: string | null | undefined): DungeonDensity {
+  return DUNGEON_DENSITY_NAMES.find((n) => n === text) ?? FULL_DUNGEON_DENSITY;
+}
+
 /** Deep water the world keeps free on every side: swimming across the seam is at least twice this much open sea. */
 export const SEA_MARGIN = 3;
 

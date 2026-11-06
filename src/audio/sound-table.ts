@@ -91,6 +91,14 @@ export const SOUNDS: Record<number, SoundEntry> = {
   9055: "light_on",
   // the sliding doors and airlocks of the spaceship, opening and closing alike (the user's own file, 1.5 s: the doors move as long as it plays)
   9056: "space_ship_door",
+  // the robots of the spaceship (the user's own files, 6. 11. 2026): they wake with an alarm or a target lock, shoot a laser or launch a missile, step, are hit and power off (`data/robot-sounds.ts`)
+  9057: "robot_alarm",
+  9058: "robot_target_acquired",
+  9059: "robot_laser",
+  9060: "robot_launch",
+  9061: "robot_powering_off",
+  9062: "robot_step",
+  9063: "robot_hit",
 };
 
 /** Every file name a sound entry can play. */

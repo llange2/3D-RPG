@@ -845,6 +845,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("proj_magic", "Magic attack.obj", 600, 256),
   S("proj_physical", "Physical attack.obj", 600, 256),
   S("proj_poison", "Poison Cloud.obj", 600, 256),
+  // the missile of the Titanic Automato (monster 88) instead of the fireball (the user's file, 6. 11. 2026; 5 200 triangles, three 4k textures); its nose is at +y
+  S("proj_missile", "new:Missile.glb", 2500, 512),
   // what the animated monsters hold in their hands (MONSTER_DATA `anim_weapon`, `anim_shield`; `src/data/equipment.ts`), 1 000 triangles each in the original
   S("wpn_sword1", "Sword 1.glb", 600, 256),
   S("wpn_sword2", "Sword 2.glb", 600, 256),

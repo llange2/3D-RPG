@@ -41,7 +41,7 @@ const isDungeon = (p: Poi) => p.kind === "dungeon";
 const MAX_MINIS: Readonly<Record<string, number>> = { small: 2, default: 3, large: 4, huge: 4 };
 
 /** The pyramids: one dungeon on each island in turn, in an order the seed decides, until there are five. */
-function pickPyramids(rng: Rng, dungeons: readonly Poi[]): Poi[] {
+export function pickPyramids(rng: Rng, dungeons: readonly Poi[]): Poi[] {
   const byIsland = new Map<number, Poi[]>();
   for (const p of dungeons) {
     const list = byIsland.get(p.region.rx);
@@ -102,15 +102,55 @@ function bossPair(rng: Rng, tier: number): { population: number; boss: number } 
   return pool[rng.int(pool.length)]!;
 }
 
-export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly Poi[], castleWords: Map<string, number> = new Map(), castleSpells: Map<string, number[]> = new Map()): Map<string, DungeonRef> {
+/** Thinned-out worlds keep at least this many ordinary dungeons (no caves) on a level: key cards, orbs and locks need dungeons. */
+const KEEP_DUNGEONS_PER_LEVEL = 2;
+/** An island keeps at least this many places (towns included): below it the roads of the island fall apart. */
+const KEEP_PLACES_PER_ISLAND = 2;
+
+/**
+ * The places of a world with fewer caves and dungeons (6. 11. 2026, "Dungeons" on the title screen). `share` of the ordinary ones of each level stay (rounded), chosen by the
+ * seed; the towns, the castles and the five pyramids (which are `pyramids`, picked exactly as `planPlaces` picks them, and handed to it) are never touched, so a world with fewer
+ * dungeons has the same castles and pyramids. A level keeps at least `KEEP_DUNGEONS_PER_LEVEL` dungeons and an island `KEEP_PLACES_PER_ISLAND` places, whatever the share says.
+ */
+export function thinOutPlaces(rootSeed: SeedState, placed: readonly (readonly Poi[])[], share: number): { placed: Poi[][]; pyramids: Poi[] } {
+  const isPlace = (p: Poi) => p.kind === "dungeon" || p.kind === "cave";
+  const places = placed.flat().filter(isPlace);
+  const pyramids = pickPyramids(rngFor(rootSeed, LAYER.INTERIOR, "quest-plan"), places.filter(isDungeon));
+  if (share >= 1) return { placed: placed.map((list) => [...list]), pyramids };
+  const rng = rngFor(rootSeed, LAYER.POI, "thin-out");
+  const pyramidIds = new Set(pyramids.map((p) => p.id));
+  const ordinary = places.filter((p) => !pyramidIds.has(p.id));
+  const islandPlaces = new Map<number, number>();
+  for (const p of placed.flat()) islandPlaces.set(p.region.rx, (islandPlaces.get(p.region.rx) ?? 0) + 1);
+  const dropped = new Set<string>();
+  const tiers = [...new Set(ordinary.map((p) => p.tier))].sort((a, b) => a - b);
+  for (const tier of tiers) {
+    const level = ordinary.filter((p) => p.tier === tier);
+    let toDrop = level.length - Math.round(level.length * share);
+    let dungeons = level.filter(isDungeon).length;
+    const floor = Math.min(KEEP_DUNGEONS_PER_LEVEL, dungeons);
+    for (const p of rng.shuffle([...level])) {
+      if (toDrop <= 0) break;
+      if (isDungeon(p) && dungeons <= floor) continue;
+      if ((islandPlaces.get(p.region.rx) ?? 0) <= KEEP_PLACES_PER_ISLAND) continue;
+      dropped.add(p.id);
+      islandPlaces.set(p.region.rx, islandPlaces.get(p.region.rx)! - 1);
+      if (isDungeon(p)) dungeons--;
+      toDrop--;
+    }
+  }
+  return { placed: placed.map((list) => list.filter((p) => !dropped.has(p.id))), pyramids };
+}
+
+export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly Poi[], castleWords: Map<string, number> = new Map(), castleSpells: Map<string, number[]> = new Map(), pickedPyramids?: readonly Poi[]): Map<string, DungeonRef> {
   const out = new Map<string, DungeonRef>();
   const places = pois.filter((p) => p.kind === "dungeon" || p.kind === "cave");
   if (places.length === 0) return out;
   const rng = rngFor(rootSeed, LAYER.INTERIOR, "quest-plan");
   const perRoom = MAX_ITEMS_PER_ROOM[size] ?? 1;
 
-  // 1. the pyramids and their cards
-  const pyramids = sectionOrder(rootSeed, pickPyramids(rng, places.filter(isDungeon)));
+  // 1. the pyramids and their cards (a thinned-out world has picked them before it dropped places: `thinOutPlaces`)
+  const pyramids = sectionOrder(rootSeed, pickedPyramids ? [...pickedPyramids] : pickPyramids(rng, places.filter(isDungeon)));
   const pyramidIds = new Set(pyramids.map((p) => p.id));
   const ordinary = places.filter((p) => !pyramidIds.has(p.id));
   const dungeons = ordinary.filter(isDungeon);
