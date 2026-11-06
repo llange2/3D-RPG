@@ -11,9 +11,11 @@ import type { Character, ClassName, Condition, Item, LastCast, Party, Place, Tim
 /** Single-target projectile spells (the old "non-penetrating" list). */
 const SINGLE_TARGET = new Set([3, 5, 8, 15, 29, 51, 59, 71, 74, 77]);
 /** Spells that hit everything on the line through the target. Pain and Turn Undead have their own entry (`LIVING_OR_UNDEAD`). */
-const PENETRATING = new Set([10, 14, 37, 38, 39, 44, 49, 50, 53, 60, 63, 68, 72, 73, 75]);
-/** Spells whose rule for whom they hit is in `specialSpell` (`sim/encounter.ts`). */
-const SPECIAL: Record<number, SpecialSpell> = { 43: "finger_of_death", 64: "mass_distortion", 69: "holy_word", 76: "star_burst" };
+const PENETRATING = new Set([10, 14, 37, 38, 39, 44, 49, 50, 53, 60, 63, 68, 73]);
+/** Spells whose rule for whom they hit is in `specialSpell` (`sim/encounter.ts`); Meteor Shower and Elemental Storm are area spells (`areaSpell`). */
+const SPECIAL: Record<number, SpecialSpell> = { 43: "finger_of_death", 64: "mass_distortion", 69: "holy_word", 76: "star_burst", 72: "meteor_shower", 75: "elemental_storm" };
+/** Meteor Shower and Elemental Storm hit every monster in the action radius: they need nothing to aim at. */
+export const isAreaSpell = (id: number): boolean => id === 72 || id === 75;
 /** Spells that change the monster the party is looking at (no damage). */
 const MONSTER_EFFECTS = new Set([31, 41]);
 
@@ -411,6 +413,7 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
 
 /** Spells that need something to aim at: a monster in sight. */
 export function isAttackSpell(id: number): boolean {
+  if (isAreaSpell(id)) return false;
   return SINGLE_TARGET.has(id) || PENETRATING.has(id) || id === 12 || id === 19 || id in SPECIAL || MONSTER_EFFECTS.has(id);
 }
 

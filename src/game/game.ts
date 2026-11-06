@@ -16,7 +16,7 @@ import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { sectionAt } from "../interiors/spaceship";
-import { ENDING_TEXT } from "../data/ship-texts";
+import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
 import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
@@ -27,11 +27,12 @@ import { ChunkManager } from "../render/chunkManager";
 import { LAMP_RANGE, VIEW_DISTANCES, VIEW_TILES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
 import { doorLook, doorModelKeys, doorSound } from "../render/interiorDoors";
-import { ROBOT_SOUND, ROBOT_STEP_PAUSE, fliesAsMissile, isRobot, robotAttackSound, robotStepSounds, robotWakeSound } from "../data/robot-sounds";
+import { ROBOT_SOUND, ROBOT_STEP_PAUSE, firesLaser, fliesAsMissile, isRobot, robotAttackSound, robotStepSounds, robotWakeSound } from "../data/robot-sounds";
 import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/environment";
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
+import { LASER_LAMP } from "../render/lasers";
 import { ITEM_LAMPS, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
@@ -53,12 +54,12 @@ import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport
 import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
-  alertMonsters, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters,
+  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters,
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS,
   type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
-import { RIFT_TURNS, SPELL_AGING, castSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, lastCastOf, noteCast, quickCastOf, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
+import { RIFT_TURNS, SPELL_AGING, castSpell, isAreaSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, lastCastOf, noteCast, quickCastOf, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
 import { canCombine, combine, combineGroups, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
 import { pickGateSpot, safeCells, type Spot } from "./spellSites";
 import { pickFromBackpack } from "../ui/itemSpells";
@@ -147,6 +148,11 @@ const LOAD_MODELS = 0.5;
 const LOAD_BUILT = 0.6;
 
 type PartyAttackEvent = Extract<CombatEvent, { type: "party_attack" }>;
+
+/** Meteor Shower: the fireballs start this high above the monster and fall for this long. Elemental Storm: the element appears this far from the monster's middle, towards the party. */
+const METEOR_HEIGHT = 11;
+const METEOR_FALL_SECONDS = 0.5;
+const STORM_FRONT = 1.2;
 
 /** Said when a spell that would carry the party away is cast in melee, and when the party tries to step away from it. */
 const IN_MELEE_SPELL = "That spell cannot be cast during a fight: the party cannot leave its field while monsters are next to it.";
@@ -261,6 +267,7 @@ const LAMP_REACH = 18;
 const LAMP_INTENSITY = 1.7;
 /** Seconds a lamp takes to fade in or out of a light of the pool. */
 const LAMP_FADE = 0.4;
+const LASER_LAMP_FADE = 0.08;
 /** The noise of a trap going off. The pit has none here: its stones fall once, when it opens (`useAction`); the magic trap sounds like its element's spell. */
 const TRAP_SOUND: Record<string, number> = { spring: 9036, guillotine: 9042, steal_gold: 9038 };
 
@@ -363,7 +370,7 @@ export class Game {
     progress?.(0.1);
     this.sky = new SkyDome(this.r.scene, this.textures);
     this.props = new PropRenderer(this.r.scene);
-    this.projectiles = new Projectiles(this.props);
+    this.projectiles = new Projectiles(this.props, this.r.scene);
     const [staticInfo, monsterInfo] = await Promise.all([fetchJson<Record<string, StaticModelInfo>>(registryFile("static")), fetchJson<Record<string, MonsterModelInfo>>(registryFile("monsters"))]);
     progress?.(0.15);
     // the models are the originals, and so is the ground: the full ground tiles of the old game
@@ -918,7 +925,7 @@ export class Game {
     }
     this.audio.playMusic(map.theme.music);
     this.audio.play(9012);
-    this.ui.toast(poi.name);
+    this.ui.toast(this.placeTitle());
     this.busy = false;
     this.refresh();
     this.save("auto");
@@ -2383,7 +2390,7 @@ export class Game {
       switch (e.type) {
         case "text":
           // a computer of the spaceship (item 68) shows its text on the ComputerScreen, everything else on the scroll
-          if (a.kind === "lore") await (Number(a.params.item) === COMPUTER_ITEM || Number(a.params.item) === CONSOLE_ITEM ? ui.computerMessage(e.text, rt?.poi.name ?? "") : ui.message(e.text, rt?.poi.name ?? ""));
+          if (a.kind === "lore") await (Number(a.params.item) === COMPUTER_ITEM || Number(a.params.item) === CONSOLE_ITEM ? ui.computerMessage(e.text, this.placeTitle()) : ui.message(e.text, this.placeTitle()));
           else ui.log(e.text, e.tone ?? (a.kind === "trap" ? "bad" : "info"));
           break;
         case "gold":
@@ -2482,9 +2489,14 @@ export class Game {
         case "skulls":
           await this.meetSkullMiser();
           break;
-        case "ending":
-          await this.playEnding();
+        case "terminal": {
+          // the console of the bridge writes its question; a no leaves the party free to walk away, a yes starts the ending
+          this.player.locked = true;
+          const start = await ui.terminal(TERMINAL_TITLE, TERMINAL_TEXT, TERMINAL_CURSOR, e.animate);
+          this.player.locked = false;
+          if (start) await this.playEnding();
           break;
+        }
         case "condition":
           ui.log(`${this.state.party.characters[e.character]!.name} is ${e.condition.toLowerCase()}!`, "bad");
           break;
@@ -2600,6 +2612,9 @@ export class Game {
   private async playEnding(): Promise<void> {
     this.player.locked = true;
     this.state.opened.add("game:won");
+    // the movie has its own sound: the music and the hum of the engines stop when it starts (6. 11. 2026)
+    this.audio.stopMusic();
+    this.audio.setAmbient(new Map());
     await new Promise<void>((resolve) => {
       const video = document.createElement("video");
       video.src = "assets/ui/outro.mp4";
@@ -2617,6 +2632,9 @@ export class Game {
       void video.play().catch(done);
     });
     await this.endingScroll();
+    // back in the ship: its music and the hum of the engines return
+    this.audio.playMusic(this.interior?.map.theme.music ?? 2);
+    this.updateAmbient();
     this.player.locked = false;
   }
 
@@ -3042,10 +3060,31 @@ export class Game {
    * has to wait for the shot to arrive. `spell` is the kind of a cast spell: it is one projectile aimed at the farthest
    * monster it hits; without it every ranged attack is a volley of arrows.
    */
-  private launchPartyShots(events: CombatEvent[], spell?: ProjectileKind): Map<string, number> {
+  private launchPartyShots(events: CombatEvent[], spell?: ProjectileKind, area?: "meteor_shower" | "elemental_storm"): Map<string, number> {
     const flights = new Map<string, number>();
     const hits = events.filter((e): e is PartyAttackEvent => e.type === "party_attack" && e.kind !== "melee");
     const from = this.muzzle();
+    if (area) {
+      hits.forEach((e, i) => {
+        const at = this.monsters.anchor(e.uid);
+        if (!at) return;
+        if (area === "meteor_shower") {
+          // fireballs fall out of the sky onto every monster, a little aslant and one after the other
+          const delay = (i % 8) * 0.06;
+          const start = { x: at.x + ((i % 3) - 1) * 1.4, y: at.y + METEOR_HEIGHT, z: at.z + ((i % 2) * 2 - 1) * 1.4 };
+          this.later(delay, () => this.projectiles.launch("fire", start, at, 1, METEOR_FALL_SECONDS));
+          flights.set(e.uid, delay + METEOR_FALL_SECONDS);
+          return;
+        }
+        // the element appears in front of the monster (on its tile, towards the party, so that it is not inside the monster) and fades out
+        const away = Math.hypot(from.x - at.x, from.z - at.z) || 1;
+        const front = { x: at.x + ((from.x - at.x) / away) * STORM_FRONT, y: at.y, z: at.z + ((from.z - at.z) / away) * STORM_FRONT };
+        const element = e.element === "ice" ? "ice" : e.element === "acid" ? "acid" : "fire";
+        this.projectiles.flash(element, front);
+        flights.set(e.uid, 0);
+      });
+      return flights;
+    }
     if (spell) {
       let far: { at: Point; dist: number } | null = null;
       for (const e of hits) {
@@ -3070,7 +3109,7 @@ export class Game {
     const m = this.enc.monsters.find((x) => x.uid === uid);
     if (!m) return 0;
     const seconds = flightSeconds(Math.hypot(m.x - this.player.tx, m.y - this.player.ty));
-    const kind = fliesAsMissile(m.defId) ? "missile" : monsterProjectile(damageType);
+    const kind = fliesAsMissile(m.defId) ? "missile" : firesLaser(m.defId) ? "laser" : monsterProjectile(damageType);
     this.later(delay, () => {
       const from = this.monsters.anchor(uid);
       // aimed at the camera, a little lower so that the last frames are not cut off by the near plane
@@ -3106,9 +3145,9 @@ export class Game {
    * the party's arrows and spells fly first and their hits show when they arrive, then the monsters answer (their shots
    * fly as well). Melee has no flight, so it all shows at once.
    */
-  private handleEvents(events: CombatEvent[], spell?: ProjectileKind): void {
+  private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: "meteor_shower" | "elemental_storm"): void {
     const party = this.state.party;
-    const flights = this.launchPartyShots(events, spell);
+    const flights = this.launchPartyShots(events, spell, area);
     const landing = (uid: string) => flights.get(uid) ?? 0;
     // the monsters answer when the party's last shot has landed
     const answer = Math.max(0, ...flights.values());
@@ -3389,6 +3428,11 @@ export class Game {
     const { tx, ty } = this.player;
     const view = this.gridView();
     const near = (radius: number) => this.enc.monsters.filter((m) => m.hp > 0 && !isPhased(m) && (m.x - tx) ** 2 + (m.y - ty) ** 2 <= radius * radius);
+    if (isAreaSpell(spellId)) {
+      // the meteors fall from the sky: no roof, no storm of fire
+      if (spellId === 72 && !(this.outsideNow() || this.interior?.map.theme.open)) return "Meteor Shower only works outside.";
+      return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS) ? null : "There is no monster in range.";
+    }
     if (isAttackSpell(spellId)) {
       const m = this.focusMonster();
       if (!m) return "There is nothing to aim at.";
@@ -3537,9 +3581,9 @@ export class Game {
         return true;
       }
       case 26: {
-        const lines = identifyMonsters(this.enc, tx, ty).map((m) => `${m.name}: ${m.hp}/${m.maxHp} hit points, armor ${m.armor}, ${m.attacks} attack${m.attacks === 1 ? "" : "s"} a round${m.abilities ? `, ${m.abilities}` : ""}`);
+        const rows = identifyMonsters(this.enc, tx, ty);
         this.audio.play(9039);
-        await this.ui.message(lines.join("\n"), "Identify Monster");
+        await this.ui.identifyReport(rows);
         return true;
       }
       case 32: {
@@ -3735,6 +3779,16 @@ export class Game {
         this.ui.log(FIZZLE_TEXT[result.reason]?.(c.name) ?? `The spell fizzles (${result.reason.replace(/_/g, " ")}).`, "bad");
         break;
       case "attack": {
+        // Meteor Shower and Elemental Storm hit every monster in the action radius: nothing to aim at (6. 11. 2026)
+        if (result.special === "meteor_shower" || result.special === "elemental_storm") {
+          const { tx, ty } = this.player;
+          const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), result.special, { damage: result.damage, type: result.type });
+          // the sound of every element that falls (the storm throws all three)
+          const elements = new Set(events.flatMap((e) => (e.type === "party_attack" && e.element ? [e.element] : [])));
+          for (const element of elements.size > 0 ? elements : [result.type]) this.audio.play(ATTACK_SOUND[element] ?? 9029);
+          this.handleEvents(events, undefined, result.special);
+          break;
+        }
         const target = this.focusMonster();
         if (!target) break; // checked before the spell was paid for; only a monster that vanished in between gets here
         this.audio.play(ATTACK_SOUND[result.type] ?? 9029);
@@ -4650,12 +4704,21 @@ export class Game {
     return { open: view.open.length > shown.length ? [...shown, `... and ${view.open.length - shown.length} more (J)`] : shown, done: view.done.length };
   }
 
+  /**
+   * The name of the place the party stands in, for titles and pop-ups. Inside the spaceship it is the section (it changes at the airlocks), not the name of the
+   * pyramid that opened it (6. 11. 2026: the pop-up on entering showed the pyramid's name).
+   */
+  private placeTitle(): string {
+    const rt = this.interior;
+    if (!rt) return "The wilds";
+    return rt.map.spaceship ? (SECTION_NAMES[sectionAt(rt.map.spaceship, this.player.tx, this.player.ty)] ?? rt.poi.name) : rt.poi.name;
+  }
+
   private hudInfo(): HudInfo {
     const rt = this.interior;
     const tile = this.mode === "overworld" ? this.world.tile(this.player.tx, this.player.ty) : null;
     return {
-      // inside the spaceship the name is the section the party stands in (it changes at the airlocks), not the name of the pyramid that opened it
-      place: rt ? (rt.map.spaceship ? (SECTION_NAMES[sectionAt(rt.map.spaceship, this.player.tx, this.player.ty)] ?? rt.poi.name) : rt.poi.name) : "The wilds",
+      place: this.placeTitle(),
       sub: rt?.campaign ? "campaign" : rt ? `${rt.map.theme.id.replace(/_/g, " ")} - level ${rt.poi.tier}` : `${tile ? OVERWORLD_THEMES[tile.biome === BIOME.OCEAN ? BIOME.MEADOW : tile.biome].id : ""}`,
       facing: this.player.facing,
       // the world is a globe: the position shown is the one on the map, not how far the party has walked past the seam
@@ -5002,7 +5065,8 @@ export class Game {
    * the free light and then fades in, instead of one popping off and the other on in a single frame. By day outside they add nothing; underground and at night they do.
    */
   private updateLamps(dt: number): void {
-    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0) return;
+    const beams = this.projectiles.glows();
+    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0 && beams.length === 0) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
     const { x, z } = this.player;
@@ -5010,6 +5074,8 @@ export class Game {
     const carried: LampSource[] = this.glowMonsters
       ? this.monsters.glowing(this.glowModels).map((g) => ({ ...MONSTER_GLOW.get(g.defId)!, x: g.x, y: g.y, z: g.z, key: `m:${g.uid}` }))
       : [];
+    // so do the lasers of the robots: a blue light flies along with each beam, and fades in and out quickly
+    for (const b of beams) carried.push({ ...LASER_LAMP, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE });
     // the Orb in the party is no longer at its place: its lamp goes out with it
     const orbAway = this.state.party.mascot === "Orb";
     const near = [...this.lamps, ...this.lootLamps, ...this.mascotLamps, ...carried]
@@ -5018,11 +5084,11 @@ export class Game {
       .filter((e) => e.d < LAMP_REACH)
       .sort((a, b) => a.d - b.d)
       .slice(0, this.lampSlots.length);
-    const step = Math.min(dt, 0.1) / LAMP_FADE;
     for (const slot of this.lampSlots) {
       if (!slot.lamp) continue;
       const key = slot.lamp.key;
       const e = near.find((n) => n.lamp.key === key);
+      const step = Math.min(dt, 0.1) / (slot.lamp.fade ?? LAMP_FADE);
       if (e) {
         slot.lamp = e.lamp;
         const target = Math.min(1, (LAMP_REACH - e.d) / 4);

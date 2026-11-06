@@ -140,5 +140,7 @@
  * 49 = the spaceship's objects (user, 6. 11. 2026): nothing in the room of a section's tube, crystals, orbs and crates spread over the rooms, objects never shut a passage (`blocksPassage`), two cells round the console free.
  * 50 = the spaceship (user, 6. 11. 2026): every robot of the game turns up in the four sections after the bridge (not only the ED-409), steps of one cell in its walls are smoothed away so that the round corner models fit (`straightenCorners`).
  * 51 = the spaceship's doors (user, 6. 11. 2026): a sliding door in each corridor that leaves a room, shut behind the party again (`actions/spaceship.ts`, param `slide`); the airlocks look the same but stay open.
+ * 52 = the spaceship's doors stand only between straight walls (user, 6. 11. 2026): two cells of straight wall either side of a door (`straightFor`).
+ * Also the shelter of a town (trees and rock three tiles from its footprint, `SHELTER_*` in `world.ts`) and at most three monsters within the action radius of a town's exit (`EXIT_MONSTER_LIMIT`: the huts keep out of it, the wild groups there are cut down).
  */
-export const GEN_VERSION = 51;
+export const GEN_VERSION = 52;

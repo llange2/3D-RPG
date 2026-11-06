@@ -26,14 +26,15 @@ describe("the sliding doors of the spaceship (6. 11. 2026)", () => {
       const locks = doors.filter((d) => d.params.airlock === true);
       const plain = doors.filter((d) => d.params.airlock !== true);
       expect(locks.length, seed).toBe(4);
-      expect(plain.length, seed).toBeGreaterThan(8);
+      // (fewer than before the doors asked for two cells of straight wall either side, 6. 11. 2026)
+      expect(plain.length, seed).toBeGreaterThan(3);
       const floor = (x: number, y: number) => map.cells[y * map.width + x] === CELL.FLOOR;
       for (const d of plain) {
         expect(d.params.slide, `${seed} ${d.uid}`).toBe(true);
-        // a straight piece of corridor: walls on both sides of the door and of the cells before and behind it, floor along the way
+        // a straight piece of corridor: walls on both sides of the door and of the two cells before and behind it, floor along the way (a door stands only between straight walls, there are no gaps)
         const [ax, ay] = d.params.axis === "x" ? [1, 0] : [0, 1];
         expect(floor(d.x - ax, d.y - ay) && floor(d.x + ax, d.y + ay), `${seed} ${d.uid} floor before and behind`).toBe(true);
-        for (const k of [-1, 0, 1]) for (const s of [-1, 1]) expect(floor(d.x + ax * k + ay * s, d.y + ay * k + ax * s), `${seed} ${d.uid} walls at the side`).toBe(false);
+        for (const k of [-2, -1, 0, 1, 2]) for (const s of [-1, 1]) expect(floor(d.x + ax * k + ay * s, d.y + ay * k + ax * s), `${seed} ${d.uid} walls at the side`).toBe(false);
       }
       // two doors never stand close together
       for (const p of doors) for (const q of doors) if (p !== q) expect(Math.abs(p.x - q.x) + Math.abs(p.y - q.y), `${seed} ${p.uid} ${q.uid}`).toBeGreaterThanOrEqual(3);

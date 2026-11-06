@@ -2,7 +2,7 @@ import { LAYER, rngFor, type Rng } from "../core/rng";
 import { pickSeaMonster, pickWildMonster } from "./difficulty";
 import { hutsOf } from "./huts";
 import { isqrt, wrapDist2, type Island } from "./islands";
-import { SAFE_RADIUS, inSafeZone, inStrongKeepOff } from "./safezone";
+import { SAFE_RADIUS, inSafeZone, inStrongKeepOff, nearTownExit } from "./safezone";
 import { CHUNK_SIZE, GROUND, isTileWalkable, wrap } from "./types";
 import type { World } from "./world";
 
@@ -24,6 +24,8 @@ const SEA_PER_GROUP = 700;
 const CANDIDATES = 8;
 /** Tries to find a first candidate at all (a chunk of mountains, trees and water would otherwise stay empty). */
 const GIVE_UP = 400;
+/** No group stands nearer than this (tiles) to another group, a hut or a place. */
+const MIN_GROUP_GAP = 3;
 /** How much ground `reachesShore` looks at. */
 const COAST_LOOK = 300;
 
@@ -65,7 +67,8 @@ function reachesShore(world: World, x: number, y: number): boolean {
  * A small island may have no such ground at all, nothing but pockets between rocks and trees; `shore` then takes the pockets that a party landing from the sea can reach.
  */
 function fitsLand(world: World, isl: Island, x: number, y: number, shore: boolean): boolean {
-  if (world.islandAt(x, y) !== isl || inSafeZone(world, x, y)) return false;
+  // (nothing stands within the action radius of a town's exit: the party that leaves a town meets at most three monsters, in fact none, `EXIT_MONSTER_LIMIT`)
+  if (world.islandAt(x, y) !== isl || inSafeZone(world, x, y) || nearTownExit(world, x, y)) return false;
   if (world.tierAt(x, y) > 1 && inStrongKeepOff(world, x, y)) return false;
   const t = world.tile(x, y);
   if (t.poiId !== null || !isTileWalkable(t) || t.ground === GROUND.ROAD || t.ground === GROUND.BRIDGE || t.ground === GROUND.PASS || t.ground === GROUND.WATER || t.ground === GROUND.SHALLOW) return false;
@@ -85,9 +88,11 @@ function bestSpot(world: World, rng: Rng, draw: () => { x: number; y: number }, 
     const x = world.wrapX(c.x);
     const y = world.wrapY(c.y);
     if (!fits(x, y)) continue;
-    found++;
     let gap = Infinity;
     for (const p of near) gap = Math.min(gap, wrapDist2(x, y, p.x, p.y, world.width, world.height));
+    // a spot right next to another group or hut is no spot: where the ground left over (round the shelters of the towns) is a few pockets, a group has none rather than two stand together
+    if (gap < MIN_GROUP_GAP * MIN_GROUP_GAP) continue;
+    found++;
     if (gap > bestGap) {
       bestGap = gap;
       best = { x, y };
@@ -137,7 +142,7 @@ function planOf(world: World): Map<number, OverworldSpawn[]> {
   const rng = rngFor(world.rootSeed, LAYER.SPAWN, "sea");
   // open sea: no land within three tiles (the shore is shallow, the sea beyond it deep), told from the rasters of the islands: no chunk has to be built for it
   const ring: readonly (readonly [number, number])[] = [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3], [2, 2], [-2, 2], [2, -2], [-2, -2]];
-  const deep = (x: number, y: number) => ring.every(([dx, dy]) => !world.islandAt(x + dx, y + dy)) && !inSafeZone(world, x, y);
+  const deep = (x: number, y: number) => ring.every(([dx, dy]) => !world.islandAt(x + dx, y + dy)) && !inSafeZone(world, x, y) && !nearTownExit(world, x, y);
   let wet = 0;
   const samples = 1200;
   for (let i = 0; i < samples; i++) if (deep(rng.int(world.width), rng.int(world.height))) wet++;

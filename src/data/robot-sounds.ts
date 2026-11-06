@@ -38,6 +38,9 @@ export function robotAttackSound(defId: number): number | null {
 /** The Titanic Automato shoots a missile (the model `proj_missile`) where other monsters of its damage type shoot a fireball. */
 export const fliesAsMissile = (defId: number): boolean => defId === TITANIC_AUTOMATO;
 
+/** The ED-409, the Terminator and the Iron Wizard fire a blue laser beam (a thin cylinder with a light that flies along) where other monsters of their damage type shoot a fireball. */
+export const firesLaser = (defId: number): boolean => defId === IRON_WIZARD || defId === TERMINATOR || defId === ED_409;
+
 /** How many steps are heard for every tile a robot crosses (0 for a monster that makes no such noise). */
 export function robotStepSounds(defId: number): number {
   return defId === TITANIC_AUTOMATO || defId === ED_409 ? 2 : 0;

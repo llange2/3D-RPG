@@ -1,4 +1,5 @@
 import { wrapDist2 } from "./islands";
+import { wrapDelta } from "./types";
 import type { World } from "./world";
 
 /**
@@ -29,6 +30,34 @@ export const STRONG_KEEP_OFF = SAFE_RADIUS + 9;
 /** Is the tile too near the town and the start for a monster stronger than level 1? */
 export function inStrongKeepOff(world: World, x: number, y: number): boolean {
   return safeSpots(world).some((p) => wrapDist2(x, y, p.x, p.y, world.width, world.height) <= STRONG_KEEP_OFF * STRONG_KEEP_OFF);
+}
+
+/**
+ * The party that steps out of a town has at most this many monsters within the action radius of the exit (user, 6. 11. 2026). The rule keeps them all out of that radius
+ * (`nearTownExit`: the huts, the wild groups on land and the groups of the sea), so the limit is a guarantee that `tests/unit/playtest44.test.ts` counts, not a number to fill up.
+ */
+export const EXIT_MONSTER_LIMIT = 3;
+/** The action radius of the monsters (`MONSTER_ACTION_RADIUS` in `sim/encounter.ts`, which the world does not import). */
+export const EXIT_RADIUS = 7;
+
+const exits = new WeakMap<World, { x: number; y: number }[]>();
+
+/** The tiles the party stands on when it comes out of a town: the front of every town of the world. */
+export function townExits(world: World): { x: number; y: number }[] {
+  let list = exits.get(world);
+  if (!list) {
+    list = world.allPois().filter((p) => p.kind === "town").map((p) => {
+      const front = world.frontOf(p);
+      return { x: front.x, y: front.y };
+    });
+    exits.set(world, list);
+  }
+  return list;
+}
+
+/** Is the tile within the action radius of the exit of a town (square, round the globe)? */
+export function nearTownExit(world: World, x: number, y: number): boolean {
+  return townExits(world).some((e) => Math.abs(wrapDelta(x, e.x, world.width)) <= EXIT_RADIUS && Math.abs(wrapDelta(y, e.y, world.height)) <= EXIT_RADIUS);
 }
 
 /** Is the tile inside the safe zone? */

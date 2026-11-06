@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildMapContent, validateContent } from "../../src/actions";
 import { resolveAction, type ActionContext, type ActionOutcome } from "../../src/actions/handlers";
 import type { ActionInstance } from "../../src/actions/types";
-import { BRIDGE, CONTROL_ROOM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, ENGINE_ROOM, LIFE_FLAG, LIFE_SUPPORT, ORBS_IN_SPACESHIP, SECTIONS, STORAGE_BAY } from "../../src/data/quest-table";
+import { BRIDGE, CONSOLE_SEEN_FLAG, CONTROL_ROOM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, ENGINE_ROOM, LIFE_FLAG, LIFE_SUPPORT, ORBS_IN_SPACESHIP, SECTIONS, STORAGE_BAY } from "../../src/data/quest-table";
 import { analyzeTopology, generateInterior, planDungeon } from "../../src/interiors";
 import { sectionAt } from "../../src/interiors/spaceship";
 import { carriedItems, createDefaultParty, giveItem } from "../../src/sim/party";
@@ -233,7 +233,7 @@ describe("the spaceship (quest document 1.5, quest_7)", () => {
     const party = createDefaultParty();
     const opened = new Set<string>();
     const ctx: ActionContext = { party, rootSeed: world.rootSeed, content, opened, monsterThemes: {}, tier: 5 };
-    const ends = () => resolveAction(consoleAction, { ...ctx, answer: "yes" }).effects.some((e) => e.type === "ending");
+    const ends = () => resolveAction(consoleAction, ctx).effects.some((e) => e.type === "terminal");
     // nothing works yet
     expect(resolveAction(consoleAction, ctx).effects[0]).toMatchObject({ text: "Ship not fully operational" });
     expect(resolveAction(consoleAction, ctx).effects.some((e) => e.type === "sound" && e.id === 9014)).toBe(true);
@@ -245,13 +245,18 @@ describe("the spaceship (quest document 1.5, quest_7)", () => {
     expect(ends()).toBe(false);
     opened.add(ENGINES_FLAG);
     expect(ends()).toBe(true);
-    // the heroes are asked before the card goes in: without an answer nothing ends, a no leaves everything as it was
-    expect(resolveAction(consoleAction, ctx).effects.map((e) => e.type)).toEqual(["confirm"]);
-    expect(resolveAction(consoleAction, { ...ctx, answer: null }).effects).toEqual([]);
+    // the screen types its question the first time, and shows it at once after that (the game asks yes or no and starts the ending on a yes)
+    const first = resolveAction(consoleAction, ctx);
+    expect(first.effects).toEqual([{ type: "terminal", animate: true }]);
+    expect(first.state?.add).toEqual([CONSOLE_SEEN_FLAG]);
+    opened.add(CONSOLE_SEEN_FLAG);
+    const again = resolveAction(consoleAction, ctx);
+    expect(again.effects).toEqual([{ type: "terminal", animate: false }]);
+    expect(again.state).toBeUndefined();
     // the systems without the card: denied, with the slot's word
     const poor = createDefaultParty();
     const without = resolveAction(consoleAction, { ...ctx, party: poor });
-    expect(without.effects.some((e) => e.type === "ending")).toBe(false);
+    expect(without.effects.some((e) => e.type === "terminal")).toBe(false);
     expect(without.effects[0]).toMatchObject({ text: expect.stringContaining("black key card") });
     // the tubes only lead back to the pyramid now
     const tube = content.actions.find((a) => a.kind === "tube")!;

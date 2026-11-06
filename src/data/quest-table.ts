@@ -83,6 +83,8 @@ export const PEARL_GOLD = 50_000;
 /** The computer terminal (old item 68): its messages show on the ComputerScreen. */
 export const COMPUTER_ITEM = 68;
 export const ENGINES_FLAG = "ship:engines";
+/** The party has read the text of the console of the bridge once: it stands there at once from then on, without the typewriter. */
+export const CONSOLE_SEEN_FLAG = "ship:console";
 export const ENGINE_HUM_SOUND = 9;
 export const ENGINE_HUM_LEVEL = 0.7;
 

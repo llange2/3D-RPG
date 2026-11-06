@@ -29,6 +29,69 @@ export interface SpellSheet {
   placeholder: number[];
 }
 
+/** Where the picture lies inside a cell: the plate's dark red rim stays as it is, only the paper inside is looked at and tinted. */
+const INSET = { x: 12, y: 8 };
+/** A picture whose darkest ink is less saturated than this reads as grey on the cream plate (the sepia ones are 0.5 to 0.8). */
+const GRAY_INK_SATURATION = 0.46;
+/** The sepia of the pictures that were drawn in brown. */
+const BROWN: [number, number, number] = [150, 100, 52];
+
+const lumOf = (r: number, g: number, b: number): number => 0.299 * r + 0.587 * g + 0.114 * b;
+
+/**
+ * Some of the pictures are drawn in a grey ink and stand out between the brown ones (6. 11. 2026). Their ink is brought to the brown of the others: every pixel
+ * keeps how dark it is (its share of the way from the paper to the darkest ink), and the colour of that way runs from the paper's cream to the brown. The plate itself
+ * (its rim, its cream) stays as it is; a picture that is brown already is returned untouched.
+ */
+export function warmGrayIcon(data: Buffer, width: number, height: number): Buffer {
+  const inside = (x: number, y: number): boolean => x >= INSET.x && x < width - INSET.x && y >= INSET.y && y < height - INSET.y;
+  const at = (x: number, y: number): number => (y * width + x) * 4;
+  const lums: number[] = [];
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (inside(x, y)) lums.push(lumOf(data[at(x, y)]!, data[at(x, y) + 1]!, data[at(x, y) + 2]!));
+  const order = [...lums].sort((a, b) => a - b);
+  const darkLimit = order[Math.max(20, Math.floor(order.length * 0.04))]!;
+  const paperLimit = order[Math.floor(order.length * 0.7)]!;
+  const dark = [0, 0, 0];
+  const paper = [0, 0, 0];
+  let nDark = 0;
+  let nPaper = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!inside(x, y)) continue;
+      const i = at(x, y);
+      const l = lumOf(data[i]!, data[i + 1]!, data[i + 2]!);
+      if (l <= darkLimit) {
+        for (let c = 0; c < 3; c++) dark[c]! += data[i + c]!;
+        nDark++;
+      } else if (l >= paperLimit) {
+        for (let c = 0; c < 3; c++) paper[c]! += data[i + c]!;
+        nPaper++;
+      }
+    }
+  }
+  if (nDark === 0 || nPaper === 0) return data;
+  const ink = dark.map((v) => v / nDark);
+  const cream = paper.map((v) => v / nPaper);
+  const peak = Math.max(...ink);
+  if (peak <= 0 || (peak - Math.min(...ink)) / peak >= GRAY_INK_SATURATION) return data;
+  const inkLum = lumOf(ink[0]!, ink[1]!, ink[2]!);
+  const creamLum = lumOf(cream[0]!, cream[1]!, cream[2]!);
+  if (creamLum - inkLum < 20) return data;
+  // the brown, as dark as the picture's own darkest ink
+  const scale = inkLum / lumOf(...BROWN);
+  const target = BROWN.map((v) => Math.min(255, v * scale));
+  const out = Buffer.from(data);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!inside(x, y)) continue;
+      const i = at(x, y);
+      const share = Math.min(1, Math.max(0, (creamLum - lumOf(data[i]!, data[i + 1]!, data[i + 2]!)) / (creamLum - inkLum)));
+      for (let c = 0; c < 3; c++) out[i + c] = Math.round(cream[c]! + (target[c]! - cream[c]!) * share);
+    }
+  }
+  return out;
+}
+
 export async function buildSpellIcons(): Promise<{ files: number; bytes: number }> {
   const sheetOut = join(OUT, "ui", "spells.webp");
   const registerOut = join(OUT, "ui", "spells.json");
@@ -40,7 +103,9 @@ export async function buildSpellIcons(): Promise<{ files: number; bytes: number 
   const cellOf: Record<string, number> = {};
   const uses = new Map<number, number>();
   for (let id = 1; id <= SPELLS; id++) {
-    const { data } = await sharp(sources[id - 1]!, { failOn: "none" }).resize(CELL.w, CELL.h, { fit: "fill" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const resized = await sharp(sources[id - 1]!, { failOn: "none" }).resize(CELL.w, CELL.h, { fit: "fill" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    // the pictures drawn in a grey ink get the brown of the others (the plate itself is untouched)
+    const data = warmGrayIcon(resized.data, CELL.w, CELL.h);
     const hash = createHash("sha1").update(data).digest("hex");
     let cell = byHash.get(hash);
     if (cell === undefined) {

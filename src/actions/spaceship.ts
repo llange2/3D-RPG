@@ -120,7 +120,8 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
     const along = axis === "x" ? { dx: 1, dy: 0 } : { dx: 0, dy: 1 };
     const side = axis === "x" ? { dx: 0, dy: 1 } : { dx: 1, dy: 0 };
     if (!isFloor(x, y) || !isFloor(x - along.dx, y - along.dy) || !isFloor(x + along.dx, y + along.dy)) return false;
-    for (const k of [-1, 0, 1]) for (const s of [-1, 1]) if (isFloor(x + along.dx * k + side.dx * s, y + along.dy * k + side.dy * s)) return false;
+    // (two cells either side: the wall cell beside the cell before or behind the door must not be the end of a wall, or a round outer corner model stands next to the frame and leaves a gap)
+    for (const k of [-2, -1, 0, 1, 2]) for (const s of [-1, 1]) if (isFloor(x + along.dx * k + side.dx * s, y + along.dy * k + side.dy * s)) return false;
     return true;
   };
   const doorCells: { x: number; y: number }[] = [];
@@ -138,7 +139,7 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
         if (s.axis === "x") for (let y = r.y; y < r.y + r.h; y++) edge.push({ x: s.dx < 0 ? r.x : r.x + r.w - 1, y });
         else for (let x = r.x; x < r.x + r.w; x++) edge.push({ x, y: s.dy < 0 ? r.y : r.y + r.h - 1 });
         for (const e of edge) {
-          for (let dist = 2; dist <= 4; dist++) {
+          for (let dist = 2; dist <= 6; dist++) {
             const x = e.x + s.dx * dist;
             const y = e.y + s.dy * dist;
             // (the cells between the room and the door are floor: the corridor)

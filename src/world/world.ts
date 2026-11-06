@@ -93,6 +93,15 @@ const LANDING_GAP = 3;
  */
 const VEG_NEAR = 2;
 const VEG_FAR = 6;
+/**
+ * The shelter of a town (user, 6. 11. 2026: the land round a town was too open, above all on small worlds): trees and mountains stand on the land three tiles from the town's footprint,
+ * just outside the cleared ground, and thinner on the fourth. The roads still lead through (they come first), and the gaps in between are what the dice leave. Permille of the
+ * tiles on each of the two rings that are blocked, and the share of the blocked ones that are rock (a desert has few trees).
+ */
+const SHELTER_AT = 3;
+const SHELTER_PERMILLE = [550, 220] as const;
+const SHELTER_ROCK = 300;
+const SHELTER_ROCK_DESERT = 600;
 /** Permille of the lattice slots near the ways that hold a tree, by biome (a desert has few, a lava land none). */
 const NEAR_TREE: Record<number, number> = { [BIOME.MEADOW]: 450, [BIOME.FOREST]: 800, [BIOME.DESERT]: 250, [BIOME.SNOW]: 600, [BIOME.SWAMP]: 650, [BIOME.LAVA]: 0, [BIOME.OCEAN]: 0 };
 /** Side of a cell of the lattice; a slot lies in the top left 2 x 2 tiles of its cell, so two trees are at least three tiles apart in x or y. */
@@ -234,6 +243,7 @@ export class World {
   private readonly sLump: number;
   private readonly sLattice: number;
   private readonly sThin: number;
+  private readonly sShelter: number;
   /** Indices of the islands that can reach a cell of `INDEX_CELL` x `INDEX_CELL` tiles. */
   private readonly islandIndex: number[][] = [];
   private readonly indexColumns: number;
@@ -277,6 +287,7 @@ export class World {
     this.sLump = t("lump");
     this.sLattice = toInt(derive(this.seed, LAYER.PROPS, "lattice"));
     this.sThin = toInt(derive(this.seed, LAYER.PROPS, "thin"));
+    this.sShelter = toInt(derive(this.seed, LAYER.PROPS, "shelter"));
     this.layout = buildLayout(this.seed, size);
     this.indexColumns = Math.ceil(this.width / INDEX_CELL);
     const rows = Math.ceil(this.height / INDEX_CELL);
@@ -1107,7 +1118,35 @@ export class World {
       }
     }
 
+    // 5. the shelter of a town: trees and rock three tiles out, on land that is still free (no road, no landmark, nothing cleared round a place)
+    // (not within `VEG_NEAR` of a road: the trees near the ways keep two free tiles between them, and the roads keep a clear way out of the shelter)
+    if (ground === GROUND.LAND && deco !== DECO.LANDMARK && !cleared && base.landBiome !== BIOME.LAVA && this.waysDistance(tx, ty, chunk, places) > VEG_NEAR) {
+      const ring = this.townDistance(tx, ty, places) - SHELTER_AT;
+      const permilleBlocked = SHELTER_PERMILLE[ring];
+      if (permilleBlocked !== undefined && permille(hash2(this.sShelter, tx, ty)) < permilleBlocked) {
+        const rockShare = biome === BIOME.DESERT ? SHELTER_ROCK_DESERT : SHELTER_ROCK;
+        if (permille(hash2(this.sShelter + 1, tx, ty)) < rockShare) {
+          ground = GROUND.MOUNTAIN;
+          elevation = MOUNTAIN_LEVEL + 1 + 1500;
+          deco = DECO.NONE;
+        } else deco = DECO.TREE;
+      }
+    }
+
     return { biome, ground, deco, elevation, poiId };
+  }
+
+  /** Chebyshev distance from a tile to the nearest town's footprint, 99 when no town is near. */
+  private townDistance(tx: number, ty: number, places: readonly Poi[]): number {
+    let d = 99;
+    for (const p of places) {
+      if (p.kind !== "town") continue;
+      const b = poiBounds(p);
+      const dx = tx < b.x0 ? b.x0 - tx : tx > b.x1 ? tx - b.x1 : 0;
+      const dy = ty < b.y0 ? b.y0 - ty : ty > b.y1 ? ty - b.y1 : 0;
+      d = Math.min(d, Math.max(dx, dy));
+    }
+    return d;
   }
 
   /** Is this tile the slot of its lattice cell? Each 4 x 4 cell has one, in its top left 2 x 2 tiles: two trees on slots are at least three tiles apart in x or y. */
