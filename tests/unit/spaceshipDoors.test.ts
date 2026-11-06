@@ -51,8 +51,8 @@ describe("the sliding doors of the spaceship (6. 11. 2026)", () => {
       for (const k of ["obj_space_lock", "obj_space_door_left", "obj_space_door_right"]) expect(registry[k], `${file} ${k}`).toBeDefined();
       // the leaves fit the frame's opening: as high as the opening and each as wide as its half with a little overlap
       const b = registry["obj_space_lock"]!.bounds;
-      expect(b[3]! - b[0]!).toBeCloseTo(0.8667, 3);
-      expect(b[4]! - b[1]!).toBeCloseTo(0.9531, 3);
+      expect(b[3]! - b[0]!).toBeCloseTo(1.9023, 3);
+      expect(b[4]! - b[1]!).toBeCloseTo(1.4037, 3);
     }
     expect(doorSound("slide")).toBe(9056);
     expect(filesOf(SOUNDS[9056]!)).toEqual(["space_ship_door"]);

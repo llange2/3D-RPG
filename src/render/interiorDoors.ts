@@ -39,14 +39,16 @@ const SLIDE_FRAME = "obj_space_lock";
 const SLIDE_LEFT = "obj_space_door_left";
 const SLIDE_RIGHT = "obj_space_door_right";
 /**
- * Measured on the triangles of the frame (its own units, 0.867 wide, 0.953 high): the opening is 0.324 wide and its lower edge lies 0.0458 over the model's lowest point.
- * The leaves are 0.172 wide, so that each one covers half of the opening and reaches a little behind the rim, and slide that far into the wall when the door opens.
+ * Measured on the triangles of the frame (its own units, 1.902 wide, 1.404 high, 0.16 deep; the second file of the user, 6. 11. 2026): the opening is 0.929 wide and 0.862 high, its
+ * lower edge lies 0.0389 over the model's lowest point, the slot between the two faces is about 0.05 thick. The leaves are 0.478 wide, so that each one covers half of the opening
+ * and reaches a little behind the rim; when the door opens they slide `SLIDE_LEAF_TRAVEL` (the half width of the opening) to the sides, into the wall, where the frame's faces hide them.
  */
-const SLIDE_LEAF_WIDTH = 0.172;
-const SLIDE_LEAF_LIFT = 0.0458;
+const SLIDE_LEAF_WIDTH = 0.478;
+const SLIDE_LEAF_TRAVEL = 0.47;
+const SLIDE_LEAF_LIFT = 0.0389;
 /** Frame and leaves are scaled alike: the frame fills the cell's width and the wall's height (like the frames of the old maps), the depth follows the width. */
-const SLIDE_WIDTH_UNITS = 0.8667;
-const SLIDE_HEIGHT_UNITS = 0.9531;
+const SLIDE_WIDTH_UNITS = 1.9023;
+const SLIDE_HEIGHT_UNITS = 1.4037;
 /** How far a sliding door is open before the party may walk through (the leaves have then cleared the opening almost completely). */
 export const SLIDE_PASSABLE = 0.75;
 
@@ -253,7 +255,7 @@ export class InteriorDoors {
   }
 
   /**
-   * The frame of a sliding door (always there) and its two leaves at `t` (0 shut, 1 open: they have slid into the wall, a leaf's width to each side, and are hidden by the
+   * The frame of a sliding door (always there) and its two leaves at `t` (0 shut, 1 open: they have slid into the wall, half the opening's width to each side, and are hidden by the
    * frame's faces). Seen from the corridor, the left leaf moves left and the right one right. `still` leaves out the leaves of a door that is on its way.
    */
   private slideParts(d: Door, t: number, frame: boolean, leaves: boolean): PropInstance[] {
@@ -265,7 +267,7 @@ export class InteriorDoors {
     const ux = Math.cos(rotY);
     const uz = -Math.sin(rotY);
     for (const side of [-1, 1] as const) {
-      const lateral = side * (SLIDE_LEAF_WIDTH / 2 + SLIDE_LEAF_WIDTH * t) * d.scale[0];
+      const lateral = side * (SLIDE_LEAF_WIDTH / 2 + SLIDE_LEAF_TRAVEL * t) * d.scale[0];
       out.push({ model: side < 0 ? SLIDE_LEFT : SLIDE_RIGHT, x: d.x + ux * lateral, y: SLIDE_LEAF_LIFT * d.scale[1], z: d.z + uz * lateral, rotY, scale: d.scale[0], scaleXYZ: d.scale });
     }
     return out;
