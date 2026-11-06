@@ -6,7 +6,7 @@ import { Rng, seedFromString } from "../core/rng";
 import { newProgress, type CampaignProgress } from "../campaign/engine";
 import type { CellOverrides } from "../campaign/model";
 import { CAMPAIGN_START, CAMPAIGN_START_CELL } from "../campaign/types";
-import { CHUNK_SIZE, DEFAULT_WORLD_SIZE, WORLD_SIZES, parseWorldSize, wrap, type WorldSize } from "../world/types";
+import { CHUNK_SIZE, DEFAULT_WORLD_SIZE, FULL_DUNGEON_DENSITY, WORLD_SIZES, parseDungeonDensity, parseWorldSize, wrap, type DungeonDensity, type WorldSize } from "../world/types";
 
 /** Gold and items lying on a tile (dropped by a monster). */
 export interface LootPile {
@@ -110,6 +110,8 @@ export interface GameState {
   seed: string;
   /** How big the world is: small, default, large or huge (the seed alone does not tell). */
   size: WorldSize;
+  /** How many of the caves and dungeons the world keeps (title screen, "Dungeons"); a save without it has all of them. */
+  dungeons: DungeonDensity;
   /** Set when the game is played in the campaign maps instead of the endless world. */
   campaign: CampaignSave | null;
   party: Party;
@@ -135,10 +137,11 @@ export interface GameState {
   kills: number;
 }
 
-export function newGameState(seed: string, start: { x: number; y: number; facing: Facing }, size: WorldSize = DEFAULT_WORLD_SIZE): GameState {
+export function newGameState(seed: string, start: { x: number; y: number; facing: Facing }, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY): GameState {
   return {
     seed,
     size,
+    dungeons,
     campaign: null,
     party: createDefaultParty(),
     at: { mode: "overworld", x: start.x, y: start.y, facing: start.facing },
@@ -177,6 +180,8 @@ export interface SaveFile {
     seed: string;
     /** Absent in saves of the endless world, which no longer load as such. */
     size?: WorldSize;
+    /** Absent in saves from before the choice of how many dungeons a world has: they have all of them. */
+    dungeons?: DungeonDensity;
     party: Party;
     at: Location;
     opened: string[];
@@ -204,6 +209,7 @@ export function toSaveFile(state: GameState): SaveFile {
     state: {
       seed: state.seed,
       size: state.size,
+      dungeons: state.dungeons,
       party: state.party,
       at: state.at,
       opened: [...state.opened],
@@ -227,6 +233,7 @@ export function fromSaveFile(file: SaveFile): GameState {
   return {
     seed: s.seed,
     size,
+    dungeons: parseDungeonDensity(s.dungeons),
     party: normalizeParty(s.party),
     at: s.at,
     opened: new Set(s.opened),

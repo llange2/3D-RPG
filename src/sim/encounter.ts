@@ -332,6 +332,17 @@ function scan(view: GridView, enc: Encounter, px: number, py: number, radius: nu
 }
 
 /**
+ * Wakes the monsters that have a way to the party within the radius, without anybody taking a turn (`scan` sets `alerted` for good, and an awake monster opens the sliding doors
+ * in its way). The party opens a door of the spaceship: the monsters behind it come for the party from that moment, not only after they have had a turn of their own. Returns
+ * the monsters that woke up now.
+ */
+export function alertMonsters(view: GridView, enc: Encounter, px: number, py: number, radius = MONSTER_ACTION_RADIUS): MonsterInstance[] {
+  const before = new Set(enc.monsters.filter((m) => m.alerted).map((m) => m.uid));
+  scan(view, enc, px, py, radius);
+  return enc.monsters.filter((m) => m.alerted && !before.has(m.uid));
+}
+
+/**
  * The monsters that would come for a camping party: within the action radius and with a way to it (`distance_in_steps < 9999`
  * of the old rest function). Monsters behind a wall or across water that they cannot cross do not count.
  */

@@ -52,6 +52,9 @@ const SLIDE_HEIGHT_UNITS = 1.4037;
 /** How far a sliding door is open before the party may walk through (the leaves have then cleared the opening almost completely). */
 export const SLIDE_PASSABLE = 0.75;
 
+/** How far an iron gate has risen (or sunk) before the party may walk through: like the doors, the party waits until it is open (6. 11. 2026), no longer passing through the closed bars. */
+export const GATE_PASSABLE = 0.85;
+
 /** What a gate is made of per kind of map: its frame, its size (add_block 47 and 41), the gate item and where the gate goes when it opens. */
 const GATES = {
   dungeon: { frame: "frame_dungeon", scale: [1.5, 1.473, 1.5] as [number, number, number], glb: true, item: 81, direction: "up" as GateDirection },
@@ -209,14 +212,13 @@ export class InteriorDoors {
   }
 
   /**
-   * Can the party step into the door's cell? A sliding or wooden door lets them through once it is open far enough, and not a moment longer than it is meant to be open: the
-   * leaf that starts to close is in the way at once. A gate opens at once.
+   * Can the party step into the door's cell? A sliding or wooden door and an iron gate let them through once they are open far enough, and not a moment longer than they are
+   * meant to be open: the leaf that starts to close is in the way at once.
    */
   isPassable(uid: string): boolean {
     const d = this.doors.get(uid);
     if (!d) return true;
-    if (d.look === "gate") return d.open;
-    return d.open && d.t >= (d.look === "slide" ? SLIDE_PASSABLE : DOOR_PASSABLE);
+    return d.open && d.t >= (d.look === "slide" ? SLIDE_PASSABLE : d.look === "gate" ? GATE_PASSABLE : DOOR_PASSABLE);
   }
 
   update(dt: number): void {

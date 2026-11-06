@@ -4101,5 +4101,23 @@
   "surface": 1.8725,
   "fromObj": false,
   "mean": 0.186
+ },
+ "proj_missile": {
+  "file": "models-original/proj_missile.glb",
+  "tris": 5202,
+  "bytes": 1097608,
+  "bounds": [
+   -0.11450199782848358,
+   -0.47582998871803284,
+   -0.11791999638080597,
+   0.11352500319480896,
+   0.47582998871803284,
+   0.11743199825286865
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "surface": 0.1675,
+  "fromObj": false,
+  "mean": 0.148
  }
 }

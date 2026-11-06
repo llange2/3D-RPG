@@ -4,7 +4,7 @@ import { ALIGNMENTS, type Alignment } from "../data/castles";
 import { CASTLE_TIERS } from "../data/quest-table";
 import { placeName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
-import { planPlaces } from "../interiors/dungeonPlan";
+import { planPlaces, thinOutPlaces } from "../interiors/dungeonPlan";
 import { SHOWCASE_ID, SHOWCASE_NAME } from "../interiors/showcase";
 import type { DungeonRef } from "../interiors/types";
 import { FIELD_UNIT, ISLAND_EDGE, buildLayout, fieldAt, isqrt, tierOn, wrapDist2, type Island, type Layout } from "./islands";
@@ -14,6 +14,8 @@ import {
   CHUNK_SIZE,
   DECO,
   DEFAULT_WORLD_SIZE,
+  DUNGEON_DENSITIES,
+  FULL_DUNGEON_DENSITY,
   GROUND,
   SIDE_DELTA,
   WORLD_SIZES,
@@ -24,6 +26,7 @@ import {
   wrapDelta,
   type Biome,
   type Deco,
+  type DungeonDensity,
   type Ground,
   type Poi,
   type PoiKind,
@@ -211,6 +214,8 @@ const SHOWCASE_POI: Poi = { id: SHOWCASE_ID, kind: "dungeon", name: SHOWCASE_NAM
 export class World {
   readonly seedText: string;
   readonly size: WorldSize;
+  /** How many of the caves and dungeons the world keeps (the seed and the size alone do not tell). */
+  readonly density: DungeonDensity;
   /** Tiles across and down; the world is a globe, tile `width` is tile 0 again. */
   readonly width: number;
   readonly height: number;
@@ -249,9 +254,10 @@ export class World {
   private chunkRoads: RoadSeg[][] = [];
   private chunkPois: Poi[][] = [];
 
-  constructor(seedText: string, size: WorldSize = DEFAULT_WORLD_SIZE) {
+  constructor(seedText: string, size: WorldSize = DEFAULT_WORLD_SIZE, density: DungeonDensity = FULL_DUNGEON_DENSITY) {
     this.seedText = seedText;
     this.size = size;
+    this.density = density;
     this.width = WORLD_SIZES[size].width;
     this.height = WORLD_SIZES[size].height;
     this.chunksAcross = this.width / CHUNK_SIZE;
@@ -828,9 +834,18 @@ export class World {
     if (this.planned) return;
     this.planned = true;
     // the quests, keys and orbs are planned for the whole world; the plan says which dungeons are pyramids (they ask for a key card), and those are three tiles wide
-    const placed = this.layout.islands.map((isl) => this.placesOf(isl));
+    let placed = this.layout.islands.map((isl) => this.placesOf(isl));
     this.planCastles(placed.flat());
-    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords, this.castleSpells);
+    // fewer caves and dungeons (title screen, "Dungeons"): after the castles are chosen, so that they stand where they stand in a full world; the pyramids are picked before
+    // places are dropped and handed on. A full world takes the plan's own way, untouched.
+    const share = DUNGEON_DENSITIES[this.density].share;
+    let pyramids: Poi[] | undefined;
+    if (share < 1) {
+      const thinned = thinOutPlaces(this.seed, placed, share);
+      placed = thinned.placed;
+      pyramids = thinned.pyramids;
+    }
+    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords, this.castleSpells, pyramids);
     for (const p of placed.flat()) if (this.dungeonRefs.get(p.id)?.klass === "C") p.size = PYRAMID_SIZE;
     this.plans = this.layout.islands.map((isl, i) => this.planIsland(isl, placed[i]!));
     // the bridge between the start island and the level-3 island: a road from a place on the level-2 half to the place of the other island nearest to it
