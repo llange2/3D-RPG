@@ -86,6 +86,8 @@ export type TownSite =
   | { kind: "fountain"; x: number; y: number; item: number }
   /** The Crow's perch of the start town, in a dead end and facing the street. */
   | { kind: "perch"; x: number; y: number; facing: Facing }
+  /** The Capybara's pocket of the start town (the Easter egg): one cell in the houses behind a `brittle` wall, `facing` the wall. */
+  | { kind: "capybara"; x: number; y: number; facing: Facing }
   /** A gate on a street cell that shuts off a pocket with chests; `axis` is the way through it. */
   | { kind: "cage"; x: number; y: number; axis: "x" | "y" }
   /** A wall between two streets that gives way to a perceptive party (`BRITTLE_WALLS` in `interiors/town.ts`); `axis` is the way through it. The cell is a wall. */

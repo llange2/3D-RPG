@@ -88,14 +88,14 @@ import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampai
 import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
-import { BIRD_PERCH, BLUE_MUSHROOM, MASCOT_ASK, MASCOT_ITEM, isSolidSpotItem, mascotSpotItem } from "../data/mascots";
+import { BIRD_PERCH, BLUE_MUSHROOM, CAPYBARA_ITEM, CAPYBARA_MODEL, CAPYBARA_SCALE, CAPYBARA_YAW, MASCOT_ASK, MASCOT_ITEM, isSolidSpotItem, mascotSpotItem } from "../data/mascots";
 import { COTTAGE_LINES, emptyContainerLine, propLine } from "../data/prop-texts";
 import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
 import { CAVE_EXPLORER, SENSE_STEPS, pickOf, senseFlag, senseLine, wallsSensed } from "./caveSense";
 import { SKULL_MISER_MET,clueFlag, lockSeenFlag, placeSegments, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
-import { overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
+import { capybaraSpot, overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
 import { preloadPortraits } from "../ui/portraitSheets";
@@ -223,7 +223,7 @@ const IDENTIFY_RADIUS = 14;
  * cells (calibrated against screenshot 18 of the old game: 1.4 * (1 - 3.5 / 10.5) = 1.26 * (1 - 3.5 / 13.5) = 0.93), and only the reach grows.
  */
 /** Models of the mascots' places: the five mascots, the empty bird perch and the empty blue mushroom. */
-const MASCOT_MODELS = [...Object.values(MASCOT_ITEM), BIRD_PERCH, BLUE_MUSHROOM].map((id) => itemModelKey(id)).filter((k): k is string => !!k);
+const MASCOT_MODELS = [...Object.values(MASCOT_ITEM), BIRD_PERCH, BLUE_MUSHROOM].map((id) => itemModelKey(id)).filter((k): k is string => !!k).concat(CAPYBARA_MODEL);
 /** The old item 126 "Float": the raft the party stands on while it crosses deep water (Walk on Water, Seafarer). */
 const RAFT_ITEM = 126;
 const RAFT_OWNER = "raft";
@@ -1827,10 +1827,8 @@ export class Game {
       make = () => overworldMascotSpots(this.world);
     } else if (this.mode === "interior" && rt && !rt.campaign && rt.poi.id === START_TOWN_ID) {
       key = `in:${rt.map.key}`;
-      make = () => {
-        const spot = townMascotSpot(rt.map, rt.content);
-        return spot ? [spot] : [];
-      };
+      // the Crow's perch and, behind a brittle wall, the Capybara's pocket
+      make = () => [townMascotSpot(rt.map, rt.content), capybaraSpot(rt.map)].filter((s): s is MascotSpot => s !== null);
     } else {
       this.mascotCache = null;
       return [];
@@ -1863,7 +1861,9 @@ export class Game {
       if (shown === 10) glows.push(lampSource(MASCOT_ORB_LAMP, w.x, w.z, `${MASCOT_ORB_KEY}${s.x},${s.y}`));
       // compass bearing towards the tile it faces (0 north), the same convention as the old map's item rotation
       const bearing = (Math.atan2(s.faceX - s.x, s.y - s.faceY) * 180) / Math.PI;
-      const inst = itemProp(shown, (bearing + 360) % 360, w.x, w.z, this.staticInfo);
+      // the Capybara is no item of the old game: the user's model on its pocket (the prop renderer rests its lowest point on the floor)
+      const inst: PropInstance | null =
+        shown === CAPYBARA_ITEM ? { model: CAPYBARA_MODEL, x: w.x, y: 0, z: w.z, rotY: (((bearing + CAPYBARA_YAW) % 360) * Math.PI) / 180, scale: CAPYBARA_SCALE } : itemProp(shown, (bearing + 360) % 360, w.x, w.z, this.staticInfo);
       if (!inst) continue;
       inst.y += w.y + (this.mode === "overworld" ? groundPropLift() : 0);
       list.push(inst);
@@ -3289,6 +3289,8 @@ export class Game {
           at(landing(e.uid), () => {
             this.ui.log(`The wolf leaps at ${monsterById(e.defId).name} and finishes it off.`, "good");
             this.audio.play(9046);
+            // the wolf's card beside the heroes swells once and shrinks back
+            this.ui.pulseMascot();
           });
           break;
         case "monster_dead": {

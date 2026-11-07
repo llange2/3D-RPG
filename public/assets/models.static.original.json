@@ -4227,5 +4227,23 @@
   "surface": 0.9425,
   "fromObj": false,
   "mean": 0.295
+ },
+ "obj_capybara": {
+  "file": "models-original/obj_capybara.glb",
+  "tris": 10394,
+  "bytes": 1007580,
+  "bounds": [
+   -0.5692790150642395,
+   -0.7728250622749329,
+   -0.9629321694374084,
+   0.5695559978485107,
+   0.7725740671157837,
+   0.9505271911621094
+  ],
+  "animations": [],
+  "groundTop": -0.7,
+  "surface": 0.645,
+  "fromObj": false,
+  "mean": 0.249
  }
 }

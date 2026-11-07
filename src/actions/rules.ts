@@ -313,9 +313,9 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   const landings = new Set<number>();
   for (const act of actions) if ((act.kind === "teleporter" || act.kind === "riddle" || act.kind === "qportal") && (act.params.tx !== 0 || act.params.ty !== 0) && act.params.tx !== undefined) landings.add(idx(Number(act.params.tx), Number(act.params.ty)));
 
-  // the Crow's perch is not an action but it is there: its cell is taken, and solid while the Crow sits on it
+  // the Crow's perch and the Capybara's pocket are not actions but they are there: their cells are taken, and solid while the mascot sits on them
   for (const site of map.sites ?? []) {
-    if (site.kind !== "perch") continue;
+    if (site.kind !== "perch" && site.kind !== "capybara") continue;
     occupied.add(idx(site.x, site.y));
     blockedCells.add(idx(site.x, site.y));
   }

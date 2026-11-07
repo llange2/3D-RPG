@@ -221,6 +221,7 @@ export function computeAnchors(map: InteriorMap, topo: Topology): AnchorSet {
         by.vaultGuard.push({ ...a, params: { boss: s.boss } });
         break;
       case "perch":
+      case "capybara":
         break;
       case "fountain":
         by.fountainSite.push(a);

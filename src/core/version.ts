@@ -143,5 +143,6 @@
  * 52 = the spaceship's doors stand only between straight walls (user, 6. 11. 2026): two cells of straight wall either side of a door (`straightFor`).
  * Also the shelter of a town (trees and rock three tiles from its footprint, `SHELTER_*` in `world.ts`) and at most three monsters within the action radius of a town's exit (`EXIT_MONSTER_LIMIT`: the huts keep out of it, the wild groups there are cut down).
  * 53 = the wall decorations of the dungeons (45th playtest, point 4): one kind per dungeon by the monsters that live in it, hung every ten cells on the walls (`data/wall-deco.ts`); the moose king left the random props.
+ * 54 = the Capybara (user, 7. 11. 2026): the start town has one more brittle wall, behind which a one-cell pocket holds the Easter egg mascot (`CAPYBARA_POCKET` in `interiors/town.ts`, site `capybara`).
  */
-export const GEN_VERSION = 53;
+export const GEN_VERSION = 54;

@@ -38,6 +38,13 @@ const PORTAL_ITEM = 3;
  */
 const BRITTLE_WALLS: Readonly<Record<number, readonly (readonly [number, number])[]>> = { 4: [[3, 3], [5, 3], [7, 3]] };
 
+/**
+ * The Capybara's pocket (7. 11. 2026, the user's Easter egg) in the start town, Fountain Head (plan coordinates): the street cell, the house wall that is brittle and the cell of the houses
+ * behind it, which is empty in the plan (the plan has hollow houses; the pocket opens at the end of `generateTown`, so that nothing else is put in it). The wall is a brittle wall like the ones of Swamp Town:
+ * only a party with the Perceptive talent sees that it gives way.
+ */
+const CAPYBARA_POCKET = { street: [5, 3], wall: [5, 4], pocket: [5, 5] } as const;
+
 /** The ground plan of a tier: tier 1 is Fountain Head, tier 5 Blistering Heights (`data/town-blueprints.ts`). */
 export function blueprintFor(tier: number): TownBlueprint {
   return TOWN_BLUEPRINTS.find((b) => b.tier === Math.min(5, Math.max(1, tier))) ?? TOWN_BLUEPRINTS[0]!;
@@ -125,6 +132,17 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
     if (!b.isFloor(x, y) || through === null) continue;
     b.set(x, y, CELL.BUILDING);
     brittle.push({ x, y, axis: through });
+  }
+  // the Capybara's wall: the same kind of site as the brittle walls above, with the one empty cell of the houses behind it (opened at the end)
+  let capybara: { x: number; y: number; facing: Facing } | null = null;
+  if (ctx.key === START_TOWN_KEY && plan.tier === 1) {
+    const [sx, sy] = place(...CAPYBARA_POCKET.street);
+    const [wx, wy] = place(...CAPYBARA_POCKET.wall);
+    const [px, py] = place(...CAPYBARA_POCKET.pocket);
+    if (b.isFloor(sx, sy) && b.get(wx, wy) === CELL.BUILDING && !b.isFloor(px, py)) {
+      brittle.push({ x: wx, y: wy, axis: wx === sx ? "y" : "x" });
+      capybara = { x: px, y: py, facing: SIDES.find((f) => FACING_DELTA[f].dx === wx - px && FACING_DELTA[f].dy === wy - py)! };
+    }
   }
 
   const isWall = (x: number, y: number) => b.get(x, y) !== CELL.FLOOR;
@@ -648,6 +666,12 @@ export function generateTown(rng: Rng, ctx: BuildContext): InteriorMap {
       sites.push({ kind: "guard", x: k % width, y: (k - (k % width)) / width, monsters: guards });
       used.add(k);
     }
+  }
+
+  // the Capybara's pocket (see `CAPYBARA_POCKET`) opens only now, so that no rule, shop or gate has taken the cell on the way: it is the one cell of the houses behind the brittle wall
+  if (capybara) {
+    b.set(capybara.x, capybara.y, CELL.FLOOR);
+    sites.push({ kind: "capybara", x: capybara.x, y: capybara.y, facing: capybara.facing });
   }
 
   const map = b.finish("town", ctx, exit, spawn, lots);

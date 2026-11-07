@@ -76,3 +76,14 @@ export function townMascotSpot(map: InteriorMap, _content: MapContent): MascotSp
   const d = FACING_DELTA[site.facing];
   return { mascot: "Crow", item: MASCOT_ITEM.Crow!, x: site.x, y: site.y, faceX: site.x + d.dx, faceY: site.y + d.dy };
 }
+
+/**
+ * The Capybara's place in the start town (the user's Easter egg, 7. 11. 2026): a pocket in the houses behind a brittle wall, so only a party with the Perceptive talent
+ * finds it. It faces the wall (the generator reserves the cell as a `capybara` site). Null in other maps.
+ */
+export function capybaraSpot(map: InteriorMap): MascotSpot | null {
+  const site = (map.sites ?? []).find((s) => s.kind === "capybara");
+  if (!site || site.kind !== "capybara") return null;
+  const d = FACING_DELTA[site.facing];
+  return { mascot: "Capybara", item: MASCOT_ITEM.Capybara!, x: site.x, y: site.y, faceX: site.x + d.dx, faceY: site.y + d.dy };
+}

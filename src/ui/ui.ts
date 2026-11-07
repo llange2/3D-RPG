@@ -10,6 +10,7 @@ import { DEFAULT_WORLD_SIZE, DUNGEON_DENSITIES, DUNGEON_DENSITY_NAMES, TITLE_DUN
 import { hitEffect, portraitImage, protectionEffect, type AvatarEffect } from "./avatarFx";
 import { conditionTitle, shownCondition } from "./conditionInfo";
 import { mascotPortrait } from "./panels";
+import { CapybaraClip } from "./capybaraClip";
 import { LoadingScreen } from "./loadingScreen";
 import { GAME_ACTIONS, KEYS_PER_ACTION, MENU_KEY, keyLabel, normalizeKey, type GameAction, type KeyBindings } from "../game/keybindings";
 
@@ -79,6 +80,8 @@ export class UI {
   private mascotShown = "";
   /** The crow's clip, made once at the start so that it is loaded before the first alarm (it showed a black avatar until the file had arrived). */
   private readonly crowClip: HTMLVideoElement = Object.assign(h("video", { class: "portrait", src: assetPath("ui/npc01_active.webm") }), { poster: assetPath("icons/portraits/npc01.webp"), loop: true, muted: true, playsInline: true, preload: "auto" });
+  /** The Capybara's picture: a still painting that turns round now and then, kept so that its timer is not restarted with every rebuild of the card. */
+  private readonly capybaraClip = new CapybaraClip();
   private readonly info: HTMLElement;
   private readonly compass: HTMLElement;
   private readonly logEl: HTMLElement;
@@ -204,13 +207,24 @@ export class UI {
     this.mascotShown = state;
     this.mascotEl.classList.toggle("alarm", alarm && name === "Crow");
     this.mascotEl.title = `${name} - click for the mascot page (5)`;
-    const picture = name === "Crow" && alarm ? this.crowClip : h("img", { class: "portrait", src: assetPath(`icons/portraits/${mascotPortrait(name)}.webp`), alt: name });
+    const picture = name === "Crow" && alarm ? this.crowClip : name === "Capybara" ? this.capybaraClip.el : h("img", { class: "portrait", src: assetPath(`icons/portraits/${mascotPortrait(name)}.webp`), alt: name });
     this.mascotEl.replaceChildren(h("div", { class: "row" }, picture, h("div", {}, h("div", { class: "name", text: name }), h("div", { class: "cls", text: "Mascot" }))));
     // the clip is the one made at the start (loaded, with the still picture as poster): it only has to run from the beginning
     if (picture === this.crowClip) {
       picture.currentTime = 0;
       void picture.play().catch(() => undefined);
     } else this.crowClip.pause();
+    // the Capybara turns round now and then while it is the mascot (`CapybaraClip`)
+    if (name === "Capybara") this.capybaraClip.start();
+    else this.capybaraClip.stop();
+  }
+
+  /** The mascot's card swells once and shrinks back (the Wolf has killed a monster). The animation restarts if it is still running from a kill just before. */
+  pulseMascot(): void {
+    this.mascotEl.classList.remove("pulse");
+    // (reading a layout property makes the browser take the class off before it is put on again)
+    void this.mascotEl.offsetWidth;
+    this.mascotEl.classList.add("pulse");
   }
 
   private renderQuests(quests: HudInfo["quests"]): void {
