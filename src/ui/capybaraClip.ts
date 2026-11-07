@@ -9,6 +9,16 @@ export const CAPYBARA_HOLD: readonly [number, number] = [5, 15];
 export const waitMs = (range: readonly [number, number], pick: number = Math.random()): number => (range[0] + pick * (range[1] - range[0])) * 1000;
 
 /**
+ * The Capybara on its page in the party window (47th playtest, point 5): the clip runs on and on in a loop, with no pauses and no waiting, as long as the page is open (the page makes a new
+ * one each time it opens, and a video that has left the page stops by itself).
+ */
+export function capybaraLoop(className = "mascot-pic"): HTMLVideoElement {
+  const video = Object.assign(h("video", { class: className, src: assetPath("ui/capybara_turn.webm") }), { poster: assetPath("icons/portraits/npc06.webp"), muted: true, loop: true, autoplay: true, playsInline: true, preload: "auto" });
+  void video.play().catch(() => undefined);
+  return video;
+}
+
+/**
  * The picture of the Capybara mascot (7. 11. 2026, the user's clip `capybara_turn.mp4`): it stands still, and every one to three minutes it plays the clip up to
  * the middle (where it looks over its shoulder), holds there for five to fifteen seconds and plays the rest, back to where it began. Used by the card beside the
  * heroes and by the mascot page; each takes its own clip. The timer runs from `start()` to `stop()`, and ends by itself once the picture has left the page.

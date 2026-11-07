@@ -144,5 +144,6 @@
  * Also the shelter of a town (trees and rock three tiles from its footprint, `SHELTER_*` in `world.ts`) and at most three monsters within the action radius of a town's exit (`EXIT_MONSTER_LIMIT`: the huts keep out of it, the wild groups there are cut down).
  * 53 = the wall decorations of the dungeons (45th playtest, point 4): one kind per dungeon by the monsters that live in it, hung every ten cells on the walls (`data/wall-deco.ts`); the moose king left the random props.
  * 54 = the Capybara (user, 7. 11. 2026): the start town has one more brittle wall, behind which a one-cell pocket holds the Easter egg mascot (`CAPYBARA_POCKET` in `interiors/town.ts`, site `capybara`).
+ * 55 = the 47th playtest: the maze (`dungeon_3`) is 25, 33, 39, 47 and 55 cells wide for level 1 to 5 (quest document 1.6); the wall decorations are picked so that every one turns up about equally often (the undead have the wizard and the witch, the beasts sometimes the lion or the moose, `ANY_PERMILLE`); the lava towns have white ambient light.
  */
-export const GEN_VERSION = 54;
+export const GEN_VERSION = 55;

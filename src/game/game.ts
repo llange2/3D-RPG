@@ -32,7 +32,6 @@ import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/envi
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { LASER_LAMP } from "../render/lasers";
 import { ITEM_LAMPS, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
@@ -5173,8 +5172,11 @@ export class Game {
     this.enableLampLights();
   }
 
+  /** A spell has flown: the lights of the pool stay on from then (switching them is a recompile of the shaders, once; the lasers fly in places that have them on anyway). */
+  private spellLights = false;
+
   private enableLampLights(): void {
-    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.mascotLamps.length > 0;
+    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.mascotLamps.length > 0 || this.spellLights;
     for (const light of this.r.lamps) light.setEnabled(on);
   }
 
@@ -5185,6 +5187,12 @@ export class Game {
    */
   private updateLamps(dt: number): void {
     const beams = this.projectiles.glows();
+    if (beams.length > 0 && !this.spellLights) {
+      this.spellLights = true;
+      // (in a place without lamps the slots of the pool were never made)
+      if (this.lampSlots.length === 0) this.lampSlots = this.r.lamps.map(() => ({ lamp: null, level: 0 }));
+      this.enableLampLights();
+    }
     if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0 && beams.length === 0) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
@@ -5193,8 +5201,8 @@ export class Game {
     const carried: LampSource[] = this.glowMonsters
       ? this.monsters.glowing(this.glowModels).map((g) => ({ ...MONSTER_GLOW.get(g.defId)!, x: g.x, y: g.y, z: g.z, key: `m:${g.uid}` }))
       : [];
-    // so do the lasers of the robots: a blue light flies along with each beam, and fades in and out quickly
-    for (const b of beams) carried.push({ ...LASER_LAMP, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE });
+    // so do the lasers of the robots (a blue light) and the spells in flight (orange for fire, green for acid, blue for ice, pink for magic): a light flies along with each, and fades in and out quickly
+    for (const b of beams) carried.push({ ...b.lamp, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE });
     // the Orb in the party is no longer at its place: its lamp goes out with it
     const orbAway = this.state.party.mascot === "Orb";
     const near = [...this.lamps, ...this.lootLamps, ...this.mascotLamps, ...carried]

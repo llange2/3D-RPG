@@ -12,6 +12,7 @@ import type { ActionInstance, MapContent } from "../actions/types";
 import { hasRoundWalls, roundCorners, ROUND_ITEM, type RoundCorner } from "../interiors/roundCorners";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import type { StaticModelInfo, TextureCache } from "./assets";
+import { faceOpenYaw } from "./facing";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { BROKEN_PIECES, CEILING_RELIEF, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
@@ -854,43 +855,7 @@ export class InteriorView {
    * or none does (a pillar in the open), `pick` decides, so the choice stays stable.
    */
   private faceOpen(map: InteriorMap, a: ActionInstance, pick: number): number {
-    const bearings: [Facing, Facing, number][] = [["N", "S", 0], ["E", "W", 90], ["S", "N", 180], ["W", "E", 270]];
-    // a closed door or a wall that can be broken is a floor cell in the map but looks like a wall: an object does not face it
-    const floorCell = (x: number, y: number) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !this.wallLike.has(y * map.width + x);
-    // the front looks at an empty cell if there is one: a lectern or chest facing a statue or a person is worse than one facing a bare street
-    const sides = (empty: boolean) => {
-      const openAt = (x: number, y: number) => floorCell(x, y) && !(empty && this.objectCells.has(y * map.width + x));
-      const floorAt = (f: Facing) => openAt(a.x + FACING_DELTA[f].dx, a.y + FACING_DELTA[f].dy);
-      return { openAt, floorAt };
-    };
-    const emptySides = sides(true);
-    const { openAt, floorAt } = bearings.some(([front]) => emptySides.floorAt(front)) ? emptySides : sides(false);
-    // a banner hangs on a wall with its back to it, whichever way the corridor runs: facing along a corridor it stood across the way (31st playtest, point 2)
-    if (WALL_HUNG.has(shownItem(a) ?? -1)) {
-      const hung = bearings.filter(([front, back]) => floorAt(front) && !floorAt(back));
-      const walled = hung.length > 0 ? hung : bearings.filter(([, back]) => !floorAt(back));
-      const options = walled.length > 0 ? walled : bearings;
-      return (options[pick % options.length]![2] * Math.PI) / 180;
-    }
-    /** Open cells in a row from this one in a direction (up to 8). */
-    const run = (f: Facing) => {
-      let n = 0;
-      while (n < 8 && openAt(a.x + FACING_DELTA[f].dx * (n + 1), a.y + FACING_DELTA[f].dy * (n + 1))) n++;
-      return n;
-    };
-    let choices = bearings.filter(([front, back]) => floorAt(front) && !floorAt(back));
-    if (choices.length === 0) choices = bearings.filter(([front]) => floorAt(front));
-    if (choices.length === 0) choices = bearings;
-    // the back goes to a real wall, not to a neighbouring statue or chest: the chest of the Vault of Corthea (85/31) sat with its side to the wall (36th playtest, point 21)
-    const wallBehind = choices.filter(([, back]) => !floorCell(a.x + FACING_DELTA[back].dx, a.y + FACING_DELTA[back].dy));
-    if (wallBehind.length > 0) choices = wallBehind;
-    if (choices.length > 1) {
-      // a corner, a corridor: it looks along the longer way and turns its back to the nearer wall
-      const score = ([front, back]: [Facing, Facing, number]) => run(front) - run(back);
-      const best = Math.max(...choices.map(score));
-      choices = choices.filter((c) => score(c) === best);
-    }
-    return (choices[pick % choices.length]![2] * Math.PI) / 180;
+    return faceOpenYaw(map, { wallLike: this.wallLike, objectCells: this.objectCells }, a, pick, WALL_HUNG.has(shownItem(a) ?? -1));
   }
 
   /** Yaw that turns an object on a square toward the middle of that square. */

@@ -745,13 +745,13 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_space_door_left", "new:Space_door_left.glb", 100, 1024),
   S("obj_space_door_right", "new:Space_door_right.glb", 100, 1024),
   // the wall decorations of the dungeons (45th playtest, point 4, the user's models: reliefs of 1.3 x 1.9 x 0.3 around their middle, about 10 000 triangles and three 2048 px textures each);
-  // the lion comes without a material and gets the grey-brown of the others' stone (`tint`). Which dungeon hangs which: `data/wall-deco.ts`
+  // (the lion once came without a material and got a grey-brown `tint`; the file of 7. 11. 2026 is textured like the others). Which dungeon hangs which: `data/wall-deco.ts`
   S("obj_deco_evil_wizard", "new:Decoration_evil_wizard.glb", 4000, 512),
   S("obj_deco_evil_witch", "new:Decoration_evil_witch.glb", 4000, 512),
   S("obj_deco_barbarian", "new:Decoration_barbarian.glb", 4000, 512),
   S("obj_deco_demon_1", "new:Decoration_demon_1.glb", 4000, 512),
   S("obj_deco_demon_2", "new:Decoration_demon_2.glb", 4000, 512),
-  { ...S("obj_deco_lion", "new:Decoration_lion.glb", 4000, 512), tint: [0.36, 0.32, 0.27] },
+  S("obj_deco_lion", "new:Decoration_lion.glb", 4000, 512),
   S("poi_hut", "Hut.obj", 1200),
   S("poi_pyramid", "Pyramid.obj", 900),
   S("poi_dungeon", "Dungeon entrance.obj", 1200),
