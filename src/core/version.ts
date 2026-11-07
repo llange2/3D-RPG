@@ -142,5 +142,6 @@
  * 51 = the spaceship's doors (user, 6. 11. 2026): a sliding door in each corridor that leaves a room, shut behind the party again (`actions/spaceship.ts`, param `slide`); the airlocks look the same but stay open.
  * 52 = the spaceship's doors stand only between straight walls (user, 6. 11. 2026): two cells of straight wall either side of a door (`straightFor`).
  * Also the shelter of a town (trees and rock three tiles from its footprint, `SHELTER_*` in `world.ts`) and at most three monsters within the action radius of a town's exit (`EXIT_MONSTER_LIMIT`: the huts keep out of it, the wild groups there are cut down).
+ * 53 = the wall decorations of the dungeons (45th playtest, point 4): one kind per dungeon by the monsters that live in it, hung every ten cells on the walls (`data/wall-deco.ts`); the moose king left the random props.
  */
-export const GEN_VERSION = 52;
+export const GEN_VERSION = 53;

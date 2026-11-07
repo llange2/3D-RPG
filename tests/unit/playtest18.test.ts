@@ -26,7 +26,8 @@ const ASSETS = join(import.meta.dirname, "..", "..", "public", "assets");
 
 describe("eighteenth playtest: the user's list of objects (items.xlsx)", () => {
   it("knows every object of the list, where it may stand and whether it must be of use", () => {
-    expect(Object.keys(ITEM_RULES).length).toBe(128);
+    // (128 of the user's list, and the six wall reliefs of the 45th playtest that the exporter adds: `EXTRA_ROWS`)
+    expect(Object.keys(ITEM_RULES).length).toBe(134);
     // a lever, a chest, a barrel, a gate and the mascots always do something; a fountain, a statue and a well may be plain decoration
     for (const id of [1, 5, 39, 80, 81, 7, 72, 74, 96]) expect(isFunctional(id), `${id} ${ITEM_RULES[id]?.name}`).toBe(true);
     for (const id of [2, 27, 28, 29, 32, 91, 94, 95, 119]) expect(isFunctional(id), `${id} ${ITEM_RULES[id]?.name}`).toBe(false);

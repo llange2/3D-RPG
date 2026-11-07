@@ -83,6 +83,13 @@ const PROP_LINES: Record<number, readonly string[]> = {
   120: ["A puddle of lava. It glows and sulks."],
   121: ["Magic flames dance without any fuel."],
   125: ["A carving of a moose with a crown. Long live the moose!"],
+  // the wall reliefs of the dungeons (`data/wall-deco.ts`)
+  304: ["A relief of an evil wizard, his hands raised over a book nobody should read."],
+  305: ["A relief of an evil witch with a cauldron. Somebody scratched out her smile."],
+  306: ["A relief of a barbarian with a huge axe. He looks as if he would rather be elsewhere."],
+  307: ["A relief of a snarling demon. It watches the door."],
+  308: ["A relief of a demon with spread wings. The stone around it is scorched."],
+  309: ["A relief of a lion, proud and a little bit bored."],
   127: ["A sealed stone coffin. Nothing moves inside."],
   128: ["An opened stone coffin. Whatever was in there has left."],
 };

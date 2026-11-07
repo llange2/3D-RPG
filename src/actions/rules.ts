@@ -12,6 +12,9 @@ import { lockTrapParams } from "./lockTrap";
 import { BONES_FIND_CHANCE, CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS, RAT_TRAP, SEARCHABLE_DECOR } from "../data/chest-traps";
 import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
+import { WALL_DECO_ITEMS, WALL_DECO_SPACING, pickWallDeco } from "../data/wall-deco";
+import type { MonsterGroup } from "../data/quest-table";
+import { monsterGroup } from "../data/tables";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { TRAP_DAMAGE } from "../data/rules";
@@ -37,8 +40,8 @@ export interface ContentContext {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** The banners (old items 103 to 105) and the carving of the moose king (125) hang on the wall: the cell in front of one stays as free as it was. */
-export const WALL_HUNG_ITEMS: readonly number[] = [103, 104, 105, 125];
+/** The banners (old items 103 to 105) and the wall decorations of the dungeons (the carving of the moose king, 125, and the reliefs of `data/wall-deco.ts`) hang on the wall: the cell in front of one stays as free as it was. */
+export const WALL_HUNG_ITEMS: readonly number[] = [103, 104, 105, ...WALL_DECO_ITEMS];
 /** Actions that stand on their cell as an object, blocking it or not (a lore message is one only when it shows a statue or a person). */
 const isObject = (a: { kind: ActionKind; params: Record<string, unknown> }): boolean =>
   a.kind === "lore" ? a.params.object !== undefined || a.params.persona !== undefined : a.kind === "decor" && WALL_HUNG_ITEMS.includes(Number(a.params.item)) ? false : ["decor", "treasure", "shrine", "fountain", "riddle", "gong", "lever", "head", "teleporter", "talent", "work", "portal"].includes(a.kind);
@@ -315,6 +318,28 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     if (site.kind !== "perch") continue;
     occupied.add(idx(site.x, site.y));
     blockedCells.add(idx(site.x, site.y));
+  }
+
+  // the wall decoration of a dungeon (45th playtest, point 4): ONE kind for the whole place, chosen by the monsters that live in it (`data/wall-deco.ts`), hung about every ten cells along the
+  // walls. It comes first (after the puzzle), so that nothing placed later by a rule can move it; it hangs on real walls only (not on a door, a wall that gives way or the seal of an end room)
+  if (dt && map.kind === "dungeon" && map.dungeon?.quest !== "spaceship") {
+    const item = pickWallDeco(monsterGroup(dt.monsters[0]!) as MonsterGroup, new Rng(derive(mapSeed, "wall-deco")));
+    const floorAt = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[idx(x, y)] === CELL.FLOOR;
+    const notWall = new Set<number>(hiddenWalls);
+    // (the doors are placed by the rules below, on the mouths of the rooms: a relief beside one would hang on the door)
+    for (const m of anchors.byKind.mouth) notWall.add(idx(m.x, m.y));
+    for (const o of actions) if (o.kind === "door" || o.kind === "breakable_wall") notWall.add(idx(o.x, o.y));
+    const onWall = (x: number, y: number): boolean => floorAt(x, y) && (Object.keys(FACING_DELTA) as (keyof typeof FACING_DELTA)[]).every((f) => !notWall.has(idx(x + FACING_DELTA[f].dx, y + FACING_DELTA[f].dy)));
+    const pool = [...anchors.byKind.roomEdge, ...anchors.byKind.corridor].filter((a) => floorAt(a.x, a.y) && onWall(a.x, a.y) && !roomCentres.has(idx(a.x, a.y)));
+    const hung: Anchor[] = [];
+    spacedAlongWalls(pool, floorAt, WALL_DECO_SPACING).forEach((a) => {
+      if (!isFree(a, false)) return;
+      // (the two sides of a corridor, or a corner, would put two reliefs side by side)
+      if (hung.some((o) => Math.max(Math.abs(o.x - a.x), Math.abs(o.y - a.y)) < WALL_DECO_SPACING / 2)) return;
+      hung.push(a);
+      actions.push({ uid: `${map.key}#wall_deco:${hung.length - 1}`, kind: "decor", x: a.x, y: a.y, params: { item } });
+      occupied.add(idx(a.x, a.y));
+    });
   }
 
   // the Skull Miser is always in the start town (ue_quest_2), in a dead end

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMapContent } from "../../src/actions";
+import { WALL_HUNG_ITEMS } from "../../src/actions/rules";
 import { DEBUG_LEVELS, debugLevels } from "../../src/game/debug";
 import { MAP_OPEN_CELLS } from "../../src/game/minimap";
 import { Builder } from "../../src/interiors/builder";
@@ -17,7 +18,8 @@ const poiFor = (kind: Poi["kind"], i: number, tier: number): Poi => ({ id: `p:t:
 describe("the 21st playtest, point 10: no object in a passage of one cell", () => {
   const world = new World("objects-21", "default");
   const OBJECT_KINDS = new Set(["decor", "treasure", "shrine", "fountain", "gong", "lever", "talent", "work", "portal"]);
-  const WALL_BANNERS = [103, 104, 105];
+  // (the banners and the other wall decorations hang on the wall: they stand in no passage)
+  const WALL_BANNERS = WALL_HUNG_ITEMS;
 
   it("puts no decoration, chest, shrine or person on a cell of a straight street, corridor or tunnel that is one cell wide", () => {
     const bad: string[] = [];
@@ -115,7 +117,7 @@ describe("the 21st playtest: map, debug menu and banners", () => {
   });
 
   it("hangs the banners on the wall: they are not turned by the half circle the standing glTF objects get", () => {
-    expect([...WALL_HUNG].sort()).toEqual([103, 104, 105, 125]);
+    expect([...WALL_HUNG].sort()).toEqual([103, 104, 105, 125, 304, 305, 306, 307, 308, 309]);
     const banner = themedProp({ uid: "u#1", kind: "decor", x: 0, y: 0, params: { item: 103 } }, 0, 0, 90, {});
     expect(banner!.rotY).toBeCloseTo((90 * Math.PI) / 180, 6);
     // any other glTF object (not a banner and with a model of its own in the item table) is turned by 180 degrees

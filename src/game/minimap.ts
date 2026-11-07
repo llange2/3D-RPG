@@ -1,4 +1,4 @@
-import { trapElementOf } from "../actions/registry";
+import { heapGone, trapElementOf } from "../actions/registry";
 import type { ActionKind, MapContent } from "../actions/types";
 import { CELL, type Facing, type InteriorMap } from "../interiors/types";
 import { ENGINE_CRYSTAL_FLAG, LIFE_FLAG } from "../data/quest-table";
@@ -365,7 +365,8 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
   const symbolAt = new Map<string, { symbol: SymbolName; used: boolean }>();
   const legacyColor = new Map<string, string>();
   for (const a of content.actions) {
-    const symbol = actionSymbol(a, opened);
+    // an orb, key or heap that was taken and a chalice that was drunk from are gone from the map, not greyed out (45th playtest, points 1 and 7)
+    const symbol = heapGone(a, opened) ? null : actionSymbol(a, opened);
     // a wall that can be broken is a wall: it keeps its brick picture (the party with the Perceptive talent learns it from the pointer)
     if (symbol && a.kind !== "breakable_wall") symbolAt.set(`${a.x},${a.y}`, { symbol, used: opened.has(a.uid) && symbol !== "door_open" && !FLIPPING.has(a.kind) });
     if (a.kind === "legacy") {
@@ -596,7 +597,7 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
   if (!eye && !explored.has(`in:${map.key}`, y * map.width + x)) return null;
   content = knownContent(content, opened, eye);
   if (monsters.some((m) => m.x === x && m.y === y)) return "Monster";
-  const a = content.actions.find((c) => c.x === x && c.y === y);
+  const a = content.actions.find((c) => c.x === x && c.y === y && !heapGone(c, opened));
   if (a && traps.has(`${x},${y}`)) return trapLabel(a);
   if (a) {
     const used = opened.has(a.uid) ? " (used)" : "";

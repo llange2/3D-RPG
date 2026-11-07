@@ -158,6 +158,8 @@ export interface Party {
   lastCast?: LastCast;
   /** The spell each hero cast last, by name (the old game kept a `last_spell` per hero; 36th playtest, point 5). */
   lastCasts?: Record<string, LastCast>;
+  /** Pandora's box: the game day (minutes / 1440) and how often it was cast on it. Absent until the first cast; a new day starts the count again (45th playtest, point 8). */
+  pandora?: { day: number; casts: number };
   gold: number;
   bankGold: number;
   food: number;

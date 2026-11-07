@@ -198,6 +198,66 @@ export const V4_RANGED: Partial<V5Options> = { bowRes: 1, bowDiv: 1.5, bowAdj: 0
 PROPOSALS.v4 = makeV5("v4", V4_RANGED);
 PROPOSALS.v4.title = "Spiel: Vorschlag v4 mit dem Fernkampf-Paket (Bogen: Resistenz, Stufenanteil / 1,5, Nahschuss halb; Gegnerschuesse: halbe Ruestung, Mindestschaden 25 %, bis 2 Schuesse)";
 
+/**
+ * Level scaling of the monsters (45th playtest, point 11: proposal only, the game does not do this). A monster of tier `t` meets a hero of level `L`; the design bands of the
+ * tiers are `TIER_ENTRY` / `TIER_EXIT` (`src/data/locks.ts`). `S(t, L)` is the factor on the monster's damage roll, taken before armor and resistance:
+ *
+ *   ramp-in:  S = rampFrom at the entry level of the tier, rising straight to 1 over `rampLevels` levels (a tier starts gentler; 1 = off; a hero below the entry level meets full strength)
+ *   fade-out: S = 1 up to the exit level of the tier plus `fadeAfter`, then falling straight to 0 at the entry level of tier t + `zeroTiers` (no tier t + zeroTiers: no fade)
+ *   chip:     a physical hit does at least `chip` x S of its roll through any armor (0 = off; a ranged shot has the v4 floor of 25 % anyway)
+ *   pctK:     armor as a share instead of a flat deduction: a physical hit does K / (K + armor) of the scaled roll (0 = off, the game's flat deduction stays)
+ *
+ * Use as a formula name: `v6:rampFrom=0.5,rampLevels=3,zeroTiers=3,chip=0.25`. Everything defaults to off, so `v6:` with no option is v4.
+ */
+export interface V6Options {
+  rampFrom: number;
+  rampLevels: number;
+  fadeAfter: number;
+  zeroTiers: number;
+  chip: number;
+  pctK: number;
+}
+export const V6_DEFAULT: V6Options = { rampFrom: 1, rampLevels: 3, fadeAfter: 0, zeroTiers: 0, chip: 0, pctK: 0 };
+const ENTRY = [1, 5, 11, 19, 33, 51, 51];
+const EXIT = [4, 10, 18, 32, 50, 50, 50];
+
+export function scaleOf(tier: number, level: number, o: V6Options): number {
+  const t = Math.min(5, Math.max(1, Math.round(tier)));
+  let s = 1;
+  const rampEnd = ENTRY[t - 1]! + o.rampLevels;
+  // (a hero below the entry level of the tier came too early: the monsters keep their full strength)
+  if (o.rampFrom < 1 && level >= ENTRY[t - 1]! && level < rampEnd) s = o.rampFrom + ((1 - o.rampFrom) * Math.max(0, level - ENTRY[t - 1]!)) / o.rampLevels;
+  if (o.zeroTiers > 0 && t + o.zeroTiers <= 5) {
+    const from = EXIT[t - 1]! + o.fadeAfter;
+    const zero = ENTRY[t + o.zeroTiers - 1]!;
+    if (level > from) s *= Math.max(0, 1 - (level - from) / Math.max(1, zero - from));
+  }
+  return Math.max(0, Math.min(1, s));
+}
+
+export function makeV6(id: string, given: Partial<V6Options>): Formulas {
+  const o = { ...V6_DEFAULT, ...given };
+  const base = PROPOSALS.v4!;
+  return {
+    ...base,
+    id,
+    title: `v4 mit Stufenskalierung der Monster ${JSON.stringify(given)}`,
+    monsterDamage(mon, h, a) {
+      const s = scaleOf(mon.treasure_level, h.level, o);
+      const rolled = Math.max(0, pyRound(a.damage * s));
+      if (o.pctK > 0 && mon.attack_type.toLowerCase() === "physical") {
+        const bare = base.monsterDamage(mon, { ...h, armor: 0 }, { ...a, damage: rolled });
+        return Math.trunc((bare * o.pctK) / (o.pctK + h.armor));
+      }
+      const damage = base.monsterDamage(mon, h, { ...a, damage: rolled });
+      if (o.chip <= 0 || a.ranged || mon.attack_type.toLowerCase() !== "physical") return damage;
+      // a blow gets through whatever the armor (the Ninja's evasion decides first, as in the game)
+      if (h.cls === "Ninja" && a.evade < 0.1) return 0;
+      return Math.max(damage, Math.trunc(o.chip * rolled));
+    },
+  };
+}
+
 const outDir = join(dirname(fileURLToPath(import.meta.url)), "out");
 
 /** `current`, a named proposal, or the result of a parameter search (`out/search-<name>.json`). */
@@ -211,6 +271,15 @@ export function formulasByName(name: string | undefined): Formulas {
       given[k as keyof V5Options] = Number(v);
     }
     return makeV5(name, given);
+  }
+  if (name === "v6" || name.startsWith("v6:")) {
+    const given: Partial<V6Options> = {};
+    for (const part of name.slice(3).split(",").filter(Boolean)) {
+      const [k, v] = part.split("=");
+      if (!k || v === undefined || !(k in V6_DEFAULT)) throw new Error(`unknown v6 option "${part}" (known: ${Object.keys(V6_DEFAULT).join(", ")})`);
+      given[k as keyof V6Options] = Number(v);
+    }
+    return makeV6(name, given);
   }
   const proposal = PROPOSALS[name];
   if (proposal) return proposal;

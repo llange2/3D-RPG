@@ -36,6 +36,9 @@ html.custom-cursor, html.custom-cursor * { cursor: none !important; }
 /* none while the loading screen is up (src/ui/loadingScreen.ts), neither the system pointer nor the game's own */
 html.loading-on, html.loading-on * { cursor: none !important; }
 html.loading-on #game-cursor { display: none; }
+/* none during the outro movie and the closing words (src/game/game.ts playEnding), back with the OK button */
+html.ending-on, html.ending-on * { cursor: none !important; }
+html.ending-on #game-cursor { display: none; }
 
 #ui { position: fixed; inset: 0; pointer-events: none; user-select: none; }
 #ui .hud-hide { display: none !important; }

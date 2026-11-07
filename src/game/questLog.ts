@@ -49,8 +49,8 @@ const DUNGEON_LINES: Record<QuestId, { open: (name: string, where: string, boss:
     done: (n) => `Silenced the moaning statues of ${n} and reached its hidden chamber.`,
   },
   quest_2: {
-    open: (n, w) => `Make the stone heads of ${n} (${w}) face the right way and reach the chamber behind the wall.`,
-    done: (n) => `Set the stone heads of ${n} right and reached the chamber behind the wall.`,
+    open: (n, w) => `Solve the mystery of the stone heads in ${n} (${w}).`,
+    done: (n) => `Solved the mystery of the stone heads in ${n} and reached the chamber behind the wall.`,
   },
   quest_3: {
     open: (n, w) => `Strike all the gongs of ${n} (${w}) and step through the runes.`,

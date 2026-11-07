@@ -137,7 +137,13 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 | 122 | Quest: Keycard green | **ja** |  |  | x |  |  |  |  |
 | 123 | Quest: Keycard purple | **ja** |  |  | x |  |  |  |  |
 | 124 | Quest: Keycard brown | **ja** |  |  | x |  |  |  |  |
-| 125 | Decoration: Moose King |  | x |  | x |  |  |  |  |
+| 125 | Decoration: Moose King |  | x |  | x |  |  |  | Wandrelief. Gehört zu den Wanddekos: ein Dungeon hängt genau eine Art regelmäßig (ca. alle 10 Felder) an die Wand, Elch und Löwe passen zu jedem Monstertyp, Wizard/Witch/Barbarian zu humanoiden, Demon 1/2 zu beast-Monstern (`src/data/wall-deco.ts`). |
 | 126 | Float | **ja** |  |  |  |  |  |  | Dieses Objekt erscheint automatisch sobald der Spieler das Wasser betritt, welches mehr als 1 Feld vom Ufer entfernt ist. Wasserflächen am Ufer können mit "Schwimmen" überquert werden, >1 Feld entfernt z.B. mit dem Zauberspruch "Walk on Water" |
 | 127 | Stone coffin locked |  |  | x | x |  |  |  |  |
 | 128 | Stone coffin unlocked |  |  | x | x |  |  |  |  |
+| 304 | Decoration: Evil Wizard |  | x |  | x |  |  |  | Wandrelief. Dungeon mit humanoiden Monstern: genau eine der Dekos Evil Wizard / Evil Witch / Barbarian (+ Löwe, Elch), regelmäßig ca. alle 10 Felder an der Wand. |
+| 305 | Decoration: Evil Witch |  | x |  | x |  |  |  | Wandrelief, siehe Evil Wizard. |
+| 306 | Decoration: Barbarian |  | x |  | x |  |  |  | Wandrelief, siehe Evil Wizard. |
+| 307 | Decoration: Demon 1 |  | x |  | x |  |  |  | Wandrelief. Dungeon mit Monstern der Gruppe beast: genau eine der Dekos Demon 1 / Demon 2 (+ Löwe, Elch), ca. alle 10 Felder. |
+| 308 | Decoration: Demon 2 |  | x |  | x |  |  |  | Wandrelief, siehe Demon 1. |
+| 309 | Decoration: Lion |  | x |  | x |  |  |  | Wandrelief. Löwe und Elch (125) passen zu jedem Monstertyp. |

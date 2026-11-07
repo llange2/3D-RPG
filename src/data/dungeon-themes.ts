@@ -75,7 +75,8 @@ const INHABITANTS: Record<MonsterGroup, Inhabitants> = {
 };
 
 /** The decoration of a dungeon; the caves have the short list of the document (mining tools, wheelbarrow, skull on a spike, bone pile, crystals). */
-const DUNGEON_DECOR = [12, 13, 14, 15, 16, 27, 29, 32, 34, 61, 62, 63, 69, 70, 71, 75, 76, 83, 94, 95, 97, 98, 99, 125, 127, 128];
+// (the carving of the moose king, 125, is no longer one of them: it is one of the wall decorations, of which a dungeon hangs one kind regularly, `data/wall-deco.ts`)
+const DUNGEON_DECOR = [12, 13, 14, 15, 16, 27, 29, 32, 34, 61, 62, 63, 69, 70, 71, 75, 76, 83, 94, 95, 97, 98, 99, 127, 128];
 const CAVE_DECOR = [12, 16, 38, 70, 117];
 const CHESTS = [1, 74, 72, 96, 4];
 const SHRINES = [35, 37, 88, 117, 86];

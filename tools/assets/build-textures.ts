@@ -12,6 +12,7 @@ import { buildFlatTerrain } from "./build-flat-terrain";
 import { buildMinimap } from "./build-minimap";
 import { buildPlaceholderIcons } from "./build-placeholder-icons";
 import { buildItemIcons } from "./build-item-icons";
+import { buildPortraitSheets } from "./build-portrait-sheets";
 import { buildSpellIcons } from "./build-spell-icons";
 import { OLD, OUT, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
 
@@ -69,6 +70,9 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
 
   const portraits = await listFiles(TEX, (n) => /^character\d+.*\.(png|jpg)$/.test(n));
   await pool(portraits, 8, async (n) => add("icons portraits", await toWebp(join(TEX, n), join(OUT, "icons", "portraits", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 192, 85)));
+
+  // and every hero's portraits in all their states become one sheet each (see build-portrait-sheets.ts)
+  add("icons portraits", (await buildPortraitSheets()).bytes);
 
   const skills = await listFiles(TEX, (n) => /^mm3_icon_.*\.(png|jpg)$/.test(n));
   await pool(skills, 8, async (n) => add("icons skills", await toWebp(join(TEX, n), join(OUT, "icons", "skills", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 160, 85)));

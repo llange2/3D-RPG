@@ -4119,5 +4119,113 @@
   "surface": 0.1675,
   "fromObj": false,
   "mean": 0.148
+ },
+ "obj_deco_evil_wizard": {
+  "file": "models-original/obj_deco_evil_wizard.glb",
+  "tris": 10184,
+  "bytes": 1885800,
+  "bounds": [
+   -0.6912810206413269,
+   -0.9518111348152161,
+   -0.21832315623760223,
+   0.6906030178070068,
+   0.9509931206703186,
+   0.23010607063770294
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "surface": 0.9475,
+  "fromObj": false,
+  "mean": 0.264
+ },
+ "obj_deco_evil_witch": {
+  "file": "models-original/obj_deco_evil_witch.glb",
+  "tris": 10104,
+  "bytes": 1852920,
+  "bounds": [
+   -0.6550379991531372,
+   -0.9506881237030029,
+   -0.19770891964435577,
+   0.6525110006332397,
+   0.9499621391296387,
+   0.19865009188652039
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "surface": 0.945,
+  "fromObj": false,
+  "mean": 0.266
+ },
+ "obj_deco_barbarian": {
+  "file": "models-original/obj_deco_barbarian.glb",
+  "tris": 10188,
+  "bytes": 1753492,
+  "bounds": [
+   -0.6541330218315125,
+   -0.9506621360778809,
+   -0.20954102277755737,
+   0.6517130136489868,
+   0.9501461386680603,
+   0.2128380984067917
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "surface": 0.9325,
+  "fromObj": false,
+  "mean": 0.255
+ },
+ "obj_deco_lion": {
+  "file": "models-original/obj_deco_lion.glb",
+  "tris": 10036,
+  "bytes": 455648,
+  "bounds": [
+   -0.6636120080947876,
+   -0.9511651420923275,
+   -0.14135899045603517,
+   0.6660749912261963,
+   0.9503651387423444,
+   0.15330906832950258
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "surface": 0.9425,
+  "fromObj": false,
+  "mean": 0.326
+ },
+ "obj_deco_demon_1": {
+  "file": "models-original/obj_deco_demon_1.glb",
+  "tris": 10274,
+  "bytes": 1713796,
+  "bounds": [
+   -0.6895419955253601,
+   -0.9519221186637878,
+   -0.18497499823570251,
+   0.6977559924125671,
+   0.9491891264915466,
+   0.1915210783481598
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "surface": 0.945,
+  "fromObj": false,
+  "mean": 0.228
+ },
+ "obj_deco_demon_2": {
+  "file": "models-original/obj_deco_demon_2.glb",
+  "tris": 10294,
+  "bytes": 1936068,
+  "bounds": [
+   -0.6813129782676697,
+   -0.9515790939331055,
+   -0.34306806325912476,
+   0.6810929775238037,
+   0.9479930996894836,
+   0.3376750349998474
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "surface": 0.9425,
+  "fromObj": false,
+  "mean": 0.295
  }
 }

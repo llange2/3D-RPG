@@ -1,6 +1,7 @@
 import { INTERIOR_THEMES } from "../data/interior-themes";
 import { COTTAGE_HEIGHT_FACTOR, COTTAGE_SCALE, tunedItemModels } from "../data/item-tuning";
 import { PERSONAS } from "../data/personas";
+import { DECO_MODELS, DECO_SCALE } from "../data/wall-deco";
 import { MONSTERS } from "../data/tables";
 import { Builder } from "./builder";
 import type { InteriorMap, LightLine, ShowcaseLayout } from "./types";
@@ -34,6 +35,8 @@ export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: 
   { model: "obj_futuristic_box", scale: 1.6 },
   { model: "obj_power_crystal_broken", scale: 2.03, height: 1.03 },
   { model: "obj_spaceship_console", scale: 3 },
+  // the wall reliefs of the dungeons (45th playtest, point 4): they stand upright on their cell here, nothing hangs
+  ...Object.values(DECO_MODELS).map((model) => ({ model, scale: DECO_SCALE })),
 ];
 
 /** Places, huge buildings and the like get a wide slot of their own (the pyramid is the largest). */
