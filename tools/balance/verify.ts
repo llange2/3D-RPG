@@ -92,10 +92,12 @@ for (let i = 0; i < samples; i++) {
     const game = monsterDamage(party, mon, c, ranged, distance, a);
     const hit = ranged ? b.float() : 1;
     const damage = b.range(Math.min(mon.damage_min, mon.damage_max), Math.max(mon.damage_min, mon.damage_max));
+    // (the game draws the extra miss of a level 1 to 3 hero before the evasion, 45th playtest)
+    const early = BALANCE.mode === "v4" && level <= 3 ? b.float() : 1;
     const evade = !ranged && cls === "Ninja" ? b.float() : 1;
-    const mine = CURRENT.monsterDamage(mon, hero, { damage, hit: ranged ? hit : 0, evade, ranged, distance, fairy: party.mascot === "Fairy" ? CURRENT.fairyReduction : 0 });
+    const mine = CURRENT.monsterDamage(mon, hero, { damage, early, hit: ranged ? hit : 0, evade, ranged, distance, fairy: party.mascot === "Fairy" ? CURRENT.fairyReduction : 0 });
     if (game !== mine) fail("monster", `${mon.name} (${mon.attack_type}) -> ${cls}/${race} armor ${hero.armor} ranged ${ranged} @${distance}: game ${game} tool ${mine}`);
-    const roll2 = { damage, hit: ranged ? hit : 0, evade, ranged, distance, fairy: party.mascot === "Fairy" ? CURRENT.fairyReduction : 0 };
+    const roll2 = { damage, early, hit: ranged ? hit : 0, evade, ranged, distance, fairy: party.mascot === "Fairy" ? CURRENT.fairyReduction : 0 };
     if (PARAM.monsterDamage(mon, hero, roll2) !== mine) fail("monster-param", `${mon.name} -> ${cls}`);
   }
 }

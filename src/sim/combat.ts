@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, type MonsterDef } from "../data/tables";
-import { fairyReduction, isV4, RULES } from "./balance";
+import { earlyMissChance, fairyReduction, isV4, RULES } from "./balance";
 import { addCondition, anyoneLeft, armor, attr, canAct, equippedItems, fightSpeed, getBaseValue, isRifted, itemBonus, pyRound, removeCondition, resistance } from "./character";
 import { cheats } from "./cheats";
 import { sumBonus } from "./items";
@@ -109,18 +109,21 @@ export function monsterDamage(party: Party, monster: MonsterDef, target: Charact
     : 1;
   const hit = ranged ? (rng.float() <= hitChance ? 1 : 0) : 1;
   let total = rng.range(Math.min(monster.damage_min, monster.damage_max), Math.max(monster.damage_min, monster.damage_max));
+  // BALANCE v4 (45th playtest): a hero of level 1 to 3 is also missed by chance (the roll is drawn for every attack on such a hero, so that the stream does not depend on the hit)
+  const earlyMiss = earlyMissChance(target.level);
+  const early = earlyMiss > 0 ? rng.float() : 1;
 
   // a missed shot does no damage at all, whatever the armor or protection takes off (the old code let a physical miss through in full)
   if (!hit) return 0;
+  if (early < earlyMiss) return 0;
 
   if (ELEMENTS.has(type)) {
     total = elementalDamage(party, target, type as "acid" | "fire" | "ice" | "magic", total);
   } else if (type === "physical") {
     const arm = armor(target);
-    if (ranged && isV4()) {
-      // BALANCE v4 (ranged): the armor counts half against a shot, like the monster's armor against the heroes' bows, and a quarter of the
-      // roll always gets through; LEGACY (balance v4): the armor and half of it again, down to 0
-      total = Math.max(Math.trunc(RULES.v4.monsterShotFloor * total), total - Math.trunc(arm * RULES.v4.monsterShotArmor));
+    if (isV4()) {
+      // BALANCE v4 (45th playtest): armor as a share of the roll, `K / (K + armor)`, blows and shots alike; LEGACY (balance v4): the flat deduction below (a shot loses the armor and half of it again)
+      total = Math.trunc((total * RULES.v4.monsterArmorK) / (RULES.v4.monsterArmorK + arm));
     } else {
       if (arm > 0) total = Math.max(0, total - arm);
       if (ranged) total = Math.max(0, total - Math.trunc(arm / 2));

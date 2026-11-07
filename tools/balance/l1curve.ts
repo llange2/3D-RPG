@@ -115,7 +115,9 @@ function hitMain(): void {
           total += d;
           if (d >= 1) any = true;
         }
-        sum += (total / (hi - lo + 1)) * m.no_of_attacks;
+        // (the extra miss of heroes of level 1 to 3 is a chance, not a roll here: it takes its share off the mean; the game's v4 set has it, the old ones do not)
+        const miss = name === "v4" || name.includes("miss1") ? ([0, 0.5, 0.3, 0.15][level] ?? 0) : 0;
+        sum += (total / (hi - lo + 1)) * m.no_of_attacks * (1 - miss);
         if (any) hurts++;
       }
       return `${(sum / L1.length).toFixed(1).padStart(5)} per turn, hurts ${String(hurts).padStart(2)}/18`.padEnd(46);

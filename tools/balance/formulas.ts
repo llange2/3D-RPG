@@ -54,6 +54,8 @@ export interface MonsterAttackRoll {
   hit: number;
   /** Uniform [0, 1) for the Ninja's evasion. */
   evade: number;
+  /** Uniform [0, 1) for the extra miss against heroes of level 1 to 3 (45th playtest); absent = never misses by it. */
+  early?: number;
   ranged: boolean;
   distance: number;
   /** Points the Fairy takes off an elemental hit (0 without the Fairy). */

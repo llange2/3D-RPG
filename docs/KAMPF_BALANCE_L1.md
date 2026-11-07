@@ -189,3 +189,24 @@ OVERRIDE="Candle Creep:health=45,no_of_attacks=1;Wicked Witch:damage_min=3,damag
 ```
 
 Der Formelsatz `v6` (`makeV6`, `scaleOf` in `tools/balance/proposals.ts`) ist nur im Werkzeug; das Spiel kennt ihn nicht.
+
+## 7. Nachtrag: der Versuch des Nutzers (7. 11. 2026, im Spiel)
+
+Der Nutzer hat statt des Stufenfensters (Abschnitt 2) zwei andere Regeln angeordnet, **im Spiel umgesetzt** (`monsterDamage` in `sim/combat.ts`, Zahlen `monsterArmorK` und `earlyMiss` in `RULES.v4` von `sim/balance.ts`, Kommentar `BALANCE v4`, im Modus `legacy` aus):
+
+1. **Körperlicher Schaden bei Treffer** (Schlag und Fernschuss): `Rohschaden × 30 / (30 + Rüstung)` statt `Rohschaden − Rüstung`. Die Sonderregeln des Fernschusses (halbe Rüstung, Viertel-Boden) entfallen damit.
+2. **Zusätzliche Fehlchance** der Monster gegen Helden der Stufe 1 / 2 / 3: **50 % / 30 % / 15 %** (jeder Angriff, auch Elementare und Fernschüsse, zusätzlich zur Trefferchance eines Schusses).
+
+Messung (Werkzeug, Formelsatz `v4` = Spiel, vorher `v5:bowRes=1,bowDiv=1.5,bowAdj=0.5,eArmor=0.5,eFloor=0.25,eShots=2`; `l1curve.ts hit`, Ritter mit der Ausrüstung seiner Stufe, mittlerer Schaden je Monsterzug der 18 Level-1-Monster **einschließlich** der Fehlchance):
+
+| Stufe | Rüstung | vorher | Versuch | | Stufe | Rüstung | vorher | Versuch |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 15 | 3,5 | 4,4 | | 10 | 32 | 3,4 | 6,6 |
+| 2 | 15 | 3,5 | 6,1 | | 15 | 43 | 2,8 | 5,7 |
+| 3 | 15 | 3,5 | 7,4 | | 20 | 54 | 2,6 | 5,1 |
+| 5 | 15 | 3,5 | 8,7 | | 25 | 54 | 2,6 | 5,1 |
+| 7 | 32 | 3,4 | 6,6 | | | | | |
+
+Kämpfe (`l1curve.ts curve`, Leben verloren im Mittel der 18 Arten, vorher → Versuch): 2er-Gruppen Stufe 1: 14 → **18 %**, Stufe 2: 8 → 12 %, Stufe 3: 4 → 6 %, Stufe 4: 2 → 5 %; 3er-Gruppen Stufe 1: 21 → **36 %**, Stufe 3: 9 → 17 %, Stufe 5: 3 → 6 %. Ab Stufe 7 bleibt der Verlust unter 2 %. Die Spielstand-Gruppe (Stufe 7/8, 2 × jede Art): 2 / 5 % → **4 / 9 %** (Bogen / Schwert); Zombie, Giant Spider und Skeleton, vorher 0 %, kosten jetzt 6 bis 25 %.
+
+Lesart: Die Regel macht **keinen** Level-1-Monster mehr harmlos (auch auf Stufe 30 nicht: 5,1 je Zug, 17 bis 18 von 18 Arten verletzen) und **verdoppelt** den Schaden ab Stufe 2. Die zusätzliche Fehlchance gleicht nur Stufe 1 zum Teil aus (3,5 → 4,4 statt 8,7 ohne sie); auf Stufe 2 und 3 ist es schwerer als vorher, weil die körperlichen Monster (Giant Spider mit 8 Angriffen, Zombie, Skeleton) die Rüstung 15 bis 21 jetzt zum Teil durchdringen. Ein kleineres K hilft kaum (K 10: 3,7 / 5,2 / 6,3 auf Stufe 1 / 2 / 3), weil die 8 Elementaren (Rüstung wirkt dort nicht) ohnehin die Hälfte des Schadens liefern. Wer Stufe 1 bis 3 leichter will, braucht eine größere Fehlchance (etwa 65 / 50 / 35 %) oder das Stufenfenster aus Abschnitt 2.
