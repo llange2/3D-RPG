@@ -32,7 +32,6 @@ import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/envi
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { LASER_LAMP } from "../render/lasers";
 import { ITEM_LAMPS, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
@@ -84,7 +83,7 @@ import { hutScene } from "../data/hut-texts";
 import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { readSettings, writeSettings, type Settings } from "./settings";
-import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, GAME_KINDS, SAVE_SLOTS, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
+import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, deleteNamedSave, findNamedSave, listNamedSaves, readNamedSave, writeNamedSave, LISTED_KINDS, SAVE_SLOTS, MAX_SAVE_NAME, cleanSaveName, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
 import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
@@ -274,8 +273,14 @@ const LASER_LAMP_FADE = 0.08;
 const TRAP_SOUND: Record<string, number> = { spring: 9036, guillotine: 9042, steal_gold: 9038 };
 
 /** How the save slots are named in the load lists of the title screen and of the menu. */
-const SLOT_NAMES: Record<SaveSlot, string> = { manual: "Saved game", quick: "Quicksave (F5)", auto: "Autosave" };
+const SLOT_NAMES: Record<SaveSlot, string> = { quick: "Quicksave (F5)", auto: "Autosave" };
 const KIND_NAMES: Record<GameKind, string> = { world: "World", campaign: "Campaign" };
+/** What the title screen hands back for a save: the file is only read when it is chosen (the named saves can be big). */
+type SaveRef = () => SaveFile | null;
+/** An entry of the load list in the menu: a named save, or the quicksave or autosave of a kind of game. */
+type LoadPick = { id: string } | { kind: GameKind; slot: SaveSlot };
+/** "World: " in front of a save's name only when saves of more than one kind of game are listed. */
+const kindPrefix = (kind: GameKind): string => (LISTED_KINDS.length > 1 ? `${KIND_NAMES[kind]}: ` : "");
 
 export class Game {
   mode: Mode = "title";
@@ -492,8 +497,11 @@ export class Game {
     const params = new URLSearchParams(location.search);
     const choice = await this.ui.title({ seed: defaultSeed || randomSeed(), size: parseWorldSize(params.get("size")), dungeons: params.has("dungeons") ? parseDungeonDensity(params.get("dungeons")) : TITLE_DUNGEON_DENSITY, saves: this.titleSaves(), onOptions: () => void this.optionsMenu() });
     this.audio.play(9001);
-    if (choice.action === "load") await this.loadFromFile(choice.save);
-    else if (choice.action === "campaign") await this.newCampaign(choice.seed);
+    if (choice.action === "load") {
+      const file = choice.save();
+      if (file) await this.loadFromFile(file);
+      else await this.start(defaultSeed); // the save could not be read (a damaged or removed one): back to the title
+    } else if (choice.action === "campaign") await this.newCampaign(choice.seed);
     else await this.newGame(choice.seed, true, choice.size, choice.dungeons);
   }
 
@@ -501,18 +509,17 @@ export class Game {
    * What "Load game" on the title screen offers. The world and the campaign are saved apart: the autosave of each is its
    * "Continue" entry, below them come the saves made in the menu and by F5. Slots without a save are left out.
    */
-  private titleSaves(): Option<SaveFile>[] {
-    const out: Option<SaveFile>[] = [];
-    for (const kind of GAME_KINDS) {
+  private titleSaves(): Option<SaveRef>[] {
+    const out: Option<SaveRef>[] = [];
+    for (const kind of LISTED_KINDS) {
       const file = readSave(kind, "auto");
-      if (file) out.push({ label: `Continue the ${kind === "world" ? "world" : "campaign"}`, value: file, note: describeSave(file) });
+      if (file) out.push({ label: `Continue the ${kind === "world" ? "world" : "campaign"}`, value: () => file, note: describeSave(file) });
     }
     const continues = out.length;
-    for (const kind of GAME_KINDS) {
-      for (const slot of SAVE_SLOTS) {
-        const file = slot === "auto" ? null : readSave(kind, slot);
-        if (file) out.push({ label: `${KIND_NAMES[kind]}: ${SLOT_NAMES[slot]}`, value: file, note: describeSave(file), apart: continues > 0 && out.length === continues });
-      }
+    for (const kind of LISTED_KINDS) {
+      const quick = readSave(kind, "quick");
+      if (quick) out.push({ label: `${kindPrefix(kind)}${SLOT_NAMES.quick}`, value: () => quick, note: describeSave(quick), apart: continues > 0 && out.length === continues });
+      for (const entry of listNamedSaves(kind)) out.push({ label: `${kindPrefix(kind)}${entry.name}`, value: () => readNamedSave(entry.id), note: entry.note, apart: continues > 0 && out.length === continues });
     }
     return out;
   }
@@ -4282,9 +4289,7 @@ export class Game {
         continue;
       }
       if (choice === "save") {
-        this.save("manual");
-        this.save("auto");
-        this.ui.toast("Game saved");
+        if (!(await this.saveMenu())) continue; // Back from the save list returns to the menu
       } else if (choice === "load") {
         await this.loadMenu();
       } else if (choice === "link") {
@@ -4313,7 +4318,6 @@ export class Game {
         { label: "All spells", value: "spells", note: "of each hero's school" },
         { label: "All talents", value: "talents", note: "for each hero" },
         { label: "All keys & key cards", value: "keys", note: "nine keys, five key cards and the black one" },
-        { label: `Engine hum: ${this.state.opened.has(ENGINES_FLAG) ? "on" : "off"}`, value: "hum", note: "spaceship sound test (the engines of quest_7)" },
         { label: "Reveal map", value: "map", note: this.mode === "overworld" ? (this.state.campaign ? "150 tiles around" : "the whole world") : "this level" },
         { label: "Identify", value: "identify", note: this.mode === "overworld" ? "the nearest place" : "this place" },
         ...(this.state.campaign ? [] : [{ label: "Teleport to Level", value: "teleport", note: "any town, cave, dungeon or castle" }]),
@@ -4344,12 +4348,6 @@ export class Game {
         case "keys":
           this.ui.toast(`${debugAllKeys(party)} keys and key cards added`);
           this.refresh();
-          break;
-        case "hum":
-          if (this.state.opened.has(ENGINES_FLAG)) this.state.opened.delete(ENGINES_FLAG);
-          else this.state.opened.add(ENGINES_FLAG);
-          this.updateAmbient();
-          this.ui.toast(`Engine hum ${this.state.opened.has(ENGINES_FLAG) ? "on (inside the spaceship)" : "off"}`);
           break;
         case "map":
           this.revealMap();
@@ -4637,32 +4635,104 @@ export class Game {
   }
 
   /**
-   * Lists the saves (the one made in the menu, the quicksave and the autosave), first those of the kind of game being played,
-   * then those of the other kind, and continues the chosen one.
+   * Lists the saves (the named ones, newest first, then the quicksave and the autosave) of the kinds of game that are offered (`LISTED_KINDS`),
+   * the ones of the game being played first, and continues the chosen one. "Delete a save" at the end removes a named one.
    */
   private async loadMenu(): Promise<void> {
     const mine = kindOfState(this.state);
-    const options = [...GAME_KINDS].sort((a) => (a === mine ? -1 : 1)).flatMap((kind) =>
-      SAVE_SLOTS.map((slot) => {
-        const file = readSave(kind, slot);
-        return { label: `${KIND_NAMES[kind]}: ${SLOT_NAMES[slot]}`, value: { kind, slot }, note: file ? describeSave(file) : "empty", disabled: !file };
-      }),
-    );
-    const pick = await this.ui.choose("Load game", "The game you are playing now is replaced. Save first if you want to keep it.", options);
-    if (!pick) return;
-    const file = readSave(pick.kind, pick.slot);
-    if (file) await this.loadFromFile(file);
+    for (;;) {
+      const kinds = [...LISTED_KINDS].sort((a) => (a === mine ? -1 : 1));
+      const named = kinds.flatMap((kind) => listNamedSaves(kind).map((entry) => ({ label: `${kindPrefix(kind)}${entry.name}`, value: { id: entry.id } as LoadPick, note: entry.note })));
+      const slots = kinds.flatMap((kind) =>
+        SAVE_SLOTS.map((slot) => {
+          const file = readSave(kind, slot);
+          return { label: `${kindPrefix(kind)}${SLOT_NAMES[slot]}`, value: { kind, slot } as LoadPick, note: file ? describeSave(file) : "empty", disabled: !file };
+        }),
+      );
+      const options: Option<LoadPick | "delete">[] = [...named, ...slots, ...(named.length > 0 ? [{ label: "Delete a save…", value: "delete" as const, note: "remove one of your named saves", apart: true }] : [])];
+      const pick = await this.ui.choose("Load game", "The game you are playing now is replaced. Save first if you want to keep it.", options);
+      if (!pick) return;
+      if (pick === "delete") {
+        await this.deleteSaveMenu();
+        continue;
+      }
+      const file = "id" in pick ? readNamedSave(pick.id) : readSave(pick.kind, pick.slot);
+      if (file) await this.loadFromFile(file);
+      else this.ui.toast("This save could not be read");
+      return;
+    }
+  }
+
+  /** "Save game": a new save (the player names it) or one of the existing ones replaced. True when a game was saved, false for Back. */
+  private async saveMenu(): Promise<boolean> {
+    if (this.mode === "title" || this.over || !this.state) return false;
+    const kind = kindOfState(this.state);
+    for (;;) {
+      const saves = listNamedSaves(kind);
+      const pick = await this.ui.choose("Save game", saves.length > 0 ? "Make a new save, or replace one of these." : "Make a new save.", [
+        { label: "New save…", value: "new", note: "you name it" },
+        ...saves.map((s, i) => ({ label: s.name, value: s.id, note: s.note, apart: i === 0 })),
+      ]);
+      if (pick === null) return false;
+      let name: string;
+      if (pick === "new") {
+        const typed = await this.ui.prompt("What shall the save be called?", "Save game", { placeholder: "name of the save", ok: "Save", cancel: "Back", maxLength: MAX_SAVE_NAME });
+        if (typed === null) continue;
+        name = cleanSaveName(typed);
+        if (name === "") {
+          this.ui.toast("A save needs a name");
+          continue;
+        }
+        // a name that exists is that save: it is replaced, but not without asking
+        if (findNamedSave(name, kind) && !(await this.ui.confirm("Replace save", `A save called "${name}" exists. Replace it with the game you are playing now?`, "Replace", "Back"))) continue;
+      } else {
+        const entry = saves.find((s) => s.id === pick)!;
+        if (!(await this.ui.confirm("Replace save", `Replace "${entry.name}" with the game you are playing now?`, "Replace", "Back"))) continue;
+        name = entry.name;
+      }
+      if (this.saveNamed(name)) {
+        this.save("auto");
+        this.ui.toast(`Game saved: ${name}`);
+      }
+      return true;
+    }
+  }
+
+  /** Esc > Load game > Delete a save: lists the named saves, asks, removes. */
+  private async deleteSaveMenu(): Promise<void> {
+    const kinds = [...LISTED_KINDS];
+    const entries = kinds.flatMap((kind) => listNamedSaves(kind).map((entry) => ({ label: `${kindPrefix(kind)}${entry.name}`, value: entry.id, note: entry.note })));
+    const id = await this.ui.choose("Delete a save", "Which save shall be removed? This cannot be undone.", entries);
+    if (id === null) return;
+    const entry = listNamedSaves().find((s) => s.id === id);
+    if (entry && (await this.ui.confirm("Delete save", `Delete "${entry.name}" for good?`, "Delete", "Back"))) {
+      deleteNamedSave(id);
+      this.ui.toast("Save deleted");
+    }
+  }
+
+  /** The party's place and facing are brought up to date before a save is written: turning on the spot does not move the party. */
+  private prepareSave(): void {
+    const at = this.state.at;
+    this.state.at = this.campaignLocation() ?? (this.mode === "interior" && at.mode === "interior" ? { ...at, x: this.player.tx, y: this.player.ty, facing: this.player.facing } : { mode: "overworld", x: this.player.tx, y: this.player.ty, facing: this.player.facing });
+    this.stashCampaign();
   }
 
   save(slot: SaveSlot): void {
     if (this.mode === "title" || this.over || !this.state) return;
-    // turning on the spot does not move the party, so the stored facing is brought up to date here
-    const at = this.state.at;
-    this.state.at = this.campaignLocation() ?? (this.mode === "interior" && at.mode === "interior" ? { ...at, x: this.player.tx, y: this.player.ty, facing: this.player.facing } : { mode: "overworld", x: this.player.tx, y: this.player.ty, facing: this.player.facing });
-    this.stashCampaign();
+    this.prepareSave();
     const ok = writeSave(this.state, slot);
     this.lastAutosave = this.state.steps;
     if (!ok) this.ui.log("Could not save (browser storage unavailable).", "bad");
+  }
+
+  /** Writes the game under a name of the player's choice; false (and a note in the log) when the browser refuses. */
+  private saveNamed(name: string): boolean {
+    if (this.mode === "title" || this.over || !this.state) return false;
+    this.prepareSave();
+    const ok = writeNamedSave(this.state, name);
+    if (!ok) this.ui.log("Could not save (browser storage unavailable or full).", "bad");
+    return ok;
   }
 
   // ---------------------------------------------------------------- ambient sound
@@ -5102,8 +5172,11 @@ export class Game {
     this.enableLampLights();
   }
 
+  /** A spell has flown: the lights of the pool stay on from then (switching them is a recompile of the shaders, once; the lasers fly in places that have them on anyway). */
+  private spellLights = false;
+
   private enableLampLights(): void {
-    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.mascotLamps.length > 0;
+    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.mascotLamps.length > 0 || this.spellLights;
     for (const light of this.r.lamps) light.setEnabled(on);
   }
 
@@ -5114,6 +5187,12 @@ export class Game {
    */
   private updateLamps(dt: number): void {
     const beams = this.projectiles.glows();
+    if (beams.length > 0 && !this.spellLights) {
+      this.spellLights = true;
+      // (in a place without lamps the slots of the pool were never made)
+      if (this.lampSlots.length === 0) this.lampSlots = this.r.lamps.map(() => ({ lamp: null, level: 0 }));
+      this.enableLampLights();
+    }
     if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0 && beams.length === 0) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
@@ -5122,8 +5201,8 @@ export class Game {
     const carried: LampSource[] = this.glowMonsters
       ? this.monsters.glowing(this.glowModels).map((g) => ({ ...MONSTER_GLOW.get(g.defId)!, x: g.x, y: g.y, z: g.z, key: `m:${g.uid}` }))
       : [];
-    // so do the lasers of the robots: a blue light flies along with each beam, and fades in and out quickly
-    for (const b of beams) carried.push({ ...LASER_LAMP, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE });
+    // so do the lasers of the robots (a blue light) and the spells in flight (orange for fire, green for acid, blue for ice, pink for magic): a light flies along with each, and fades in and out quickly
+    for (const b of beams) carried.push({ ...b.lamp, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE });
     // the Orb in the party is no longer at its place: its lamp goes out with it
     const orbAway = this.state.party.mascot === "Orb";
     const near = [...this.lamps, ...this.lootLamps, ...this.mascotLamps, ...carried]

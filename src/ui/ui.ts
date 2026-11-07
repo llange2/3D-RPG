@@ -666,10 +666,11 @@ export class UI {
   }
 
   /** Parchment with a question and a text field; resolves with the answer or null when dismissed. */
-  prompt(question: string, title = ""): Promise<string | null> {
+  prompt(question: string, title = "", labels: { placeholder?: string; ok?: string; cancel?: string; maxLength?: number } = {}): Promise<string | null> {
     return this.modal<string | null>(
       (close) => {
-        const input = h("input", { type: "text", placeholder: "your answer" }) as HTMLInputElement;
+        const input = h("input", { type: "text", placeholder: labels.placeholder ?? "your answer" }) as HTMLInputElement;
+        if (labels.maxLength) input.maxLength = labels.maxLength;
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") close(input.value);
           e.stopPropagation();
@@ -681,7 +682,7 @@ export class UI {
           title ? h("h2", { text: title }) : null,
           h("p", { text: question }),
           h("div", { class: "seedrow" }, input),
-          h("div", { class: "buttons" }, h("button", { class: "btn primary", text: "Answer", onclick: () => close(input.value) }), h("button", { class: "btn", text: "Walk away", onclick: () => close(null) })),
+          h("div", { class: "buttons" }, h("button", { class: "btn primary", text: labels.ok ?? "Answer", onclick: () => close(input.value) }), h("button", { class: "btn", text: labels.cancel ?? "Walk away", onclick: () => close(null) })),
         );
       },
       { dismissWith: null },

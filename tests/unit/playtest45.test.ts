@@ -31,7 +31,7 @@ describe("45th playtest, point 4: the wall decorations of the dungeons", () => {
     expect(wallDecoChoices("humanoid")).not.toContain(307);
     expect(wallDecoChoices("beast")).toEqual(expect.arrayContaining([307, 308]));
     expect(wallDecoChoices("beast")).not.toContain(304);
-    expect(wallDecoChoices("undead")).toEqual([309, 125]);
+    expect(wallDecoChoices("undead")).toEqual([304, 305, 309, 125]);
   });
 
   it("hangs exactly one kind in a dungeon, the one that fits its monsters, with room between the reliefs", { timeout: 240_000 }, () => {

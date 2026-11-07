@@ -4177,20 +4177,20 @@
  "obj_deco_lion": {
   "file": "models-original/obj_deco_lion.glb",
   "tris": 10036,
-  "bytes": 455648,
+  "bytes": 1910128,
   "bounds": [
    -0.6636120080947876,
-   -0.9511651420923275,
-   -0.14135899045603517,
+   -0.9511651396751404,
+   -0.14135898649692535,
    0.6660749912261963,
-   0.9503651387423444,
-   0.15330906832950258
+   0.9503651261329651,
+   0.15330906212329865
   ],
   "animations": [],
   "groundTop": -0.95,
   "surface": 0.9425,
   "fromObj": false,
-  "mean": 0.326
+  "mean": 0.355
  },
  "obj_deco_demon_1": {
   "file": "models-original/obj_deco_demon_1.glb",

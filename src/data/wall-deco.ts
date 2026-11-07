@@ -46,20 +46,33 @@ export const DECO_SCALE = 1.2;
 /** Cells between two decorations on the walls of a dungeon ("every 10 fields"). */
 export const WALL_DECO_SPACING = 10;
 
-/** The decoration that goes with a kind of monster only. */
+/** The decoration that goes with a kind of monster only. The undead have the wizard and the witch (necromancers; 47th playtest, point 10: with nothing of their own they took the moose or the lion). */
 const BY_GROUP: Readonly<Partial<Record<MonsterGroup, readonly number[]>>> = {
-  humanoid: [DECO_EVIL_WIZARD, DECO_EVIL_WITCH, DECO_BARBARIAN],
-  monster_humanoid: [DECO_EVIL_WIZARD, DECO_EVIL_WITCH, DECO_BARBARIAN],
+  // (a decoration listed twice is picked twice as often: the wizard and the witch also go with the undead, the barbarian only with these, so he gets half of the humanoids)
+  humanoid: [DECO_EVIL_WIZARD, DECO_EVIL_WITCH, DECO_BARBARIAN, DECO_BARBARIAN],
+  monster_humanoid: [DECO_EVIL_WIZARD, DECO_EVIL_WITCH, DECO_BARBARIAN, DECO_BARBARIAN],
+  undead: [DECO_EVIL_WIZARD, DECO_EVIL_WITCH],
   beast: [DECO_DEMON_1, DECO_DEMON_2],
 };
 
+/**
+ * How many permille of the dungeons of a group hang the lion or the moose (the two equally) although the group has decorations of its own. Every decoration should turn up about
+ * equally often in a world (47th playtest, point 10: the moose and the lion were a third each, the reliefs 4 to 10 %, because a group without reliefs had only those two). The beasts
+ * are 38 % of the dungeons and would give each demon 19 %, so a quarter of them take the lion or the moose; the others (humanoids and undead: the wizard, the witch and the barbarian)
+ * keep to their own, and a group with nothing of its own (constructs, plants, robots) always hangs the lion or the moose.
+ */
+const ANY_PERMILLE: Readonly<Partial<Record<MonsterGroup, number>>> = { beast: 260 };
+
 /** The decorations that fit a dungeon whose first monster is of this group: the ones of its kind, and the lion and the moose, which fit any. */
 export function wallDecoChoices(group: MonsterGroup | undefined): number[] {
-  return [...((group && BY_GROUP[group]) || []), DECO_LION, MOOSE_KING_ITEM];
+  return [...new Set([...((group && BY_GROUP[group]) || []), DECO_LION, MOOSE_KING_ITEM])];
 }
 
 /** The one decoration a dungeon hangs on its walls (the random stream is the dungeon's own, so that nothing else in the world shifts). */
 export function pickWallDeco(group: MonsterGroup | undefined, rng: Rng): number {
-  const choices = wallDecoChoices(group);
-  return choices[rng.int(choices.length)]!;
+  const own = (group && BY_GROUP[group]) || [];
+  const any = [DECO_LION, MOOSE_KING_ITEM];
+  const takesAny = own.length === 0 || rng.int(1000) < (ANY_PERMILLE[group!] ?? 0);
+  const pool = takesAny ? any : own;
+  return pool[rng.int(pool.length)]!;
 }

@@ -12,6 +12,7 @@ import type { ActionInstance, MapContent } from "../actions/types";
 import { hasRoundWalls, roundCorners, ROUND_ITEM, type RoundCorner } from "../interiors/roundCorners";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import type { StaticModelInfo, TextureCache } from "./assets";
+import { faceOpenYaw } from "./facing";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { BROKEN_PIECES, CEILING_RELIEF, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
@@ -603,7 +604,7 @@ export class InteriorView {
    * towards the more open side (a street, not the one-cell pocket behind a brittle wall; a tie takes the lower coordinate). Returns the offset of the slab's middle from the
    * cell's middle for a slab `thick` deep: its outer face lies on the edge.
    */
-  private brokenWallShift(map: InteriorMap, cx: number, cy: number, alongX: boolean, thick: number): { dx: number; dz: number } {
+  private brokenWallShift(map: InteriorMap, cx: number, cy: number, alongX: boolean, thick: number, out = 0): { dx: number; dz: number; sx: number; sz: number } {
     // the two cells the passage joins, the one at the lower coordinate first; `sign` is the way to it in the world (z runs against y)
     const sides = alongX
       ? [{ x: cx - 1, y: cy, sx: -1, sz: 0 }, { x: cx + 1, y: cy, sx: 1, sz: 0 }]
@@ -614,8 +615,9 @@ export class InteriorView {
       return !(nx === cx && ny === cy) && nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && map.cells[ny * map.width + nx] === CELL.FLOOR;
     }).length;
     const pick = open(sides[1]!) > open(sides[0]!) ? sides[1]! : sides[0]!;
-    const reach = CELL_SIZE / 2 - thick / 2;
-    return { dx: pick.sx * reach, dz: pick.sz * reach };
+    // `out`: how far the slab's outer face stands beyond the edge, towards the open side (the wall pieces of "Full 3D" stand that far in front of the wall)
+    const reach = CELL_SIZE / 2 + out - thick / 2;
+    return { dx: pick.sx * reach, dz: pick.sz * reach, sx: pick.sx, sz: pick.sz };
   }
 
   private pushBrokenPiece(instances: PropInstance[], map: InteriorMap, alongX: boolean, x: number, z: number, cx: number, cy: number): boolean {
@@ -733,8 +735,14 @@ export class InteriorView {
           if (this.brokenWalls.has(a.uid) && this.pushBrokenPiece(instances, map, a.params.axis === "x", x, z, a.x, a.y)) break;
           const look = brokenWallLook(map);
           if (!look || !this.brokenWalls.has(a.uid) || !this.props.has(look.model)) break;
-          // the passage runs along the axis of the action; the glTF models stand turned by half a circle (see `GLTF_YAW` in blocks.ts)
-          const yaw = (a.params.axis === "x" ? 0 : Math.PI / 2) + (look.glb ? Math.PI : 0);
+          // In "Full 3D" the walls beside it wear wall pieces that stand `PANEL_DEPTH` in front of the wall: the slab is as deep as two of them and centred on the edge, so its
+          // face is flush with them (from the side it showed a step, and the slab's blue edge, 7. 11. 2026, 47th playtest). Otherwise it is pressed flat across the edge.
+          const panelled = hasWallModels(this.environment) && wallModelOfTexture(map.theme.wall) !== undefined;
+          const slab = panelled ? PANEL_DEPTH * 2 : BROKEN_SLAB_DEPTH;
+          const shift = this.brokenWallShift(map, a.x, a.y, a.params.axis === "x", panelled ? slab : 0, panelled ? PANEL_DEPTH : 0);
+          // The slopes of its hole face the open side (the street), not the pocket: the glTF model's relief lies on its local -x, which has to point to the open side
+          // (the first fix turned it by the axis alone, so it faced the pocket whenever the street lay on the other side; 47th playtest, point 9)
+          const yaw = Math.atan2(shift.sz, -shift.sx) + (look.glb ? 0 : Math.PI);
           // the old block models hang off their origin (the city's slab lies 1.4 units beside it): they are put by their middle and then on the cell's edge
           // (`brokenWallShift`), flush with the walls beside. By the origin the broken wall stood a cell away from the one that gave way (7. 11. 2026). The register's bounds are
           // glTF's, and Babylon mirrors a glTF in x (`CellStyle.model.yaw`), so the middle of the model lies at (-middle x, middle z) here; `PropInstance.center` would take
@@ -742,8 +750,7 @@ export class InteriorView {
           // The slab (0.3 deep) is pressed flat to `BROKEN_SLAB_DEPTH` and stands across the edge itself: a deeper one was flush with the wall on one side only, and from the other its
           // edge and the end of the passage walls showed a step (the blue side of the slab, 7. 11. 2026)
           const b = this.staticInfo[look.model]?.bounds;
-          const depth = b ? BROKEN_SLAB_DEPTH / (b[3] - b[0]) : look.scale[0];
-          const shift = this.brokenWallShift(map, a.x, a.y, a.params.axis === "x", 0);
+          const depth = b ? slab / (b[3] - b[0]) : look.scale[0];
           const mx = b ? (-(b[0] + b[3]) / 2) * depth : 0;
           const mz = b ? ((b[2] + b[5]) / 2) * look.scale[2] : 0;
           const mid = { x: mx * Math.cos(yaw) + mz * Math.sin(yaw), z: -mx * Math.sin(yaw) + mz * Math.cos(yaw) };
@@ -848,43 +855,7 @@ export class InteriorView {
    * or none does (a pillar in the open), `pick` decides, so the choice stays stable.
    */
   private faceOpen(map: InteriorMap, a: ActionInstance, pick: number): number {
-    const bearings: [Facing, Facing, number][] = [["N", "S", 0], ["E", "W", 90], ["S", "N", 180], ["W", "E", 270]];
-    // a closed door or a wall that can be broken is a floor cell in the map but looks like a wall: an object does not face it
-    const floorCell = (x: number, y: number) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !this.wallLike.has(y * map.width + x);
-    // the front looks at an empty cell if there is one: a lectern or chest facing a statue or a person is worse than one facing a bare street
-    const sides = (empty: boolean) => {
-      const openAt = (x: number, y: number) => floorCell(x, y) && !(empty && this.objectCells.has(y * map.width + x));
-      const floorAt = (f: Facing) => openAt(a.x + FACING_DELTA[f].dx, a.y + FACING_DELTA[f].dy);
-      return { openAt, floorAt };
-    };
-    const emptySides = sides(true);
-    const { openAt, floorAt } = bearings.some(([front]) => emptySides.floorAt(front)) ? emptySides : sides(false);
-    // a banner hangs on a wall with its back to it, whichever way the corridor runs: facing along a corridor it stood across the way (31st playtest, point 2)
-    if (WALL_HUNG.has(shownItem(a) ?? -1)) {
-      const hung = bearings.filter(([front, back]) => floorAt(front) && !floorAt(back));
-      const walled = hung.length > 0 ? hung : bearings.filter(([, back]) => !floorAt(back));
-      const options = walled.length > 0 ? walled : bearings;
-      return (options[pick % options.length]![2] * Math.PI) / 180;
-    }
-    /** Open cells in a row from this one in a direction (up to 8). */
-    const run = (f: Facing) => {
-      let n = 0;
-      while (n < 8 && openAt(a.x + FACING_DELTA[f].dx * (n + 1), a.y + FACING_DELTA[f].dy * (n + 1))) n++;
-      return n;
-    };
-    let choices = bearings.filter(([front, back]) => floorAt(front) && !floorAt(back));
-    if (choices.length === 0) choices = bearings.filter(([front]) => floorAt(front));
-    if (choices.length === 0) choices = bearings;
-    // the back goes to a real wall, not to a neighbouring statue or chest: the chest of the Vault of Corthea (85/31) sat with its side to the wall (36th playtest, point 21)
-    const wallBehind = choices.filter(([, back]) => !floorCell(a.x + FACING_DELTA[back].dx, a.y + FACING_DELTA[back].dy));
-    if (wallBehind.length > 0) choices = wallBehind;
-    if (choices.length > 1) {
-      // a corner, a corridor: it looks along the longer way and turns its back to the nearer wall
-      const score = ([front, back]: [Facing, Facing, number]) => run(front) - run(back);
-      const best = Math.max(...choices.map(score));
-      choices = choices.filter((c) => score(c) === best);
-    }
-    return (choices[pick % choices.length]![2] * Math.PI) / 180;
+    return faceOpenYaw(map, { wallLike: this.wallLike, objectCells: this.objectCells }, a, pick, WALL_HUNG.has(shownItem(a) ?? -1));
   }
 
   /** Yaw that turns an object on a square toward the middle of that square. */

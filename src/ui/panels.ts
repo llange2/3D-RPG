@@ -7,7 +7,7 @@ import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type BoonKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
 import { portraitImage } from "./avatarFx";
-import { CapybaraClip } from "./capybaraClip";
+import { capybaraLoop } from "./capybaraClip";
 import { plateButton } from "./buttonArt";
 import { assetPath, clear, h } from "./dom";
 import { conditionClass, conditionTitle, shownCondition } from "./conditionInfo";
@@ -211,13 +211,10 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       const info = MASCOTS[name];
       const owned = hooks.mascots?.() ?? [name];
       const picture = info?.full ?? info?.portrait ?? "character00";
-      // the Capybara's picture turns round now and then (a new clip each time the page opens: the timer ends by itself when the page is closed)
+      // the Capybara's picture on its page is the clip in a loop (the card beside the heroes turns round now and then, `CapybaraClip`)
       let pic: HTMLElement;
-      if (name === "Capybara") {
-        const clip = new CapybaraClip("mascot-pic");
-        clip.start();
-        pic = clip.el;
-      } else pic = h("img", { class: "mascot-pic", src: assetPath(`icons/portraits/${picture}.webp`), alt: name });
+      if (name === "Capybara") pic = capybaraLoop("mascot-pic");
+      else pic = h("img", { class: "mascot-pic", src: assetPath(`icons/portraits/${picture}.webp`), alt: name });
       const head = h(
         "div",
         { class: "mascot-head" },

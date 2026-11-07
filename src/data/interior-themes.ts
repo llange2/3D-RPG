@@ -13,7 +13,7 @@ const base = {
   dungeon: {
     wall: "tex_dungeon_wall",
     floor: "tex_dungeon_floor",
-    ceiling: "tex_dungeon_ceiling",
+    ceiling: "tex_dungeon_ceiling",
     door: "tex_dungeon_door",
     music: 3,
     open: false,
@@ -23,7 +23,7 @@ const base = {
   fortress: {
     wall: "tex_fortress_wall",
     floor: "tex_fortress_floor",
-    ceiling: null,
+    ceiling: null,
     door: "tex_fortress_door",
     music: 4,
     open: true,
@@ -54,7 +54,8 @@ export const INTERIOR_THEMES: Record<string, InteriorTheme> = {
   town_desert: theme("town_desert", "town", "#ffe8bf", "#e8d4a0", 0.008, {}),
   town_snow: theme("town_snow", "town", "#e2ecff", "#dde8f0", 0.01, {}),
   town_swamp: theme("town_swamp", "town", "#cfd9b8", "#8c9a82", 0.014, {}),
-  town_lava: theme("town_lava", "town", "#ffd0a8", "#a85a38", 0.012, {}),
+  // (the ambient light is white like the other towns': the orange one tinted the floor tiles and their rims orange, 47th playtest, point 1; the haze at the horizon stays lava-coloured)
+  town_lava: theme("town_lava", "town", "#ffffff", "#a85a38", 0.012, {}),
 };
 
 /**

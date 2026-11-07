@@ -1,5 +1,6 @@
 import type { Scene } from "@babylonjs/core/scene";
-import { LaserFactory, type LaserBolt } from "./lasers";
+import { LASER_LAMP, LaserFactory, type LaserBolt } from "./lasers";
+import type { LampKind } from "./lamps";
 import type { PropRenderer } from "./props";
 import type { PropInstance } from "./terrainMesher";
 
@@ -54,6 +55,9 @@ export function flightSeconds(tiles: number): number {
 }
 
 interface Flight {
+  /** What the light that flies along is called (`ProjectileGlow.key`). */
+  id: number;
+  kind: ProjectileKind;
   /** The model that flies, or null for a laser bolt. */
   pose: Pose | null;
   laser: LaserBolt | null;
@@ -71,12 +75,25 @@ interface Flash {
   t: number;
 }
 
-/** A moving light of the lamp pool: the laser in flight (`Game.updateLamps`). */
+/**
+ * The light that flies along with a projectile (47th playtest, point 8: like the robots' lasers, whose blue is `LASER_LAMP`). The colour follows the element: fire orange, acid green,
+ * ice blue, magic pink to violet. Arrows, the physical attack and the missile carry none.
+ */
+export const PROJECTILE_LAMPS: Readonly<Partial<Record<ProjectileKind, Omit<LampKind, "y">>>> = {
+  laser: LASER_LAMP,
+  fire: { color: [1, 0.5, 0.12], range: 6.5, intensity: 3.4 },
+  acid: { color: [0.4, 1, 0.15], range: 6.5, intensity: 3.2 },
+  ice: { color: [0.35, 0.68, 1], range: 6.5, intensity: 3.2 },
+  magic: { color: [0.88, 0.35, 1], range: 6.5, intensity: 3.2 },
+};
+
+/** A moving light of the lamp pool: a laser or a spell in flight (`Game.updateLamps`). */
 export interface ProjectileGlow {
   key: string;
   x: number;
   y: number;
   z: number;
+  lamp: Omit<LampKind, "y">;
 }
 
 /** Objects that fly from one point to another in a straight line, drawn as props so they cost one draw call per kind. */
@@ -86,6 +103,7 @@ export class Projectiles {
   private drawn = false;
   private lasers: LaserFactory | null = null;
   private static readonly OWNER = "projectiles";
+  private static flights = 0;
 
   constructor(
     private readonly props: PropRenderer,
@@ -111,8 +129,8 @@ export class Projectiles {
         const laser = this.lasers?.create() ?? null;
         // (already in place: the bolt must not show at the origin for the frame before the first update)
         laser?.place(start.x, start.y, start.z, yaw, Math.atan2(start.y - to.y, Math.hypot(dx, dz)));
-        this.flights.push({ pose: null, laser, from: start, to, yaw, t: 0, duration });
-      } else this.flights.push({ pose: POSES[kind], laser: null, from: start, to, yaw, t: 0, duration });
+        this.flights.push({ id: Projectiles.flights++, kind, pose: null, laser, from: start, to, yaw, t: 0, duration });
+      } else this.flights.push({ id: Projectiles.flights++, kind, pose: POSES[kind], laser: null, from: start, to, yaw, t: 0, duration });
     }
     return duration;
   }
@@ -126,13 +144,14 @@ export class Projectiles {
     return this.flights.length > 0 || this.flashes.length > 0;
   }
 
-  /** The lasers in flight, as moving lights (the same blue as the beam). */
+  /** The lasers and the spells in flight, as moving lights (the colour of the beam or of the element). */
   glows(): ProjectileGlow[] {
     const out: ProjectileGlow[] = [];
     for (const f of this.flights) {
-      if (!f.laser) continue;
+      const lamp = PROJECTILE_LAMPS[f.kind];
+      if (!lamp) continue;
       const k = Math.min(1, f.t / f.duration);
-      out.push({ key: `laser:${f.laser.id}`, x: f.from.x + (f.to.x - f.from.x) * k, y: f.from.y + (f.to.y - f.from.y) * k, z: f.from.z + (f.to.z - f.from.z) * k });
+      out.push({ key: `proj:${f.id}`, lamp, x: f.from.x + (f.to.x - f.from.x) * k, y: f.from.y + (f.to.y - f.from.y) * k, z: f.from.z + (f.to.z - f.from.z) * k });
     }
     return out;
   }

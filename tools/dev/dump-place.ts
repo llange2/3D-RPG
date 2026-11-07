@@ -10,7 +10,7 @@ import type { WorldSize } from "../../src/world/types";
 import { World } from "../../src/world/world";
 
 const [seed = "frost-gate-324", size = "default", name = "Aldhold", ...rest] = process.argv.slice(2);
-const world = new World(seed, size as WorldSize);
+const world = new World(seed, size as WorldSize, (process.env.DUNGEONS ?? "maximum") as never);
 const poi = world.allPois().find((p) => p.name.toLowerCase() === name.toLowerCase());
 if (!poi) {
   console.log("not found; places:", world.allPois().map((p) => `${p.name} (${p.kind})`).join(", "));

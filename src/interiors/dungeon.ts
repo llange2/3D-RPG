@@ -258,6 +258,9 @@ function hub(rng: Rng, ctx: BuildContext): InteriorMap {
 
 // ---------------------------------------------------------------- dungeon_3: the maze
 
+/** Logical maze cells per side by level (2N + 1 = 25, 33, 39, 47, 55; a maze is always odd, 33 is the nearest to the 32 of the document). */
+const MAZE_CELLS = [12, 16, 19, 23, 27] as const;
+
 /**
  * A maze of corridors one cell wide between walls one cell wide, with a few small rooms (3 x 3 to 4 x 4). Runes stand in the place of some walls
  * that were taken out to make loops: they throw the party to another place, but the maze is whole without them, so every part is reachable. There
@@ -265,7 +268,8 @@ function hub(rng: Rng, ctx: BuildContext): InteriorMap {
  */
 function maze(rng: Rng, ctx: BuildContext): InteriorMap {
   const b = new Builder(SIZE, SIZE);
-  const N = 29; // logical cells across and down; the map region is 2N + 1
+  // logical cells across and down; the map region is 2N + 1: about 25, 32, 39, 47 and 55 cells for level 1 to 5 (quest document 1.6)
+  const N = MAZE_CELLS[Math.min(Math.max(ctx.tier, 1), 5) - 1]!;
   const R = 2 * N + 1;
   const ox = (SIZE - R) >> 1;
   const oy = (SIZE - R) >> 1;
