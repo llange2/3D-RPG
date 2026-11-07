@@ -1245,6 +1245,8 @@ export class Game {
 
   private async onArrived(x: number, y: number): Promise<void> {
     const s = this.state;
+    // the cell was reached in this scene: an action on it may leave it (the exit of a town, a portal, a ladder), and `x, y` mean nothing in the next one
+    const epoch = this.fxEpoch;
     s.steps++;
     cursorStepped();
     this.syncSurroundings();
@@ -1276,6 +1278,12 @@ export class Game {
       }
       this.closeSlidingDoors();
     }
+    // Leaving the town on its exit cell asks first and the answer comes later: the overworld's monsters are there by then, and the town's coordinates (1, 6) put the party
+    // next to a Kudo crab of the tile (2, 6) a whole world away, which hit it before anybody had moved (bug_fix_43, jade-wood-358). The new scene has its own turn.
+    if (epoch !== this.fxEpoch) {
+      this.ambushGrace = false;
+      return;
+    }
 
     if (this.ambushGrace) {
       // an ambush springs the monsters up in front of the party; the party gets the first move
@@ -1299,7 +1307,8 @@ export class Game {
       const place = this.world.poiAtEntrance(x, y);
       if (place) await this.promptEnterPoi(place.id);
     }
-    if (this.mode === "interior" && !this.enc.battleMode) {
+    // (entering a place has changed the scene: the overworld's x, y are no cell of its map)
+    if (epoch === this.fxEpoch && this.mode === "interior" && !this.enc.battleMode) {
       await this.senseBrittleWalls(x, y);
       await this.noticeBrittleWall(x, y);
     }
