@@ -267,7 +267,7 @@ export function runFight(party: HeroRun[], defs: MonsterDef[], env: FightEnv, F:
         if (!adjacent && !m.d.ranged) continue;
         const distance = adjacent ? 1 : Math.max(2, dist);
         const roll = rng.range(Math.min(m.d.damage_min, m.d.damage_max), Math.max(m.d.damage_min, m.d.damage_max));
-        const dmg = F.monsterDamage(m.d, t.h, { damage: roll, hit: rng.float(), evade: rng.float(), ranged: !adjacent, distance, fairy: env.mascot === "Fairy" ? F.fairyReduction : 0 });
+        const dmg = F.monsterDamage(m.d, t.h, { damage: roll, hit: rng.float(), evade: rng.float(), early: rng.float(), ranged: !adjacent, distance, fairy: env.mascot === "Fairy" ? F.fairyReduction : 0 });
         hitHero(t, dmg, special, adjacent);
       }
     });

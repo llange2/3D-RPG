@@ -38,11 +38,13 @@ describe("fixes of docs/KAMPF_BALANCE.md section 3.5", () => {
     const party = createDefaultParty();
     const hero = createCharacter({ name: "T", classType: "Knight", raceType: "Human", avatar: "character05", attrs: { str: 10, int: 10, per: 10, end: 10, spd: 20, acc: 10, lck: 10 } });
     hero.inventory.body_armor = makeItem({ name: "Mail", type: "chain_mail", bonus: { arm: 10 } });
+    // (level 4: heroes of level 1 to 3 are also missed by chance, 45th playtest)
+    hero.level = 4;
     const shooter: MonsterDef = { ...monsters.find((m) => m.attack_type === "Physical")!, speed: 5, damage_min: 40, damage_max: 40 };
     const results = new Set<number>();
     for (let i = 0; i < 400; i++) results.add(monsterDamage(party, shooter, hero, true, 6, rng(`s${i}`)));
-    // BALANCE v4: a hit costs half of the armor (5): 35; a miss nothing (the old code let 40 through)
-    expect([...results].sort((a, b) => a - b)).toEqual([0, 35]);
+    // BALANCE v4 (45th playtest): a hit does 30 / (30 + armor) of the roll, 40 x 30 / 40 = 30; a miss nothing (the old code let 40 through)
+    expect([...results].sort((a, b) => a - b)).toEqual([0, 30]);
     // LEGACY (balance v4): a hit costs armor 10 and half of it (5): 25
     setBalanceMode("legacy");
     try {

@@ -138,6 +138,8 @@ describe("BALANCE v4: the shots of a monster from afar", () => {
   const armored = (arm: number): Character => {
     const hero = createCharacter({ name: "T", classType: "Knight", raceType: "Human", avatar: "character05", attrs: { str: 10, int: 10, per: 10, end: 10, spd: 20, acc: 10, lck: 10 } });
     hero.inventory.body_armor = makeItem({ name: "Mail", type: "chain_mail", bonus: { arm } });
+    // (level 4: heroes of level 1 to 3 are also missed by chance, 45th playtest)
+    hero.level = 4;
     return hero;
   };
   const shooter = (min: number, max: number): MonsterDef => ({ ...Object.values(MONSTERS).find((m) => m.attack_type === "Physical")!, speed: 1000, damage_min: min, damage_max: max });
@@ -148,12 +150,12 @@ describe("BALANCE v4: the shots of a monster from afar", () => {
     expect(inMode("legacy", () => [1, 4, 7].map(monsterShots))).toEqual([1, 1, 1]);
   });
 
-  it("loses only half of the armor and always lets a quarter of the roll through", () => {
-    // armor 10: 40 - 5; armor 100: the floor of a quarter of 40
-    expect(monsterDamage(party, shooter(40, 40), armored(10), true, 3, rng("a"))).toBe(35);
-    expect(monsterDamage(party, shooter(40, 40), armored(100), true, 3, rng("a"))).toBe(10);
-    // melee keeps the full armor and has no floor
-    expect(monsterDamage(party, shooter(40, 40), armored(100), false, 1, rng("a"))).toBe(0);
+  it("does 30 / (30 + armor) of the roll, blows and shots alike, and never makes a hit harmless", () => {
+    // armor 10: 40 x 30 / 40; armor 100: 40 x 30 / 130 (45th playtest; the flat deduction and the quarter floor are the legacy rules)
+    expect(monsterDamage(party, shooter(40, 40), armored(10), true, 3, rng("a"))).toBe(30);
+    expect(monsterDamage(party, shooter(40, 40), armored(100), true, 3, rng("a"))).toBe(9);
+    expect(monsterDamage(party, shooter(40, 40), armored(100), false, 1, rng("a"))).toBe(9);
+    expect(monsterDamage(party, shooter(40, 40), armored(0), false, 1, rng("a"))).toBe(40);
     expect(inMode("legacy", () => monsterDamage(party, shooter(40, 40), armored(10), true, 3, rng("a")))).toBe(25);
     expect(inMode("legacy", () => monsterDamage(party, shooter(40, 40), armored(100), true, 3, rng("a")))).toBe(0);
   });

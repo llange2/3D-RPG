@@ -45,6 +45,13 @@ export const RULES = {
     monsterShotFloor: 0.25,
     /** A monster with a ranged attack fires `ceil(attacks / 2)` shots a turn from afar, at most this many. */
     monsterShotsMax: 2,
+    /**
+     * Physical damage of a monster hit (45th playtest, the user's trial): `roll × K / (K + armor)` instead of the flat deduction `roll − armor`, for blows and shots alike.
+     * Armor never makes a hit harmless, and every point counts less the more of it there is. (This replaces `monsterShotArmor` and `monsterShotFloor` for physical shots.)
+     */
+    monsterArmorK: 30,
+    /** Extra chance that a monster misses a hero of level 1, 2 and 3 (every kind of attack, on top of the hit chance of a shot): a gentler start. */
+    earlyMiss: [0.5, 0.3, 0.15],
     /** The Wolf kills a monster that is below this share of its health. */
     wolfBelow: 0.1,
     /** The Fairy takes this many points off every elemental hit. */
@@ -75,6 +82,8 @@ export const RULES = {
     rangedResPhysical: false,
     monsterShotArmor: 1.5,
     monsterShotFloor: 0,
+    monsterArmorK: 0,
+    earlyMiss: [] as readonly number[],
     monsterShotsMax: 1,
     wolfBelow: 0.9,
     /** The old game's value lives in the generated constants (`MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION`, 20). */
@@ -93,6 +102,9 @@ export const monsterShots = (attacks: number): number => {
   const rules = isV4() ? RULES.v4 : RULES.legacy;
   return Math.max(1, Math.min(rules.monsterShotsMax, Math.ceil(attacks / 2)));
 };
+
+/** BALANCE v4 (45th playtest): the extra chance (0 to 1) that a monster misses a hero of this level; 0 from level 4 on and in the legacy mode. */
+export const earlyMissChance = (level: number): number => (isV4() ? (RULES.v4.earlyMiss[level - 1] ?? 0) : 0);
 
 export const healthFlat = (): number => (isV4() ? RULES.v4.healthFlat : RULES.legacy.healthFlat);
 export const wolfBelow = (): number => (isV4() ? RULES.v4.wolfBelow : RULES.legacy.wolfBelow);

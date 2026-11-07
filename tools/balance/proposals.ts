@@ -140,6 +140,8 @@ PROPOSALS.v4b = makeV4("v4b", "add1");
  *   eArmor     share of the hero's armor taken off a monster's physical shot (game 1.5: armor and half of it again)
  *   eFloor     a monster's physical shot does at least this share of its roll, whatever the armor (game 0)
  *   eDmg       factor on the damage of every ranged shot of a monster (game 1)
+ *   mK         physical hits of a monster do `roll x mK / (mK + armor)` (blows and shots; 0 = the flat deduction above; 45th playtest: the game uses 30)
+ *   miss1..3   extra chance that a monster misses a hero of level 1, 2, 3 (every attack; the game: 0.5, 0.3, 0.15)
  * (The number of shots per turn is a rule of the fight, `--rshots=one|half|all`.)
  */
 export interface V5Options {
@@ -153,8 +155,12 @@ export interface V5Options {
   eFloor: number;
   eDmg: number;
   eShots: number;
+  mK: number;
+  miss1: number;
+  miss2: number;
+  miss3: number;
 }
-export const V5_DEFAULT: V5Options = { bowRes: 0, bowDiv: 1, bowArmor: 0.5, bowAdj: 1, minSpeed: 0, eHit: 0.5, eArmor: 1.5, eFloor: 0, eDmg: 1, eShots: 1 };
+export const V5_DEFAULT: V5Options = { bowRes: 0, bowDiv: 1, bowArmor: 0.5, bowAdj: 1, minSpeed: 0, eHit: 0.5, eArmor: 1.5, eFloor: 0, eDmg: 1, eShots: 1, mK: 0, miss1: 0, miss2: 0, miss3: 0 };
 
 export function makeV5(id: string, given: Partial<V5Options>): Formulas {
   const o = { ...V5_DEFAULT, ...given };
@@ -176,6 +182,17 @@ export function makeV5(id: string, given: Partial<V5Options>): Formulas {
     },
     rangedShots: (attacks) => Math.max(1, Math.min(o.eShots, Math.ceil(attacks / 2))),
     monsterDamage(mon, h, a) {
+      const extra = [0, o.miss1, o.miss2, o.miss3][h.level] ?? 0;
+      if (extra > 0 && (a.early ?? 1) < extra) return 0;
+      if (o.mK > 0 && mon.attack_type.toLowerCase() === "physical") {
+        const ninja = h.cls === "Ninja";
+        if (a.ranged) {
+          const chance = a.distance > 0 ? Math.min(1, Math.max(0, mon.speed / (h.spd * a.distance * (ninja ? o.eHit * 1.5 : o.eHit)))) : 1;
+          if (!(a.hit <= chance)) return 0;
+        } else if (ninja && a.evade < 0.1) return 0;
+        const total = Math.trunc((a.damage * o.mK) / (o.mK + h.armor));
+        return a.ranged ? Math.trunc(total * o.eDmg) : total;
+      }
       if (!a.ranged) return currentMonsterDamage(mon, h, a);
       const ninja = h.cls === "Ninja";
       const factor = ninja ? o.eHit * 1.5 : o.eHit;
@@ -194,7 +211,7 @@ export function makeV5(id: string, given: Partial<V5Options>): Formulas {
 }
 
 /** The ranged package of docs/KAMPF_BALANCE.md section 8, in the game since then: the formulas of `v4` (this name is what `verify.ts` compares with the game). */
-export const V4_RANGED: Partial<V5Options> = { bowRes: 1, bowDiv: 1.5, bowAdj: 0.5, eArmor: 0.5, eFloor: 0.25, eShots: 2 };
+export const V4_RANGED: Partial<V5Options> = { bowRes: 1, bowDiv: 1.5, bowAdj: 0.5, eArmor: 0.5, eFloor: 0.25, eShots: 2, mK: 30, miss1: 0.5, miss2: 0.3, miss3: 0.15 };
 PROPOSALS.v4 = makeV5("v4", V4_RANGED);
 PROPOSALS.v4.title = "Spiel: Vorschlag v4 mit dem Fernkampf-Paket (Bogen: Resistenz, Stufenanteil / 1,5, Nahschuss halb; Gegnerschuesse: halbe Ruestung, Mindestschaden 25 %, bis 2 Schuesse)";
 

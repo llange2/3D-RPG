@@ -9,6 +9,10 @@ import { worldQuestLog } from "../../src/game/questLog";
 import { BANK_SLIDER_STEPS, bankSliderAmount } from "../../src/sim/economy";
 import { createDefaultParty, advanceTime } from "../../src/sim/party";
 import { PANDORA_PER_DAY, castSpell } from "../../src/sim/spells";
+import { earlyMissChance } from "../../src/sim/balance";
+import { createCharacter } from "../../src/sim/character";
+import { monsterDamage } from "../../src/sim/combat";
+import { makeItem } from "../../src/sim/items";
 import { Rng } from "../../src/core/rng";
 import { World } from "../../src/world/world";
 
@@ -147,5 +151,38 @@ describe("45th playtest, point 7: the quest log on the stone heads", () => {
       expect(line).toMatch(/mystery of the stone heads in /);
       expect(line).not.toMatch(/face the right/);
     }
+  });
+});
+
+describe("45th playtest, the trial of the user: armor as a share, and an extra miss on levels 1 to 3", () => {
+  const knight = (level: number, arm: number) => {
+    const hero = createCharacter({ name: "T", classType: "Knight", raceType: "Human", avatar: "character05", attrs: { str: 10, int: 10, per: 10, end: 10, spd: 20, acc: 10, lck: 10 } });
+    hero.inventory.body_armor = makeItem({ name: "Mail", type: "chain_mail", bonus: { arm } });
+    hero.level = level;
+    return hero;
+  };
+  const blow = { ...Object.values(MONSTERS).find((m) => m.attack_type === "Physical")!, damage_min: 30, damage_max: 30 };
+  const party = createDefaultParty();
+  const missRate = (level: number): number => {
+    let missed = 0;
+    for (let i = 0; i < 4000; i++) if (monsterDamage(party, blow, knight(level, 0), false, 1, new Rng([i, 7, 7, 7])) === 0) missed++;
+    return missed / 4000;
+  };
+
+  it("misses a hero of level 1, 2 and 3 on 50, 30 and 15 percent more of the attacks, none from level 4 on", () => {
+    expect(missRate(1)).toBeGreaterThan(0.46);
+    expect(missRate(1)).toBeLessThan(0.54);
+    expect(missRate(2)).toBeGreaterThan(0.26);
+    expect(missRate(2)).toBeLessThan(0.34);
+    expect(missRate(3)).toBeGreaterThan(0.12);
+    expect(missRate(3)).toBeLessThan(0.18);
+    expect(missRate(4)).toBe(0);
+    expect(earlyMissChance(1)).toBe(0.5);
+    expect(earlyMissChance(40)).toBe(0);
+  });
+
+  it("takes a hit down to 30 / (30 + armor) of the roll", () => {
+    const hit = (arm: number) => monsterDamage(party, blow, knight(4, arm), false, 1, new Rng([1, 2, 3, 4]));
+    expect([0, 10, 30, 60, 120].map(hit)).toEqual([30, 22, 15, 10, 6]);
   });
 });
