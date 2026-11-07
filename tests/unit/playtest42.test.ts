@@ -5,7 +5,7 @@ import { generateInterior, planDungeon } from "../../src/interiors";
 import { CELL } from "../../src/interiors/types";
 import { RIDDLES_WORLD } from "../../src/data/riddles";
 import { emptyContainerLine } from "../../src/data/prop-texts";
-import { newGameState, exportSaves, importSaves, writeSave, readSave } from "../../src/game/state";
+import { newGameState, exportSaves, importSaves, writeSave, readSave, listNamedSaves, readNamedSave } from "../../src/game/state";
 import { train } from "../../src/sim/economy";
 import { createDefaultParty } from "../../src/sim/party";
 import { xpToNextLevel } from "../../src/sim/character";
@@ -175,11 +175,11 @@ describe("42nd playtest, point 13: export and import of the saves", () => {
     expect(result.skipped).toEqual([]);
     expect(result.written.sort()).toEqual(["world / auto", "world / quick"]);
     expect(readSave("world", "auto")?.seed).toBe("export-a");
-    // one save alone goes into the manual slot
+    // one save alone becomes a named save
     store.clear();
     const single = importSaves(JSON.stringify(bundle.saves[0]!.save));
-    expect(single.written).toEqual(["world / manual"]);
-    expect(readSave("world", "manual")?.seed).toBe("export-a");
+    expect(single.written).toEqual(["world / Imported export-a"]);
+    expect(readNamedSave(listNamedSaves("world")[0]!.id)?.seed).toBe("export-a");
   });
 
   it("writes nothing for a file that is no save", () => {

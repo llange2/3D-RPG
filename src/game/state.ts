@@ -256,15 +256,19 @@ export function fromSaveFile(file: SaveFile): GameState {
  * moves a campaign save that was written under them.
  */
 export type GameKind = "world" | "campaign";
-const KEYS: Record<GameKind, Record<"auto" | "quick" | "manual", string>> = {
-  world: { auto: "mm3-seed-rpg:save:v1", quick: "mm3-seed-rpg:quicksave:v1", manual: "mm3-seed-rpg:manualsave:v1" },
-  campaign: { auto: "mm3-seed-rpg:campaign:save:v1", quick: "mm3-seed-rpg:campaign:quicksave:v1", manual: "mm3-seed-rpg:campaign:manualsave:v1" },
+const KEYS: Record<GameKind, Record<"auto" | "quick", string>> = {
+  world: { auto: "mm3-seed-rpg:save:v1", quick: "mm3-seed-rpg:quicksave:v1" },
+  campaign: { auto: "mm3-seed-rpg:campaign:save:v1", quick: "mm3-seed-rpg:campaign:quicksave:v1" },
 };
+/** The single slot "Save game" wrote before there were named saves (`migrateManualSaves` turns it into one). */
+const LEGACY_MANUAL: Record<GameKind, string> = { world: "mm3-seed-rpg:manualsave:v1", campaign: "mm3-seed-rpg:campaign:manualsave:v1" };
 
-/** `auto`: written by the game itself, `quick`: F5, `manual`: "Save game" in the menu. */
+/** `auto`: written by the game itself, `quick`: F5. What "Save game" in the menu writes are the named saves below. */
 export type SaveSlot = keyof (typeof KEYS)["world"];
-export const SAVE_SLOTS: readonly SaveSlot[] = ["manual", "quick", "auto"];
+export const SAVE_SLOTS: readonly SaveSlot[] = ["quick", "auto"];
 export const GAME_KINDS: readonly GameKind[] = ["world", "campaign"];
+/** The kinds of game whose saves the title screen and the menu list: the campaign was taken off the menu (6. 11. 2026), its saves stay in the browser but are not offered. */
+export const LISTED_KINDS: readonly GameKind[] = ["world"];
 
 export const kindOfState = (state: Pick<GameState, "campaign">): GameKind => (state.campaign ? "campaign" : "world");
 
@@ -296,6 +300,7 @@ export function readSave(kind: GameKind, slot: SaveSlot = "auto"): SaveFile | nu
  * and `readSave` ignores it).
  */
 export function splitLegacySaves(): void {
+  migrateManualSaves();
   try {
     for (const slot of SAVE_SLOTS) {
       const raw = localStorage.getItem(KEYS.world[slot]);
@@ -308,28 +313,148 @@ export function splitLegacySaves(): void {
   }
 }
 
+// ---------------------------------------------------------------- named saves ("Save game")
+
+/**
+ * Any number of saves, each with a name the player chose. The index (one small key) lists them, each save has a key of its own so that one big
+ * save does not have to be read to show the list. A name is unique among the saves of a kind of game (capitals do not count): saving under a name
+ * that exists replaces that save.
+ */
+export interface NamedSave {
+  id: string;
+  name: string;
+  kind: GameKind;
+  /** `describeSave` of the save (the seed, the lead hero and when it was made), so that a list needs no save to be read. */
+  note: string;
+  savedAt: string;
+}
+
+const NAMED_INDEX = "mm3-seed-rpg:named:index:v1";
+const namedKey = (id: string) => `mm3-seed-rpg:named:save:${id}`;
+export const MAX_SAVE_NAME = 40;
+/** The name a save of the old single slot gets. */
+export const LEGACY_SAVE_NAME = "Saved game";
+
+/** A name as it is stored: whitespace trimmed and collapsed, at most `MAX_SAVE_NAME` letters. */
+export const cleanSaveName = (name: string): string => name.replace(/\s+/g, " ").trim().slice(0, MAX_SAVE_NAME).trim();
+const sameName = (a: string, b: string) => a.toLocaleLowerCase() === b.toLocaleLowerCase();
+
+function readIndex(): NamedSave[] {
+  try {
+    const raw = localStorage.getItem(NAMED_INDEX);
+    const list: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? (list as NamedSave[]).filter((e) => typeof e?.id === "string" && typeof e.name === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** The named saves of a kind of game (all kinds without one), the newest first. */
+export function listNamedSaves(kind?: GameKind): NamedSave[] {
+  return readIndex()
+    .filter((e) => kind === undefined || e.kind === kind)
+    .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+export const findNamedSave = (name: string, kind: GameKind): NamedSave | undefined => readIndex().find((e) => e.kind === kind && sameName(e.name, cleanSaveName(name)));
+
+/** Stores a save file under a name (replacing the save of that name). Returns false when the name is empty or the browser refuses. */
+export function storeNamedSave(file: SaveFile, name: string): boolean {
+  const clean = cleanSaveName(name);
+  if (clean === "") return false;
+  const kind: GameKind = file.state.campaign ? "campaign" : "world";
+  try {
+    const index = readIndex();
+    const old = index.find((e) => e.kind === kind && sameName(e.name, clean));
+    const id = old?.id ?? `${Date.now().toString(36)}${index.length.toString(36)}`;
+    localStorage.setItem(namedKey(id), JSON.stringify(file));
+    const entry: NamedSave = { id, name: clean, kind, note: describeSave(file), savedAt: file.savedAt };
+    localStorage.setItem(NAMED_INDEX, JSON.stringify([...index.filter((e) => e.id !== id), entry]));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Saves the game being played under a name. */
+export const writeNamedSave = (state: GameState, name: string): boolean => storeNamedSave(toSaveFile(state), name);
+
+export function readNamedSave(id: string): SaveFile | null {
+  try {
+    const raw = localStorage.getItem(namedKey(id));
+    const file = raw ? (JSON.parse(raw) as SaveFile) : null;
+    return file && file.version === 1 && file.state ? file : null;
+  } catch {
+    return null;
+  }
+}
+
+export function deleteNamedSave(id: string): void {
+  try {
+    localStorage.removeItem(namedKey(id));
+    localStorage.setItem(NAMED_INDEX, JSON.stringify(readIndex().filter((e) => e.id !== id)));
+  } catch {
+    // nothing to remove
+  }
+}
+
+/** A name for an imported save that no save of the kind has yet ("Imported abc", "Imported abc (2)"). */
+export function freeSaveName(base: string, kind: GameKind): string {
+  const root = cleanSaveName(base);
+  let name = root;
+  for (let n = 2; findNamedSave(name, kind); n++) name = cleanSaveName(`${root.slice(0, MAX_SAVE_NAME - 5)} (${n})`);
+  return name;
+}
+
+/** Once at start-up: the save of the old single slot becomes the named save "Saved game" (unless the name is taken), and the old key is dropped. */
+export function migrateManualSaves(): void {
+  for (const kind of GAME_KINDS) {
+    try {
+      const raw = localStorage.getItem(LEGACY_MANUAL[kind]);
+      if (!raw) continue;
+      const file = JSON.parse(raw) as SaveFile;
+      // a campaign save may sit in the world's key (see `splitLegacySaves`): the save itself says what it is
+      if (isSaveFile(file)) {
+        const own: GameKind = file.state.campaign ? "campaign" : "world";
+        storeNamedSave(file, freeSaveName(LEGACY_SAVE_NAME, own));
+      }
+      localStorage.removeItem(LEGACY_MANUAL[kind]);
+    } catch {
+      // a damaged save stays where it is
+    }
+  }
+}
+
 /** All the saves of this browser in one file (Esc > Debug > Export saves): what a tester sends so that the game can be looked at somewhere else. */
 export interface SaveBundle {
   format: "mm3-saves";
   exportedAt: string;
-  saves: { kind: GameKind; slot: SaveSlot; save: SaveFile }[];
+  saves: { kind: GameKind; slot: SaveSlot | "manual"; save: SaveFile }[];
+  /** The named saves (older bundles have none; their "manual" slot is imported as a named save). */
+  named?: { name: string; save: SaveFile }[];
 }
 
-/** Every save in the slots of both kinds of game. */
+/** Every save in the slots of both kinds of game, and every named save. */
 export function exportSaves(): SaveBundle {
   const saves: SaveBundle["saves"] = [];
   for (const kind of GAME_KINDS) for (const slot of SAVE_SLOTS) {
     const save = readSave(kind, slot);
     if (save) saves.push({ kind, slot, save });
   }
-  return { format: "mm3-saves", exportedAt: new Date().toISOString(), saves };
+  const named: NonNullable<SaveBundle["named"]> = [];
+  for (const entry of listNamedSaves()) {
+    const save = readNamedSave(entry.id);
+    if (save) named.push({ name: entry.name, save });
+  }
+  return { format: "mm3-saves", exportedAt: new Date().toISOString(), saves, named };
 }
 
 const isSaveFile = (v: unknown): v is SaveFile => typeof v === "object" && v !== null && (v as SaveFile).version === 1 && typeof (v as SaveFile).state === "object" && (v as SaveFile).state !== null && Array.isArray((v as SaveFile).state.party?.characters);
 
 /**
- * Puts the saves of a file into their slots, replacing what is there. The file is a bundle (`exportSaves`) or a single save, which goes into the manual slot of its kind.
- * Returns the slots written ("world / manual") and why the rest was left out; nothing is written when the text is no save at all.
+ * Puts the saves of a file into their slots, replacing what is there. The file is a bundle (`exportSaves`) or a single save, which becomes a named save
+ * ("Imported <seed>"); named saves of a bundle keep their names (and replace a save of that name), the "manual" slot of an older bundle becomes "Saved game".
+ * Returns what was written ("world / auto", "world / <name>") and why the rest was left out; nothing is written when the text is no save at all.
  */
 export function importSaves(text: string): { written: string[]; skipped: string[] } {
   let data: unknown;
@@ -338,14 +463,24 @@ export function importSaves(text: string): { written: string[]; skipped: string[
   } catch {
     return { written: [], skipped: ["the file is no JSON"] };
   }
-  const entries: { kind: GameKind; slot: SaveSlot; save: unknown }[] =
-    isSaveFile(data) ? [{ kind: data.state.campaign ? "campaign" : "world", slot: "manual", save: data }] :
-    typeof data === "object" && data !== null && (data as SaveBundle).format === "mm3-saves" && Array.isArray((data as SaveBundle).saves) ? (data as SaveBundle).saves : [];
   const written: string[] = [];
   const skipped: string[] = [];
-  for (const { kind, slot, save } of entries) {
+  const kindOf = (save: SaveFile): GameKind => (save.state.campaign ? "campaign" : "world");
+  const putNamed = (save: unknown, name: string, label: string) => {
+    if (!isSaveFile(save)) skipped.push(`${label}: not a save`);
+    else if (storeNamedSave(save, name)) written.push(`${kindOf(save)} / ${cleanSaveName(name)}`);
+    else skipped.push(`${label}: the browser refused to store it`);
+  };
+  if (isSaveFile(data)) {
+    putNamed(data, freeSaveName(`Imported ${data.seed}`, kindOf(data)), "the save");
+    return { written, skipped };
+  }
+  const bundle = data as Partial<SaveBundle> | null;
+  if (typeof bundle !== "object" || bundle === null || bundle.format !== "mm3-saves" || !Array.isArray(bundle.saves)) return { written, skipped: ["the file holds no save"] };
+  for (const { kind, slot, save } of bundle.saves) {
     const name = `${kind} / ${slot}`;
-    if (!GAME_KINDS.includes(kind) || !SAVE_SLOTS.includes(slot)) skipped.push(`${name}: unknown slot`);
+    if (slot === "manual") putNamed(save, LEGACY_SAVE_NAME, name);
+    else if (!GAME_KINDS.includes(kind) || !SAVE_SLOTS.includes(slot)) skipped.push(`${name}: unknown slot`);
     else if (!isSaveFile(save) || !!save.state.campaign !== (kind === "campaign")) skipped.push(`${name}: not a save of this kind of game`);
     else {
       try {
@@ -356,7 +491,8 @@ export function importSaves(text: string): { written: string[]; skipped: string[
       }
     }
   }
-  if (entries.length === 0) skipped.push("the file holds no save");
+  for (const entry of Array.isArray(bundle.named) ? bundle.named : []) putNamed(entry?.save, String(entry?.name ?? ""), `named save "${String(entry?.name)}"`);
+  if (bundle.saves.length === 0 && !(bundle.named?.length)) skipped.push("the file holds no save");
   return { written, skipped };
 }
 

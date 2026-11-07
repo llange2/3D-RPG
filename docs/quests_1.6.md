@@ -4,7 +4,8 @@
 | --- | --- | --- |
 | 1.2 | 1.3 | **quest\_1 (The Moaning Statues) wird nicht mehr in `dungeon_3` (Labyrinth) gebaut.** Layouts von quest\_1 sind jetzt nur noch `dungeon_2` und `dungeon_4`. Grund: Das Statuenfeld braucht den Eingangsraum als Halle; das Labyrinth hat nur kleine Räume und dünne Wände (36. Playtest, Punkt 13). |
 | 1.3 | 1.4 | **ue\_quest4 (Pirate Queen)** ergänzt. Nach der Begegnung taucht das Piratenschiff erst **eine Woche später** wieder auf; ist es außer Sichtweite, steht es wieder an seiner Ausgangsposition. Das Schiff fährt auf tiefem und flachem Wasser, die Begegnung gibt es nur, wenn die Party auf dem Floß steht. |
-| 1.4 | 1.5 | - **spaceship\_1** aktualisiert (Power Crystal darf nur als Teil des Quests verwendet werden)<br>- **quest\_7** eränzt<br>- Generierungstabelle aktualisert (Spaceship hat immer quest\_7) |
+| 1.4 | 1.5 | \- **spaceship\_1** aktualisiert (Power Crystal darf nur als Teil des Quests verwendet werden)<br>\- **quest\_7** eränzt<br>\- Generierungstabelle aktualisert (Spaceship hat immer quest\_7)<br>\- IDs der neuen Assets (Modelle, Quest-Item, Sounds) in quest\_7 ergänzt (Stand 5. 11. 2026, Version bleibt 1.5)<br>\- **Spaceship (Stand 5. 11. 2026, Version bleibt 1.5):** Die Konsole der Bridge braucht laufende Engines und Life Support UND die schwarze Key Card (statt der Transportröhre des Kontrolldecks); einheitliche Sektionsnamen (Storage Bay, Engine Room, Life Support, Control Room, Bridge); 2 Orbs je Sektion außer der Bridge (8 im Spaceship, 23 auf L5-Dungeons); Pyramide-zu-Sektion zufällig, die der Bridge auf einem L5-Territory; Licht, Sounds und Aktionen gelten für das ganze Schiff; Hinweistexte der Kisten; Terminatoren; Computer (ID68) pro Level mit ComputerScreen |
+| 1.5 | 1.6 | \- **dungeon\_3** Levelgrößen ergänzt |
 
 # Generierung
 
@@ -16,7 +17,7 @@
 | quest\_4 | \- dungeon\_1<br>\- dungeon\_2<br>\- dungeon\_3<br>\- dungeon\_4 | 1-5 | alle außer robot |
 | quest\_5 | \- dungeon\_1<br>\- dungeon\_2<br>\- dungeon\_3<br>\- dungeon\_4<br>\- cave\_1<br>\- cave\_2<br>\- cave\_3 | 1-5 | alle außer robot |
 | quest\_6 | \- dungeon\_1<br>\- dungeon\_2<br>\- dungeon\_3<br>\- dungeon\_4<br>\- cave\_1<br>\- cave\_2<br>\- cave\_3<br>\- castle\_1 | 1-5<br>(castle nur L2-4) | dungeon & cave: alle außer robot |
-| quest\_7 | - spaceship\_1 | 5 | nur robot |
+| quest\_7 | \- spaceship\_1 | 5 | nur robot |
 
 # Quest Kontext (Story)
 
@@ -25,7 +26,7 @@
 - Um das Spiel zu gewinnen, muss der Spieler
 - Schlüssel sammeln, um Zutritt zu den Dungeons zu erhalten, die Key Cards erhalten, die ihm wiederum Eintritt in die Pyramiden/Spaceship geben
 - Die schwarze Key Card erlangen. Diese erhält er von dem König, dem er 11 "Orbs of ultimate Power" übergeben hat
-- Der finale Raum ("Mothership control deck") enthält eine Transportröhre, die nur mit der schwarzen Key Card aktiviert werden kann. Betritt der Spieler das Spiel wird die Endsequenz abgespielt
+- Der finale Raum ("Bridge") enthält die Spaceship Console, durch die die Endsequenz gestartet wird. Sie funktioniert nur, wenn Life Support und Engines laufen UND die Party die schwarze Key Card besitzt. Dann wird die Endsequenz abgespielt
 
 Der Spieler weiss von dem am Anfang nichts und entdeckt es erst nach und nach
 
@@ -47,7 +48,7 @@ Der Spieler weiss von dem am Anfang nichts und entdeckt es erst nach und nach
 
 | Beschreibung | Alternative | Objekte |
 | --- | --- | --- |
-| \- Verteile in der Welt 31 "Orbs of Ultimate Power"<br>\- Diese finden sich ausschliesslich in L5 Endräumen und in Spaceship Leveln<br>\- Die 3 Könige versuchen jeweils 11 Kugeln zu erhalten, da sie dadurch die Übermacht erhalten und die anderen beiden Könige zerstören können<br>\- Der Spieler kann die "Orbs of Ultimate Power" den Königen retournieren. Es werden immer alle im Inventar befindlichen Orbs abgeben.<br>\- Pro Orb erhält die Party 1 mio Gold und jeder Charakter 1 mio XP<br>\- Sobald 1 König die 11 Kugel erhält, werden die anderen beiden Burgen zerstört und können nicht mehr betreten werden. Der König übergibt dem Spieler dann die schwarze Key Card.<br>\- Auch wenn ein König gewonnen hat können weiterhin Orbs bei ihm abgegeben werden. | keine | Orbs of Ultimate Power: quest\_orb (Inventar) und ID109 (Objekt) |
+| \- Verteile in der Welt 31 "Orbs of Ultimate Power"<br>\- Diese finden sich ausschliesslich in L5 Endräumen (23) und in Spaceship Leveln (8: 2 je Sektion, außer in der Bridge)<br>\- Die 3 Könige versuchen jeweils 11 Kugeln zu erhalten, da sie dadurch die Übermacht erhalten und die anderen beiden Könige zerstören können<br>\- Der Spieler kann die "Orbs of Ultimate Power" den Königen retournieren. Es werden immer alle im Inventar befindlichen Orbs abgeben.<br>\- Pro Orb erhält die Party 1 mio Gold und jeder Charakter 1 mio XP<br>\- Sobald 1 König die 11 Kugel erhält, werden die anderen beiden Burgen zerstört und können nicht mehr betreten werden. Der König übergibt dem Spieler dann die schwarze Key Card.<br>\- Auch wenn ein König gewonnen hat können weiterhin Orbs bei ihm abgegeben werden. | keine | Orbs of Ultimate Power: quest\_orb (Inventar) und ID109 (Objekt) |
 
 ## ue\_quest\_4 (Pirate Queen)
 
@@ -101,13 +102,13 @@ Soweit nicht explizit im Quest erwähnt, gelten diese Regeln immer
 
 | Beschreibung | Alternative | Objekte |
 | --- | --- | --- |
-| \- Eine **Antwort** aus dem Rätselmaster wird zufällig gewählt (**die Frage zu dem Rätsel wird in diesem Fall komplett ignoriert**)<br>\- Es werden **nur Antworten mit 1 Wort gewählt** (3-6 Buchstaben lang)  (z.B. **nicht** Rätsel #14 mit der Antwort "death by axe")<br>\- **Wichtige Sonderregel:** Bei Schlössern wird immer ein Wort gewählt, dass 4 Buchstaben hat, da es immer genau 4 Statuen gibt<br>\- Verteile so viele Statuen im Dungeon, wie das Wort Buchstaben hat<br>\- Jeder dieser Statue gibt einen verschleierten Hinweis auf einen Buchtstaben. <br>\- Nahe des End-Raums wird eine weitere Statue platziert, um die Antwort einzugeben. Die richtige Antwort gibt den Raum frei. Es sind unendlich Antworten möglich<br>\- Beispiel "Boots" (Die Buchstaben sollen im Spiel nicht besonders markiert werden. Dieses ist nur zum besseren Verständnis dieses Beispiels)<br>\- Statue 1: "The first brother was called **B**en" (Hinweis 1. Buchstabe)<br>\- Statue 2: "The second brother was called **O**liver" (Hinweis 2. Buchstabe)<br>\- Statue 3: "The youngest brother was called **S**alomon" (Hinweis 5. Buchstabe)<br>\- Statue 4: "The forth brother's name was **T**heodor" (Hinweis 4. Buchstabe)<br>\- Statue 5: "The third brother was a twin of the second, so they gave him the **same name**" (Hinweis 3. Buchstabe)<br>\- Statue 6: "What did the father of the brothers produce and sell for living?" (Answer: "boots") | \- zufällige Antwort aus dem Rätselmaster<br>\- Variation des Beispiels, wie die Buchstaben erklärt werden | \- Statue: ID95, ID61, ID34, ID29, ID28, ID27<br>\- Im Spaceship Leveln nur: ID68<br>\- In Cave Leveln nur: ID95 oder ID33 |
+| \- Eine **Antwort** aus dem Rätselmaster wird zufällig gewählt (**die Frage zu dem Rätsel wird in diesem Fall komplett ignoriert**)<br>\- Es werden **nur Antworten mit 1 Wort gewählt** (3-6 Buchstaben lang)  (z.B. **nicht** Rätsel #14 mit der Antwort "death by axe")<br>\- **Wichtige Sonderregel:** Bei Schlössern wird immer ein Wort gewählt, dass 4 Buchstaben hat, da es immer genau 4 Statuen gibt<br>\- Verteile so viele Statuen im Dungeon, wie das Wort Buchstaben hat<br>\- Jeder dieser Statue gibt einen verschleierten Hinweis auf einen Buchtstaben. <br>\- Nahe des End-Raums wird eine weitere Statue platziert, um die Antwort einzugeben. Die richtige Antwort gibt den Raum frei. Es sind unendlich Antworten möglich<br>\- Beispiel "Boots" (Die Buchstaben sollen im Spiel nicht besonders markiert werden. Dieses ist nur zum besseren Verständnis dieses Beispiels)<br>\- Statue 1: "The first brother was called **B**en" (Hinweis 1. Buchstabe)<br>\- Statue 2: "The second brother was called **O**liver" (Hinweis 2. Buchstabe)<br>\- Statue 3: "The youngest brother was called **S**alomon" (Hinweis 5. Buchstabe)<br>\- Statue 4: "The forth brother's name was **T**heodor" (Hinweis 4. Buchstabe)<br>\- Statue 5: "The third brother was a twin of the second, so they gave him the **same name**" (Hinweis 3. Buchstabe)<br>\- Statue 6: "What did the father of the brothers produce and sell for living?" (Answer: "boots") | \- zufällige Antwort aus dem Rätselmaster<br>\- Variation des Beispiels, wie die Buchstaben erklärt werden | \- Statue: ID95, ID61, ID34, ID29, ID28, ID27<br>\- Im Spaceship gibt es kein quest\_6 (dort gilt quest\_7)<br>\- In Cave Leveln nur: ID95 oder ID33 |
 
 ## quest\_7 (Spaceship)
 
 | Beschreibung | Alternative | Objekte |
 | --- | --- | --- |
-| - Das Spaceship (=Eingang über die Pyramiden) hat immer 5 Sektionen: "Storage Bay", "Engine room", "Life support", "Control room" and "Bridge" |  |  |
+| \- Das Spaceship (=Eingang über die Pyramiden) hat immer 5 Sektionen mit den Namen: "Storage Bay", "Engine Room", "Life Support", "Control Room" und "Bridge" (diese Schreibweise gilt überall im Dokument)<br>\- **Pyramiden:** Welche Pyramide in welche Sektion führt, ist zufällig. Einzige Ausnahme: Die Pyramide zur "Bridge" steht auf einem schweren L5-Territory<br>\- **Alle Aktionen, Sounds und das Ambient Light betreffen immer das ganze Schiff** (alle 5 Sektionen), nicht nur die Sektion, in der sie ausgelöst werden<br>\- Anfangs ist die Beleuchtung dunkel (wie im Dungeon), allerdings in roter Farbe<br>\- **Orbs:** In jeder Sektion außer der "Bridge" liegen 2 Orbs of ultimate power (ID109), insgesamt 8<br>\- **Monster:** nur Robots. Die "Bridge" ist vor allem mit Terminatoren (ID69) gesichert. Diese dürfen auch in den anderen Sektionen vorkommen, allerdings nur rar<br>\- "Storage Bay" beinhaltet immer 10 futuristische Kisten. 8 davon enthalten Pillen oder ein Serum (2 geben 1 mio XP, 3 geben +15 Attributspunkte auf **ein** zufälliges Attribut (z.B. Glück +15), 3 geben +30 Resistenzpunkte auf **eine** zufällige Resistenz - immer nur für 1 Charakter, **den der Spieler auswählt**). Die Kiste gibt einen Hinweis auf die Verbesserung, ähnlich wie bei den Magic Pools, aber im Sci-Fi-Stil: nie wird das Attribut genannt, sondern ein Produktname, der pro Welt fest zu einem Attribut bzw. einer Resistenz gehört. Beispiel: "You find a package with a single pill inside it. The packaging reads 'Stamina-X1000.4'. Who wants to try the pill?" (> Endurance). Die letzten beiden Kisten erhalten jeweils 1 Power Crystal (Quest Item Inventar)<br>\- "Engine Room" beinhaltet 4 Power Crystals (3D Objekt) und 1 Broken Power Crystal. Die Power Crystals strahlen ein sehr schwaches Licht aus. **Ersetzen:** Hat die Party einen Power Crystal (Quest Item) im Inventar, fragt das kaputte Objekt: "The crystal in your inventory seems to have the same size like the broken one. Try to replace it?" (Ja/Nein). Bei Ja wird der Kristall **verbraucht** und das Modell wechselt von kaputt zu intakt. Ohne Kristall im Inventar (Vorschlag): "The crystal is broken. Maybe an intact one of the same size could replace it." Nach dem Ersetzen leuchten alle 5 Power Crystals stark (3 Felder Radius - Blauton, wie Kristall): "As soon as you snap in the new crystal its start to emit a faint light, which grows quickly brighter. You realize that also all other crystals start to emit a strong light, while a humming noise appears"<br>\- "Life Support" hat die gleiche Logik wie "Engine Room" (4 Power Crystals + 1 Broken Power Crystal, der Ersatz kommt aus der Storage Bay) mit dem Unterschied, dass beim Reparieren des Kristalls der Sound "light\_on.mp3" einmalig ertönt und gleichzeitig (= Länge des Sounds, 1,44 s) die Beleuchtung **im ganzen Schiff** von dunkel-rot auf Tages-hell wechselt (und nicht mehr rot)<br>\- "Control Room" enthält 1 Computer (ID68), der anfangs den Status hat "<br>Ship status:<br>Life support: Emergency only<br>Engines: Failure<br>" Wird "Life Support" repariert, ändert sich die Anzeige auf 'Life Support: Functional'. Wird "Engine Room" repariert, ändert sich der Punkt auf "Engines: Functional'". Wenn beide 'functional' sind, erscheint zusätzlich die Frage: 'Would you like to activate the engines?'. Bejaht der Spieler dies, spiele **im ganzen Schiff** "low-engine-hum.mp3" zusätzlich zur Musik ab. Der Sound läuft **permanent, aber nur innerhalb des Schiffs** (auch nach Speichern/Laden und beim Wechsel der Sektion). Die Lautstärke ist so gesetzt, dass er durch die Hintergrundmusik hörbar ist, diese aber nicht übertönt (erste Version: Stufe 0,35 der Effektlautstärke, ca. 7 dB unter der Musik; Feedback folgt). Die Engine Anzeige ändert sich auf 'Engines: Ready'. Dies ist der Endzustand, es gibt keine Fragen mehr<br>\- Der "Control Room" enthält zusätzliche Computer (ID68), die die Antworten der Mini Quests geben. Die Weltgenerierung setzt die Miniquests, aus ihnen entsteht die Liste: es kommen alle Level L1-L5 vor, sofern sie ein Miniquest haben. **Pro Level 1 Computer** (mehr, wenn die Liste des Levels nicht auf eine Seite passt). Der Titel ist immer "Code words for surface entities" und darunter die Liste der Orte des Levels z.B. "Cave of Alma: 'fire', 'fear'". Evaluiere selbst, wie viele Passwörter auf eine Seite passen. Wichtig: auch bei riesigen Welten muss jeder Computer erreichbar sein - ggf. Sektionsgröße anpassen, wenn nötig<br>\- **Computer zeigen ihren Text auf dem ComputerScreen** (Bildschirmrahmen statt Schriftrolle, `ui/computer_screen.webp`, `UI.computerMessage`). Das gilt für alle Computer (ID68), auch den Status-Computer<br>\- Die "Bridge" enthält die Spaceship Console, durch die die Schlusssequenz gestartet wird. Diese steht zentral im Raum und soll beleuchtet sein. Sie kann nur benutzt werden, wenn **Life Support und Engines laufen** (Anzeige 'Life Support: Functional' und 'Engines: Ready') **UND die Party die schwarze Key Card besitzt**. Sonst den "Denied" Sound spielen. Fehlt es an Life Support/Engines: "Ship not fully operational". Fehlt nur die Karte (Vorschlag): "A slot beside the screen glows red. The console wants a black key card." | keine | **Modelle** (Nutzerdateien, `tools/assets/sources/models`):<br>\- Futuristic Box: Modell `obj_futuristic_box` (`Futuristic_Box.glb`, kein Altitem, daher keine Item-ID)<br>\- Power Crystal (Inventar): Quest-Item `quest_power_crystal` (Bild `quest_power_crystal.png`)<br>\- Power Crystal (3D-Objekt): ID67 (`Power_crystal.glb` ersetzt das Altmodell, gleiche Maße)<br>\- Broken Power Crystal: Modell `obj_power_crystal_broken` (`Power_crystal_broken.glb`, kein Altitem)<br>\- Computer: ID68 (Computer terminal), Anzeige: ComputerScreen (`ui/computer_screen.webp`, Quelle `tools/assets/sources/ui/computer_screen.png`)<br>\- Space Ship Console: Modell `obj_spaceship_console` (`Spaceship_Console.glb`, kein Altitem)<br>\- Orb of ultimate power: ID109, Quest-Item `quest_orb`<br>\- Terminator: Monster ID69<br>\- Transporter Tube: ID40<br>**Sounds:**<br>\- `light_on.mp3`: Sound-ID 9055 (`light_on`, 1,44 s)<br>\- `low-engine-hum.mp3`: Sound-ID 9 (`low_engine_hum`, 27,5 s, Hintergrund-Schleife wie die Sounds 1 bis 8, Stufe 0,35 in `ENGINE_HUM_LEVEL`)<br>\- "Denied": Sound-ID 9014 (`denied`)<br>**Zustand:** Flag `ship:engines` in `state.opened` (Engines laufen, `ENGINES_FLAG`) |
 
 ## Miniquest - Extra Loot
 
@@ -262,6 +263,7 @@ Soweit nicht explizit im Quest erwähnt, gelten diese Regeln immer
 - Die Zwischenwände sind 1 Feld breit
 - Es gibt keine Türen/Gitter
 - Es existieren Teleportfelder (Rune, ID73) als Absperrungen, die den Spieler an einen anderen Ort transportieren. Die Teleporter **müssen** so angelegt werden, dass sie übersprungen werden können, d.h. jeder Teil des Dungeons ist erreichbar
+- L1 Dungeons sind ca. 25x25 groß, L2: 32x32, L3: 39x39, L4: 47x47 und L5:55x55
 
 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -666,10 +668,10 @@ Soweit nicht explizit im Quest erwähnt, gelten diese Regeln immer
 - Funktionale & Dekoobjekte:
 - Power source crystal (ID67): Wird als funktionales Objekt in quest\_7 verwendet
 - Computer (ID68): Kann als Deko Informationen geben oder funktional (z.B. für Quest)
-- Rewards sind primär 0-2 "Orb of ultimate power" (ID109) pro Sektion oder Kelche (ID86) mit 1-2 mio XP.
+- Rewards: in jeder Sektion außer der "Bridge" 2 "Orb of ultimate power" (ID109, s. Loot). Zusätzlich sind Kelche (ID86) mit 1-2 mio XP möglich.
 - Es gibt keine 90° Ecken, sondern nur Rundungen (innere und äußere Rundungen)
-- Das Spaceship ist ein großes zusammenhänges Level, welches aus 5 Sektionen besteht (Keycards ID65-66, ID122-124). Teile das generierte Spaceshiplevel in 5 gleich große Sektionen ein, die du mit Schleusen voneinander trennst. Das"Mothership control deck" ist immer vorne (im Beispiel unten ganz links). In ihm steht zentral die Transportröhre, durch die der Spieler (wenn er die schwarze Keycard hat) das Spiel beenden kann (Abspann "..\\old\_code\\resources\\movies\\Game Outro.mp4"
-- Zugang zu einer Sektion erfolgt durch eine Pyramide auf der Außenwelt (d.h. es müssen immer 5 Pyramiden vorhanden sein - diese müssen möglichst gleichmäßig über die Inseln verteilt sein und dürfen auf jeder Insel stehen). Im Spaceship ist der Ein/Ausgang die Transporter Tube ID40, die an der Wand aber auch mitten im Raum stehen darf
+- Das Spaceship ist ein großes zusammenhänges Level, welches aus 5 Sektionen besteht (Keycards ID65-66, ID122-124). Teile das generierte Spaceshiplevel in 5 gleich große Sektionen ein, die du mit Schleusen voneinander trennst. Die "Bridge" ist immer vorne (im Beispiel unten ganz links). In ihr steht zentral die Spaceship Console, durch die der Spieler (wenn Life Support und Engines laufen und er die schwarze Keycard hat) das Spiel beenden kann (Abspann "..\\old\_code\\resources\\movies\\Game Outro.mp4")
+- Zugang zu einer Sektion erfolgt durch eine Pyramide auf der Außenwelt (d.h. es müssen immer 5 Pyramiden vorhanden sein - diese müssen möglichst gleichmäßig über die Inseln verteilt sein und dürfen auf jeder Insel stehen). Welche Pyramide zu welcher Sektion gehört, ist zufällig; nur die Pyramide zur "Bridge" muss auf einem schweren L5-Territory stehen. Im Spaceship ist der Ein/Ausgang die Transporter Tube ID40, die an der Wand aber auch mitten im Raum stehen darf
 - Initial sind die Sektionen voneinander durch Schleusen getrennt (die Grafik existiert noch nicht, nutze einen Dummy). Auf beiden Seiten der Schleuse gibt es Hebel (ID39):
 - Initialer Text "A small sign next to the level reads 'Manual lock override.' Would you like to switch the lever"
 - Wenn der 1. Hebel umgelegt wird (der auf der anderen Seite noch nicht): "You hear a buzz and afterwards mechanical noises. However the lock still stands in place."
@@ -701,12 +703,18 @@ Soweit nicht explizit im Quest erwähnt, gelten diese Regeln immer
 
 ### Anordnung der 5 Sektionen
 
+\-Die "Bridge" ist immer vorne mit Schleuse zum "Control Room". Dahinter kommen die Sektionen "Control Room" und "Life Support" nebeneinander. Sie sind mit einer Schleuse verbunden
+
+- Dahinter kommt die "Storage Bay", die mit einer Schleuse mit dem "Control Room" verbunden ist
+- Am Ende der "Engine Room", der durch eine Schleuse mit der "Storage Bay" verbunden ist
+- Es gibt also 4 Schleusen: Bridge - Control Room, Control Room - Life Support, Control Room - Storage Bay, Storage Bay - Engine Room
+
 |  |  |  |  |
 | --- | --- | --- | --- |
-| Bridge | Control room | Storage room | Engine room |
-|  | Life support |  |  |
+| Bridge | Control Room | Storage Bay | Engine Room |
+|  | Life Support |  |  |
 
-# End-Räume
+End-Räume
 
 ## Goldene Regeln
 
@@ -724,7 +732,7 @@ Die fett geschriebenen Punkte müssen immer dabei sein. Wähle **zusätzlich** z
 | \- 2 | \- 10-50k Gold<br>\- 1-2x 10 Attributspunkte (von zufälligem Typ)<br>\- 5-10 x Treasure L2<br>\- 0-2 L2 Spells<br>**\- Schlüssel (s. Goldene Regeln)** |
 | 3 | \- 50 - 200 k Gold<br>\- 1-2x 20 Attributspunkte (von zufälligem Typ)<br>\- 5-10 x Treasure L3<br>\- 0-2 L3 Spells |
 | \- 4 | \- 200-1000 k Gold<br>\- 1-3 x Levelaufstieg um 1 Level<br>\- 5-10 x Treasure L4<br>\- 0-2 L4 Spells<br>**\- Key Card (s. Goldene Regeln)** |
-| 5 | \- 1-4 mio Gold<br>\- 5-10 x Treasure L5<br>\- 0-2 L5 Spells<br>**\- Key Card (s. Goldene Regeln)<br>\- Orb of ultimate power: 2 Orbs pro Sektion im Spaceship (2x5 =10). Die anderen 21 Orbs auf die L5 Dungeon möglichst gleichmäßig verteilen (hängt von der Kartengröße ab)** |
+| 5 | \- 1-4 mio Gold<br>\- 5-10 x Treasure L5<br>\- 0-2 L5 Spells<br>**\- Key Card (s. Goldene Regeln)<br>\- Orb of ultimate power: 2 Orbs pro Sektion im Spaceship, außer in der Bridge (2x4 = 8). Die anderen 23 Orbs auf die L5 Dungeon möglichst gleichmäßig verteilen (hängt von der Kartengröße ab)** |
 
 # Referenzen
 
