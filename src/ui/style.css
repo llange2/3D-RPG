@@ -54,6 +54,13 @@ html.ending-on #game-cursor { display: none; }
 /* the mascot is the fifth portrait; the crow's card glows and moves while there is danger */
 .card.mascot-card { width: 128px; align-self: flex-start; }
 .card.mascot-card.alarm { border-color: #ff8a3a; box-shadow: 0 0 12px #ff7a2aaa; }
+/* the Wolf has killed a monster: the card swells once and shrinks back (`UI.pulseMascot`) */
+.card.mascot-card.pulse { animation: mascot-pulse 0.7s ease-in-out 1; }
+@keyframes mascot-pulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22); box-shadow: 0 0 16px #ffd36aaa; }
+  100% { transform: scale(1); }
+}
 .card video.portrait { width: 52px; height: 52px; border: 1px solid var(--gold-dim); border-radius: 4px; object-fit: cover; background: #000; }
 /* the hero whose turn it is in a melee round: a glowing green frame, a little thicker than the mascot's (2px border + 2px ring) */
 .card.active { border-color: #6dff8a; box-shadow: 0 0 0 2px #3fe05a, 0 0 16px 4px #3fe05acc; }

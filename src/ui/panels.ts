@@ -7,6 +7,7 @@ import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type BoonKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
 import { portraitImage } from "./avatarFx";
+import { CapybaraClip } from "./capybaraClip";
 import { plateButton } from "./buttonArt";
 import { assetPath, clear, h } from "./dom";
 import { conditionClass, conditionTitle, shownCondition } from "./conditionInfo";
@@ -122,6 +123,8 @@ export const MASCOTS: Record<string, { portrait: string; full?: string; text: st
   // BALANCE v4: the texts of Wolf, Fairy and Orb follow the numbers in sim/balance.ts (v4: 10%, 30 points, 20% spell damage)
   Wolf: { portrait: "npc02", text: `Fights alongside the party: a monster that drops below ${Math.round(wolfBelow() * 100)}% of its health is killed by the wolf.` },
   Donkey: { portrait: "npc03", full: "npc03_full", text: "Carries a backpack of 20 slots. Whatever the heroes cannot hold goes to the Donkey." },
+  // the Easter egg (7. 11. 2026): no ability at all, on purpose. Its picture turns round now and then (`ui/capybaraClip.ts`)
+  Capybara: { portrait: "npc06", text: "The capybara does not seem to have any capabilities except from being the cutest thing ever \u{1F60D}" },
   Fairy: { portrait: "npc04", text: `Takes ${fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION)} points off every elemental hit (fire, ice, acid and magic) that reaches a hero.` },
   Orb: {
     portrait: "npc05",
@@ -208,10 +211,17 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       const info = MASCOTS[name];
       const owned = hooks.mascots?.() ?? [name];
       const picture = info?.full ?? info?.portrait ?? "character00";
+      // the Capybara's picture turns round now and then (a new clip each time the page opens: the timer ends by itself when the page is closed)
+      let pic: HTMLElement;
+      if (name === "Capybara") {
+        const clip = new CapybaraClip("mascot-pic");
+        clip.start();
+        pic = clip.el;
+      } else pic = h("img", { class: "mascot-pic", src: assetPath(`icons/portraits/${picture}.webp`), alt: name });
       const head = h(
         "div",
         { class: "mascot-head" },
-        h("img", { class: "mascot-pic", src: assetPath(`icons/portraits/${picture}.webp`), alt: name }),
+        pic,
         h(
           "div",
           {},

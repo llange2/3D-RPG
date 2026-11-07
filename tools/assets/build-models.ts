@@ -732,6 +732,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   // the cottage: a house that stands in the place of every third rustic caravan (`world/caravans.ts`, the caravan landmarks), and the pirate ship of ue_quest_4
   S("obj_cottage", "new:Cottage.glb", 3000, 1024),
   S("obj_pirate_ship", "new:Pirate Ship.glb", 4500, 1024),
+  // the Capybara (7. 11. 2026, the user's model): the Easter egg mascot that waits behind a brittle wall of the start town (`world/mascots.ts`)
+  S("obj_capybara", "new:Capybara.glb", 3000, 1024),
   // the spaceship of quest_7 (quest document 1.5, the user's models): the futuristic crate of the storage bay, the broken power crystal that the new one mends
   // (the intact one is item 67) and the console of the bridge that starts the ending. The files are 10 424, 15 676 and 3 885 triangles with three 2048 to 4096 px textures each
   S("obj_futuristic_box", "new:Futuristic_Box.glb", 3000, 1024),

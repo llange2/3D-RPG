@@ -118,6 +118,8 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   const npc = await listFiles(TEX, (n) => /^npc\d+.*\.(png|jpg)$/.test(n) && !/^npc03_full\./.test(n));
   await pool(npc, 4, async (n) => add("icons portraits", await toWebp(join(TEX, n), join(OUT, "icons", "portraits", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 256, 85)));
   add("icons portraits", await toWebp(join(SOURCES, "ui", "donkey.jpg"), join(OUT, "icons", "portraits", "npc03_full.webp"), 512, 85));
+  // the Capybara (7. 11. 2026, the user's painting, 512 x 512): the portrait of the card beside the heroes and the still picture (poster) of its clip on the mascot page
+  add("icons portraits", await toWebp(join(SOURCES, "ui", "capybara.jpg"), join(OUT, "icons", "portraits", "npc06.webp"), 256, 85));
 
   // the Pirate Queen (ue_quest_4, quest document 1.4): the user's painting, shown in the dialogue with the pirate ship
   add("icons portraits", await toWebp(join(SOURCES, "ui", "pirate_queen.png"), join(OUT, "icons", "portraits", "pirate_queen.webp"), 512, 85));
@@ -142,6 +144,15 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
     await promisify(execFile)(ffmpegPath!, ["-y", "-loglevel", "error", "-i", crow, "-an", "-vf", "scale=192:192", "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "38", "-deadline", "good", "-cpu-used", "4", crowOut]);
   }
   add("ui", statSync(crowOut).size);
+
+  // the Capybara turns round now and then (`ui/capybaraClip.ts`): the user's 200 x 200 H.264 clip of 10 s (with a sound track) as a small VP9 file without sound
+  const capy = join(SOURCES, "ui", "capybara_turn.mp4");
+  const capyOut = join(OUT, "ui", "capybara_turn.webm");
+  if (!upToDate(capyOut, capy)) {
+    ensureDir(capyOut);
+    await promisify(execFile)(ffmpegPath!, ["-y", "-loglevel", "error", "-i", capy, "-an", "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "34", "-deadline", "good", "-cpu-used", "4", capyOut]);
+  }
+  add("ui", statSync(capyOut).size);
 
   // the animated pictures of the town services (the optional "Animated town scenes"): the old 1764 x 1176 H.264 clips of 10 s (3 to 16 MB each)
   // as 640 px VP9 loops without sound, a few hundred KB each. The window shows them at 530 px at most.
