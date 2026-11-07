@@ -4319,7 +4319,6 @@ export class Game {
         { label: "All spells", value: "spells", note: "of each hero's school" },
         { label: "All talents", value: "talents", note: "for each hero" },
         { label: "All keys & key cards", value: "keys", note: "nine keys, five key cards and the black one" },
-        { label: `Engine hum: ${this.state.opened.has(ENGINES_FLAG) ? "on" : "off"}`, value: "hum", note: "spaceship sound test (the engines of quest_7)" },
         { label: "Reveal map", value: "map", note: this.mode === "overworld" ? (this.state.campaign ? "150 tiles around" : "the whole world") : "this level" },
         { label: "Identify", value: "identify", note: this.mode === "overworld" ? "the nearest place" : "this place" },
         ...(this.state.campaign ? [] : [{ label: "Teleport to Level", value: "teleport", note: "any town, cave, dungeon or castle" }]),
@@ -4350,12 +4349,6 @@ export class Game {
         case "keys":
           this.ui.toast(`${debugAllKeys(party)} keys and key cards added`);
           this.refresh();
-          break;
-        case "hum":
-          if (this.state.opened.has(ENGINES_FLAG)) this.state.opened.delete(ENGINES_FLAG);
-          else this.state.opened.add(ENGINES_FLAG);
-          this.updateAmbient();
-          this.ui.toast(`Engine hum ${this.state.opened.has(ENGINES_FLAG) ? "on (inside the spaceship)" : "off"}`);
           break;
         case "map":
           this.revealMap();
