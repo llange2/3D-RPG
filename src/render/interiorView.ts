@@ -711,7 +711,8 @@ export class InteriorView {
           if (!look || !this.brokenWalls.has(a.uid) || !this.props.has(look.model)) break;
           // the passage runs along the axis of the action; the glTF models stand turned by half a circle (see `GLTF_YAW` in blocks.ts)
           const yaw = (a.params.axis === "x" ? 0 : Math.PI / 2) + (look.glb ? Math.PI : 0);
-          instances.push({ model: look.model, x, y: 0, z, rotY: yaw, scale: look.scale[0], scaleXYZ: look.scale });
+          // `center`: the old block models hang off their origin (the city's slab lies 1.4 units beside it), so without it the broken wall stood a cell away from the one that gave way
+          instances.push({ model: look.model, x, y: 0, z, rotY: yaw, scale: look.scale[0], scaleXYZ: look.scale, center: true });
           break;
         }
         default:
