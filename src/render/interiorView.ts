@@ -135,7 +135,10 @@ const BROKEN_WALL: Partial<Record<InteriorMap["kind"], { model: string; scale: [
   town: { model: "blk_city_cracked", scale: [1, 1, 1], glb: true },
 };
 
-const brokenWallLook = (map: InteriorMap) => (map.theme.id === "cyber" ? undefined : BROKEN_WALL[map.kind]);
+/** How deep the old models of a broken wall stand (they are 0.3 to 0.45 deep as modelled): across the cell's edge, so that both sides are flush with the walls. */
+const BROKEN_SLAB_DEPTH = 0.08;
+
+const brokenWallLook =(map: InteriorMap) => (map.theme.id === "cyber" ? undefined : BROKEN_WALL[map.kind]);
 
 /** The model a map needs for its broken walls (loaded with the others, before the first frame). */
 export function brokenWallModelKeys(map: InteriorMap, content: MapContent): string[] {
@@ -736,13 +739,15 @@ export class InteriorView {
           // (`brokenWallShift`), flush with the walls beside. By the origin the broken wall stood a cell away from the one that gave way (7. 11. 2026). The register's bounds are
           // glTF's, and Babylon mirrors a glTF in x (`CellStyle.model.yaw`), so the middle of the model lies at (-middle x, middle z) here; `PropInstance.center` would take
           // the register's side and move it twice as far the wrong way
+          // The slab (0.3 deep) is pressed flat to `BROKEN_SLAB_DEPTH` and stands across the edge itself: a deeper one was flush with the wall on one side only, and from the other its
+          // edge and the end of the passage walls showed a step (the blue side of the slab, 7. 11. 2026)
           const b = this.staticInfo[look.model]?.bounds;
-          const thick = b ? (b[3] - b[0]) * look.scale[0] : 0.3;
-          const shift = this.brokenWallShift(map, a.x, a.y, a.params.axis === "x", thick);
-          const mx = b ? (-(b[0] + b[3]) / 2) * look.scale[0] : 0;
+          const depth = b ? BROKEN_SLAB_DEPTH / (b[3] - b[0]) : look.scale[0];
+          const shift = this.brokenWallShift(map, a.x, a.y, a.params.axis === "x", 0);
+          const mx = b ? (-(b[0] + b[3]) / 2) * depth : 0;
           const mz = b ? ((b[2] + b[5]) / 2) * look.scale[2] : 0;
           const mid = { x: mx * Math.cos(yaw) + mz * Math.sin(yaw), z: -mx * Math.sin(yaw) + mz * Math.cos(yaw) };
-          instances.push({ model: look.model, x: x + shift.dx - mid.x, y: 0, z: z + shift.dz - mid.z, rotY: yaw, scale: look.scale[0], scaleXYZ: look.scale });
+          instances.push({ model: look.model, x: x + shift.dx - mid.x, y: 0, z: z + shift.dz - mid.z, rotY: yaw, scale: look.scale[0], scaleXYZ: [depth, look.scale[1], look.scale[2]] });
           break;
         }
         default:
