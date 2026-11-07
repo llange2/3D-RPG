@@ -595,14 +595,35 @@ export class InteriorView {
    * In "Full 3D" a wall that gave way is the user's broken wall piece (`BROKEN_PIECES`: the wall with a hole and its rubble) instead of the old model, stretched like
    * the other wall pieces to the cell's width and the wall's height and standing across the passage. False when the environment or the map has none.
    */
-  private pushBrokenPiece(instances: PropInstance[], map: InteriorMap, alongX: boolean, x: number, z: number): boolean {
+  /**
+   * Where a broken wall's slab stands in its cell (7. 11. 2026): flush with the walls beside it, on the cell's edge, not in the middle of the passage. The edge is the one
+   * towards the more open side (a street, not the one-cell pocket behind a brittle wall; a tie takes the lower coordinate). Returns the offset of the slab's middle from the
+   * cell's middle for a slab `thick` deep: its outer face lies on the edge.
+   */
+  private brokenWallShift(map: InteriorMap, cx: number, cy: number, alongX: boolean, thick: number): { dx: number; dz: number } {
+    // the two cells the passage joins, the one at the lower coordinate first; `sign` is the way to it in the world (z runs against y)
+    const sides = alongX
+      ? [{ x: cx - 1, y: cy, sx: -1, sz: 0 }, { x: cx + 1, y: cy, sx: 1, sz: 0 }]
+      : [{ x: cx, y: cy - 1, sx: 0, sz: 1 }, { x: cx, y: cy + 1, sx: 0, sz: -1 }];
+    const open = (s: { x: number; y: number }) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([ox, oy]) => {
+      const nx = s.x + ox!;
+      const ny = s.y + oy!;
+      return !(nx === cx && ny === cy) && nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && map.cells[ny * map.width + nx] === CELL.FLOOR;
+    }).length;
+    const pick = open(sides[1]!) > open(sides[0]!) ? sides[1]! : sides[0]!;
+    const reach = CELL_SIZE / 2 - thick / 2;
+    return { dx: pick.sx * reach, dz: pick.sz * reach };
+  }
+
+  private pushBrokenPiece(instances: PropInstance[], map: InteriorMap, alongX: boolean, x: number, z: number, cx: number, cy: number): boolean {
     const piece = hasWallModels(this.environment) ? BROKEN_PIECES[wallModelOfTexture(map.theme.wall) ?? ""] : undefined;
     const b = piece ? this.staticInfo[piece]?.bounds : undefined;
     if (!piece || !b || !this.props.has(piece)) return false;
     const sx = CELL_SIZE / (b[3] - b[0]);
     const sy = wallHeightOf(map) / (b[4] - b[1]);
     const sz = (PANEL_DEPTH * 2) / (b[5] - b[2]);
-    instances.push({ model: piece, x, y: -b[1] * sy, z, rotY: alongX ? Math.PI / 2 : 0, scale: sx, scaleXYZ: [sx, sy, sz], atOrigin: true });
+    const shift = this.brokenWallShift(map, cx, cy, alongX, PANEL_DEPTH * 2);
+    instances.push({ model: piece, x: x + shift.dx, y: -b[1] * sy, z: z + shift.dz, rotY: alongX ? Math.PI / 2 : 0, scale: sx, scaleXYZ: [sx, sy, sz], atOrigin: true });
     return true;
   }
 
@@ -706,13 +727,22 @@ export class InteriorView {
           break;
         }
         case "breakable_wall": {
-          if (this.brokenWalls.has(a.uid) && this.pushBrokenPiece(instances, map, a.params.axis === "x", x, z)) break;
+          if (this.brokenWalls.has(a.uid) && this.pushBrokenPiece(instances, map, a.params.axis === "x", x, z, a.x, a.y)) break;
           const look = brokenWallLook(map);
           if (!look || !this.brokenWalls.has(a.uid) || !this.props.has(look.model)) break;
           // the passage runs along the axis of the action; the glTF models stand turned by half a circle (see `GLTF_YAW` in blocks.ts)
           const yaw = (a.params.axis === "x" ? 0 : Math.PI / 2) + (look.glb ? Math.PI : 0);
-          // `center`: the old block models hang off their origin (the city's slab lies 1.4 units beside it), so without it the broken wall stood a cell away from the one that gave way
-          instances.push({ model: look.model, x, y: 0, z, rotY: yaw, scale: look.scale[0], scaleXYZ: look.scale, center: true });
+          // the old block models hang off their origin (the city's slab lies 1.4 units beside it): they are put by their middle and then on the cell's edge
+          // (`brokenWallShift`), flush with the walls beside. By the origin the broken wall stood a cell away from the one that gave way (7. 11. 2026). The register's bounds are
+          // glTF's, and Babylon mirrors a glTF in x (`CellStyle.model.yaw`), so the middle of the model lies at (-middle x, middle z) here; `PropInstance.center` would take
+          // the register's side and move it twice as far the wrong way
+          const b = this.staticInfo[look.model]?.bounds;
+          const thick = b ? (b[3] - b[0]) * look.scale[0] : 0.3;
+          const shift = this.brokenWallShift(map, a.x, a.y, a.params.axis === "x", thick);
+          const mx = b ? (-(b[0] + b[3]) / 2) * look.scale[0] : 0;
+          const mz = b ? ((b[2] + b[5]) / 2) * look.scale[2] : 0;
+          const mid = { x: mx * Math.cos(yaw) + mz * Math.sin(yaw), z: -mx * Math.sin(yaw) + mz * Math.cos(yaw) };
+          instances.push({ model: look.model, x: x + shift.dx - mid.x, y: 0, z: z + shift.dz - mid.z, rotY: yaw, scale: look.scale[0], scaleXYZ: look.scale });
           break;
         }
         default:
