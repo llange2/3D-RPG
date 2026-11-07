@@ -3,8 +3,9 @@
  *   floor   the floor of the level 5 town beside the one of a level 1 town (point 1)
  *   deco    the lion of the Catacombs of Nora, 50/37 (point 6)
  *   spells  the light of a fireball at night (point 8)
+ *   saves   named saves: new, replace, list (points 2 and 3)
  *
- * Usage: GAME_URL=http://localhost:<port>/ npx tsx tools/dev/check-playtest47.ts <screenshot folder> <floor|deco|spells> [flat|floor|full]
+ * Usage: GAME_URL=http://localhost:<port>/ npx tsx tools/dev/check-playtest47.ts <screenshot folder> <floor|deco|spells|saves> [flat|floor|full]
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -87,6 +88,49 @@ try {
       await shot(`flying-${kind}`);
       await sleep(2500);
     }
+  }
+  if (part === "saves") {
+    // "Save game" with names: two new saves, one replaced; "Load game" lists them; the title lists them too; the campaign is not offered
+    await open("saves-47");
+    await sleep(9000); // (the first load of a new world takes a while: the loading picture must be gone)
+    const click = (text: string) => evalJs<boolean>(`(() => { const e = [...document.querySelectorAll(".opt, .btn")].find((x) => x.textContent.trim().startsWith(${JSON.stringify(text)})); if (!e) return false; e.click(); return true; })()`);
+    const saveAs = async (name: string) => {
+      await page.keyboard.press("Escape");
+      await sleep(500);
+      if (!(await click("Save game"))) problems.push("no Save game in the menu");
+      await sleep(400);
+      await shot(`menu-${name.replace(/\W/g, "")}`);
+      if (!(await click("New save"))) problems.push("no New save entry");
+      await sleep(400);
+      await page.keyboard.type(name);
+      await page.keyboard.press("Enter");
+      await sleep(600);
+    };
+    await saveAs("First save");
+    await saveAs("Second one");
+    // replace the first one: pick it in the list and confirm
+    await page.keyboard.press("Escape");
+    await sleep(500);
+    await click("Save game");
+    await sleep(400);
+    await shot("list-two");
+    await click("First save");
+    await sleep(400);
+    await shot("replace-asks");
+    await click("Replace");
+    await sleep(600);
+    const names = await evalJs<string>(`JSON.stringify(JSON.parse(localStorage.getItem("mm3-seed-rpg:named:index:v1") ?? "[]").map((e) => e.name))`);
+    console.log("named saves:", names);
+    if (names !== JSON.stringify(["First save", "Second one"]) && names !== JSON.stringify(["Second one", "First save"])) problems.push(`unexpected saves ${names}`);
+    // the load list in the game
+    await page.keyboard.press("Escape");
+    await sleep(500);
+    await click("Load game");
+    await sleep(400);
+    await shot("load-list");
+    const loadText = await evalJs<string>(`document.body.innerText`);
+    if (!loadText.includes("First save") || !loadText.includes("Second one") || !loadText.includes("Delete a save")) problems.push("the load list lacks the named saves or Delete");
+    if (/campaign/i.test(loadText.split("Load game")[1] ?? "")) problems.push("the campaign is still listed");
   }
   if (problems.length) console.log("PROBLEMS:\n" + problems.join("\n"));
 } finally {
