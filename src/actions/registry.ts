@@ -288,6 +288,9 @@ export function isSpent(a: { uid: string; kind: ActionKind; params: Record<strin
 /** The old item of a heap of treasure ("Treasure"): the chest that is not a chest. */
 export const TREASURE_HEAP = 4;
 
+/** The old item of the golden chalice. */
+export const CHALICE_ITEM = 86;
+
 /**
  * A heap of treasure that has been emptied (also one that held nothing: "The chest is empty.") is gone: it leaves its cell, which the party can
  * walk over again. So is the object of a quest item (a key, a key card, an orb) once the party has taken it: the view stops drawing it, and a cell
@@ -296,6 +299,8 @@ export const TREASURE_HEAP = 4;
 export function heapGone(a: { uid: string; kind: ActionKind; params: Record<string, unknown> }, opened: ReadonlySet<string>): boolean {
   // (a crate of the spaceship's storage bay stays, empty, like the others: it is a piece of the room, not the pickup)
   if (Number(a.params.chest) === CRATE_ITEM) return false;
+  // a chalice (object 86) that has been drunk from is empty and gone, with its mark on the map (45th playtest, point 7); wells, barrels and crystals with points stay
+  if (a.kind === "chalice") return Number(a.params.item) === CHALICE_ITEM && isSpent(a, opened);
   return a.kind === "treasure" && (Number(a.params.chest) === TREASURE_HEAP || typeof a.params.quest === "string") && isSpent(a, opened);
 }
 

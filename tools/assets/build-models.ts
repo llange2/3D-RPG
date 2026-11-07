@@ -46,6 +46,11 @@ export interface ModelSpec {
   keepNormalMap?: boolean;
   /** Turns the model about the vertical axis (degrees), for a model that was made facing another way than the old one. */
   rotateY?: number;
+  /**
+   * Base colour (linear 0 to 1) for a source that has no material at all: the lion of the decorations comes as bare geometry and would show in the engine's default grey.
+   * Parts that do have a material keep it.
+   */
+  tint?: [number, number, number];
   maxTris: number;
   texSize: number;
   /** Keep skins and animations (monsters, NPCs). */
@@ -110,13 +115,20 @@ export interface ModelInfo {
 }
 
 /** Mean luma (0 to 1) of the colour textures of a document, or undefined when it has none. */
-async function meanBrightness(doc: Document): Promise<number | undefined> {
+async function meanBrightness(doc: Document, fromColour = false): Promise<number | undefined> {
   const means: number[] = [];
   for (const tex of doc.getRoot().listTextures()) {
     const image = tex.getImage();
     if (!image) continue;
     const { channels } = await sharp(Buffer.from(image)).removeAlpha().stats();
     means.push((0.299 * channels[0]!.mean + 0.587 * channels[1]!.mean + 0.114 * channels[2]!.mean) / 255);
+  }
+  // a model without textures is as bright as its base colours (the tinted lion; the other textureless models keep the default boost)
+  if (means.length === 0 && fromColour) {
+    for (const mat of doc.getRoot().listMaterials()) {
+      const [r, g, b] = mat.getBaseColorFactor();
+      means.push(0.299 * r! + 0.587 * g! + 0.114 * b!);
+    }
   }
   return means.length > 0 ? Math.round((means.reduce((a, b) => a + b, 0) / means.length) * 1000) / 1000 : undefined;
 }
@@ -250,6 +262,10 @@ async function processDoc(doc: Document, spec: ModelSpec, profile: ModelProfile)
     for (const scene of doc.getRoot().listScenes()) for (const node of scene.listChildren()) node.setRotation(q);
   }
   if (spec.heightfield) heightfieldDoc(doc, spec.heightfield.cells, spec.heightfield.uvSpan);
+  if (spec.tint) {
+    const tinted = doc.createMaterial(`${spec.key}_tint`).setBaseColorFactor([...spec.tint, 1]).setMetallicFactor(0).setRoughnessFactor(1);
+    for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) if (!prim.getMaterial()) prim.setMaterial(tinted);
+  }
   doc.createExtension(EXTTextureWebP).setRequired(false);
   // flat matte look: drop normal, roughness, occlusion and emissive maps, keep the colour
   for (const mat of doc.getRoot().listMaterials()) {
@@ -627,7 +643,7 @@ export async function buildModel(spec: ModelSpec, profile: ModelProfile = "reduc
     const cached = JSON.parse(readFileSync(cacheFile, "utf-8")) as ModelInfo;
     // a cache from before the brightness was recorded: read it from the built file instead of building the model again
     if (cached.mean === undefined) {
-      cached.mean = await meanBrightness(await io.readBinary(new Uint8Array(readFileSync(out))));
+      cached.mean = await meanBrightness(await io.readBinary(new Uint8Array(readFileSync(out))), spec.tint !== undefined);
       if (cached.mean !== undefined) writeFileSync(cacheFile, JSON.stringify(cached));
     }
     return cached;
@@ -649,7 +665,7 @@ export async function buildModel(spec: ModelSpec, profile: ModelProfile = "reduc
     groundTop: spec.animated ? 0 : groundTopOf(doc),
     surface: spec.animated ? undefined : surfaceOf(doc),
     fromObj: extname(src).toLowerCase() === ".obj",
-    mean: await meanBrightness(doc),
+    mean: await meanBrightness(doc, spec.tint !== undefined),
   };
   ensureDir(cacheFile);
   writeFileSync(cacheFile, JSON.stringify(info));
@@ -726,6 +742,14 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_space_lock", "new:Space_lock.glb", 3000, 1024),
   S("obj_space_door_left", "new:Space_door_left.glb", 100, 1024),
   S("obj_space_door_right", "new:Space_door_right.glb", 100, 1024),
+  // the wall decorations of the dungeons (45th playtest, point 4, the user's models: reliefs of 1.3 x 1.9 x 0.3 around their middle, about 10 000 triangles and three 2048 px textures each);
+  // the lion comes without a material and gets the grey-brown of the others' stone (`tint`). Which dungeon hangs which: `data/wall-deco.ts`
+  S("obj_deco_evil_wizard", "new:Decoration_evil_wizard.glb", 4000, 512),
+  S("obj_deco_evil_witch", "new:Decoration_evil_witch.glb", 4000, 512),
+  S("obj_deco_barbarian", "new:Decoration_barbarian.glb", 4000, 512),
+  S("obj_deco_demon_1", "new:Decoration_demon_1.glb", 4000, 512),
+  S("obj_deco_demon_2", "new:Decoration_demon_2.glb", 4000, 512),
+  { ...S("obj_deco_lion", "new:Decoration_lion.glb", 4000, 512), tint: [0.36, 0.32, 0.27] },
   S("poi_hut", "Hut.obj", 1200),
   S("poi_pyramid", "Pyramid.obj", 900),
   S("poi_dungeon", "Dungeon entrance.obj", 1200),

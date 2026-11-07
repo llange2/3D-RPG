@@ -1,5 +1,6 @@
 import { worstCondition } from "../sim/character";
 import { assetPath, h } from "./dom";
+import { cachedPortrait } from "./portraitSheets";
 import type { Character, Condition } from "../sim/types";
 
 /**
@@ -89,7 +90,8 @@ const PORTRAIT_SUFFIX: Partial<Record<Condition, string>> = {
  */
 export function portraitImage(c: Pick<Character, "avatar" | "conditions" | "name">, className = "portrait"): HTMLImageElement {
   const file = portraitOf(c);
-  const img = h("img", { class: className, src: assetPath(`icons/portraits/${file}.webp`), alt: c.name });
+  // the picture of the hero's sheet when it has come (`portraitSheets.ts`), else the file of the state
+  const img = h("img", { class: className, src: cachedPortrait(file) ?? assetPath(`icons/portraits/${file}.webp`), alt: c.name });
   img.addEventListener("error", () => {
     const plain = assetPath(`icons/portraits/${c.avatar}.webp`);
     if (!img.src.endsWith(plain.replace(/^\./, ""))) img.src = plain;

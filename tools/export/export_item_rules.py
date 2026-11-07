@@ -28,6 +28,19 @@ ADD_PLACES = {118: ["cave"], 86: ["cave"], 3: ["town", "dungeon"], **{k: ["cave"
 # they may hold a spell scroll, so they are never plain decoration (`BOOKSHELVES` in src/data/spell-loot.ts).
 ADD_FUNCTIONAL = {73, 75, 97}
 
+# Objects the sheet does not list (the user's models, pseudo item numbers above the old table, `src/data/wall-deco.ts`): id, name, functional, places, comment.
+# The wall decorations of the dungeons (45th playtest, point 4, rules of the user): they follow the monsters of the dungeon, one kind per dungeon, about every ten cells on the walls.
+EXTRA_ROWS = [
+    (304, "Decoration: Evil Wizard", False, ["castle", "dungeon"], "Wandrelief. Dungeon mit humanoiden Monstern: genau eine der Dekos Evil Wizard / Evil Witch / Barbarian (+ Löwe, Elch), regelmäßig ca. alle 10 Felder an der Wand."),
+    (305, "Decoration: Evil Witch", False, ["castle", "dungeon"], "Wandrelief, siehe Evil Wizard."),
+    (306, "Decoration: Barbarian", False, ["castle", "dungeon"], "Wandrelief, siehe Evil Wizard."),
+    (307, "Decoration: Demon 1", False, ["castle", "dungeon"], "Wandrelief. Dungeon mit Monstern der Gruppe beast: genau eine der Dekos Demon 1 / Demon 2 (+ Löwe, Elch), ca. alle 10 Felder."),
+    (308, "Decoration: Demon 2", False, ["castle", "dungeon"], "Wandrelief, siehe Demon 1."),
+    (309, "Decoration: Lion", False, ["castle", "dungeon"], "Wandrelief. Löwe und Elch (125) passen zu jedem Monstertyp."),
+]
+# 125 Moose King: now one of the wall decorations (a dungeon hangs ONE kind regularly), not a prop picked by chance.
+NOTES = {125: "Wandrelief. Gehört zu den Wanddekos: ein Dungeon hängt genau eine Art regelmäßig (ca. alle 10 Felder) an die Wand, Elch und Löwe passen zu jedem Monstertyp, Wizard/Witch/Barbarian zu humanoiden, Demon 1/2 zu beast-Monstern (`src/data/wall-deco.ts`)."}
+
 DOC = os.path.join(ROOT, "docs", "OBJECTS.md")
 
 wb = openpyxl.load_workbook(SOURCE)
@@ -49,7 +62,9 @@ for row in ws.iter_rows(min_row=2, values_only=True):
         if extra not in envs:
             envs.append(extra)
     comment = (row[8] or "").strip() if len(row) > 8 else ""
+    comment = NOTES.get(item, comment)
     rows.append((item, name, functional, envs, comment))
+rows.extend(EXTRA_ROWS)
 
 lines = [
     "/**",

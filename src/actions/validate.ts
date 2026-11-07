@@ -3,7 +3,8 @@ import { FORBIDDEN_PROPS } from "../data/dungeon-themes";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { questIssues } from "./questChecks";
-import { BRIDGE, CONSOLE_CLEAR, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPPORT, ORBS_PER_SECTION, POWER_CRYSTAL, STORAGE_BAY } from "../data/quest-table";
+import { BRIDGE, CONSOLE_CLEAR, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPPORT, ORBS_PER_SECTION, POWER_CRYSTAL, STORAGE_BAY, type MonsterGroup } from "../data/quest-table";
+import { WALL_DECO_ITEMS, wallDecoChoices } from "../data/wall-deco";
 import { MONSTERS, monsterGroup } from "../data/tables";
 import { sectionAt } from "../interiors/spaceship";
 import { analyzeTopology, type Topology } from "../interiors/topology";
@@ -49,10 +50,15 @@ export function themeIssues(map: InteriorMap, content: MapContent): string[] {
   const forbidden = new Set(FORBIDDEN_PROPS[theme.inhabitants]);
   for (const s of content.spawns) for (const id of s.monsterIds) if (!own.has(id)) issues.push(`${s.uid}: monster ${id} does not belong to ${theme.id}`);
   const found: string[] = [];
+  // the wall decorations (45th playtest, point 4): one kind in the whole place, and one that goes with the monsters that live in it
+  const hung = new Set(content.actions.filter((a) => a.kind === "decor" && WALL_DECO_ITEMS.includes(Number(a.params.item))).map((a) => Number(a.params.item)));
+  if (hung.size > 1) issues.push(`${map.key}: ${hung.size} kinds of wall decoration (${[...hung].join(", ")}), a dungeon hangs only one`);
+  const fitting = wallDecoChoices(monsterGroup(theme.monsters[0]!) as MonsterGroup);
+  for (const item of hung) if (!fitting.includes(item)) issues.push(`${map.key}: wall decoration ${item} does not go with the monsters of ${theme.id}`);
   for (const a of content.actions) {
     // (the field of traps that a wrong answer of a mini quest throws the party on may have a trap in a place that has none)
     if (a.kind === "trap" && !a.uid.includes("trapfield") && a.params.trap !== theme.trap) issues.push(`${a.uid}: ${String(a.params.trap)} trap in ${theme.id}, which has ${theme.trap}`);
-    if (a.kind === "decor" && Number(a.params.item) !== 76 && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
+    if (a.kind === "decor" && Number(a.params.item) !== 76 && !WALL_DECO_ITEMS.includes(Number(a.params.item)) && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
     // the objects of a quest (runes, gongs, statues, levers) belong to the quest, whoever lives here
     for (const item of [a.params.item, a.params.chest]) if (["decor", "treasure", "shrine"].includes(a.kind) && typeof item === "number" && forbidden.has(item) && a.params.quest === undefined) issues.push(`${a.uid}: prop ${item} does not suit ${theme.inhabitants}`);
     if (typeof a.params.quest === "string") for (let i = 0; i < Number(a.params.count ?? 1); i++) found.push(a.params.quest);

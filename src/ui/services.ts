@@ -3,7 +3,7 @@ import { LAYER, rngFor } from "../core/rng";
 import { SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
 import {
-  buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf,
+  BANK_SLIDER_STEPS, bankSliderAmount, buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf,
   templeCure, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
@@ -224,17 +224,33 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
 
     // -------------------------------------------------------------- bank
     const bank = () => {
+      // one slider for each way, the button to the right of it (45th playtest, point 10); the sums run from a few hundred to millions, see `bankSliderAmount`
+      const mover = (verb: string, max: number, move: (amount: number) => number) => {
+        let amount = max;
+        // (a fixed width, so that the slider does not change its length while the sum grows or shrinks)
+        const button = h("button", { class: "btn", text: `${verb} ${thousands(amount)}`, disabled: max < 1, style: "flex:none;width:13em" });
+        const input = h("input", { type: "range", min: "0", max: String(BANK_SLIDER_STEPS), step: "1", value: String(BANK_SLIDER_STEPS), disabled: max < 1, title: `${verb}: drag to choose the sum (arrow keys for single steps)`, style: "flex:1 1 auto;min-width:0;accent-color:var(--gold)" }) as HTMLInputElement;
+        const set = (): void => {
+          amount = bankSliderAmount(max, Number(input.value));
+          button.textContent = `${verb} ${thousands(amount)}`;
+          button.disabled = amount < 1;
+        };
+        input.addEventListener("input", set);
+        // the keys that move the slider must not turn the party or open a window behind the panel
+        input.addEventListener("keydown", (e) => e.stopPropagation());
+        button.addEventListener("click", () => {
+          if (amount < 1) return;
+          ctx.sound?.(9000);
+          note(`${verb === "Deposit" ? "Deposited" : "Withdrew"} ${thousands(move(amount))} gold.`, "good");
+          refresh();
+        });
+        return h("div", { class: "bank-row", style: "display:flex;align-items:center;gap:12px;margin-top:10px" }, input, button);
+      };
       root.append(
         ...header(`in the vault: <b style="color:var(--gold)">${thousands(party.bankGold)}</b>`),
         h("p", { text: "Gold in the vault is safe from thieves, traps and your own bad judgement." }),
-        h("div", { class: "row-btns" },
-          ...[100, 1000, 10000].map((n) => h("button", { class: "btn", text: `Deposit ${thousands(n)}`, disabled: party.gold < 1, onclick: () => { deposit(party, n); refresh(); } })),
-          h("button", { class: "btn", text: "Deposit all", disabled: party.gold < 1, onclick: () => { deposit(party, party.gold); refresh(); } }),
-        ),
-        h("div", { class: "row-btns" },
-          ...[100, 1000, 10000].map((n) => h("button", { class: "btn", text: `Withdraw ${thousands(n)}`, disabled: party.bankGold < 1, onclick: () => { withdraw(party, n); refresh(); } })),
-          h("button", { class: "btn", text: "Withdraw all", disabled: party.bankGold < 1, onclick: () => { withdraw(party, party.bankGold); refresh(); } }),
-        ),
+        mover("Deposit", party.gold, (n) => deposit(party, n)),
+        mover("Withdraw", party.bankGold, (n) => withdraw(party, n)),
       );
     };
 

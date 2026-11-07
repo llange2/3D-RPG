@@ -1,5 +1,6 @@
 import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
+import { DECO_MODELS, DECO_SCALE } from "../data/wall-deco";
 import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
@@ -15,6 +16,12 @@ import type { PropInstance } from "./terrainMesher";
 
 /** The altar (item 35) is 60 % of the size the wells have (31st playtest, point 6); a prop rests its lowest point on the floor whatever its scale. */
 export const ALTAR_SCALE = 0.9;
+
+/** The wall reliefs hang with their middle 2.0 above the floor (the moose king's carving), and their back lies a hand's breadth inside the wall. */
+const DECO_LIFT = 2.0 - 0.95 * DECO_SCALE;
+const DECO_BURY = 0.1;
+/** Half the width of a cell (`CELL_SIZE` 3): where the wall stands. */
+const WALL_AT = 1.5;
 
 /** Old item id -> the interior view's own model and its scale, for the objects it has had since before the themes. */
 export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?: [number, number, number]; lift?: number }> = {
@@ -32,6 +39,9 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?:
   // the broken crystal is as big as the intact one it turns into (item 67, 0.87 x 2.0 x 0.86 in the original set; the file is 0.43 x 0.95 x 0.43), and it rests on the floor the same way
   [BROKEN_CRYSTAL_ITEM]: { model: "obj_power_crystal_broken", scale: 2.03, scale3: [2.03, 2.1, 2.0] },
   [CONSOLE_ITEM]: { model: "obj_spaceship_console", scale: CONSOLE_SCALE },
+  // the wall reliefs of the dungeons (45th playtest, point 4): the files are 1.3 x 1.9 around their middle, as big as the moose king's carving (scale 1.2); the middle hangs at the height of the
+  // moose's (2.0), so the lowest point is 2.0 - 0.95 * 1.2 above the floor
+  ...Object.fromEntries(Object.entries(DECO_MODELS).map(([item, model]) => [item, { model, scale: DECO_SCALE, lift: DECO_LIFT }])),
 };
 
 /**
@@ -108,6 +118,13 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   // a pulled lever has turned half a circle, so that its handle lies on the other side (the campaign turns its levers the same way)
   if (a.kind === "lever" && leverPulled(a, opened)) bearing += 180;
   const own = OWN_MODELS[item];
+  if (own && item in DECO_MODELS) {
+    // the files are centred on their middle: the relief is pushed back so that its back plane lies in the wall (the moose's carving has its origin in front of it)
+    const back = (staticInfo[own.model]?.bounds?.[2] ?? -0.2) * own.scale;
+    const push = WALL_AT + DECO_BURY + back;
+    const rotY = (bearing * Math.PI) / 180;
+    return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
+  }
   if (own) return { model: own.model, x, y: own.lift ?? 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale, ...(own.scale3 ? { scaleXYZ: own.scale3 } : {}) };
   return itemProp(item, bearing, x, z, staticInfo);
 }

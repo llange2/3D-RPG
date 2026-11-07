@@ -98,6 +98,7 @@ import { SKULL_MISER_MET,clueFlag, lockSeenFlag, placeSegments, reachedFlag, wor
 import { overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
+import { preloadPortraits } from "../ui/portraitSheets";
 import { cursorStepped, setCursorFade } from "../ui/cursor";
 import { h } from "../ui/dom";
 import { thousands } from "../core/format";
@@ -165,6 +166,7 @@ const HUD_QUEST_CHARS = 42;
 const FIZZLE_TEXT: Partial<Record<FizzleReason, (caster: string) => string>> = {
   mana: (n) => `${n} lacks the spell points.`,
   in_town: () => "It is too dangerous to cast Pandora's box in a town.",
+  pandora_spent: () => "Pandora's box has been opened three times today. Its rift closes until midnight.",
   in_battle: () => IN_MELEE_SPELL,
   no_beacon: (n) => `${n} has not lit a fire to go back to yet. Set one first.`,
   no_food: () => "The party has no food to rest on.",
@@ -277,6 +279,8 @@ const KIND_NAMES: Record<GameKind, string> = { world: "World", campaign: "Campai
 
 export class Game {
   mode: Mode = "title";
+  /** The avatars of the party whose portrait sheets have been asked for (`preloadPortraits`). */
+  private portraitKey = "";
   world!: World;
   state!: GameState;
   private r!: Renderer;
@@ -601,6 +605,8 @@ export class Game {
   private async beginPlay(): Promise<void> {
     cheats.god = false; // the debug cheats are for one game
     this.ui.setHudVisible(true);
+    // the portraits of the chosen heroes in all their states, before the first frame (45th playtest, point 5)
+    await this.preloadPortraits();
     const at = this.state.at;
     if (isCampaignPlace(at) && this.state.campaign) {
       await this.openCampaignMap(at.poiId.slice("campaign:".length), { x: at.x, y: at.y, rotation: { N: 0, E: 90, S: 180, W: 270 }[at.facing] }, false);
@@ -2615,6 +2621,8 @@ export class Game {
     // the movie has its own sound: the music and the hum of the engines stop when it starts (6. 11. 2026)
     this.audio.stopMusic();
     this.audio.setAmbient(new Map());
+    // no mouse pointer during the movie and the closing words (45th playtest, point 2); it returns with the OK button (`endingScroll`)
+    document.documentElement.classList.add("ending-on");
     await new Promise<void>((resolve) => {
       const video = document.createElement("video");
       video.src = "assets/ui/outro.mp4";
@@ -2632,19 +2640,22 @@ export class Game {
       void video.play().catch(done);
     });
     await this.endingScroll();
-    // back in the ship: its music and the hum of the engines return
-    this.audio.playMusic(this.interior?.map.theme.music ?? 2);
-    this.updateAmbient();
+    document.documentElement.classList.remove("ending-on");
+    // the game is won: back to the title screen (the saved game stays as it is, with the flag `game:won`)
     this.player.locked = false;
+    this.save("auto");
+    void this.start(this.state.seed);
   }
 
   /**
-   * After the movie: a black screen and the closing words rise from the bottom like credits (6. 11. 2026). A click, Enter, Space or Escape ends it early.
+   * After the movie: a black screen and the closing words rise from the bottom like credits (6. 11. 2026). They stop when the text stands exactly in the middle of the
+   * screen, and an OK button appears below it (45th playtest, point 3). A click, Enter, Space or Escape during the rise jumps straight to that state; the pointer is hidden
+   * until the button is there.
    */
   private endingScroll(): Promise<void> {
     return new Promise<void>((resolve) => {
       const screen = document.createElement("div");
-      screen.style.cssText = "position:fixed;inset:0;background:#000;z-index:9999;overflow:hidden;cursor:pointer";
+      screen.style.cssText = "position:fixed;inset:0;background:#000;z-index:9999;overflow:hidden";
       const text = document.createElement("div");
       text.style.cssText =
         "position:absolute;left:50%;top:0;width:min(44em,86vw);text-align:center;white-space:pre-line;color:#e9dfc0;font-family:var(--font-head);font-size:clamp(20px,2.6vw,34px);line-height:1.8;letter-spacing:0.02em";
@@ -2652,24 +2663,40 @@ export class Game {
       screen.appendChild(text);
       document.body.appendChild(screen);
       const from = window.innerHeight;
-      const to = -text.offsetHeight;
-      // (about 60 pixels a second: the three sentences take as long to leave the screen as they need to be read)
-      const run = text.animate([{ transform: `translate(-50%, ${from}px)` }, { transform: `translate(-50%, ${to}px)` }], { duration: ((from - to) / 60) * 1000, easing: "linear", fill: "forwards" });
+      // the middle of the text on the middle of the screen (a text taller than the screen keeps a margin at the top)
+      const middle = Math.max(16, (window.innerHeight - text.offsetHeight) / 2);
+      // (about 60 pixels a second: the three sentences take as long to rise as they need to be read)
+      const run = text.animate([{ transform: `translate(-50%, ${from}px)` }, { transform: `translate(-50%, ${middle}px)` }], { duration: (Math.max(0, from - middle) / 60) * 1000, easing: "linear", fill: "forwards" });
+      const button = document.createElement("button");
+      button.className = "btn primary";
+      button.textContent = "OK";
+      button.style.cssText = `position:absolute;left:50%;top:${middle + text.offsetHeight + 28}px;transform:translateX(-50%);min-width:120px;font-size:20px`;
+      button.hidden = true;
+      screen.appendChild(button);
       const done = (): void => {
         window.removeEventListener("keydown", onKey, true);
         run.cancel();
         screen.remove();
         resolve();
       };
+      const arrived = (): void => {
+        document.documentElement.classList.remove("ending-on");
+        button.hidden = false;
+        button.focus();
+        button.onclick = done;
+      };
       const onKey = (e: KeyboardEvent): void => {
         if (e.key !== "Enter" && e.key !== " " && e.key !== "Escape") return;
         e.preventDefault();
         e.stopPropagation();
-        done();
+        if (button.hidden) run.finish();
+        else done();
       };
       window.addEventListener("keydown", onKey, true);
-      screen.onclick = done;
-      void run.finished.then(done, () => undefined);
+      screen.onclick = () => {
+        if (button.hidden) run.finish();
+      };
+      void run.finished.then(arrived, () => undefined);
     });
   }
 
@@ -3839,7 +3866,8 @@ export class Game {
         break;
       case "buff":
         this.audio.play(result.effect.kind === "light" ? 9035 : result.effect.kind === "protection" ? 9047 : 9039);
-        if (result.effect.kind === "protection" && result.effect.element) this.ui.avatarEffect(who, protectionEffect(result.effect.element));
+        // the protection covers the whole party, so the picture shows over every hero, not only over the caster (45th playtest, point 6)
+        if (result.effect.kind === "protection" && result.effect.element) party.characters.forEach((_, i) => this.ui.avatarEffect(i, protectionEffect(result.effect.element!)));
         else if (result.effect.kind === "levitate") this.ui.avatarEffect(who, "gui_levitate");
         this.ui.log(BUFF_TEXT[result.effect.kind]?.(c.name, party.characters[result.effect.character ?? -1]?.name ?? "") ?? `${c.name} casts ${result.effect.kind.replace(/_/g, " ")}.`, "good");
         break;
@@ -4774,8 +4802,17 @@ export class Game {
     return out;
   }
 
+  /** Loads the sheets with the portraits of the heroes of the party (all their states); the ones that are cut already cost nothing. */
+  private preloadPortraits(): Promise<void> {
+    const avatars = this.state.party.characters.map((c) => c.avatar);
+    this.portraitKey = avatars.join(",");
+    return preloadPortraits(avatars);
+  }
+
   private refresh(): void {
     if (this.mode === "title") return;
+    // a new party (a hero swapped in the inn, a new game): its sheets load now, the portraits change to the ready pictures with the next update
+    if (this.state.party.characters.map((c) => c.avatar).join(",") !== this.portraitKey) void this.preloadPortraits();
     if (cheats.god) maintainGod(this.state.party);
     this.ui.updateHud(this.state.party, this.hudInfo());
     this.syncMonsterEffects();

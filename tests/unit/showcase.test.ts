@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildMapContent } from "../../src/actions";
 import { PERSONAS } from "../../src/data/personas";
+import { DECO_MODELS } from "../../src/data/wall-deco";
 import { MONSTERS } from "../../src/data/tables";
 import { generateInterior, SHOWCASE_ID, CELL } from "../../src/interiors";
 import { OVERWORLD_EXTRAS, SHOWCASE_EXTRAS, SPACESHIP_EXTRAS, showcaseItems } from "../../src/interiors/showcase";
@@ -55,7 +56,7 @@ describe("the debug showcase", () => {
     expect(signs).toHaveLength(7);
     const rest = INTERIOR_MODELS.filter((m) => !shownByItems.has(m) && !m.startsWith("obj_sign_"));
     // the cottage and the pirate ship belong to the overworld: the showcase loads them itself (`OVERWORLD_EXTRAS`)
-    expect([...rest, ...OVERWORLD_EXTRAS, ...SPACESHIP_EXTRAS].sort()).toEqual(SHOWCASE_EXTRAS.map((e) => e.model).sort());
+    expect([...rest, ...OVERWORLD_EXTRAS, ...SPACESHIP_EXTRAS, ...Object.values(DECO_MODELS)].sort()).toEqual(SHOWCASE_EXTRAS.map((e) => e.model).sort());
     expect(showcase.extras.map((e) => e.model).sort()).toEqual(SHOWCASE_EXTRAS.map((e) => e.model).sort());
   });
 

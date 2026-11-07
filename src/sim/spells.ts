@@ -4,7 +4,7 @@ import { orbSpellBonus } from "./balance";
 import { addCondition, canAct, canBeHealed, healHp, isAlive, recalcValues, removeCondition } from "./character";
 import { restartCondition } from "./conditions";
 import { generateItem } from "./items";
-import { addEffect } from "./party";
+import { MINUTES_PER_DAY, addEffect } from "./party";
 import type { SpecialSpell } from "./encounter";
 import type { Character, ClassName, Condition, Item, LastCast, Party, Place, TimedEffect } from "./types";
 
@@ -74,7 +74,8 @@ export type FizzleReason =
   | "no_food"
   | "no_effect"
   | "cannot_revive"
-  | "no_hp";
+  | "no_hp"
+  | "pandora_spent";
 
 export type SpellResult =
   | { kind: "fizzle"; reason: FizzleReason }
@@ -171,6 +172,14 @@ function pandoraMonsters(level: number): number[] {
     .filter((m) => m.treasure_level === level && walksOnLand(m))
     .map((m) => m.id)
     .sort((a, b) => a - b);
+}
+
+/** How often Pandora's box can be cast in a game day (from midnight to midnight). */
+export const PANDORA_PER_DAY = 3;
+
+/** How often the party has cast Pandora's box on the game day that is running. */
+export function pandoraCastsToday(party: Pick<Party, "minutes" | "pandora">): number {
+  return party.pandora?.day === Math.floor(party.minutes / MINUTES_PER_DAY) ? party.pandora.casts : 0;
 }
 
 /** The roll of Pandora's box (the percentages of the spell sheet). */
@@ -295,6 +304,8 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
 
   if (WORLD_SPELLS.has(spellId)) {
     if (spellId === 2 && options.town) return { kind: "fizzle", reason: "in_town" };
+    // Pandora's box opens the rift only three times a day; the count starts again at midnight (45th playtest, point 8). A refusal costs nothing.
+    if (spellId === 2 && pandoraCastsToday(party) >= PANDORA_PER_DAY) return { kind: "fizzle", reason: "pandora_spent" };
     if (options.battle && movesParty(spellId, options.beacon)) return { kind: "fizzle", reason: "in_battle" };
     if (spellId === 52 && party.food <= 0) return { kind: "fizzle", reason: "no_food" };
     if (spellId === 32) {
@@ -310,7 +321,10 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
     }
     pay();
     if (spellId === 16) return { kind: "jump" };
-    if (spellId === 2) return { kind: "pandora", outcome: pandoraOutcome(rng) };
+    if (spellId === 2) {
+      party.pandora = { day: Math.floor(party.minutes / MINUTES_PER_DAY), casts: pandoraCastsToday(party) + 1 };
+      return { kind: "pandora", outcome: pandoraOutcome(rng) };
+    }
     return { kind: "world", spellId };
   }
 

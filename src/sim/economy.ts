@@ -290,6 +290,21 @@ export function withdraw(party: Party, amount: number): number {
   return n;
 }
 
+/** Positions of the bank's sliders (0 to `BANK_SLIDER_STEPS`). */
+export const BANK_SLIDER_STEPS = 1000;
+
+/**
+ * The amount a bank slider stands for (45th playtest, point 10). The sums run from a few hundred to millions, so the slider is not linear: the position is cubed, which gives fine steps
+ * at the bottom and coarse ones at the top. The result is rounded to three significant digits (never to more than `max`), the end of the slider is exactly `max` and the start 0.
+ */
+export function bankSliderAmount(max: number, position: number): number {
+  if (max <= 0 || position <= 0) return 0;
+  if (position >= BANK_SLIDER_STEPS) return max;
+  const raw = Math.max(1, max * (position / BANK_SLIDER_STEPS) ** 3);
+  const unit = 10 ** Math.max(0, Math.floor(Math.log10(raw)) - 2);
+  return Math.min(max, Math.max(1, Math.round(raw / unit) * unit));
+}
+
 // ------------------------------------------------------------------ training, guild
 
 /** Game minutes a hero spends at the training grounds for one level (41st playtest, point 6): "Train all" takes this per hero, so eight hours for a party of four. */
