@@ -7,6 +7,7 @@ import { BRIDGE, CONSOLE_CLEAR, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPP
 import { WALL_DECO_ITEMS, wallDecoChoices } from "../data/wall-deco";
 import { MONSTERS, monsterGroup } from "../data/tables";
 import { sectionAt } from "../interiors/spaceship";
+import { stairLinks } from "../interiors/stairs";
 import { analyzeTopology, type Topology } from "../interiors/topology";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { ACTION_DEFS, blocksCell } from "./registry";
@@ -28,6 +29,8 @@ export function itemIssues(map: InteriorMap, content: MapContent): string[] {
   const issues: string[] = [];
   const place = placeOf(map);
   for (const a of content.actions) {
+    // the stairs of a tower are the user's own order (quest document 1.7: the spiral staircase, and the Fort door of the castle where the stairs end): the list of objects does not rule them
+    if (a.kind === "stairs") continue;
     const item = shownItemOf(a);
     if (item === null) continue;
     if (!allowedIn(item, place)) issues.push(`${a.uid}: object ${item} may not stand in a ${place}`);
@@ -212,7 +215,7 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
 
   // the party is set down on these cells by a rune, a wrong answer or a portal: never inside an object either
   for (const j of content.actions) {
-    if ((j.kind !== "teleporter" && j.kind !== "riddle" && j.kind !== "qportal") || j.params.tx === undefined || (j.params.tx === 0 && j.params.ty === 0)) continue;
+    if ((j.kind !== "teleporter" && j.kind !== "riddle" && j.kind !== "qportal" && j.kind !== "stairs") || j.params.tx === undefined || (j.params.tx === 0 && j.params.ty === 0)) continue;
     const inside = content.actions.find((o) => o !== j && o.x === j.params.tx && o.y === j.params.ty && blocksCell(o));
     if (inside) issues.push(`${j.uid} sets the party down inside ${inside.uid} (${inside.kind})`);
   }
@@ -222,7 +225,7 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
     if (spawnZone(s.x, s.y)) issues.push(`${s.uid} spawns inside the spawn zone`);
     if (s.monsterIds.length === 0) issues.push(`${s.uid} has no monsters`);
     // the party is set down on these cells by a rune, a wrong answer or a portal: never inside a monster
-    for (const a of content.actions) if ((a.kind === "teleporter" || a.kind === "riddle" || a.kind === "qportal") && a.params.tx === s.x && a.params.ty === s.y) issues.push(`${s.uid} starts on the landing cell of ${a.uid}`);
+    for (const a of content.actions) if ((a.kind === "teleporter" || a.kind === "riddle" || a.kind === "qportal" || a.kind === "stairs") && a.params.tx === s.x && a.params.ty === s.y) issues.push(`${s.uid} starts on the landing cell of ${a.uid}`);
     for (const id of s.monsterIds) {
       const m = MONSTERS[id];
       if (!m) {
@@ -250,11 +253,18 @@ export function validateContent(map: InteriorMap, content: MapContent, topology?
     seen[idx(end.cx, end.cy)] = 1;
   }
   let reached = 0;
+  const jumps = stairLinks(map);
   for (let head = 0; head < queue.length; head++) {
     const i = queue[head]!;
     reached++;
     const x = i % map.width;
     const y = (i - x) / map.width;
+    // the stairs of a tower take the party to the other floor
+    const jump = jumps.get(i);
+    if (jump !== undefined && !seen[jump] && !blocked.has(jump)) {
+      seen[jump] = 1;
+      queue.push(jump);
+    }
     for (const d of DIRS) {
       const nx = x + FACING_DELTA[d].dx;
       const ny = y + FACING_DELTA[d].dy;

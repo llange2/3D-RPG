@@ -131,6 +131,12 @@ export interface TileInfo {
   dirt?: boolean;
 }
 
+/**
+ * A tower: a dungeon of the layout dungeon_5, 2 x 2 tiles wide (the plan of the world sets it, `World.plan`; a dungeon is 1, a pyramid 3 wide). No road leads to it, it stands in the
+ * open and has no entrance side of a road.
+ */
+export const isTower = (p: Pick<Poi, "kind" | "size">): boolean => p.kind === "dungeon" && p.size === 2;
+
 /** The tiles a place stands on, both ends inclusive. */
 export function poiBounds(p: Pick<Poi, "x" | "y" | "size">): { x0: number; y0: number; x1: number; y1: number } {
   const low = Math.floor(p.size / 2);

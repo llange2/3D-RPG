@@ -21,7 +21,7 @@ import {
 import { RIDDLES_WORLD, RIDDLE_NUMBERS, WORD_RIDDLES } from "../data/riddles";
 import { planSpellLoot } from "./spellPlan";
 import { MONSTERS } from "../data/tables";
-import type { Poi, WorldSize } from "../world/types";
+import { BIOME, type Poi, type WorldSize } from "../world/types";
 import type { World } from "../world/world";
 import type { DungeonRef } from "./types";
 
@@ -240,7 +240,9 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
       continue;
     }
     const quest = decks[kind].draw();
-    const layout = rngPick(look, layoutsFor(quest, kind));
+    // (no tower on a lava island: its only ways are streams of lava, and a tower has a way of plain ground)
+    const layouts = layoutsFor(quest, kind).filter((l) => !(l === "dungeon_5" && poi.biome === BIOME.LAVA));
+    const layout = rngPick(look, layouts);
     // 0 to 4 mini quests by the size of the world (fewer where the list of riddles would run out); every riddle occurs once in a world
     const miniIds = Array.from({ length: miniCounts.get(poi.id) ?? 0 }, () => takeRiddle(RIDDLE_NUMBERS));
     const def = QUESTS[quest];

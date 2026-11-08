@@ -197,7 +197,9 @@ describe("islands", () => {
     const world = new World("poi-tiles", "large");
     for (const p of world.allPois()) {
       const pyramid = p.kind === "dungeon" && planDungeon(world, p)?.klass === "C";
-      expect(p.size, `${p.id} ${p.kind}`).toBe(pyramid ? 3 : p.kind === "town" || p.kind === "castle" ? 2 : 1);
+      // a dungeon built as a tower (layout dungeon_5, quest document 1.7) is 2 x 2 like a town
+      const tower = p.kind === "dungeon" && planDungeon(world, p)?.layout === "dungeon_5";
+      expect(p.size, `${p.id} ${p.kind}`).toBe(pyramid ? 3 : p.kind === "town" || p.kind === "castle" || tower ? 2 : 1);
       const b = poiBounds(p);
       for (let y = b.y0 - 1; y <= b.y1 + 1; y++) {
         for (let x = b.x0 - 1; x <= b.x1 + 1; x++) {

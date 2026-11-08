@@ -84,7 +84,7 @@ const KIND_TITLE: Record<PoiKind, string> = { town: "Town", cave: "Cave", dungeo
 /** The places of the world for Esc > Debug > Teleport to Level: by level, then town, cave, dungeon, castle, then by name. A pyramid (a dungeon of size 3) leads into the spaceship. */
 export function teleportTargets(pois: readonly Poi[]): { poi: Poi; kind: string }[] {
   return pois
-    .map((poi) => ({ poi, kind: poi.kind === "dungeon" && poi.size === 3 ? "Pyramid" : KIND_TITLE[poi.kind] }))
+    .map((poi) => ({ poi, kind: poi.kind === "dungeon" && poi.size === 3 ? "Pyramid" : poi.kind === "dungeon" && poi.size === 2 ? "Tower" : KIND_TITLE[poi.kind] }))
     .sort((a, b) => a.poi.tier - b.poi.tier || KIND_ORDER[a.poi.kind] - KIND_ORDER[b.poi.kind] || a.poi.name.localeCompare(b.poi.name));
 }
 

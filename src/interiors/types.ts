@@ -174,6 +174,28 @@ export interface DungeonRef {
   barriers?: { x: number; y: number }[];
   /** The room the layout set aside for the quest: the entrance room of quest 1 (the field of statues) or the hall of quest 2 (the row of heads). */
   hall?: { x: number; y: number; w: number; h: number };
+  /** A tower (dungeon_5): where its floors lie on the map and where the stairs are. */
+  tower?: TowerLayout;
+}
+
+/**
+ * The floors of a tower (layout dungeon_5, quest document 1.7). All of them lie on ONE map, side by side with rock between them (at least `FLOOR_GAP` cells, so that no teleport
+ * spell can hop from one floor to the next); the stairs are cells that throw the party to the other floor without a loading screen. Each transition k (floor k to floor k + 1)
+ * has a staircase on floor k and a gate on floor k + 1 at the same place of the round plan (the same cell, relative to the floor).
+ */
+export interface TowerLayout {
+  /** The top left cell of every floor's bounding square, and its edge length (a floor is a disk in it). */
+  floors: { x: number; y: number; size: number }[];
+  stairs: {
+    /** The spiral staircase on the lower floor, and the cell in front of it (where the party arrives when it comes down the gate of the floor above). */
+    up: { x: number; y: number };
+    front: { x: number; y: number };
+    /** The Fort door on the floor above, and the cell in front of it (where the party arrives when it climbs the staircase). */
+    down: { x: number; y: number };
+    land: { x: number; y: number };
+    /** The way from the wall into the room (the party arrives facing it, on both floors). */
+    facing: Facing;
+  }[];
 }
 
 /** A castle of the generated world (`interiors/castle.ts`): a keep, entered through its gate. */

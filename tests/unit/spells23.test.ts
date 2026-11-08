@@ -6,12 +6,12 @@ import { MONSTERS, SPELLS, isUndead, monsterGroup } from "../../src/data/tables"
 import { ageOf, armor, attr, canAct, createCharacter, fightSpeed, recalcValues } from "../../src/sim/character";
 import { applyHit, meleeDamage } from "../../src/sim/combat";
 import {
-  cancelRifts, createEncounter, createMonster, immobilize, makeClumsy, monsterTurn, partyAttack, phaseMonsters, pullMonsters, specialSpell, type Encounter, type GridView,
+  MONSTER_ACTION_RADIUS, PRISMATIC_ELEMENTS, areaSpell, cancelRifts, createEncounter, createMonster, immobilize, makeClumsy, monsterTurn, partyAttack, phaseMonsters, pullMonsters, specialSpell, type Encounter, type GridView,
 } from "../../src/sim/encounter";
 import { canCombine, combine, combineGroups, duplicate, transformRing } from "../../src/sim/itemSpells";
 import { generateItem, makeItem, ringLevel } from "../../src/sim/items";
 import { MINUTES_PER_DAY, advanceTime, createDefaultParty, hasEffect, surroundings } from "../../src/sim/party";
-import { DRAGON_LORD, SPELL_GRID, SPELL_SCHOOL, castSpell, isSpellImplemented, pandoraOutcome } from "../../src/sim/spells";
+import { DRAGON_LORD, SPELL_GRID, SPELL_SCHOOL, castSpell, isAreaSpell, isAttackSpell, isSpellImplemented, pandoraOutcome } from "../../src/sim/spells";
 import { MINUTES_PER_YEAR } from "../../src/sim/character";
 import type { Party } from "../../src/sim/types";
 import { safeCells } from "../../src/game/spellSites";
@@ -416,13 +416,34 @@ describe("attack spells with rules of their own", () => {
     expect(enc.monsters[0]!.hp).toBe(MONSTERS[l5]!.health);
   });
 
-  it("Star Burst hits everything within three tiles of the target, not what is farther", () => {
+  it("Star Burst goes off at the party and hits everything within three tiles of it, not what is farther (48th playtest, point 2)", () => {
     const p = party();
-    const enc = fight(0, 0, [[living, 6, 0], [living, 8, 1], [living, 6, 3], [living, 12, 0]]);
-    const events = cast(p, enc, "star_burst", "m0");
+    for (const c of p.characters) c.hp = c.health = 99999;
+    const enc = fight(0, 0, [[living, 1, 1], [living, 3, 0], [living, 0, -3], [living, 2, 2], [living, 4, 0], [living, 6, 0]]);
+    const events = areaSpell(p, open, enc, 0, 0, rng("sb"), "star_burst", { damage: 200, type: "magic" });
     const hit = new Set(events.filter((e) => e.type === "party_attack").map((e) => (e as { uid: string }).uid));
-    // the first is 6 tiles from the party but the target; the second is 2.2 away, the third 3, the fourth 6
-    expect([...hit].sort()).toEqual(["m0", "m1", "m2"]);
+    // 1.4, 3 and 3 tiles away are inside, 2.8 too; 4 and 6 are outside (a circle: 2/2 is 2.8, 3/3 would be 4.2)
+    expect([...hit].sort()).toEqual(["m0", "m1", "m2", "m3"]);
+    // no clear line is needed
+    expect(isAreaSpell(76)).toBe(true);
+  });
+
+  it("Prismatic Light hits every monster in the action radius, each with one of the four damage types", () => {
+    const seen = new Set<string>();
+    for (let n = 0; n < 12; n++) {
+      const p = party();
+      for (const c of p.characters) c.hp = c.health = 99999;
+      const enc = fight(0, 0, [[living, 1, 0], [living, 0, 2], [living, -3, 3], [living, 6, -6], [living, 0, MONSTER_ACTION_RADIUS + 4]]);
+      const events = areaSpell(p, open, enc, 0, 0, rng(`pl${n}`), "prismatic_light", { damage: 95, type: "magic" });
+      const hits = events.filter((e) => e.type === "party_attack") as { uid: string; element?: string }[];
+      expect(hits.map((e) => e.uid).sort()).toEqual(["m0", "m1", "m2", "m3"]);
+      for (const e of hits) {
+        expect(PRISMATIC_ELEMENTS).toContain(e.element);
+        seen.add(e.element!);
+      }
+    }
+    expect([...seen].sort()).toEqual([...PRISMATIC_ELEMENTS].sort());
+    expect(isAreaSpell(73) && isAttackSpell(73)).toBe(false);
   });
 
   it("Moon Ray heals everyone who can be healed by up to 50 while it hits", () => {

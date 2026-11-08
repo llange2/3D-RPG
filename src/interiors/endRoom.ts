@@ -21,9 +21,11 @@ function depthFrom(b: Builder, sx: number, sy: number): Int16Array {
     const i = queue[head]!;
     const x = i % b.width;
     const y = (i - x) / b.width;
-    for (const [nx, ny] of neighbours4(x, y)) {
-      if (!b.inside(nx, ny) || !b.isFloor(nx, ny)) continue;
-      const ni = b.idx(nx, ny);
+    const next = neighbours4(x, y).filter(([nx, ny]) => b.inside(nx, ny) && b.isFloor(nx, ny)).map(([nx, ny]) => b.idx(nx, ny));
+    // the stairs of a tower are a way as well: the floor above is as far as the stairs and the way along it
+    const link = b.links.get(i);
+    if (link !== undefined) next.push(link);
+    for (const ni of next) {
       if (depth[ni]! < 0) {
         depth[ni] = depth[i]! + 1;
         queue.push(ni);

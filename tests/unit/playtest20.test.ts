@@ -103,7 +103,8 @@ describe("twentieth playtest, point 7: no corner of three terrains where it can 
     }
     // (what is left is a bridge that meets the bank: there is no picture for it either)
     // (six worlds of 140 x 200 now, 2.8 times the area of the 100 x 100 ones this limit was set for)
-    expect(corners).toBeLessThan(200);
+    // (210 since the towers of quest document 1.7: no road leads to a tower, so the roads of the world are laid differently and the bridges meet the banks elsewhere)
+    expect(corners).toBeLessThan(210);
   });
 });
 

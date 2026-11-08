@@ -32,6 +32,8 @@ export const FLOOR_MODELS: Readonly<Record<string, { model: string; replacesQuad
   tex_dungeon_floor: { model: "blk_floor", replacesQuad: true },
   tex_city_floor: { model: "blk_city_floor", replacesQuad: false },
   tex_fortress_floor: { model: "blk_fortress_floor", replacesQuad: false },
+  // the tower's wooden floor (quest document 1.7)
+  tex_wooden_floor: { model: "blk_wooden_floor", replacesQuad: false },
   // the cave floor is the old game's dirt tile (the full one, `gndx_dirt`, as the overworld draws it), over the flat dirt tile
   tex_cave: { model: "gndx_dirt", replacesQuad: false },
 };

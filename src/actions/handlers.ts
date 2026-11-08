@@ -46,8 +46,8 @@ export type Effect =
   | { type: "ambush"; monsterIds: number[] }
   /** A statue wants an answer: the game asks the question and calls `resolveAction` again with it as `ctx.answer`. */
   | { type: "ask"; question: string }
-  /** The party is thrown to a cell (a rune of the field). */
-  | { type: "jump"; x: number; y: number }
+  /** The party is thrown to a cell (a rune of the field). `silent`: no teleport sound (the stairs of a tower); `facing`: the way the party looks when it arrives. */
+  | { type: "jump"; x: number; y: number; silent?: boolean; facing?: "N" | "E" | "S" | "W" }
   /** The game asks which hero (a chalice is to be drunk) and calls `resolveAction` again with `ctx.hero` set, or null when nobody was chosen. */
   | { type: "pick"; question: string }
   /** The quest of the place is done: its end room opens (the seal gives way, or the party is teleported into the pocket). */
@@ -776,6 +776,11 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
 
     case "teleporter":
       effects.push({ type: "text", text: "The floor flares under your feet. You are thrown back!" }, { type: "jump", x: Number(p.tx), y: Number(p.ty) });
+      return { effects, consumed: false };
+
+    case "stairs":
+      // up the spiral staircase or down the Fort door: the other floor of the tower, on the same map, without a loading screen and without the sound of a teleport
+      effects.push({ type: "jump", x: Number(p.tx), y: Number(p.ty), silent: true, facing: p.facing as "N" | "E" | "S" | "W" });
       return { effects, consumed: false };
 
     case "door": {

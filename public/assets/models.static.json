@@ -1222,24 +1222,6 @@
   "fromObj": true,
   "mean": 0.439
  },
- "blk_pillars_city": {
-  "file": "models/blk_pillars_city.glb",
-  "tris": 496,
-  "bytes": 47088,
-  "bounds": [
-   -1.25,
-   0,
-   -1.25,
-   1.25,
-   2,
-   1.25
-  ],
-  "animations": [],
-  "groundTop": 2,
-  "surface": 2,
-  "fromObj": true,
-  "mean": 0.63
- },
  "blk_floor": {
   "file": "models/blk_floor.glb",
   "tris": 2762,
@@ -4245,5 +4227,77 @@
   "surface": 0.6425,
   "fromObj": false,
   "mean": 0.249
+ },
+ "blk_city_pillar": {
+  "file": "models/blk_city_pillar.glb",
+  "tris": 2999,
+  "bytes": 399756,
+  "bounds": [
+   -0.29945918917655945,
+   -1,
+   -0.2997192144393921,
+   0.29945918917655945,
+   1,
+   0.2997192144393921
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "surface": 1,
+  "fromObj": false,
+  "mean": 0.567
+ },
+ "blk_wooden_floor": {
+  "file": "models/blk_wooden_floor.glb",
+  "tris": 1400,
+  "bytes": 251480,
+  "bounds": [
+   -0.9503620266914368,
+   -0.06462112069129944,
+   -0.9501301050186157,
+   0.9485160112380981,
+   0.08965699374675751,
+   0.9485720992088318
+  ],
+  "animations": [],
+  "groundTop": 0.05,
+  "surface": 0.085,
+  "fromObj": false,
+  "mean": 0.318
+ },
+ "poi_tower": {
+  "file": "models/poi_tower.glb",
+  "tris": 6000,
+  "bytes": 456024,
+  "bounds": [
+   -0.4819290041923523,
+   -0.9516831040382385,
+   -0.5444321632385254,
+   0.48394501209259033,
+   0.9507091045379639,
+   0.5473519563674927
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "surface": 0.28,
+  "fromObj": false,
+  "mean": 0.484
+ },
+ "obj_spiral_staircase": {
+  "file": "models/obj_spiral_staircase.glb",
+  "tris": 4498,
+  "bytes": 566684,
+  "bounds": [
+   -0.6944569945335388,
+   -0.9509661197662354,
+   -0.6899280548095703,
+   0.693572998046875,
+   0.9488271474838257,
+   0.6892901659011841
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "surface": -0.2625,
+  "fromObj": false,
+  "mean": 0.369
  }
 }

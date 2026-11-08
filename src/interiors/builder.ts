@@ -24,6 +24,10 @@ export class Builder {
   readonly roomRects: Rect[][] = [];
   /** Cells that hold a group of four pillars (the old game's "4 pillars"); they stay floor and can be walked on. */
   readonly pillars: { x: number; y: number }[] = [];
+  /** Cells that are one end of a way that is no walk (the stairs of a tower): from the first cell the party arrives at the second at once. Searches along the floor follow them. */
+  readonly links = new Map<number, number>();
+  /** Cells that stay bare (the stairs and the cells in front of them): no column stands on or next to them. */
+  readonly reserved = new Set<number>();
 
   constructor(
     readonly width: number,
@@ -60,6 +64,7 @@ export class Builder {
   addPillar(x: number, y: number): boolean {
     if (!openSquare((cx, cy) => this.isFloor(cx, cy), x, y)) return false;
     if (this.pillars.some((q) => Math.max(Math.abs(q.x - x), Math.abs(q.y - y)) < 2)) return false;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (this.reserved.has(this.idx(x + dx, y + dy))) return false;
     this.pillars.push({ x, y });
     return true;
   }

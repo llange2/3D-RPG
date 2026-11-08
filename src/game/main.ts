@@ -69,6 +69,7 @@ async function main(): Promise<void> {
     enter: (id: string) => game.enterPoiById(id),
     goto: (kind: string, service?: string) => !!game.debugGoto(kind, service),
     gotoMonster: (distance = 2) => !!game.debugGotoMonster(distance),
+    cast: (who: number, spellId: number) => game.debugCast(who, spellId),
     firstPoi: (kind: string) => {
       for (const p of game.world.allPois()) if (p.kind === kind) return p.id;
       return null;

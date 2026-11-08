@@ -6,6 +6,8 @@ import { execFile } from "node:child_process";
 import { statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { NodeIO } from "@gltf-transform/core";
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
 import { buildFlatTerrain } from "./build-flat-terrain";
@@ -39,6 +41,21 @@ export const WORLD_TEXTURES = [
   "tex_cave", "tex_cave_ceiling", "tex_lava", "tex_snow", "tex_water", "tex_black",
 ];
 
+/**
+ * The flat floor of the tower (`tex_wooden_floor`, quest document 1.7): the base colour picture of the user's wooden floor model, which the flat floor shows where the model is not
+ * drawn (the lower settings, and as the far view under the slabs). Read out of the model, so that the picture and the slab never differ.
+ */
+export async function buildWoodenFloorTexture(): Promise<number> {
+  const model = join(SOURCES, "models", "Wooden_floor.glb");
+  const out = join(OUT, "tex", "tex_wooden_floor.webp");
+  if (upToDate(out, model)) return statSync(out).size;
+  const doc = await new NodeIO().registerExtensions(ALL_EXTENSIONS).read(model);
+  const base = doc.getRoot().listMaterials()[0]?.getBaseColorTexture()?.getImage();
+  if (!base) throw new Error("Wooden_floor.glb has no base colour picture");
+  ensureDir(out);
+  return (await sharp(Buffer.from(base)).resize(512, 512, { fit: "inside", withoutEnlargement: true }).webp({ quality: 82, effort: 5 }).toFile(out)).size;
+}
+
 // ---------------------------------------------------------------- icons and UI
 
 async function listFiles(dir: string, filter: (name: string) => boolean): Promise<string[]> {
@@ -60,6 +77,8 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
     if (!src) throw new Error(`world texture not found: ${name}`);
     add("tex (interior)", await toWebp(src, join(OUT, "tex", `${name}.webp`), 512));
   });
+
+  add("tex (interior)", await buildWoodenFloorTexture());
 
   const flat = await buildFlatTerrain();
   stats["terrain flat"] = { files: flat.files, bytes: flat.bytes };

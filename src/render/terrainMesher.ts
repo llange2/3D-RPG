@@ -1,7 +1,7 @@
 import { hash2, valueNoise2 } from "../core/noise";
 import { COTTAGE_MODEL, COTTAGE_SCALE, COTTAGE_SCALE_XYZ, tunedItemModels } from "../data/item-tuning";
 import { CARAVAN_ITEM, COTTAGE_EVERY } from "../world/caravans";
-import { BIOME, CHUNK_SIZE, DECO, GROUND, TILE_SIZE, isTileWalkable, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
+import { BIOME, CHUNK_SIZE, DECO, GROUND, TILE_SIZE, isTileWalkable, isTower, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
 import { poiFront, type PoiSide, type World } from "../world/world";
 import { flatTerrainOf, type FlatTileSet } from "./flatGround";
 import { tileHeight, tileToWorldX, tileToWorldZ, usesTileModels } from "./heights";
@@ -29,6 +29,8 @@ export interface PropInstance {
   /** Pitch and roll in radians, applied before the yaw (a trap door lies flat by a roll of 270 degrees). */
   rotX?: number;
   rotZ?: number;
+  /** A turn about the model's own up axis (y), made before everything else: spins a model whose long axis is y about that axis (the icicle of a flying ice spell). */
+  spin?: number;
   /** `y` is the height of the model's origin instead of its lowest point. For rolled items, whose lowest point is not at the bottom of the model. */
   atOrigin?: boolean;
   lod?: { model: string; scale: number };
@@ -286,6 +288,13 @@ const POI_MODEL: Record<string, { model: string; scale: number; scaleXYZ: [numbe
   Object.entries(POI_ITEM).map(([kind, p]) => [kind, { model: p.model, scale: ITEM_POSES[String(p.item)]!.scale, scaleXYZ: ITEM_POSES[String(p.item)]!.scale3, yaw: ITEM_POSES[String(p.item)]!.yaw }]),
 );
 
+// the tower of the layout dungeon_5 (quest document 1.7, the user's model, 0.97 wide, 1.9 high, 1.09 deep; 2 x 2 tiles): not an old item, so its pose is given here. 2.8 times its width
+// per tile fills the footprint (5.4 of 6 units), and 2.4 times its height makes it 9.1 high: tall like a tower, a little over the castle
+POI_MODEL.tower = { model: "poi_tower", scale: 2.8, scaleXYZ: [2.8, 2.4, 2.8], yaw: 0 };
+
+/** Which of the models above a place is drawn with: a dungeon is a pyramid (3 tiles wide) or a tower (2 wide, layout dungeon_5) as well as an entrance. */
+const poiModelKind = (poi: Poi): string => (poi.kind !== "dungeon" ? poi.kind : poi.size === 3 ? "pyramid" : isTower(poi) ? "tower" : "dungeon");
+
 class Group {
   positions: number[] = [];
   normals: number[] = [];
@@ -520,7 +529,7 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
 const SIDE_YAW: Record<PoiSide, number> = { N: 0, E: Math.PI / 2, S: Math.PI, W: -Math.PI / 2 };
 
 function poiProp(poi: Poi, ch: (i: number, j: number) => number, x0: number, y0: number, tileAt: (lx: number, ly: number) => TileInfo): PropInstance {
-  const spec = POI_MODEL[poi.kind === "dungeon" && poi.size === 3 ? "pyramid" : poi.kind]!;
+  const spec = POI_MODEL[poiModelKind(poi)]!;
   const lx = poi.x - x0;
   const ly = poi.y - y0;
   const base = (ch(lx, ly) + ch(lx + 1, ly) + ch(lx + 1, ly + 1) + ch(lx, ly + 1)) / 4;

@@ -77,6 +77,14 @@ export function pickInteriorTheme(kind: PoiKind, biome: Biome, _tier: number, _r
   }
 }
 
+/**
+ * The look of a tower (dungeon_5, quest document 1.7): the stone wall of the castle, the wooden floor, the classic dungeon ceiling and the dungeon's doors. The mood (fog, ambient
+ * light, music) stays the one of the place's biome.
+ */
+export function towerTheme(look: InteriorTheme): InteriorTheme {
+  return { ...look, wall: "tex_fortress_wall", floor: "tex_wooden_floor", ceiling: "tex_dungeon_ceiling", door: "tex_dungeon_door" };
+}
+
 /** The monster families of a dungeon theme's monsters, by how many of its monsters belong to each (for ambushes and the like). */
 function familyMix(t: DungeonTheme): Record<string, number> {
   const mix: Record<string, number> = {};

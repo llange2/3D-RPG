@@ -228,7 +228,7 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
     const dy = map.exit.y - map.spawn.y;
     // a generated castle has the Castle Gate model there instead (`InteriorView.pushCastleGate`), and no wall piece in front of it: the piece hid the gate's door
     const face = `${map.exit.x + dx},${map.exit.y + dy}|${map.exit.x},${map.exit.y}`;
-    if (!map.castle || styles) doorFaces.add(face);
+    if (!(map.castle || map.dungeon?.tower) || styles) doorFaces.add(face);
     else gateFace = face;
   }
 
