@@ -88,9 +88,9 @@ export function roundModelKeys(map: InteriorMap): string[] {
 /** The old item 100, `Castle Gate.glb` (scale 1.5): its origin is the middle of the cell in front of the gate, the slab stands on that cell's far edge. */
 const CASTLE_GATE_ITEM = 100;
 
-/** The model of the gate of a generated castle (the walls of the other places carry the door texture of their theme instead). */
+/** The model of the gate of a generated castle and of a tower (quest document 1.7: the Fort door of the castle is the entrance of a tower too); the walls of the other places carry the door texture of their theme instead. */
 export function castleGateModelKeys(map: InteriorMap): string[] {
-  const key = map.castle && !map.styles ? itemModelKey(CASTLE_GATE_ITEM) : null;
+  const key = (map.castle || map.dungeon?.tower) && !map.styles ? itemModelKey(CASTLE_GATE_ITEM) : null;
   return key ? [key] : [];
 }
 

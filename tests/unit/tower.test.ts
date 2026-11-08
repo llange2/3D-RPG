@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateContent } from "../../src/actions";
+import { OWN_MODELS, themeModelKeys } from "../../src/render/interiorProps";
+import { STAIRCASE_ITEM } from "../../src/data/quest-table";
 import { stairLinks } from "../../src/interiors/stairs";
 import { FLOOR_GAP, TOWER_BIG, TOWER_SMALL, inDisk } from "../../src/interiors/tower";
 import { analyzeTopology } from "../../src/interiors/topology";
@@ -116,6 +118,10 @@ describe("the tower, layout dungeon_5 (quest document 1.7)", () => {
     const stairs = content.actions.filter((a) => a.kind === "stairs");
     expect(stairs).toHaveLength(ref.tower!.stairs.length * 2);
     for (const a of stairs) expect(["N", "E", "S", "W"]).toContain(a.params.facing);
+    // the view loads the models of the staircase and of the Fort door
+    // (the staircase has an item number of its own: 304 to 309 are the wall reliefs of the dungeons)
+    expect(OWN_MODELS[STAIRCASE_ITEM]!.model).toBe("obj_spiral_staircase");
+    expect(themeModelKeys(content)).toEqual(expect.arrayContaining(["obj_spiral_staircase", "ci_100"]));
     const up = stairs.find((a) => a.params.up === true)!;
     const s = ref.tower!.stairs[0]!;
     expect({ x: up.x, y: up.y }).toEqual(s.up);

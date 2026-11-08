@@ -145,7 +145,7 @@ export const CONSOLE_ITEM = 303;
  * The stairs of a tower (quest document 1.7): the spiral staircase of the user (`obj_spiral_staircase`, a pseudo item like the ones above) and, on the floor above, the Fort door of the
  * castle (old item 100, the castle's gate) that leads down again.
  */
-export const STAIRCASE_ITEM = 304;
+export const STAIRCASE_ITEM = 330;
 export const FORT_DOOR_ITEM = 100;
 /** The staircase file is 1.4 wide and 1.9 high: 2.3 times that fills a cell (3.2) and reaches the 4.5 of a dungeon's walls (4.4). */
 export const STAIRCASE_SCALE = 2.3;

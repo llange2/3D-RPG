@@ -3,12 +3,13 @@
  *   pillars  the town's new column (point 1)
  *   lights   the light of every flying spell element by day and by night (point 6)
  *
- * Usage: GAME_URL=http://localhost:<port>/ npx tsx tools/dev/check-playtest48.ts <screenshot folder> <pillars|lights> [flat|floor|full]
+ * Usage: GAME_URL=http://localhost:<port>/ npx tsx tools/dev/check-playtest48.ts <screenshot folder> <pillars|lights|cast|ice|tower> [flat|floor|full]
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
 import { generateInterior } from "../../src/interiors";
+import { isTower } from "../../src/world/types";
 import { World } from "../../src/world/world";
 
 const base = process.env.GAME_URL ?? "http://localhost:5183/";
@@ -29,6 +30,12 @@ try {
   const page = await browser.newPage();
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(`[pageerror] ${(e as Error).message}`));
+  page.on("response", (r) => {
+    if (r.status() >= 400) problems.push(`[http ${r.status()}] ${r.url()}`);
+  });
+  page.on("console", (m) => {
+    if (m.type() === "error" || m.type() === "warn") problems.push(`[console ${m.type()}] ${m.text().slice(0, 300)}`);
+  });
   await page.evaluateOnNewDocument((v: string) => localStorage.setItem("mm3-seed-rpg:settings:v1", v), JSON.stringify({ environment }));
   const evalJs = <T>(code: string) => page.evaluate(code) as Promise<T>;
   const shot = (name: string) => page.screenshot({ path: join(outDir, `${part}-${environment}-${name}.png`) });
@@ -75,6 +82,79 @@ try {
         await sleep(2500);
       }
     }
+  }
+  if (part === "tower") {
+    // a tower of the world: from outside, from inside, and up the stairs and down again (quest document 1.7)
+    let found: { seed: string; poiId: string; x: number; y: number; side: string } | null = null;
+    for (const seed of ["cedar-peak-198", "amber-gate-204", "frost-mere-472", "alpha", "beta", "gamma", "delta"]) {
+      const world = new World(seed, "default");
+      const poi = world.allPois().find((p) => isTower(p));
+      if (poi) {
+        found = { seed, poiId: poi.id, x: poi.x, y: poi.y, side: poi.side };
+        break;
+      }
+    }
+    if (!found) throw new Error("no tower in the seeds tried");
+    const world = new World(found.seed, "default");
+    const poi = world.poiById(found.poiId)!;
+    const map = generateInterior(world, poi);
+    const tower = map.dungeon!.tower!;
+    console.log(`${found.seed}: ${poi.name} (${poi.id}) at ${poi.x}/${poi.y}, side ${poi.side}, ${tower.floors.length} floors of ${tower.floors[0]!.size}, quest ${map.dungeon!.quest}`);
+    await open(found.seed, true);
+    const front = world.frontOf(poi);
+    const toward = { N: "S", S: "N", E: "W", W: "E" }[poi.side]!;
+    const away = { N: { dx: 0, dy: -1 }, S: { dx: 0, dy: 1 }, E: { dx: 1, dy: 0 }, W: { dx: -1, dy: 0 } }[poi.side]!;
+    for (const [dist, name] of [[4, "outside-near"], [9, "outside-far"]] as [number, string][]) {
+      await evalJs(`__game.teleport(${front.x + away.dx * dist}, ${front.y + away.dy * dist}, "${toward}")`);
+      await sleep(2500);
+      await shot(name);
+    }
+    await evalJs(`(async () => { await __game.enter(${JSON.stringify(poi.id)}); })()`);
+    await sleep(4500);
+    await shot("inside-start");
+    // the way in is the Fort door of the castle: from the cell in front of it, looking back at it
+    await evalJs(`__game.teleport(${map.spawn.x}, ${map.spawn.y}, "S")`);
+    await sleep(1500);
+    await shot("inside-entrance-door");
+    // the models the tower needs are loaded, and the staircase and the Fort door are drawn
+    const models = await evalJs<string>(`JSON.stringify({ info: ["obj_spiral_staircase", "ci_100", "blk_wooden_floor"].map((k) => [k, !!__game.game.staticInfo[k]]), instances: __game.game.internals.props.instanceCount() })`);
+    console.log("models:", models);
+    console.log("loaded:", await evalJs<string>(`JSON.stringify(["obj_spiral_staircase", "ci_100", "blk_wooden_floor", "obj_chest", "ci_73"].map((k) => [k, __game.game.internals.props.models.has(k)]))`));
+    console.log("ensure:", await evalJs<string>(`(async () => { try { await __game.game.internals.props.ensure(__game.game.staticInfo, ["obj_spiral_staircase"]); return "ok " + __game.game.internals.props.models.has("obj_spiral_staircase"); } catch (e) { return "ERROR " + (e && e.message); } })()`));
+    console.log("themed keys:", await evalJs<string>(`JSON.stringify(__game.game.interior.content.actions.filter((a) => a.kind === "stairs").map((a) => [a.uid, a.params.item]))`));
+    console.log("staircase:", await evalJs<string>(`(() => { const m = __game.game.internals.props.models.get("obj_spiral_staircase"); const info = __game.game.staticInfo["obj_spiral_staircase"]; return JSON.stringify({ meshes: m && m.meshes.length, buffers: m && [...m.buffers.entries()].map(([k, b]) => [k, b.length / 16, Array.from(b.slice(0, 16)).map((n) => +n.toFixed(2))]), base: m && m.base, centre: m && m.centre, bounds: info && info.bounds, visible: m && m.meshes.map((x) => [x.isEnabled(), x.isVisible, x.getTotalVertices(), x.visibility, x.thinInstanceCount]) }); })()`));
+    // look along the first staircase from the cell in front of it, then step onto it
+    const opposite = { N: "S", S: "N", E: "W", W: "E" } as Record<string, string>;
+    const s0 = tower.stairs[0]!;
+    const inward = { N: { dx: 0, dy: -1 }, S: { dx: 0, dy: 1 }, E: { dx: 1, dy: 0 }, W: { dx: -1, dy: 0 } }[s0.facing]!;
+    for (const [steps, name] of [[1, "stairs-up-front"], [3, "stairs-up-far"]] as [number, string][]) {
+      await evalJs(`__game.teleport(${s0.up.x + inward.dx * steps}, ${s0.up.y + inward.dy * steps}, "${opposite[s0.facing]}")`);
+      await sleep(1500);
+      await shot(name);
+    }
+    // the Fort door on the floor above: from the cell in front of it, and from three cells away
+    const hi = tower.stairs[0]!;
+    for (const [steps, name] of [[1, "door-down-front"], [3, "door-down-far"]] as [number, string][]) {
+      await evalJs(`__game.teleport(${hi.down.x + inward.dx * steps}, ${hi.down.y + inward.dy * steps}, "${opposite[s0.facing]}")`);
+      await sleep(1500);
+      await shot(name);
+    }
+    await evalJs(`__game.teleport(${s0.front.x}, ${s0.front.y}, "${opposite[s0.facing]}")`);
+    await sleep(800);
+    await evalJs(`__game.teleport(${s0.front.x + 0}, ${s0.front.y + 0}, "${opposite[s0.facing]}")`);
+    await page.keyboard.press("w");
+    await sleep(2500);
+    const at = await evalJs<string>(`JSON.stringify({ x: __game.game.player.tx, y: __game.game.player.ty, f: __game.game.player.facing })`);
+    console.log("after the staircase:", at, "expected", JSON.stringify({ x: s0.land.x, y: s0.land.y, f: s0.facing }));
+    await shot("stairs-up-arrived");
+    // back down: the door is behind the party (it arrived facing into the room), so a step back goes through it
+    await page.keyboard.press("s");
+    await sleep(2500);
+    const down = await evalJs<string>(`JSON.stringify({ x: __game.game.player.tx, y: __game.game.player.ty, f: __game.game.player.facing })`);
+    console.log("after the door down:", down, "expected", JSON.stringify({ x: s0.front.x, y: s0.front.y, f: s0.facing }));
+    await shot("stairs-down-arrived");
+    // the party must not arrive on the other end's cell again (no loop)
+    await sleep(1000);
   }
   if (part === "ice") {
     // the icicle as the party sees it from behind: almost still, just ahead of the party (a flight of 1000 s); `tag` names the shot
