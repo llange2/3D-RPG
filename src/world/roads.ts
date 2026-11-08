@@ -28,8 +28,13 @@ export class RoadSeg {
    * is not drawn as a road. It is plain ground, a pass through a range and a bridge over water only where the terrain leaves no other way.
    */
   readonly bare: boolean;
+  /**
+   * A short lane of plain ground (dirt) cut into the rock of a lava island at a locked place, where the wagon with the hint stands at its end (51st playtest, point 11). It is
+   * land, not a road, not a pass and not drawn as one.
+   */
+  readonly alley: boolean;
 
-  constructor(a: Pt, b: Pt, width = 1, lava = false, bare = false) {
+  constructor(a: Pt, b: Pt, width = 1, lava = false, bare = false, alley = false) {
     if (a.x !== b.x && a.y !== b.y) throw new Error(`road piece ${a.x}/${a.y} to ${b.x}/${b.y} is not straight`);
     this.x0 = Math.min(a.x, b.x);
     this.x1 = Math.max(a.x, b.x);
@@ -39,6 +44,7 @@ export class RoadSeg {
     this.width = width;
     this.lava = lava;
     this.bare = bare;
+    this.alley = alley;
     if (width > 1) {
       if (this.horizontal) this.y1 += width - 1;
       else this.x1 += width - 1;

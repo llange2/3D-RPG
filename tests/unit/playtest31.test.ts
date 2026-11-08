@@ -174,7 +174,7 @@ describe("31st playtest", () => {
 
     it("gives the Hollow of Halaa of seed frost-gate-324 islands in its halls", () => {
       const w = new World("frost-gate-324", "default");
-      const poi = w.allPois().find((p) => p.name === "Hollow of Halaa")!;
+      const poi = w.allPois().find((p) => p.id === "p:1:0:131" /* the Hollow of Halaa before the 51st playtest doubled the names */)!;
       const map = generateInterior(w, poi);
       const rockInHall = (x: number, y: number): boolean => {
         if (map.cells[y * map.width + x] === CELL.FLOOR) return false;

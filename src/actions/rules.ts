@@ -438,7 +438,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       const raw: Record<string, ParamValue> = { ...(rule.params ?? {}), ...(a.params ?? {}), ...pickVariant(rule, local) };
       const params: Record<string, ParamValue> = {};
       for (const [k, v] of Object.entries(raw)) params[k] = resolveParam(v, vars, local);
-      if (dt && rule.id !== "lantern") themeParams(rule.kind, params, dt, vars, local);
+      if (dt && rule.id !== "lantern") themeParams(rule.kind, params, dt, vars, local, !!map.dungeon?.tower);
       if (dt && rule.kind === "trap" && map.dungeon?.tower) towerTrap(params, towerFloorAt(map.dungeon.tower, a.x), dt, vars, local);
       // a barrel must be of use: wherever a theme stands one as a prop it is a container with a few coins or a joke in it
       let kind: ActionKind = rule.kind === "spawn" ? "legacy" : rule.kind;
@@ -578,6 +578,24 @@ export function plainProps(t: DungeonTheme): number[] {
   return t.props.filter((p) => p !== t.chest && p !== t.shrine && (!isFunctional(p) || p === BARREL || BOOKSHELVES.includes(p)));
 }
 
+/**
+ * What fits a tower best (51st playtest, point 4): the rustic table, the intact bookshelf, the fireplace, the alchemy table, the table with food and the stored goods (the
+ * wooden support beams are placed by `planBeams`). A tower furnishes with them first: three of four pieces come from this list as far as the theme allows them; the gravestone
+ * (32) never stands in a tower, everything else may as before.
+ */
+export const TOWER_DECOR_PREFERRED: readonly number[] = [94, 75, 71, 15, 14, 13];
+export const TOWER_DECOR_FORBIDDEN: readonly number[] = [32];
+const TOWER_DECOR_SHARE = 750;
+
+/** The items a tower's decoration is drawn from (`choices` are the plain props of the theme): the preferred ones with `TOWER_DECOR_SHARE` out of 1000 if the theme has any, else the rest. */
+export function towerDecor(choices: readonly number[], rng: Rng): number[] {
+  const allowed = choices.filter((i) => !TOWER_DECOR_FORBIDDEN.includes(i));
+  const preferred = allowed.filter((i) => TOWER_DECOR_PREFERRED.includes(i));
+  const others = allowed.filter((i) => !TOWER_DECOR_PREFERRED.includes(i));
+  if (preferred.length > 0 && (others.length === 0 || rng.chance(TOWER_DECOR_SHARE))) return preferred;
+  return others.length > 0 ? others : [...choices];
+}
+
 const TOWER_TRAP_ELEMENTS = ["fire", "ice", "acid", "magic"] as const;
 
 /**
@@ -593,7 +611,7 @@ export function towerTrap(params: Record<string, ParamValue>, floor: number, t: 
 }
 
 /** What a theme sets on the actions of its place: its one kind of trap, the objects that hold loot, shrines and props, and the monsters of an ambush. */
-function themeParams(kind: Rule["kind"], params: Record<string, ParamValue>, t: DungeonTheme, vars: ExprVars, rng: Rng): void {
+function themeParams(kind: Rule["kind"], params: Record<string, ParamValue>, t: DungeonTheme, vars: ExprVars, rng: Rng, tower = false): void {
   switch (kind) {
     case "trap":
       params.trap = t.trap;
@@ -609,7 +627,7 @@ function themeParams(kind: Rule["kind"], params: Record<string, ParamValue>, t: 
       if (t.shrine !== null) params.item = t.shrine;
       break;
     case "decor": {
-      const choices = plainProps(t);
+      const choices = tower ? towerDecor(plainProps(t), rng) : plainProps(t);
       params.item = choices[rng.int(choices.length)]!;
       break;
     }

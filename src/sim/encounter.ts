@@ -415,8 +415,14 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
     // no way at all, or already next to the party (the way is empty)
     if (m.immobile || !s.path || s.path.length === 0) continue;
     const other = (x: number, y: number) => enc.monsters.some((o) => o !== m && o.hp > 0 && o.x === x && o.y === y);
-    const first = wayToPlayer(viewOf(view, m), monsterById(m.defId), m.x, m.y, px, py, radius, other, MOVE_STEP_LIMIT)?.[0];
-    if (!first) continue;
+    let first = wayToPlayer(viewOf(view, m), monsterById(m.defId), m.x, m.y, px, py, radius, other, MOVE_STEP_LIMIT)?.[0];
+    if (!first) {
+      // 51st playtest, point 8: the way round the other monsters is shut. A monster with a ranged attack stays where it is (it can shoot from there); one without it closes up
+      // along the way that leads through the others, as far as the tiles in front of it are free (`occupied` below stops it at the monster ahead)
+      if (monsterById(m.defId).ranged) continue;
+      first = s.path[0];
+      if (!first) continue;
+    }
     const [nx, ny] = first;
     if ((nx === px && ny === py) || occupied(nx, ny)) continue;
     // a shut door on the way: the monster spends this step on opening it (the game opens it and lets it walk through on the next one)

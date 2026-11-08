@@ -132,7 +132,11 @@ function hintWagonOf(world: World, place: Poi): CaravanSpot[] {
     const b = poiBounds(place);
     const rng = rngFor(world.rootSeed, LAYER.POI, "hint-wagon-spot", place.id);
     let spot: CaravanSpot | null = null;
+    // a locked place on a lava island: the wagon stands at the end of the lane of dirt cut into the rock for it (51st playtest, point 11)
+    const alley = world.hintAlleyEnd(place.id);
+    if (alley) spot = { id: `hint:${place.id}`, town: place.id, talent: null, x: alley.x, y: alley.y, faceX: front.x, faceY: front.y, cottage: rngFor(world.rootSeed, LAYER.POI, "hint-cottage", place.id).int(2) === 0, hint: { place: place.id, need, holder: holder.id } };
     for (const [from, to, needRoom] of HINT_SEARCH) {
+      if (spot) break;
       for (let r = from; r <= to && !spot; r++) {
         const ring: [number, number][] = [];
         for (let y = b.y0 - r; y <= b.y1 + r; y++) for (let x = b.x0 - r; x <= b.x1 + r; x++) if (x < b.x0 - r + 1 || x > b.x1 + r - 1 || y < b.y0 - r + 1 || y > b.y1 + r - 1) ring.push([x, y]);

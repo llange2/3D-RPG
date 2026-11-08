@@ -158,9 +158,17 @@ export function attr(c: Character, a: Attribute, base = true): number {
 const RESISTANCE_FIELD = { fire: "resFire", ice: "resIce", acid: "resAcid", magic: "resMagic" } as const;
 const RESISTANCE_BONUS = { fire: "res_fire", ice: "res_ice", acid: "res_acid", magic: "res_magic" } as const;
 
-/** Resistance in percent against an element: the hero's own value plus what the worn items add. */
+/** Resistance in percent against an element: the hero's own value plus what the worn items add. The sheet shows this sum; the damage formulas use `resistanceShare`. */
 export function resistance(c: Character, element: keyof typeof RESISTANCE_FIELD): number {
   return c[RESISTANCE_FIELD[element]] + itemBonus(c, RESISTANCE_BONUS[element]) + (c.mods?.boon?.[RESISTANCE_BONUS[element]] ?? 0);
+}
+
+/** What a resistance can take off an elemental hit at the most, in percent (51st playtest, point 13): more points on the sheet do not count. */
+export const RESISTANCE_CAP = 80;
+
+/** The share of an elemental hit that the hero's resistance takes off, in percent: the resistance, never above `RESISTANCE_CAP`. */
+export function resistanceShare(c: Character, element: keyof typeof RESISTANCE_FIELD): number {
+  return Math.min(RESISTANCE_CAP, resistance(c, element));
 }
 
 /** Armor of the worn items; Rage halves it, Stone Skin adds to what is left. */

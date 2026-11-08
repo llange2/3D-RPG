@@ -18,6 +18,8 @@ export const SKULL_MISER_MET = "skullmiser:met";
 /** The party has been aboard the pirate ship (`Game.pirateMeeting`); the pearls handed in are `pearls=<n>`. */
 export const PIRATE_MET = "pirate:met";
 export const lockSeenFlag = (poiId: string): string => `lock:${poiId}`;
+/** The party has used the key or key card of the place: it is gone from the inventory and the way in stays open for good (`Game.promptEnterPoi`, 51st playtest, point 10). */
+export const unlockedFlag = (poiId: string): string => `unlocked:${poiId}`;
 /** The party has been told by the wagon near a locked place where its key or key card lies (`Game.visitHintWagon`, 49th playtest). */
 export const hintHeardFlag = (poiId: string): string => `hint:${poiId}`;
 export const reachedFlag = (poiId: string): string => `reached:${poiId}`;
@@ -140,7 +142,7 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     const need = world.dungeonRef(poi.id)?.requires;
     if (!need) continue;
     const kind = need.endsWith("_keycard") ? "the pyramid" : poi.name;
-    if (visited.has(poi.id)) {
+    if (visited.has(poi.id) || opened.has(unlockedFlag(poi.id))) {
       if (!need.endsWith("_keycard")) places.add(poi.name);
       done.push(`Opened ${kind} (${at(poi)}) with the ${itemName(need)}.`);
     } else if (opened.has(lockSeenFlag(poi.id)) || opened.has(hintHeardFlag(poi.id)) || input.carried(need) > 0) {

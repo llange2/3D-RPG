@@ -2,7 +2,7 @@
  "obj_cottage": {
   "file": "models-original/obj_cottage.glb",
   "tris": 8791,
-  "bytes": 1265904,
+  "bytes": 1254848,
   "bounds": [
    -0.41430699825286865,
    -0.47680699825286865,
@@ -15,7 +15,7 @@
   "groundTop": -0.5,
   "surface": -0.0025,
   "fromObj": false,
-  "mean": 0.215
+  "mean": 0.258
  },
  "poi_castle": {
   "file": "models-original/poi_castle.glb",
@@ -55,26 +55,26 @@
  },
  "poi_pyramid": {
   "file": "models-original/poi_pyramid.glb",
-  "tris": 10000,
-  "bytes": 995104,
+  "tris": 13468,
+  "bytes": 3442204,
   "bounds": [
-   -0.9984009861946106,
-   -0.7987260222434998,
-   -0.9911419749259949,
-   0.9941200017929077,
-   0.7687879800796509,
-   0.9827420115470886
+   -0.9475129842758179,
+   -0.9236639738082886,
+   -0.9481229782104492,
+   0.9465640187263489,
+   0.9265679717063904,
+   0.9454180002212524
   ],
   "animations": [],
-  "groundTop": -0.7,
-  "surface": -0.68,
-  "fromObj": true,
-  "mean": 0.561
+  "groundTop": -0.9,
+  "surface": -0.3275,
+  "fromObj": false,
+  "mean": 0.472
  },
  "poi_town": {
   "file": "models-original/poi_town.glb",
   "tris": 23456,
-  "bytes": 5527172,
+  "bytes": 1743828,
   "bounds": [
    -0.9421830177307129,
    -0.5799909830093384,
@@ -87,7 +87,7 @@
   "groundTop": -0.55,
   "surface": -0.51,
   "fromObj": false,
-  "mean": 0.434
+  "mean": 0.373
  },
  "obj_pirate_ship": {
   "file": "models-original/obj_pirate_ship.glb",
@@ -110,7 +110,7 @@
  "poi_dungeon": {
   "file": "models-original/poi_dungeon.glb",
   "tris": 9998,
-  "bytes": 1290656,
+  "bytes": 1347944,
   "bounds": [
    -0.9425690174102783,
    -1.0010499954223633,
@@ -122,8 +122,8 @@
   "animations": [],
   "groundTop": -0.9,
   "surface": 0.9975,
-  "fromObj": true,
-  "mean": 0.284
+  "fromObj": false,
+  "mean": 0.224
  },
  "poi_portal": {
   "file": "models-original/poi_portal.glb",
@@ -2142,21 +2142,21 @@
  },
  "ci_26": {
   "file": "models-original/ci_26.glb",
-  "tris": 9984,
-  "bytes": 1145788,
+  "tris": 9262,
+  "bytes": 1620456,
   "bounds": [
-   -0.9628940224647522,
-   -0.9004809856414795,
-   -0.9579300284385681,
-   0.9363579750061035,
-   0.9022619724273682,
-   0.954675018787384
+   -0.948731005191803,
+   -0.936001181602478,
+   -0.7957481741905212,
+   0.9505090117454529,
+   0.9216400980949402,
+   0.7925701141357422
   ],
   "animations": [],
-  "groundTop": -0.4,
-  "surface": -0.3375,
-  "fromObj": true,
-  "mean": 0.252
+  "groundTop": -0.35,
+  "surface": -0.3225,
+  "fromObj": false,
+  "mean": 0.298
  },
  "ci_27": {
   "file": "models-original/ci_27.glb",
@@ -2413,7 +2413,7 @@
  "ci_41": {
   "file": "models-original/ci_41.glb",
   "tris": 9998,
-  "bytes": 1290656,
+  "bytes": 1347944,
   "bounds": [
    -0.9425690174102783,
    -1.0010499954223633,
@@ -2425,26 +2425,26 @@
   "animations": [],
   "groundTop": -0.9,
   "surface": 0.9975,
-  "fromObj": true,
-  "mean": 0.284
+  "fromObj": false,
+  "mean": 0.224
  },
  "ci_43": {
   "file": "models-original/ci_43.glb",
-  "tris": 10000,
-  "bytes": 995104,
+  "tris": 13468,
+  "bytes": 3442204,
   "bounds": [
-   -0.9984009861946106,
-   -0.7987260222434998,
-   -0.9911419749259949,
-   0.9941200017929077,
-   0.7687879800796509,
-   0.9827420115470886
+   -0.9475129842758179,
+   -0.9236639738082886,
+   -0.9481229782104492,
+   0.9465640187263489,
+   0.9265679717063904,
+   0.9454180002212524
   ],
   "animations": [],
-  "groundTop": -0.7,
-  "surface": -0.68,
-  "fromObj": true,
-  "mean": 0.561
+  "groundTop": -0.9,
+  "surface": -0.3275,
+  "fromObj": false,
+  "mean": 0.472
  },
  "ci_42": {
   "file": "models-original/ci_42.glb",
@@ -2593,7 +2593,7 @@
  "ci_47": {
   "file": "models-original/ci_47.glb",
   "tris": 23456,
-  "bytes": 6033448,
+  "bytes": 2250104,
   "bounds": [
    -0.9421830177307129,
    -0.5799909830093384,
@@ -2606,7 +2606,7 @@
   "groundTop": -0.55,
   "surface": -0.51,
   "fromObj": false,
-  "mean": 0.434
+  "mean": 0.373
  },
  "ci_52": {
   "file": "models-original/ci_52.glb",
