@@ -142,13 +142,12 @@ export const CRATE_ITEM = 301;
 export const BROKEN_CRYSTAL_ITEM = 302;
 export const CONSOLE_ITEM = 303;
 /**
- * The stairs of a tower (quest document 1.7): the spiral staircase of the user (`obj_spiral_staircase`, a pseudo item like the ones above) and, on the floor above, the Fort door of the
- * castle (old item 100, the castle's gate) that leads down again.
+ * The stairs of a tower (quest document 1.7): the user's straight wooden stairs (`obj_wooden_stairs`, a pseudo item like the ones above; they replaced the spiral staircase in the
+ * 49th playtest) and, on the floor above, the Fort door of the castle (old item 100, the castle's gate) that leads down again. The stairs are stretched to fill their cell from the
+ * front edge to the back edge and to rise one storey (a wall's height) to the same Fort door, which stands at their top.
  */
 export const STAIRCASE_ITEM = 330;
 export const FORT_DOOR_ITEM = 100;
-/** The staircase file is 1.4 wide and 1.9 high: 2.3 times that fills a cell (3.2) and reaches the 4.5 of a dungeon's walls (4.4). */
-export const STAIRCASE_SCALE = 2.3;
 /** The console is 3 times its file (1.5 times the first size, 3 units wide: a cell) and may reach into the cells around it; this many cells around it stay free of objects (user, 6. 11. 2026). */
 export const CONSOLE_SCALE = 3;
 export const CONSOLE_CLEAR = 2;

@@ -278,7 +278,7 @@ function party(ctx: CanvasRenderingContext2D, cx: number, cy: number, facing: Fa
 }
 
 /** Levers, stone heads and gongs are used again and again (their uid in the set only says which way they stand): their question mark never greys out (36th playtest, point 12). */
-const FLIPPING: ReadonlySet<string> = new Set(["lever", "head", "gong"]);
+const FLIPPING: ReadonlySet<string> = new Set(["lever", "head", "gong", "stairs"]);
 
 /** A trap the Crow gave away: a diamond in this colour on the floor, so that it cannot be taken for a chest or a door. */
 const TRAP_COLOR = "#ff9a2a";
@@ -308,7 +308,8 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "shrine": case "fountain": return "event";
     case "riddle": case "gong": case "lever": case "head": case "chalice": case "machine": return "event";
     case "qportal": return "teleporter_city";
-    case "stairs": return "event";
+    // the stairs of a tower, up and down alike, are a way to another floor: the "Way out" symbol (49th playtest)
+    case "stairs": return "exit";
     default: return null;
   }
 }
@@ -636,7 +637,7 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "king": return "The king";
         case "skullmiser": return "The Skull Miser";
         case "qportal": return "Portal back to the entrance";
-        case "stairs": return a.params.up === true ? "Spiral staircase up" : "Door down";
+        case "stairs": return a.params.up === true ? "Stairs up" : "Stairs down";
         case "portal": return "Portal";
         case "work": return "Job master: work a week for gold";
         default: break;

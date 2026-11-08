@@ -117,12 +117,12 @@ try {
     await sleep(1500);
     await shot("inside-entrance-door");
     // the models the tower needs are loaded, and the staircase and the Fort door are drawn
-    const models = await evalJs<string>(`JSON.stringify({ info: ["obj_spiral_staircase", "ci_100", "blk_wooden_floor"].map((k) => [k, !!__game.game.staticInfo[k]]), instances: __game.game.internals.props.instanceCount() })`);
+    const models = await evalJs<string>(`JSON.stringify({ info: ["obj_wooden_stairs", "ci_100", "blk_wooden_floor"].map((k) => [k, !!__game.game.staticInfo[k]]), instances: __game.game.internals.props.instanceCount() })`);
     console.log("models:", models);
-    console.log("loaded:", await evalJs<string>(`JSON.stringify(["obj_spiral_staircase", "ci_100", "blk_wooden_floor", "obj_chest", "ci_73"].map((k) => [k, __game.game.internals.props.models.has(k)]))`));
-    console.log("ensure:", await evalJs<string>(`(async () => { try { await __game.game.internals.props.ensure(__game.game.staticInfo, ["obj_spiral_staircase"]); return "ok " + __game.game.internals.props.models.has("obj_spiral_staircase"); } catch (e) { return "ERROR " + (e && e.message); } })()`));
+    console.log("loaded:", await evalJs<string>(`JSON.stringify(["obj_wooden_stairs", "ci_100", "blk_wooden_floor", "obj_chest", "ci_73"].map((k) => [k, __game.game.internals.props.models.has(k)]))`));
+    console.log("ensure:", await evalJs<string>(`(async () => { try { await __game.game.internals.props.ensure(__game.game.staticInfo, ["obj_wooden_stairs"]); return "ok " + __game.game.internals.props.models.has("obj_wooden_stairs"); } catch (e) { return "ERROR " + (e && e.message); } })()`));
     console.log("themed keys:", await evalJs<string>(`JSON.stringify(__game.game.interior.content.actions.filter((a) => a.kind === "stairs").map((a) => [a.uid, a.params.item]))`));
-    console.log("staircase:", await evalJs<string>(`(() => { const m = __game.game.internals.props.models.get("obj_spiral_staircase"); const info = __game.game.staticInfo["obj_spiral_staircase"]; return JSON.stringify({ meshes: m && m.meshes.length, buffers: m && [...m.buffers.entries()].map(([k, b]) => [k, b.length / 16, Array.from(b.slice(0, 16)).map((n) => +n.toFixed(2))]), base: m && m.base, centre: m && m.centre, bounds: info && info.bounds, visible: m && m.meshes.map((x) => [x.isEnabled(), x.isVisible, x.getTotalVertices(), x.visibility, x.thinInstanceCount]) }); })()`));
+    console.log("staircase:", await evalJs<string>(`(() => { const m = __game.game.internals.props.models.get("obj_wooden_stairs"); const info = __game.game.staticInfo["obj_wooden_stairs"]; return JSON.stringify({ meshes: m && m.meshes.length, buffers: m && [...m.buffers.entries()].map(([k, b]) => [k, b.length / 16, Array.from(b.slice(0, 16)).map((n) => +n.toFixed(2))]), base: m && m.base, centre: m && m.centre, bounds: info && info.bounds, visible: m && m.meshes.map((x) => [x.isEnabled(), x.isVisible, x.getTotalVertices(), x.visibility, x.thinInstanceCount]) }); })()`));
     // look along the first staircase from the cell in front of it, then step onto it
     const opposite = { N: "S", S: "N", E: "W", W: "E" } as Record<string, string>;
     const s0 = tower.stairs[0]!;

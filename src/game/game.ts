@@ -34,7 +34,7 @@ import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/envi
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { ITEM_LAMPS, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
+import { ITEM_LAMPS, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, TOWER_TORCH_LAMP, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, registryFile, takeResume } from "../render/modelSet";
@@ -44,7 +44,7 @@ import { PropRenderer } from "../render/props";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
-import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
+import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, towerTorchSpots, type PropInstance } from "../render/terrainMesher";
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
@@ -66,7 +66,7 @@ import { pickGateSpot, safeCells, type Spot } from "./spellSites";
 import { pickFromBackpack } from "../ui/itemSpells";
 import { visibleCells } from "../sim/vision";
 import type { Character, Place, TimedEffect } from "../sim/types";
-import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, FULL_DUNGEON_DENSITY, GROUND, TITLE_DUNGEON_DENSITY, WORLD_SIZES, isTileWalkable, parseDungeonDensity, parseWorldSize, poiEntrances, wrap, wrapDelta, type DungeonDensity, type Poi, type PoiKind, type TileInfo, type WorldSize } from "../world/types";
+import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, FULL_DUNGEON_DENSITY, GROUND, TITLE_DUNGEON_DENSITY, WORLD_SIZES, isTileWalkable, isTower, parseDungeonDensity, parseWorldSize, poiEntrances, wrap, wrapDelta, type DungeonDensity, type Poi, type PoiKind, type TileInfo, type WorldSize } from "../world/types";
 import { chunkSpawns, type OverworldSpawn } from "../world/spawns";
 import { World } from "../world/world";
 import { MinimapIcons } from "./minimapIcons";
@@ -77,7 +77,7 @@ import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllKeys, debugAllSpells, deb
 import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
 import { sellerParams } from "../data/talent-sellers";
-import { CARAVAN_ITEM, caravansIn, caravansOf, type CaravanSpot } from "../world/caravans";
+import { CARAVAN_ITEM, caravansIn, caravansOf, wagonTale, type CaravanSpot } from "../world/caravans";
 import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, hutXpPercent, slotDistance, slotKey, type HutSpot } from "../world/huts";
 import { PIRATE_RETURN_MINUTES, pirateDistance, pirateHome, pirateSail } from "../world/pirate";
 import { PIRATE_SHIP_MODEL, PirateShip } from "../render/pirateShip";
@@ -95,7 +95,7 @@ import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
 import { CAVE_EXPLORER, SENSE_STEPS, pickOf, senseFlag, senseLine, wallsSensed } from "./caveSense";
-import { SKULL_MISER_MET,clueFlag, lockSeenFlag, placeSegments, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
+import { SKULL_MISER_MET,clueFlag, hintHeardFlag, lockSeenFlag, placeSegments, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
 import { capybaraSpot, overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
@@ -346,6 +346,9 @@ export class Game {
   private lootLamps: LampSource[] = [];
   /** The gold light of the wild Magical Orbs of the generated world (`syncMascots`); the campaign's come with `collectLamps`. */
   private mascotLamps: LampSource[] = [];
+  /** The torches of the towers near the party on the open land, and the chunk they were taken for. */
+  private towerLamps: LampSource[] = [];
+  private towerLampsFor = "";
   /** The lights of the pool (`Renderer.lamps`) and the lamp each one holds now, with how bright it is (0 to 1). */
   private lampSlots: { lamp: LampSource | null; level: number }[] = [];
   /** Whether the lamp pool also serves the monsters that glow (`MONSTER_GLOW`): in the interiors of generated places. */
@@ -2190,7 +2193,7 @@ export class Game {
     if (this.caravanCache?.key !== key) {
       const x = cx * CHUNK_SIZE;
       const y = cy * CHUNK_SIZE;
-      this.caravanCache = { key, spots: caravansIn(this.world, x - CARAVAN_REACH, y - CARAVAN_REACH, x + CHUNK_SIZE + CARAVAN_REACH, y + CHUNK_SIZE + CARAVAN_REACH) };
+      this.caravanCache = { key, spots: caravansIn(this.world, x - CARAVAN_REACH, y - CARAVAN_REACH, x + CHUNK_SIZE + CARAVAN_REACH, y + CHUNK_SIZE + CARAVAN_REACH, true) };
     }
     return this.caravanCache.spots;
   }
@@ -2221,7 +2224,29 @@ export class Game {
   /** The party bumps into a caravan: the talent it sells, asked and paid like at the people of the towns (`talent` action). */
   private async visitCaravan(caravan: CaravanSpot): Promise<void> {
     this.passTime(ACTION_MINUTES);
+    if (caravan.hint || caravan.talent === null) {
+      await this.visitHintWagon(caravan);
+      return;
+    }
     await this.useAction({ uid: caravan.id, kind: "talent", x: caravan.x, y: caravan.y, params: { talent: caravan.talent, ...sellerParams(caravan.talent, caravan.cottage) } });
+  }
+
+  /**
+   * The party walks into the wagon near a locked place (49th playtest, point 1): an old person asks it in and tells where the key or key card of the place lies, without naming the
+   * thing itself. The tale is told again on every visit; the first one is remembered (`hintHeardFlag`), which opens the place's line in the quest log and greys the map's question mark.
+   */
+  private async visitHintWagon(wagon: CaravanSpot): Promise<void> {
+    const hint = wagon.hint;
+    if (!hint) return;
+    const text = wagonTale(this.world, wagon);
+    if (!text) return;
+    this.state.opened.add(hintHeardFlag(hint.place));
+    this.audio.play(9001);
+    this.player.locked = true;
+    await this.ui.message(text, wagon.cottage ? "Cottage" : "Caravan");
+    this.player.locked = false;
+    this.refresh();
+    this.save("auto");
   }
 
   /** The party walks up to a mascot's place: the old question, and on yes the mascot joins (and the previous one goes back to its place). */
@@ -5063,7 +5088,7 @@ export class Game {
   }
 
   /** Every caravan of the world (fixed by the seed), for the maps. */
-  private caravanSites: { world: World; list: (MapEvent & { talent: string; home: string })[] } | null = null;
+  private caravanSites: { world: World; list: (MapEvent & { talent: string | null; hint?: string; home: string })[] } | null = null;
 
   /**
    * What the maps mark with a question mark on the open land: the mascots still waiting (the one in the party is gone from its place), the Monster Huts
@@ -5072,13 +5097,17 @@ export class Game {
   private overworldEvents(): MapEvent[] {
     if (!this.state) return [];
     if (this.caravanSites?.world !== this.world) {
-      const list: (MapEvent & { talent: string; home: string })[] = [];
-      // a wagon drawn as the cottage is called a cottage on the maps
-      for (const poi of this.world.allPois()) for (const c of caravansOf(this.world, poi)) list.push({ x: c.x, y: c.y, label: `${c.cottage ? "Cottage" : "Caravan"} (talent trader)`, talent: c.talent, home: c.cottage ? "Cottage" : "Caravan" });
+      const list: (MapEvent & { talent: string | null; hint?: string; home: string })[] = [];
+      // a wagon drawn as the cottage is called a cottage on the maps; the ones near a locked place only tell a tale
+      for (const poi of this.world.allPois()) for (const c of caravansOf(this.world, poi)) list.push({ x: c.x, y: c.y, label: `${c.cottage ? "Cottage" : "Caravan"} (${c.hint ? "old tales" : "talent trader"})`, talent: c.talent, ...(c.hint ? { hint: c.hint.place } : {}), home: c.cottage ? "Cottage" : "Caravan" });
       this.caravanSites = { world: this.world, list };
     }
     // a caravan whose talent the party has bought has nothing left to sell: its question mark is grey
-    const out: MapEvent[] = this.caravanSites.list.map(({ talent, home, ...ev }) => (this.state.party.talents.includes(talent) ? { ...ev, label: `${home} (${talentInfo(talent).name}: bought)`, done: true } : ev));
+    // (and one whose tale the party has heard has told it: grey too)
+    const out: MapEvent[] = this.caravanSites.list.map(({ talent, hint, home, ...ev }) => {
+      if (hint) return this.state.opened.has(hintHeardFlag(hint)) ? { ...ev, label: `${home} (old tales: heard)`, done: true } : ev;
+      return talent !== null && this.state.party.talents.includes(talent) ? { ...ev, label: `${home} (${talentInfo(talent).name}: bought)`, done: true } : ev;
+    });
     for (const s of this.mode === "overworld" ? this.mascotSpots() : []) if (s.mascot !== this.state.party.mascot) out.push({ x: s.x, y: s.y, label: "Mascot" });
     for (const h of hutIndex(this.world).huts) if (!this.hutBurnt(h)) out.push({ x: h.x, y: h.y, label: "Monster Hut" });
     return out;
@@ -5304,7 +5333,7 @@ export class Game {
   private spellLights = false;
 
   private enableLampLights(): void {
-    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.mascotLamps.length > 0 || this.spellLights;
+    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.mascotLamps.length > 0 || this.towerLamps.length > 0 || this.spellLights;
     for (const light of this.r.lamps) light.setEnabled(on);
   }
 
@@ -5321,7 +5350,8 @@ export class Game {
       if (this.lampSlots.length === 0) this.lampSlots = this.r.lamps.map(() => ({ lamp: null, level: 0 }));
       this.enableLampLights();
     }
-    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0 && beams.length === 0) return;
+    this.syncTowerLamps();
+    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0 && this.towerLamps.length === 0 && beams.length === 0) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
     const { x, z } = this.player;
@@ -5333,7 +5363,7 @@ export class Game {
     for (const b of beams) carried.push({ ...b.lamp, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE });
     // the Orb in the party is no longer at its place: its lamp goes out with it
     const orbAway = this.state.party.mascot === "Orb";
-    const near = [...this.lamps, ...this.lootLamps, ...this.mascotLamps, ...carried]
+    const near = [...this.lamps, ...this.lootLamps, ...this.mascotLamps, ...this.towerLamps, ...carried]
       .filter((lamp) => !(orbAway && lamp.key.startsWith(MASCOT_ORB_KEY)))
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
       .filter((e) => e.d < LAMP_REACH)
@@ -5375,6 +5405,27 @@ export class Game {
       const share = lamp.key.startsWith(MASCOT_ORB_KEY) ? Math.max(need, 0.4) : Math.max(need, lamp.daylight ?? 0);
       light.intensity = (lamp.intensity ?? LAMP_INTENSITY) * share * slot.level;
     });
+  }
+
+  /**
+   * The torches in front of the towers near the party (49th playtest): two lamps each, taken for the chunk the party stands in and handed to the pool like every other lamp. The
+   * towers stand in the open, so only the overworld has them; a tower seen across the seam is lit at the place of its copy (`poisInRect`).
+   */
+  private syncTowerLamps(): void {
+    const key = this.mode === "overworld" && this.state ? `${this.world.seedText}:${Math.floor(this.player.tx / CHUNK_SIZE)},${Math.floor(this.player.ty / CHUNK_SIZE)}` : "";
+    if (key === this.towerLampsFor) return;
+    this.towerLampsFor = key;
+    const had = this.towerLamps.length;
+    this.towerLamps = [];
+    if (key !== "") {
+      const reach = LAMP_REACH + 2 * CHUNK_SIZE;
+      const { tx, ty } = this.player;
+      for (const poi of this.world.poisInRect(tx - reach, ty - reach, tx + reach, ty + reach)) {
+        if (!isTower(poi)) continue;
+        towerTorchSpots(poi).forEach((s, k) => this.towerLamps.push(lampSource(TOWER_TORCH_LAMP, s.x, s.z, `tt:${poi.id}:${k}@${poi.x},${poi.y}`)));
+      }
+    }
+    if ((had === 0) !== (this.towerLamps.length === 0)) this.enableLampLights();
   }
 
   /** Whether the party is in the dark (underground, or outside at night): what it sees is the ring of its own light. */

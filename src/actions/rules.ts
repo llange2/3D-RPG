@@ -270,11 +270,11 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // the stairs of a tower (quest document 1.7): a spiral staircase up, and on the floor above at the same place the Fort door that leads down again; each lands the party in front of
   // the other. All four cells stay bare (the arrival must be free, and the stairs are no place for an object)
   (map.dungeon?.tower?.stairs ?? []).forEach((s, i) => {
-    // the staircase is turned a quarter circle clockwise from the wall (a bearing of its own: the compass direction of the wall, which is behind the way the party looks when it arrives, plus 90)
-    const wallBearing = { N: 270, E: 0, S: 90, W: 180 }[s.facing];
-    actions.push({ uid: `${map.key}#stairs:${i}:up`, kind: "stairs", x: s.up.x, y: s.up.y, params: { item: STAIRCASE_ITEM, tx: s.land.x, ty: s.land.y, up: true, facing: s.facing, bearing: wallBearing } });
+    // the stairs rise towards the wall behind them: their bearing is the way the party looks when it arrives, from the wall into the room (the straight stairs of the 49th playtest)
+    const inward = { N: 0, E: 90, S: 180, W: 270 }[s.facing];
+    actions.push({ uid: `${map.key}#stairs:${i}:up`, kind: "stairs", x: s.up.x, y: s.up.y, params: { item: STAIRCASE_ITEM, tx: s.land.x, ty: s.land.y, up: true, facing: s.facing, bearing: inward } });
     actions.push({ uid: `${map.key}#stairs:${i}:down`, kind: "stairs", x: s.down.x, y: s.down.y, params: { item: FORT_DOOR_ITEM, tx: s.front.x, ty: s.front.y, up: false, facing: s.facing } });
-    for (const p of [s.up, s.front, s.down, s.land, s.foot]) occupied.add(idx(p.x, p.y));
+    for (const p of [s.up, s.front, s.down, s.land]) occupied.add(idx(p.x, p.y));
   });
 
   // The puzzle of the theme comes first: it reserves its hall and its cells before the ordinary rules fill the place.

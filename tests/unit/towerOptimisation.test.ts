@@ -36,24 +36,19 @@ describe("the tower optimisation (48th playtest, second list)", () => {
     expect(magical).toBeGreaterThan(0);
   });
 
-  it("stands the staircase with its top end against the wall and keeps its foot cell and the door beside it free (point 2)", () => {
+  it("turns the wooden stairs to rise towards the wall and keeps the door away from them (point 2, 49th playtest)", () => {
     for (const { map, content, ref } of all) {
       ref.tower!.stairs.forEach((s, i) => {
         const up = content.actions.find((a) => a.uid === `${map.key}#stairs:${i}:up`)!;
-        // the wall is behind the way the party looks when it arrives
-        const wall = { N: 270, E: 0, S: 90, W: 180 }[s.facing];
-        expect(up.params.bearing).toBe(wall);
-        // the cell where the lowest step lies is open floor and holds nothing
-        expect(map.cells[s.foot.y * map.width + s.foot.x]).toBe(CELL.FLOOR);
-        expect(content.actions.some((a) => a.x === s.foot.x && a.y === s.foot.y), `${map.key} foot ${s.foot.x},${s.foot.y}`).toBe(false);
-        expect(content.spawns.some((p) => p.x === s.foot.x && p.y === s.foot.y)).toBe(false);
+        // the stairs rise towards the wall, which is behind the way the party looks when it arrives: their bearing is that of the party's view
+        expect(up.params.bearing).toBe({ N: 0, E: 90, S: 180, W: 270 }[s.facing]);
+        // the wall lies behind the stair cell, and the cell in front is open floor
+        const inward = FACING_DELTA[s.facing];
+        expect(map.cells[(s.up.y - inward.dy) * map.width + (s.up.x - inward.dx)]).not.toBe(CELL.FLOOR);
+        expect(map.cells[(s.up.y + inward.dy) * map.width + (s.up.x + inward.dx)]).toBe(CELL.FLOOR);
+        expect(s.front).toEqual({ x: s.up.x + inward.dx, y: s.up.y + inward.dy });
         // no door within two cells of the staircase or of the door on the floor above
         for (const end of [s.up, s.down]) for (const d of content.actions.filter((a) => a.kind === "door")) expect(Math.max(Math.abs(d.x - end.x), Math.abs(d.y - end.y)), `${map.key} door ${d.x},${d.y}`).toBeGreaterThan(2);
-        // the foot is beside the staircase, along the wall
-        const along = Math.abs(s.foot.x - s.up.x) + Math.abs(s.foot.y - s.up.y);
-        expect(along).toBe(1);
-        const inward = FACING_DELTA[s.facing];
-        expect(Math.abs((s.foot.x - s.up.x) * inward.dx + (s.foot.y - s.up.y) * inward.dy)).toBe(0);
       });
     }
   });
@@ -106,7 +101,8 @@ describe("the tower optimisation (48th playtest, second list)", () => {
     expect(ceiling.length).toBeGreaterThan(0);
     const heights = new Set<number>();
     for (const g of ceiling) for (let k = g.start; k < g.start + g.count; k++) heights.add(Math.round(geo.positions[geo.indices[k]! * 3 + 1]! * 1000) / 1000);
-    expect([...heights]).toEqual([Math.round((wallHeightOf(map) - TOWER_CEILING_DROP) * 1000) / 1000]);
+    // (and over the stairs, a storey higher: `towerStairs.test.ts`)
+    expect([...heights].sort((a, b) => a - b)).toEqual([Math.round((wallHeightOf(map) - TOWER_CEILING_DROP) * 1000) / 1000, Math.round((2 * wallHeightOf(map) - TOWER_CEILING_DROP) * 1000) / 1000]);
   });
 
   it("keeps the Kudo crab and the other water monsters on water (point 9)", () => {
