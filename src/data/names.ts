@@ -16,6 +16,12 @@ function stem(rng: Rng): string {
   return `${start}${middle}`;
 }
 
+/** The name of a dungeon that is built as a tower: "Depths of Elvaa" becomes "Tower of Elvaa". */
+export function towerName(name: string): string {
+  const i = name.indexOf(" of ");
+  return i < 0 ? `Tower of ${name}` : `Tower${name.slice(i)}`;
+}
+
 /** Deterministic place name from the given stream: "Aldaton", "Dramohold", "Crypt of Torana". */
 export function placeName(rng: Rng, kind: PoiKind): string {
   const base = stem(rng);

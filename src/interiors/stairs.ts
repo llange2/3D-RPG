@@ -1,4 +1,15 @@
-import type { InteriorMap } from "./types";
+import type { InteriorMap, TowerLayout } from "./types";
+
+/** The floor (0 is the ground floor) of a tower that column `x` belongs to; the rock between two floors belongs half to either. 0 for a map that is no tower. */
+export function towerFloorAt(tower: TowerLayout | undefined, x: number): number {
+  if (!tower) return 0;
+  let k = 0;
+  tower.floors.forEach((f, i) => {
+    const prev = tower.floors[i - 1];
+    if (prev && x >= (prev.x + prev.size + f.x) / 2) k = i;
+  });
+  return k;
+}
 
 /**
  * The jumps of a tower's stairs as pairs of cell indices (from, to): the staircase to the cell before the Fort door above it, the door to the cell before the staircase. Every search for

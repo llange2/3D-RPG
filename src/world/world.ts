@@ -2,7 +2,7 @@ import { fbm2, hash2, ONE, permille, valueNoise2 } from "../core/noise";
 import { derive, LAYER, rngFor, seedFromString, type SeedState } from "../core/rng";
 import { ALIGNMENTS, type Alignment } from "../data/castles";
 import { CASTLE_TIERS } from "../data/quest-table";
-import { placeName } from "../data/names";
+import { placeName, towerName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { planPlaces, thinOutPlaces } from "../interiors/dungeonPlan";
 import { SHOWCASE_ID, SHOWCASE_NAME } from "../interiors/showcase";
@@ -876,7 +876,11 @@ export class World {
       const ref = this.dungeonRefs.get(p.id);
       if (ref?.klass === "C") p.size = PYRAMID_SIZE;
       // a dungeon built as a tower stands on 2 x 2 tiles (quest document 1.7)
-      else if (ref?.layout === "dungeon_5") p.size = TOWER_SIZE;
+      else if (ref?.layout === "dungeon_5") {
+        p.size = TOWER_SIZE;
+        // a tower's name begins with "Tower" ("Depths of Elvaa" is "Tower of Elvaa", 48th playtest)
+        p.name = towerName(p.name);
+      }
     }
     this.plans = this.layout.islands.map((isl, i) => this.planIsland(isl, placed[i]!));
     // the bridge between the start island and the level-3 island: a road from a place on the level-2 half to the place of the other island nearest to it

@@ -16,7 +16,7 @@ import { faceOpenYaw } from "./facing";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { BROKEN_PIECES, CEILING_RELIEF, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
-import { CELL_SIZE, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type WallPanel } from "./interiorMesher";
+import { CELL_SIZE, ceilingDropOf, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type DoorFrame, type WallPanel } from "./interiorMesher";
 import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
@@ -52,6 +52,8 @@ const PANEL_RADIUS = 10;
 /** A floor tile of the user's lies a hair above the flat floor quad it covers; a ceiling hangs a hair under the flat one (no z-fighting at 1 cm). */
 const TILE_LIFT = 0.012;
 const CEILING_GAP = 0.01;
+/** The wooden support beam (item 99). */
+const SUPPORT_BEAM = 99;
 /** The tiles are cut to the cell and a little over, so that no seam of the background shows between two of them. */
 const TILE_OVERLAP = 1.004;
 /**
@@ -479,7 +481,7 @@ export class InteriorView {
       const fit = model ? this.tileFit(model, relief) : null;
       if (!model || !fit) continue;
       // a flattened ceiling hangs above the room, its lowest point at the height of the flat ceiling (which `meshInterior` raised to its back); the others hang from the flat ceiling
-      const y0 = relief === undefined ? height - CEILING_GAP - fit.top * fit.scale[1] : height - fit.bottom * fit.scale[1];
+      const y0 = (relief === undefined ? height - CEILING_GAP - fit.top * fit.scale[1] : height - fit.bottom * fit.scale[1]) - ceilingDropOf(map);
       list.push({ model, x: cellCenterX(x), y: y0, z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
     }
     this.props.setInstances(owner, list);
@@ -557,7 +559,9 @@ export class InteriorView {
         }
       }
     }
-    const geo = meshInterior(map, new Set(), { models, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined, ceilingLift: this.ceilingLifts(models) });
+    // the doorways of a tower are three boxes with the wall's texture (48th playtest), not the frame model of the old dungeon
+    const doorFrames: DoorFrame[] | undefined = map.dungeon?.tower && this.content ? this.content.actions.filter((a) => a.kind === "door").map((a) => ({ x: a.x, y: a.y, axis: a.params.axis === "x" ? "x" : "y" })) : undefined;
+    const geo = meshInterior(map, new Set(), { models, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined, ceilingLift: this.ceilingLifts(models), ...(doorFrames ? { doorFrames } : {}) });
     const mesh = new Mesh(`interior:${map.key}`, this.r.scene);
     const vd = new VertexData();
     vd.positions = geo.positions;
@@ -703,6 +707,8 @@ export class InteriorView {
           continue;
         }
       }
+      // the wooden support beam stands on the edge between two cells, where the beams of the ceiling run (48th playtest, point 6)
+      if (themed && shownItem(a) === SUPPORT_BEAM) this.setOnCellEdge(themed, map, a);
       if (themed) {
         // a banner or a carving hangs a hand's breadth from the flat wall: with the 3D wall pieces on it stands out of the wall by their depth too, or their stones cut through the cloth
         if (this.panelList.length > 0 && WALL_HUNG.has(shownItem(a) ?? -1)) {
@@ -867,6 +873,24 @@ export class InteriorView {
    * models face north at yaw 0 and the yaw is the compass bearing, as for the campaign's items. Where two sides qualify (a corner)
    * or none does (a pillar in the open), `pick` decides, so the choice stays stable.
    */
+  /**
+   * Moves a flat prop (the support beam: a truss 3 wide and 0.4 thick) from the middle of its cell to the edge of the cell in front of it, so that it stands between two cells in line
+   * with the beams of the ceiling (whose frame runs along the cell edges). If that neighbour is no open floor it takes the edge behind it; if neither is, it stays where it is.
+   */
+  private setOnCellEdge(p: PropInstance, map: InteriorMap, a: ActionInstance): void {
+    const sx = Math.round(Math.sin(p.rotY));
+    const sz = Math.round(Math.cos(p.rotY));
+    // (the world's z runs against the grid's y)
+    const open = (dir: 1 | -1): boolean => {
+      const x = a.x + sx * dir;
+      const y = a.y - sz * dir;
+      return x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !this.wallLike.has(y * map.width + x);
+    };
+    const dir = open(1) ? 1 : open(-1) ? -1 : 0;
+    p.x += sx * dir * (CELL_SIZE / 2);
+    p.z += sz * dir * (CELL_SIZE / 2);
+  }
+
   private faceOpen(map: InteriorMap, a: ActionInstance, pick: number): number {
     return faceOpenYaw(map, { wallLike: this.wallLike, objectCells: this.objectCells }, a, pick, WALL_HUNG.has(shownItem(a) ?? -1));
   }

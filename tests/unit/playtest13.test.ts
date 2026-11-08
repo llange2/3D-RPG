@@ -44,9 +44,10 @@ describe("water monsters stay in the water (thirteenth playtest, point 4)", () =
 
   it("has water monsters, all of the aquatic theme, and the theme has no land monster", () => {
     expect(water.length).toBeGreaterThan(0);
-    // the sheet lets the Kudo crab (terrain "land") out of the water: it is the only monster of the theme that walks (the Dragon Worm became a water monster in the sheet)
-    expect(monstersOfTheme("aquatic").filter(walksOnLand).map((m) => m.name)).toEqual(["Kudo crab"]);
-    expect(hasLandMonster("aquatic")).toBe(true);
+    // the sheet lets the Kudo crab (terrain "land") out of the water, the user does not (48th playtest, point 9: `TERRAIN_OVERRIDES`): no monster of the theme walks
+    expect(monstersOfTheme("aquatic").filter(walksOnLand).map((m) => m.name)).toEqual([]);
+    expect(MONSTERS[37]!.terrain).toBe("water");
+    expect(hasLandMonster("aquatic")).toBe(false);
     expect(hasLandMonster("beast")).toBe(true);
   });
 

@@ -78,6 +78,8 @@ const RAD = Math.PI / 180;
 export function doorLook(map: InteriorMap, x: number, y: number): DoorLook {
   // the airlocks and the doors of the spaceship slide
   if (map.spaceship) return "slide";
+  // a tower has wooden doors only, no gates (48th playtest)
+  if (map.dungeon?.tower) return "door";
   // castles and towns have iron gates only; so has the cyber theme, where wooden doors make no sense
   if (map.kind === "fortress" || map.kind === "town" || map.theme.id === "cyber") return "gate";
   return ((hash2(0x44, x, y) >>> 12) & 1) === 0 ? "door" : "gate";
@@ -119,7 +121,8 @@ export function doorModelKeys(map: InteriorMap, content: MapContent): string[] {
       keys.add(SLIDE_LEFT);
       keys.add(SLIDE_RIGHT);
     } else if (look === "door") {
-      keys.add(DOOR_FRAME);
+      // (the doorway of a tower is built by the mesher, from boxes)
+      if (!map.dungeon?.tower) keys.add(DOOR_FRAME);
       keys.add(DOOR_LEAF);
     } else {
       const gate = GATES[gateSetOf(map)];
@@ -157,6 +160,8 @@ interface Door {
 export class InteriorDoors {
   private readonly doors = new Map<string, Door>();
   private owner = "";
+  /** The doorways of this map are boxes of the mesher (a tower), not the frame model. */
+  private boxFrames = false;
   /** What each door looked like in the last drawn frame (0 closed, 1 moving, 2 open), to know when the still parts must be rebuilt. */
   private phase = new Map<string, number>();
   /** Seconds a sliding door needs to open or close: as long as its sound plays (`Game` sets it from the decoded file). */
@@ -172,6 +177,7 @@ export class InteriorDoors {
   show(map: InteriorMap, content: MapContent, opened: Set<string>, owner: string): void {
     this.dispose();
     this.owner = owner;
+    this.boxFrames = !!map.dungeon?.tower;
     const gate = GATES[gateSetOf(map)];
     const travel = gateTravel(gate.item, gate.direction);
     const wide = CELL_SIZE / SLIDE_WIDTH_UNITS;
@@ -314,7 +320,7 @@ export class InteriorDoors {
       }
       if (d.look === "door") {
         // the frame always stands; the leaf stands still when it is shut or wide open, and is drawn every frame under the other owner while it swings
-        list.push({ model: DOOR_FRAME, x: d.x, y: 0, z: d.z, rotY: d.yaw * RAD, scale: DOOR_SCALE[0], scaleXYZ: DOOR_SCALE });
+        if (!this.boxFrames) list.push({ model: DOOR_FRAME, x: d.x, y: 0, z: d.z, rotY: d.yaw * RAD, scale: DOOR_SCALE[0], scaleXYZ: DOOR_SCALE });
         if (d.t === 0 || d.t === 1) list.push(this.leafAt(d, d.t));
         continue;
       }

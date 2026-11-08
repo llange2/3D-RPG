@@ -24,6 +24,9 @@ OUT = ROOT / "src" / "data"
 # What the user added to the descriptions of the sheet (the workbook in old_code is read-only, 6. 11. 2026): spell id -> sentence appended.
 DESCRIPTION_ADDITIONS = {72: "Works only outside."}  # Meteor Shower
 
+# Sentences of the sheet that the user rewrote (8. 11. 2026, 48th playtest): spell id -> (old text, new text). Prismatic Light only hits what the party sees, its beams do not pass walls.
+DESCRIPTION_REPLACEMENTS = {73: ("Hits all monsters.", "Hits all monsters in view.")}
+
 
 def clean(value):
     return value.strip() if isinstance(value, str) else value
@@ -41,6 +44,10 @@ def export_spells() -> int:
         description = clean(d["Description"])
         if spell_id in DESCRIPTION_ADDITIONS and DESCRIPTION_ADDITIONS[spell_id] not in description:
             description = f"{description} {DESCRIPTION_ADDITIONS[spell_id]}"
+        if spell_id in DESCRIPTION_REPLACEMENTS:
+            old, new = DESCRIPTION_REPLACEMENTS[spell_id]
+            if "in view" not in description:
+                description = description.replace(old, new)
         out[str(spell_id)] = {
             "name": clean(d["Name"]),
             "description": description,

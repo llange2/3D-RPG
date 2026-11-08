@@ -42,6 +42,13 @@ export function wallHeightOf(map: InteriorMap): number {
   return WALL_HEIGHT[map.kind];
 }
 
+/**
+ * How far the ceiling of a tower hangs below the top of its walls (48th playtest): the stone texture of the castle wall (357 x 512, drawn for 4.2) is stretched over the 4.5 of a
+ * dungeon wall, and the top row of its stones was cut off at the ceiling; the wooden ceiling now covers it. No other place has this.
+ */
+export const TOWER_CEILING_DROP = 0.3;
+export const ceilingDropOf = (map: InteriorMap): number => (map.dungeon?.tower ? TOWER_CEILING_DROP : 0);
+
 /** A wall face that a 3D wall piece is drawn in front of: the cell it belongs to, the side the wall lies on and the model. */
 export interface WallPanel {
   x: number;
@@ -185,11 +192,85 @@ class Bucket {
 }
 
 /**
+ * The doorway of a door of the dungeons (48th playtest, tower optimisation): the opening of the user's `Dungeon_Door_Frame.glb` as the game scales it (measured on its triangles:
+ * 1.875 wide and 2.78 high; the leaf `blk_dungeon_door` fills it), in a frame that is as thick as that model (0.48).
+ */
+export const DOOR_OPENING_WIDTH = 1.875;
+export const DOOR_OPENING_HEIGHT = 2.78;
+export const DOOR_FRAME_DEPTH = 0.48;
+
+/** A doorway of a cell: `axis` is the direction the party walks through it ("x": east to west, the door's plane runs north to south). */
+export interface DoorFrame {
+  x: number;
+  y: number;
+  axis: "x" | "y";
+}
+
+/**
+ * Three boxes round a doorway: a post on either side and a lintel over it, as tall as the wall and textured like it (the wall's picture once over the height and across the cell's
+ * width, so that the stones carry on from the walls beside it). Only the faces that show are built: both sides, the faces that look into the opening and the underside of the lintel.
+ */
+function addDoorFrame(b: Bucket, frame: DoorFrame, H: number): void {
+  const cx = cellCenterX(frame.x);
+  const cz = cellCenterZ(frame.y);
+  // `s` runs across the doorway (north for a door that is walked through east to west, else east), `t` through it
+  const sDir: [number, number] = frame.axis === "x" ? [0, 1] : [1, 0];
+  const tDir: [number, number] = frame.axis === "x" ? [1, 0] : [0, 1];
+  const at = (s: number, t: number): [number, number] => [cx + sDir[0] * s + tDir[0] * t, cz + sDir[1] * s + tDir[1] * t];
+  const half = CELL_SIZE / 2;
+  const open = DOOR_OPENING_WIDTH / 2;
+  const depth = DOOR_FRAME_DEPTH / 2;
+  /**
+   * A vertical face with the normal `n`, `width` wide, its middle at (`s`, `t`): bottom left and right are the viewer's, as for the wall faces. `u0` and `u1` are the texture's
+   * coordinate at the left and right edge, the picture runs once over the wall's height.
+   */
+  const face = (s: number, t: number, n: [number, number], width: number, y0: number, y1: number, u0: number, u1: number, shade: number): void => {
+    const c = at(s, t);
+    const left: [number, number] = [n[1], -n[0]];
+    const bl: [number, number] = [c[0] + left[0] * (width / 2), c[1] + left[1] * (width / 2)];
+    const br: [number, number] = [c[0] - left[0] * (width / 2), c[1] - left[1] * (width / 2)];
+    const nn: [number, number, number] = [n[0], 0, n[1]];
+    const a = b.vertex([bl[0], y0, bl[1]], nn, [u0, y0 / H], shade);
+    const t1 = b.vertex([bl[0], y1, bl[1]], nn, [u0, y1 / H], shade);
+    const t2 = b.vertex([br[0], y1, br[1]], nn, [u1, y1 / H], shade);
+    const d = b.vertex([br[0], y0, br[1]], nn, [u1, y0 / H], shade);
+    b.indices.push(a, t2, t1, a, d, t2);
+  };
+  /** A face on one side of the frame (normal along `t`): its picture is the wall's across the cell, so the left edge is where the viewer's left lies in `s`. */
+  const side = (s: number, toward: 1 | -1, width: number, y0: number, y1: number): void => {
+    const n: [number, number] = [tDir[0] * toward, tDir[1] * toward];
+    // (the viewer's left is `n` turned a quarter: along `s` if that is its direction, else against it)
+    const leftIsPlus = n[1] * sDir[0] + -n[0] * sDir[1] > 0;
+    const sLeft = s + (leftIsPlus ? width / 2 : -width / 2);
+    const sRight = s + (leftIsPlus ? -width / 2 : width / 2);
+    face(s, toward * depth, n, width, y0, y1, (sLeft + half) / CELL_SIZE, (sRight + half) / CELL_SIZE, 1);
+  };
+  for (const sign of [1, -1]) {
+    // the post: both sides, and the face that looks into the opening (its picture is the wall's, over the depth of the frame)
+    side((sign * (open + half)) / 2, 1, half - open, 0, H);
+    side((sign * (open + half)) / 2, -1, half - open, 0, H);
+    face(sign * open, 0, [-sign * sDir[0], -sign * sDir[1]], DOOR_FRAME_DEPTH, 0, DOOR_OPENING_HEIGHT, 0, DOOR_FRAME_DEPTH / CELL_SIZE, 0.93);
+  }
+  // the lintel: both sides, and its underside
+  side(0, 1, DOOR_OPENING_WIDTH, DOOR_OPENING_HEIGHT, H);
+  side(0, -1, DOOR_OPENING_WIDTH, DOOR_OPENING_HEIGHT, H);
+  // (the underside is a ceiling quad: the same corners in the same order, here for the box's rectangle)
+  const [x0, x1] = frame.axis === "x" ? [cx - depth, cx + depth] : [cx - open, cx + open];
+  const [z0, z1] = frame.axis === "x" ? [cz - open, cz + open] : [cz - depth, cz + depth];
+  const y = DOOR_OPENING_HEIGHT;
+  const ua = b.vertex([x0, y, z1], [0, -1, 0], [0, 0], 0.93);
+  const ub = b.vertex([x1, y, z1], [0, -1, 0], [1, 0], 0.93);
+  const uc = b.vertex([x1, y, z0], [0, -1, 0], [1, 1], 0.93);
+  const ud = b.vertex([x0, y, z0], [0, -1, 0], [0, 1], 0.93);
+  b.indices.push(ua, ub, uc, ua, uc, ud);
+}
+
+/**
  * Builds floors, ceilings and wall faces. Only faces that border a floor cell exist, so a 96x96 dungeon stays at a few
  * thousand quads. `cracked` lists wall cells (as `x,y`) that hide a breakable wall and get the cracked texture. `holes` are
  * grid indices of floor cells without a floor: the open pits of a generated map, which the pit model fills.
  */
-export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(), options: { models?: ReadonlySet<string>; holes?: ReadonlySet<number>; modelWalls?: boolean; roundWalls?: boolean; flatTiles?: FlatTileSet; ceilingLift?: Readonly<Record<string, number>> } = {}): InteriorGeometry {
+export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(), options: { models?: ReadonlySet<string>; holes?: ReadonlySet<number>; modelWalls?: boolean; roundWalls?: boolean; flatTiles?: FlatTileSet; ceilingLift?: Readonly<Record<string, number>>; doorFrames?: readonly DoorFrame[] } = {}): InteriorGeometry {
   const wallHeight = wallHeightOf(map);
   // a ceiling model that is hung above the room (`CEILING_RELIEF`) raises the flat ceiling behind it and the walls up to it, so that the slabs have a back to show against
   const liftAt = (cx: number, cy: number): number => {
@@ -263,10 +344,12 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
       const roof = H + liftAt(cx, cy);
       if (styles ? styles.list[style]!.ceiling : map.theme.ceiling) {
         const c = bucket(styles ? `ceiling:${style}` : "ceiling", cx, cy);
-        const ca = c.vertex([x0, roof, z1], [0, -1, 0], [0, 0], shade);
-        const cb = c.vertex([x1, roof, z1], [0, -1, 0], [1, 0], shade);
-        const cc = c.vertex([x1, roof, z0], [0, -1, 0], [1, 1], shade);
-        const cd = c.vertex([x0, roof, z0], [0, -1, 0], [0, 1], shade);
+        // (a tower's ceiling hangs a little lower than its walls end, so that the half stone at the top of the wall is hidden behind it)
+        const lid = roof - ceilingDropOf(map);
+        const ca = c.vertex([x0, lid, z1], [0, -1, 0], [0, 0], shade);
+        const cb = c.vertex([x1, lid, z1], [0, -1, 0], [1, 0], shade);
+        const cc = c.vertex([x1, lid, z0], [0, -1, 0], [1, 1], shade);
+        const cd = c.vertex([x0, lid, z0], [0, -1, 0], [0, 1], shade);
         c.indices.push(ca, cb, cc, ca, cc, cd);
       }
 
@@ -312,6 +395,9 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
       }
     }
   }
+
+  // the simple door frames of a tower: three boxes with the texture of the wall
+  for (const frame of options.doorFrames ?? []) addDoorFrame(bucket("wall", frame.x, frame.y), frame, H);
 
   // the corner that an outer model cuts off leaves a gap in the floor and the ceiling of its wall cell: a quad each, the model covers the rest
   for (const c of corners) {

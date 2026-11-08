@@ -4,6 +4,7 @@ import { allowedIn, type Place } from "../data/item-rules";
 import { letterHints } from "../data/letter-hints";
 import { RIDDLES_WORLD, WORD_RIDDLES } from "../data/riddles";
 import { placeOf } from "../interiors/place";
+import { towerFloorAt } from "../interiors/stairs";
 import { CELL, type InteriorMap } from "../interiors/types";
 import type { AnchorSet } from "./anchors";
 import { doorCell, fillEndRoom } from "./endRoom";
@@ -166,10 +167,14 @@ function placeMinis(env: QuestEnv, rng: Rng): void {
     else if (fail === 2) {
       // the trap of the place if it has one; else a pit, in a cave a puddle of fire
       const cave = env.map.kind === "cave";
-      const theme = env.theme.trap !== "none" ? env.theme.trap : cave ? "generic" : "pit";
+      // (a tower has no guillotine, and pits and spears only on its ground floor: 48th playtest)
+      const tower = env.map.dungeon?.tower;
+      const chosen = env.theme.trap !== "none" ? env.theme.trap : cave ? "generic" : "pit";
+      const theme = tower && chosen === "guillotine" ? "generic" : chosen;
+      const groundOnly = !!tower && (theme === "pit" || theme === "spring");
       const damage = env.trapDamage(theme, env.tier, rng);
       const params: Record<string, ParamValue> = theme === "generic" ? { trap: "generic", damage, element: env.theme.trapElement ?? "fire" } : { trap: theme, damage };
-      const field = far.find((a) => env.place({ uid: env.uid("trapfield"), kind: "trap", x: a.x, y: a.y, params }));
+      const field = far.find((a) => (!groundOnly || towerFloorAt(tower, a.x) === 0) && env.place({ uid: env.uid("trapfield"), kind: "trap", x: a.x, y: a.y, params }));
       if (field) {
         statue.params.tx = field.x;
         statue.params.ty = field.y;

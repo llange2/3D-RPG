@@ -21,6 +21,7 @@ import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, E
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
+import { towerFloorAt } from "../interiors/stairs";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
 import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
 import { ChunkManager } from "../render/chunkManager";
@@ -3455,11 +3456,20 @@ export class Game {
     for (const d of distances) {
       const x = tx + dx * d;
       const y = ty + dy * d;
-      if (!this.canEnter(x, y, how === "ghost") || this.inClosedEndRoom(x, y)) continue;
+      if (!this.canEnter(x, y, how === "ghost") || this.inClosedEndRoom(x, y) || !this.onSameTowerFloor(x)) continue;
       if (how === "hop" && !this.clearBetween(tx, ty, x, y)) continue;
       return { x, y };
     }
     return null;
+  }
+
+  /**
+   * In a tower no spell carries the party from one floor to another (the floors lie side by side on one map, quest document 1.7): only the stairs do. The rock between the floors is
+   * at least ten cells wide, and this holds as well when a pocket of the rock (an end room, a treasure chamber) lies between them.
+   */
+  private onSameTowerFloor(x: number): boolean {
+    const tower = this.mode === "interior" ? this.interior?.map.dungeon?.tower : undefined;
+    return !tower || towerFloorAt(tower, x) === towerFloorAt(tower, this.player.tx);
   }
 
   /** The end room of the place before its quest is done: a spell that carried the party in would pass the boss (and the quest). */
@@ -3499,6 +3509,11 @@ export class Game {
       if (spellId === 72 && !(this.outsideNow() || this.interior?.map.theme.open)) return "Meteor Shower only works outside.";
       // Star Burst goes off at the party and reaches three tiles (a circle), the others the whole action radius
       if (spellId === 76) return near(STAR_BURST_RADIUS).length > 0 ? null : "There is no monster in range.";
+      // Prismatic Light hits what the party sees, and its beams do not pass a wall
+      if (spellId === 73) {
+        const seen = this.monsterSeen();
+        return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS && seen(m)) ? null : "There is no monster in view.";
+      }
       return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS) ? null : "There is no monster in range.";
     }
     if (isAttackSpell(spellId)) {
@@ -3537,7 +3552,7 @@ export class Game {
   /** Time Distortion: the cells nearest to the party that no monster can reach. */
   private safeSpots(): Spot[] {
     const { tx, ty } = this.player;
-    return safeCells(this.enc, tx, ty, (x, y) => this.canEnter(x, y) && !this.inClosedEndRoom(x, y));
+    return safeCells(this.enc, tx, ty, (x, y) => this.canEnter(x, y) && !this.inClosedEndRoom(x, y) && this.onSameTowerFloor(x));
   }
 
   /** The open country: the generated overworld and the campaign's outside map. */
@@ -3856,7 +3871,7 @@ export class Game {
         // (6. 11. 2026, 48th playtest points 2 and 5)
         if (result.special === "meteor_shower" || result.special === "elemental_storm" || result.special === "prismatic_light" || result.special === "star_burst") {
           const { tx, ty } = this.player;
-          const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), result.special, { damage: result.damage, type: result.type });
+          const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), result.special, { damage: result.damage, type: result.type }, this.monsterSeen());
           // the sound of every element that falls (the storm throws all three)
           const elements = new Set(events.flatMap((e) => (e.type === "party_attack" && e.element ? [e.element] : [])));
           for (const element of elements.size > 0 ? elements : [result.type]) this.audio.play(ATTACK_SOUND[element] ?? 9029);
@@ -4948,6 +4963,16 @@ export class Game {
     if (this.mode === "interior") return alive.filter((m) => seen.has(`${m.x},${m.y}`));
     // outside the world wraps: a monster stands at its place in the world, the cone at the copy next to the party
     return alive.filter((m) => seen.has(`${tx + wrapDelta(tx, m.x, this.world.width)},${ty + wrapDelta(ty, m.y, this.world.height)}`));
+  }
+
+  /** Whether the party sees a monster now: it stands in a cell of the viewing cone that no wall hides (the cells of `mappedMonsters`, without Wizard's Eye). */
+  private monsterSeen(): (m: { x: number; y: number }) => boolean {
+    const { tx, ty, facing } = this.player;
+    const seen = new Set<string>();
+    for (const [x, y] of visibleCells(this.gridView().opaque, tx, ty, facing, this.sightRadius())) seen.add(`${x},${y}`);
+    if (this.mode === "interior") return (m) => seen.has(`${m.x},${m.y}`);
+    // outside the world wraps: a monster stands at its place in the world, the cone at the copy next to the party
+    return (m) => seen.has(`${tx + wrapDelta(tx, m.x, this.world.width)},${ty + wrapDelta(ty, m.y, this.world.height)}`);
   }
 
   private drawMinimap(): void {
