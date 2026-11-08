@@ -433,7 +433,7 @@
  },
  "73": {
   "name": "Prismatic Light",
-  "description": "Hits all monsters. 90-100 random damage effect.",
+  "description": "Hits all monsters in view. 90-100 random damage effect.",
   "explanation": "",
   "status": "done"
  },

@@ -104,8 +104,16 @@ function partition(rng: Rng, size: number, zones: readonly Rect[], rooms: number
 interface Spot {
   p: { x: number; y: number };
   f: { x: number; y: number };
+  /** The cell beside `p` where the lowest step of the staircase lies (see `TowerLayout.stairs`). */
+  foot: { x: number; y: number };
   facing: Facing;
 }
+
+/**
+ * The side of the staircase on which its lowest step lies, by the side of the floor the stairs stand at (the wall is on that side): the staircase turns its top end to the wall, and its
+ * first step then lies about 55 degrees from the wall, counter-clockwise (measured on `obj_spiral_staircase`, `tools/dev` scan: the steps turn 315 degrees from the foot to the top).
+ */
+const FOOT_SIDE: Record<Facing, Facing> = { N: "W", W: "S", S: "E", E: "N" };
 
 /** The spot of a transition at the rim of the disk on one side, `offset` cells along the rim from the middle, or null if the rim there is too narrow for it. */
 function rimSpot(size: number, side: Facing, offset: number): Spot | null {
@@ -130,7 +138,11 @@ function rimSpot(size: number, side: Facing, offset: number): Spot | null {
   const side2 = { x: f.x - inward.dy, y: f.y - inward.dx };
   const beyond = { x: f.x + inward.dx, y: f.y + inward.dy };
   if (![f, side1, side2, beyond].every((q) => inDisk(size, q.x, q.y))) return null;
-  return { p, f, facing: side === "N" ? "S" : side === "S" ? "N" : side === "W" ? "E" : "W" };
+  // the foot of the staircase lies beside it, where the rim of the disk may have cut the floor away: the stairs need that cell to start from
+  const swing = FACING_DELTA[FOOT_SIDE[side]];
+  const foot = { x: p.x + swing.dx, y: p.y + swing.dy };
+  if (!inDisk(size, foot.x, foot.y)) return null;
+  return { p, f, foot, facing: side === "N" ? "S" : side === "S" ? "N" : side === "W" ? "E" : "W" };
 }
 
 /** The cells no wall may cross round a spot: two cells either side, from the wall to three cells inward of the cell in front. */
@@ -363,11 +375,11 @@ export function generateTower(rng: Rng, ctx: BuildContext): InteriorMap {
     const lo = origin(t);
     const hi = origin(t + 1);
     const at = (o: { x: number; y: number }, p: { x: number; y: number }) => ({ x: o.x + p.x, y: o.y + p.y });
-    const entry = { up: at(lo, s.p), front: at(lo, s.f), down: at(hi, s.p), land: at(hi, s.f), facing: s.facing };
+    const entry = { up: at(lo, s.p), front: at(lo, s.f), down: at(hi, s.p), land: at(hi, s.f), facing: s.facing, foot: at(lo, s.foot) };
     stairs.push(entry);
     b.links.set(b.idx(entry.up.x, entry.up.y), b.idx(entry.land.x, entry.land.y));
     b.links.set(b.idx(entry.down.x, entry.down.y), b.idx(entry.front.x, entry.front.y));
-    for (const p of [entry.up, entry.front, entry.down, entry.land]) b.reserved.add(b.idx(p.x, p.y));
+    for (const p of [entry.up, entry.front, entry.down, entry.land, entry.foot]) b.reserved.add(b.idx(p.x, p.y));
   });
   const floors = Array.from({ length: floorsN }, (_, k) => ({ ...origin(k), size }));
   const tower: TowerLayout = { floors, stairs };

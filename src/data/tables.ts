@@ -184,6 +184,12 @@ type OldMonster = Omit<MonsterDef, "id" | "res_poison" | "ranged" | "hits_all" |
 const percent = (share: number): string => `${Math.round(share * 100)}%`;
 
 /**
+ * The monsters whose terrain the user changed after the sheet (48th playtest, point 9): the Kudo crab lives on water only ("Warren of Siloa" had one on dry ground). The sheet says
+ * "land"; the table is generated from it, so the correction lives here, where `npm run data:monsters` leaves it alone.
+ */
+const TERRAIN_OVERRIDES: Readonly<Record<number, "land" | "water" | "both">> = { 37: "water" };
+
+/**
  * A monster of the user's sheet (`docs/RPG_0.1.xlsx`, exported by `npm run data:monsters`) laid over the old table: stats, resistances, XP
  * (the sheet's new XP column; the old one is not used any more), treasure level, abilities and the Monster Hut come from the sheet, the
  * animation and sound entries only the old table has stay.
@@ -223,7 +229,7 @@ function monsterFromSheet(id: number, old: OldMonster, row: MonsterSheetRow): Mo
     gold: row.gold,
     treasure_level: row.level,
     icon_height: row.iconHeight,
-    terrain: row.terrain,
+    terrain: TERRAIN_OVERRIDES[id] ?? row.terrain,
     undead: row.undead,
     // the sheet knows no hatred of one class (the old "Targets Clerics" and "Hatred:Paladins")
     preferred_enemy: null,

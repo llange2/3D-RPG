@@ -18,7 +18,7 @@ import { monsterGroup } from "../data/tables";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { TRAP_DAMAGE } from "../data/rules";
-import { stairLinks } from "../interiors/stairs";
+import { stairLinks, towerFloorAt } from "../interiors/stairs";
 import { analyzeTopology, type Topology } from "../interiors/topology";
 import { blocksPassage } from "../interiors/passage";
 import { CELL, FACING_DELTA, type InteriorMap } from "../interiors/types";
@@ -269,9 +269,11 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // the stairs of a tower (quest document 1.7): a spiral staircase up, and on the floor above at the same place the Fort door that leads down again; each lands the party in front of
   // the other. All four cells stay bare (the arrival must be free, and the stairs are no place for an object)
   (map.dungeon?.tower?.stairs ?? []).forEach((s, i) => {
-    actions.push({ uid: `${map.key}#stairs:${i}:up`, kind: "stairs", x: s.up.x, y: s.up.y, params: { item: STAIRCASE_ITEM, tx: s.land.x, ty: s.land.y, up: true, facing: s.facing } });
+    // the staircase stands with its top end against the wall (a bearing of its own: the compass direction of the wall, which is behind the way the party looks when it arrives)
+    const wallBearing = { N: 180, E: 270, S: 0, W: 90 }[s.facing];
+    actions.push({ uid: `${map.key}#stairs:${i}:up`, kind: "stairs", x: s.up.x, y: s.up.y, params: { item: STAIRCASE_ITEM, tx: s.land.x, ty: s.land.y, up: true, facing: s.facing, bearing: wallBearing } });
     actions.push({ uid: `${map.key}#stairs:${i}:down`, kind: "stairs", x: s.down.x, y: s.down.y, params: { item: FORT_DOOR_ITEM, tx: s.front.x, ty: s.front.y, up: false, facing: s.facing } });
-    for (const p of [s.up, s.front, s.down, s.land]) occupied.add(idx(p.x, p.y));
+    for (const p of [s.up, s.front, s.down, s.land, s.foot]) occupied.add(idx(p.x, p.y));
   });
 
   // The puzzle of the theme comes first: it reserves its hall and its cells before the ordinary rules fill the place.
@@ -417,6 +419,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       if (!isFree(a, allowProtected)) return; // an earlier pick of this rule may have taken the cell
       // two doors (or a door and a gate) never follow each other directly: a short corridor between two rooms has a mouth at each end
       if (rule.kind === "door" && actions.some((o) => o.kind === "door" && Math.abs(o.x - a.x) + Math.abs(o.y - a.y) < 2)) return;
+      // a tower has no door beside a staircase or a Fort door: the leaf would swing into the stairs (48th playtest, tower optimisation)
+      if (rule.kind === "door" && actions.some((o) => o.kind === "stairs" && Math.max(Math.abs(o.x - a.x), Math.abs(o.y - a.y)) <= 2)) return;
       const local = new Rng(derive(mapSeed, rule.id, i));
       const tier = tierAt(a.depth);
       const vars = { tier, depth: a.depth, depthRatio: Math.floor((a.depth * 1000) / anchors.maxDepth), mapTier: baseTier };
@@ -424,6 +428,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       const params: Record<string, ParamValue> = {};
       for (const [k, v] of Object.entries(raw)) params[k] = resolveParam(v, vars, local);
       if (dt && rule.id !== "lantern") themeParams(rule.kind, params, dt, vars, local);
+      if (dt && rule.kind === "trap" && map.dungeon?.tower) towerTrap(params, towerFloorAt(map.dungeon.tower, a.x), dt, vars, local);
       // a barrel must be of use: wherever a theme stands one as a prop it is a container with a few coins or a joke in it
       let kind: ActionKind = rule.kind === "spawn" ? "legacy" : rule.kind;
       if (kind === "decor" && Number(params.item) === BARREL) {
@@ -549,6 +554,20 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
  */
 export function plainProps(t: DungeonTheme): number[] {
   return t.props.filter((p) => p !== t.chest && p !== t.shrine && (!isFunctional(p) || p === BARREL || BOOKSHELVES.includes(p)));
+}
+
+const TOWER_TRAP_ELEMENTS = ["fire", "ice", "acid", "magic"] as const;
+
+/**
+ * The traps of a tower (48th playtest, tower optimisation): no guillotine, and pits and spear traps only on the ground floor (the floors above it have a magical trap, a puddle of fire,
+ * acid or magic flames, in their place). The element is the one of the theme if it has a magical trap, else it is chosen by chance.
+ */
+export function towerTrap(params: Record<string, ParamValue>, floor: number, t: DungeonTheme, vars: ExprVars, rng: Rng): void {
+  const trap = params.trap;
+  if (trap !== "guillotine" && !(floor > 0 && (trap === "pit" || trap === "spring"))) return;
+  params.trap = "generic";
+  params.element = t.trapElement ?? TOWER_TRAP_ELEMENTS[rng.int(TOWER_TRAP_ELEMENTS.length)]!;
+  params.damage = resolveParam(TRAP_DAMAGE.generic ?? 0, vars, rng);
 }
 
 /** What a theme sets on the actions of its place: its one kind of trap, the objects that hold loot, shrines and props, and the monsters of an ambush. */

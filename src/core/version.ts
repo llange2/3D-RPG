@@ -148,5 +148,7 @@
  * 56 = the 48th playtest, quest document 1.7: the tower (`dungeon_5`, `interiors/tower.ts`) is a layout of quests 2, 4 and 5: a round building of 2 or 3 floors on one map joined by stairs (a staircase and, on the floor above at
  * the same place, the Fort door that leads down), 2 x 2 tiles on the overworld with no road to it (a bare way of cleared ground, `RoadSeg.bare`, keeps it reachable; never on a lava island); Star Burst and Prismatic Light hit every
  * monster around the party (the plan of the world draws the layouts of quests 2, 4 and 5 from five dungeon layouts now, so most dungeons changed).
+ * 57 = the tower optimisation (48th playtest, second list): a tower has no guillotine and pits and spear traps only on its ground floor (a magical trap in their place, `towerTrap`), no door beside a staircase, the staircase's
+ * foot cell is open floor (`TowerLayout.stairs[].foot`, so the layout draws other rims), towers are named "Tower of ..." (`towerName`), and the Kudo crab lives on water only (`TERRAIN_OVERRIDES`).
  */
-export const GEN_VERSION = 56;
+export const GEN_VERSION = 57;

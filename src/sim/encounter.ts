@@ -763,15 +763,17 @@ export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" 
 
 /**
  * Meteor Shower (fire), Elemental Storm (a random element for each monster) and Prismatic Light (a random one of four damage types for each monster): they need no target, they
- * hit every monster within the action radius, wall or no wall (the storm comes from the sky, the 6. 11. 2026 playtest; the light of the prism reaches round corners, the 8. 11. 2026
- * playtest). Star Burst (48th playtest, point 2) goes off at the party and hits every monster within `STAR_BURST_RADIUS` tiles, also without a clear line.
+ * hit every monster within the action radius, wall or no wall (the storm comes from the sky, the 6. 11. 2026 playtest). Prismatic Light is the exception: "hits all monsters in view"
+ * (the second 8. 11. 2026 request), the monsters `inView` says the party sees; the beams end at them and do not go through a wall. Star Burst (48th playtest, point 2) goes off at the party and hits every monster within `STAR_BURST_RADIUS` tiles, also without a clear line.
  * `magic.damage` is what the spell rolled, the resistance of each monster takes its share.
  */
-export function areaSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, kind: AreaSpell, magic: { damage: number; type: string }): CombatEvent[] {
+export function areaSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, kind: AreaSpell, magic: { damage: number; type: string }, inView?: (m: MonsterInstance) => boolean): CombatEvent[] {
   const events: CombatEvent[] = [];
   const caught = enc.monsters.filter((m) => {
     if (m.hp <= 0 || isPhased(m)) return false;
     if (kind === "star_burst") return (m.x - px) ** 2 + (m.y - py) ** 2 <= STAR_BURST_RADIUS ** 2;
+    // Prismatic Light hits what the party sees (48th playtest, tower optimisation): its beams do not pass a wall, so a monster behind one is spared
+    if (kind === "prismatic_light" && inView && !inView(m)) return false;
     return Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= MONSTER_ACTION_RADIUS;
   });
   for (const m of caught) {

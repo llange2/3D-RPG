@@ -8,6 +8,7 @@ import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/loaders/glTF";
@@ -70,6 +71,12 @@ const FIXED_LEVEL = (key: string): boolean => key === "blk_floor" || key.startsW
  * and its colour (which key it is) could not be told from three cells away.
  */
 const QUEST_GLOW = 1.5;
+/**
+ * Floor slabs whose top has vertices with a normal that points down (the undercut edges of the planks of `blk_wooden_floor`: 218 of its vertices, all at the top): lit from above they come
+ * out black, two sided lighting does not help because their faces look up. Their normals are lifted to at least this much upward (48th playtest, "small black spots in the wooden floor").
+ */
+const LIFTED_NORMALS: ReadonlySet<string> = new Set(["blk_wooden_floor"]);
+const NORMAL_LIFT = 0.45;
 const QUEST_MODELS: ReadonlySet<string> = new Set(Object.values(QUEST_PROP).map((item) => `ci_${item}`));
 
 /** The 3D dungeon floor as bright as the flat one at the same torch distance (measured: at 3 it came out 1.75 times brighter). */
@@ -88,6 +95,13 @@ const ORB_SHINE = 0.75;
  */
 const MODEL_DIM: Record<string, number> = { blk_cave_exit: 0.65 };
 
+/**
+ * A colour factor per model (48th playtest, point 6): the wooden support beam (item 99) is a bright orange, the wood of the dungeon's ceiling a dark brown. The mean colours of the two
+ * textures are 110/66/25 and 49/32/17 of 255; the ratio of the two, scaled to the same lightness (the texture boost already levels that), is 0.83/0.90/1.27, and a little less than that
+ * all over because the ceiling hangs in the shadow of the torch's light.
+ */
+const MODEL_TINT: Record<string, readonly [number, number, number]> = { ci_99: [0.71, 0.77, 1.08] };
+
 /** Opacity of the see-through attack effects (the old game gave the fireball 0.7 and the poison cloud 0.3). */
 const PROJECTILE_ALPHA: Record<string, number> = { proj_fire: 0.85, proj_poison: 0.6 };
 
@@ -95,6 +109,22 @@ const PROJECTILE_ALPHA: Record<string, number> = { proj_fire: 0.85, proj_poison:
 const BUMP_LEVEL = 2.5;
 
 /** Replaces the glTF PBR material by a cheap StandardMaterial with the same colour texture. */
+/** Turns the normals that point down or hardly up (`LIFTED_NORMALS`) towards the sky, as far as `NORMAL_LIFT` asks. */
+function liftNormals(mesh: Mesh): void {
+  const normals = mesh.getVerticesData(VertexBuffer.NormalKind);
+  if (!normals) return;
+  const out = Float32Array.from(normals);
+  for (let i = 0; i < out.length; i += 3) {
+    if (out[i + 1]! >= NORMAL_LIFT) continue;
+    out[i + 1] = NORMAL_LIFT;
+    const len = Math.hypot(out[i]!, out[i + 1]!, out[i + 2]!);
+    out[i] = out[i]! / len;
+    out[i + 1] = out[i + 1]! / len;
+    out[i + 2] = out[i + 2]! / len;
+  }
+  mesh.setVerticesData(VertexBuffer.NormalKind, out, false);
+}
+
 export function toStandardMaterial(mat: PBRMaterial | StandardMaterial, scene: Scene, boost = 1): StandardMaterial {
   if (mat instanceof StandardMaterial) return mat;
   const std = new StandardMaterial(mat.name, scene);
@@ -191,6 +221,7 @@ export class PropRenderer {
       mesh.setParent(null);
       mesh.bakeCurrentTransformIntoVertices(); // thin instances replace the world matrix, so the glTF root flip is baked in
       if (info.fromObj) flipWinding(mesh);
+      if (LIFTED_NORMALS.has(key)) liftNormals(mesh);
       if (mesh.material) {
         const std = toStandardMaterial(mesh.material as PBRMaterial | StandardMaterial, this.scene, boost);
         // models converted from OBJ have patches that face inward (the simplifier and the old authoring tools do not care):
@@ -238,6 +269,8 @@ export class PropRenderer {
         }
         const dim = MODEL_DIM[key];
         if (dim !== undefined) std.diffuseColor = std.diffuseColor.scale(dim);
+        const tint = MODEL_TINT[key];
+        if (tint) std.diffuseColor = std.diffuseColor.multiply(new Color3(...tint));
         mesh.material = std;
         const texture = std.diffuseTexture;
         if (texture && !FIXED_LEVEL(key) && !this.exposed.some((e) => e.texture === texture)) {

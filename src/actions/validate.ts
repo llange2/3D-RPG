@@ -7,7 +7,7 @@ import { BRIDGE, CONSOLE_CLEAR, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPP
 import { WALL_DECO_ITEMS, wallDecoChoices } from "../data/wall-deco";
 import { MONSTERS, monsterGroup } from "../data/tables";
 import { sectionAt } from "../interiors/spaceship";
-import { stairLinks } from "../interiors/stairs";
+import { stairLinks, towerFloorAt } from "../interiors/stairs";
 import { analyzeTopology, type Topology } from "../interiors/topology";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { ACTION_DEFS, blocksCell } from "./registry";
@@ -60,7 +60,10 @@ export function themeIssues(map: InteriorMap, content: MapContent): string[] {
   for (const item of hung) if (!fitting.includes(item)) issues.push(`${map.key}: wall decoration ${item} does not go with the monsters of ${theme.id}`);
   for (const a of content.actions) {
     // (the field of traps that a wrong answer of a mini quest throws the party on may have a trap in a place that has none)
-    if (a.kind === "trap" && !a.uid.includes("trapfield") && a.params.trap !== theme.trap) issues.push(`${a.uid}: ${String(a.params.trap)} trap in ${theme.id}, which has ${theme.trap}`);
+    // (a tower swaps a guillotine, and a pit or a spear above its ground floor, for a magical trap: `towerTrap`)
+    const swapped = !!map.dungeon?.tower && a.params.trap === "generic" && ["guillotine", "pit", "spring"].includes(theme.trap);
+    if (a.kind === "trap" && !a.uid.includes("trapfield") && a.params.trap !== theme.trap && !swapped) issues.push(`${a.uid}: ${String(a.params.trap)} trap in ${theme.id}, which has ${theme.trap}`);
+    if (a.kind === "trap" && map.dungeon?.tower && (a.params.trap === "guillotine" || ((a.params.trap === "pit" || a.params.trap === "spring") && towerFloorAt(map.dungeon.tower, a.x) > 0))) issues.push(`${a.uid}: a ${String(a.params.trap)} trap in a tower, off its ground floor or with a blade`);
     if (a.kind === "decor" && Number(a.params.item) !== 76 && !WALL_DECO_ITEMS.includes(Number(a.params.item)) && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
     // the objects of a quest (runes, gongs, statues, levers) belong to the quest, whoever lives here
     for (const item of [a.params.item, a.params.chest]) if (["decor", "treasure", "shrine"].includes(a.kind) && typeof item === "number" && forbidden.has(item) && a.params.quest === undefined) issues.push(`${a.uid}: prop ${item} does not suit ${theme.inhabitants}`);
