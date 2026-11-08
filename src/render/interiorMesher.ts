@@ -402,14 +402,13 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
         const ny = cy + FACING_DELTA[dir].dy;
         const kind = cellAt(nx, ny);
         if (kind === CELL.FLOOR) {
-          const beside = shafts.get(ny * w + nx);
-          if (shaft !== undefined && shaft === dir) {
-            // the open side of the stairs: nothing below the ceiling of the room in front, but the shaft goes on above it, one storey of wall over the opening
-            wallQuad(bucket("wall", cx, cy), bl, br, n, shade * (dir === "N" || dir === "S" ? 1 : 0.93), H, 2 * H);
+          // a wall between two floor cells would be a face of no thickness (50th playtest, point 2a: the stairs of the Tower of Ira stood beside a floor cell and showed one): there is
+          // none, the stairs are open to the cell beside them. Only the shaft goes on above the ceiling of that cell, one storey of wall over the opening (seen from the shaft)
+          if (shaft !== undefined) {
+            if (!shafts.has(ny * w + nx)) wallQuad(bucket("wall", cx, cy), bl, br, n, shade * (dir === "N" || dir === "S" ? 1 : 0.93), H, 2 * H);
             continue;
           }
-          // the stairs fill their cell: on every side but the open one they have a wall, also where a floor cell lies beside them
-          if (shaft === undefined && (beside === undefined || beside === OPPOSITE[dir])) continue;
+          continue;
         }
         if (covered.has(`${cx},${cy},${dir}`)) continue;
         if (styles && kind === CELL.LOW) continue; // open ground next door

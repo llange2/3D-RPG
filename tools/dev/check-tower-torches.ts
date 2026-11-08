@@ -3,7 +3,7 @@
  * (`VITE_FROZEN=1 VITE_PORT=<free port> npx vite --port <free port> --strictPort`).
  *
  * Usage: GAME_URL=http://localhost:<port>/ [DUNGEONS=few|default|maximum] npx tsx tools/dev/check-tower-torches.ts <screenshot folder> [seed] [tower id]
- * Takes the tower from the front, at 4 and 9 tiles, by day and by night, and prints how many lamps the pool holds.
+ * Takes the tower from the front, at 4 and 9 tiles (DISTANCES=5,6,... changes them), by day and by night (ONLY=night|day), and prints how many lamps the pool holds.
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -43,9 +43,9 @@ try {
   await page.goto(`${base}?autostart=1&seed=${seed}&size=default&dungeons=${dungeons}&outside=1`, { waitUntil: "load", timeout: 60000 });
   await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
   await sleep(5000);
-  for (const [label, minutes] of [["night", 24 * 60 + 23 * 60], ["day", 24 * 60 + 12 * 60]] as [string, number][]) {
+  for (const [label, minutes] of ([["night", 24 * 60 + 23 * 60], ["day", 24 * 60 + 12 * 60]] as [string, number][]).filter(([l]) => !process.env.ONLY || l === process.env.ONLY)) {
     await evalJs(`(() => { const p = __game.state.party; p.minutes = ${minutes}; __game.game.refresh(); })()`);
-    for (const dist of [4, 9]) {
+    for (const dist of (process.env.DISTANCES ?? "4,9").split(",").map(Number)) {
       await evalJs(`__game.teleport(${front.x + away.dx * dist}, ${front.y + away.dy * dist}, "${toward}")`);
       await sleep(7000);
       console.log(`${label} ${dist}:`, await evalJs<string>(`JSON.stringify({ towerLamps: __game.game.towerLamps.length, lit: __game.game.r.lamps.map((l) => +l.intensity.toFixed(2)) })`));

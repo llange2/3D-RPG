@@ -67,10 +67,10 @@ describe("the wooden stairs of a tower (49th playtest, point 3)", () => {
   });
 
   it("stretches the stairs over a cell and a storey, rising towards the wall", () => {
-    // the user's file: 1.45 wide, 1.12 high, 1.9 long
-    const [sx, sy, sz] = stairsScale([-0.726, -0.558, -0.952, 0.725, 0.561, 0.95]);
-    expect(1.451 * sx).toBeCloseTo(CELL_SIZE, 2);
-    expect(1.119 * sy).toBeCloseTo(TOWER_STOREY, 2);
+    // the user's file: 0.97 wide, 1.26 high, 1.9 long
+    const [sx, sy, sz] = stairsScale([-0.488, -0.63, -0.952, 0.483, 0.625, 0.95]);
+    expect(0.971 * sx).toBeCloseTo(CELL_SIZE, 2);
+    expect(1.255 * sy).toBeCloseTo(TOWER_STOREY, 2);
     expect(1.902 * sz).toBeCloseTo(CELL_SIZE, 2);
     const { content, map, ref } = all[0]!;
     const up = content.actions.find((a) => a.kind === "stairs" && a.params.up === true)!;

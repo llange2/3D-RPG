@@ -7,6 +7,7 @@ import { installCursor } from "../ui/cursor";
 import { preloadImages } from "../ui/dom";
 import { preloadButtonArt } from "../ui/buttonArt";
 import { preloadSpellIcons } from "../ui/spellIcons";
+import { keepSpellArtWarm } from "../ui/warmUp";
 import { preloadItemIcons } from "../ui/itemIcons";
 import { setTextureQuality } from "../render/assets";
 import { readSettings } from "./settings";
@@ -23,6 +24,8 @@ async function main(): Promise<void> {
   void preloadSpellIcons();
   // the blank button of the "Select" plate of the spell window, decoded now as well
   void preloadButtonArt();
+  // and both stay in the page, so that the browser does not drop their decoded pictures before the first spell window
+  void keepSpellArtWarm();
   // the same for the item pictures: every slot of an inventory or a shop is a window onto one decoded sheet
   void preloadItemIcons();
   // the status symbols beside the minimap (Wizard's Eye, Power Shield, Levitate, the four protections): a cast would otherwise show them only after the download

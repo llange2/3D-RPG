@@ -8,7 +8,7 @@ import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type BoonKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
 import { portraitImage } from "./avatarFx";
 import { capybaraLoop } from "./capybaraClip";
-import { plateButton } from "./buttonArt";
+import { plateButton, preloadButtonArt } from "./buttonArt";
 import { assetPath, clear, h } from "./dom";
 import { conditionClass, conditionTitle, shownCondition } from "./conditionInfo";
 import { thousands } from "../core/format";
@@ -523,7 +523,7 @@ const LIGHT_SPELL = 6;
  * A click on the picture repeats that spell with this hero. Resolves with the hero and whether the last spell is to be repeated, or null.
  */
 export async function pickCaster(ui: UI, party: Party, heroes: number[], aimed: boolean, sound?: (id: number) => void): Promise<{ who: number; repeat: boolean } | null> {
-  await preloadSpellIcons();
+  await Promise.all([preloadSpellIcons(), preloadButtonArt()]);
   return ui.modal<{ who: number; repeat: boolean } | null>(
     (close) =>
       h(

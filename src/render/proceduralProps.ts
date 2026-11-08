@@ -184,28 +184,6 @@ function lodMountain(foot: RGB, top: RGB): Builder {
   return b;
 }
 
-const WOOD: RGB = [0.28, 0.17, 0.09];
-const WOOD_LIGHT: RGB = [0.4, 0.26, 0.14];
-const IRON: RGB = [0.16, 0.15, 0.15];
-
-/** The torch that stands in front of a tower (49th playtest): a wooden post, 1.7 high, with an iron bowl. The flame is `flame()`, drawn unlit so that it glows at night. */
-function torch(): Builder {
-  const b = new Builder();
-  b.cone(0, 0, 0, 1.45, 0.11, 0.08, 6, WOOD, WOOD_LIGHT);
-  b.cone(0, 0, 1.4, 1.75, 0.09, 0.24, 8, IRON, IRON);
-  return b;
-}
-
-/** The flame of the torch: an orange cone around a yellow one, wider at the bottom and bent to a point. */
-function flame(): Builder {
-  const b = new Builder();
-  // (a teardrop: it swells over the bowl and runs out into a point)
-  b.cone(0, 0, 1.72, 1.92, 0.22, 0.24, 8, [1, 0.38, 0.06], [1, 0.55, 0.12]);
-  b.cone(0, 0, 1.92, 2.3, 0.24, 0, 8, [1, 0.55, 0.12], [1, 0.82, 0.3]);
-  b.cone(0, 0, 1.74, 2.05, 0.12, 0, 6, [1, 0.85, 0.35], [1, 0.97, 0.7]);
-  return b;
-}
-
 export interface ProceduralModel {
   key: string;
   mesh: Mesh;
@@ -217,20 +195,12 @@ export function createProceduralModels(scene: Scene): ProceduralModel[] {
   material.diffuseColor = Color3.White();
   material.specularColor = Color3.Black();
   material.backFaceCulling = false;
-  // flames take their colour from the vertices alone and give it back in full, whatever the light: emissive white (times the vertex colour), no diffuse
-  const glow = new StandardMaterial("procedural-glow", scene);
-  glow.diffuseColor = Color3.Black();
-  glow.emissiveColor = Color3.White();
-  glow.specularColor = Color3.Black();
-  glow.backFaceCulling = false;
   const make = (key: string, b: Builder, m: StandardMaterial = material): ProceduralModel => ({ key, mesh: b.build(key, scene, m) });
   return [
     make("proc_tuft", tuft()),
     make("proc_flower_blue", flower([0.25, 0.35, 0.95])),
     make("proc_flower_pink", flower([0.95, 0.4, 0.7])),
     make("proc_mushroom", mushroom()),
-    make("proc_torch", torch()),
-    make("proc_flame", flame(), glow),
     make("lod_tree_green", lodTree([0.08, 0.3, 0.1], [0.2, 0.5, 0.16], "round")),
     make("lod_tree_snow", lodTree([0.6, 0.75, 0.85], [0.95, 0.97, 1], "cone")),
     make("lod_tree_palm", lodTree([0.25, 0.55, 0.12], [0.5, 0.75, 0.2], "palm")),
