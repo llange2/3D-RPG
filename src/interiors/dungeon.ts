@@ -1,6 +1,7 @@
 import type { Rng } from "../core/rng";
 import { Builder, extraEdges, primEdges, rectsOverlap, type BuildContext, type Rect } from "./builder";
 import { carveEndRoomFor, carveMachineRoom, carveVaults } from "./endRoom";
+import { generateTower } from "./tower";
 import { longestCorridor } from "./topology";
 import { CELL, type DungeonRef, type InteriorMap } from "./types";
 
@@ -20,6 +21,8 @@ export function generateDungeon(rng: Rng, ctx: BuildContext): InteriorMap {
       return hub(rng, ctx);
     case "dungeon_3":
       return maze(rng, ctx);
+    case "dungeon_5":
+      return generateTower(rng, ctx);
     default:
       return classic(rng, ctx);
   }
@@ -36,9 +39,11 @@ function entranceRect(rng: Rng, ctx: BuildContext, cx: number, cy: number): Rect
 /** The hall of quest 2 (a row of five heads with room to walk before them), or nothing for the other quests. */
 const hallRect = (ctx: BuildContext, cx: number, cy: number): Rect | undefined => (ctx.dungeon?.quest === "quest_2" ? { x: cx - 5, y: cy - 3, w: 11, h: 7 } : undefined);
 
-interface Plan {
+export interface Plan {
   b: Builder;
   rooms: Rect[][];
+  /** Where the way out is, when the layout knows (the tower's door is at the foot of its ground floor); otherwise `pickExit` finds a wall in the first room. */
+  exit?: { exit: { x: number; y: number }; spawn: { x: number; y: number; facing: "N" | "E" | "S" | "W" } };
   /** The room the party enters is room 0. */
   hall?: Rect;
   /** Where a sealed end room is wanted next to: the hall of quest 2, the last room of the tube. */
@@ -48,7 +53,7 @@ interface Plan {
 }
 
 /** Columns in the big rooms (kept away from the centre row and column where corridors leave), then the exit, the end room and the reference. */
-function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): InteriorMap {
+export function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): InteriorMap {
   const { b, rooms, hall } = plan;
   const quest = ctx.dungeon?.quest;
   // the maze has its walls one cell thick and keeps its straights short while it is grown (`maze`); every other layout is bent here
@@ -67,7 +72,7 @@ function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): InteriorMap {
     }
   });
   const r0 = rooms[0]![0]!;
-  const { exit, spawn } = b.pickExit(r0.x + Math.floor(r0.w / 2), r0.y + r0.h - 1, (x, y) => b.roomOf[b.idx(x, y)] === 0 && b.isFloor(x - 1, y) && b.isFloor(x + 1, y));
+  const { exit, spawn } = plan.exit ?? b.pickExit(r0.x + Math.floor(r0.w / 2), r0.y + r0.h - 1, (x, y) => b.roomOf[b.idx(x, y)] === 0 && b.isFloor(x - 1, y) && b.isFloor(x + 1, y));
   // the end room: the quests that teleport the party into it (quest 1 and 3) leave it in the rock on its own, the others seal it
   const wantsRoom = !!ctx.dungeon && quest !== "spaceship";
   const endRoom = wantsRoom ? carveEndRoomFor(b, rng, spawn, quest === "quest_1" || quest === "quest_3", plan.endNear, ctx.dungeon?.orbs) : null;

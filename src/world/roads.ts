@@ -23,8 +23,13 @@ export class RoadSeg {
   readonly lava: boolean;
   /** The tiles across the piece (1 or 2). */
   readonly width: number;
+  /**
+   * The way to a tower (quest document 1.7: no road leads to it): it clears the ground like a road (no tree, no rock where it can be avoided) and keeps the party's way open, but it
+   * is not drawn as a road. It is plain ground, a pass through a range and a bridge over water only where the terrain leaves no other way.
+   */
+  readonly bare: boolean;
 
-  constructor(a: Pt, b: Pt, width = 1, lava = false) {
+  constructor(a: Pt, b: Pt, width = 1, lava = false, bare = false) {
     if (a.x !== b.x && a.y !== b.y) throw new Error(`road piece ${a.x}/${a.y} to ${b.x}/${b.y} is not straight`);
     this.x0 = Math.min(a.x, b.x);
     this.x1 = Math.max(a.x, b.x);
@@ -33,6 +38,7 @@ export class RoadSeg {
     this.horizontal = a.y === b.y;
     this.width = width;
     this.lava = lava;
+    this.bare = bare;
     if (width > 1) {
       if (this.horizontal) this.y1 += width - 1;
       else this.x1 += width - 1;
@@ -42,6 +48,11 @@ export class RoadSeg {
   /** The same piece as a stream of lava `width` tiles wide. */
   asLava(width: number): RoadSeg {
     return new RoadSeg({ x: this.x0, y: this.y0 }, this.horizontal ? { x: this.x0 + (this.x1 - this.x0), y: this.y0 } : { x: this.x0, y: this.y1 }, width, true);
+  }
+
+  /** The same piece as the bare way to a tower (`bare`). */
+  asBare(): RoadSeg {
+    return new RoadSeg({ x: this.x0, y: this.y0 }, { x: this.x1, y: this.y1 }, 1, false, true);
   }
 
   /** The fixed coordinate across the road. */

@@ -236,6 +236,15 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     minimap: "tex_mm_event",
     params: loose({}),
   },
+  stairs: {
+    kind: "stairs",
+    legacyIds: [],
+    // the staircase of a tower and the Fort door that leads down again: stepping on the cell takes the party to the other floor of the same map (`tx`, `ty`), facing `facing`
+    trigger: "enter",
+    persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({ item: z.number().int().min(1), tx: z.number().int(), ty: z.number().int(), up: z.boolean(), facing: z.enum(["N", "E", "S", "W"]) }),
+  },
   rune: {
     kind: "rune",
     legacyIds: [],

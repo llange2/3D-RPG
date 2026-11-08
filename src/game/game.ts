@@ -401,7 +401,7 @@ export class Game {
       this.minimapIcons = icons;
       this.minimapDirty = true;
     });
-    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", "poi_dungeon", "poi_cave", "poi_pyramid", "obj_loot", ...PROJECTILE_MODELS], (share) => progress?.(0.15 + 0.8 * share));
+    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", "poi_dungeon", "poi_cave", "poi_pyramid", "poi_tower", "obj_loot", ...PROJECTILE_MODELS], (share) => progress?.(0.15 + 0.8 * share));
     this.sceneInst = new SceneInstrumentation(this.r.scene);
     this.sceneInst.captureFrameTime = true;
 
@@ -1440,7 +1440,7 @@ export class Game {
           await this.promptEnterPoi(poi.id);
           return;
         }
-        this.ui.log(`There is no way in on this side of the ${poi.kind === "dungeon" && poi.size === 3 ? "pyramid" : poi.kind}. Its entrance is elsewhere.`, "info");
+        this.ui.log(`There is no way in on this side of the ${poi.kind === "dungeon" && poi.size === 3 ? "pyramid" : poi.kind === "dungeon" && poi.size === 2 ? "tower" : poi.kind}. Its entrance is elsewhere.`, "info");
       } else if (this.world.tile(x, y).deco === DECO.LANDMARK) {
         // a well, a hut, a stone head: everything the party bumps into says what it is (trees and mountains are the exception); about a third of the wells, fountains and stone heads are magic
         const boon = landmarkBoon(this.world, x, y);
@@ -2501,7 +2501,7 @@ export class Game {
         case "ask":
           break;
         case "jump":
-          this.jumpTo(e.x, e.y);
+          this.jumpTo(e.x, e.y, e.silent, e.facing);
           break;
         case "endroom":
           this.openEndRoom();
@@ -2934,17 +2934,19 @@ export class Game {
   }
 
   /** A rune throws the party to another cell of the place. */
-  private jumpTo(x: number, y: number): void {
+  /** `silent`: the stairs of a tower make no teleport sound; `facing`: the way the party looks when it has arrived (otherwise it keeps its own). */
+  private jumpTo(x: number, y: number, silent = false, facing?: Facing): void {
     const rt = this.interior;
     if (!rt) return;
     // never into an object (a chest, a statue, a closed door): the nearest cell the party can stand on takes its place (36th playtest, point 4)
     ({ x, y } = this.landingCell(x, y));
     this.evictMonsters(x, y);
     const p = this.worldPos(x, y);
-    this.player.place(x, y, this.player.facing, p.x, p.z);
-    if (this.state.at.mode === "interior") this.state.at = { ...this.state.at, x, y, facing: this.player.facing };
+    const look = facing ?? this.player.facing;
+    this.player.place(x, y, look, p.x, p.z);
+    if (this.state.at.mode === "interior") this.state.at = { ...this.state.at, x, y, facing: look };
     this.interiorView.focus(x, y);
-    this.audio.play(9041);
+    if (!silent) this.audio.play(9041);
     this.markExplored();
     this.noteEndRoom(x, y);
     this.minimapDirty = true;

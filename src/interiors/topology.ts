@@ -1,3 +1,4 @@
+import { stairLinks } from "./stairs";
 import { CELL, FACING_DELTA, isFloor, type Facing, type InteriorMap } from "./types";
 
 export interface Mouth {
@@ -57,6 +58,8 @@ export function analyzeTopology(map: InteriorMap): Topology {
     depth[pocket] = 0;
     queue[tail++] = pocket;
   }
+  // the stairs of a tower are a way as well: the floor above is as far as the stairs and the way along it
+  const jumps = stairLinks(map);
   let maxDepth = 0;
   let reachable = 0;
   while (head < tail) {
@@ -66,6 +69,11 @@ export function analyzeTopology(map: InteriorMap): Topology {
     const y = (i - x) / w;
     const d = depth[i]!;
     if (d > maxDepth) maxDepth = d;
+    const jump = jumps.get(i);
+    if (jump !== undefined && depth[jump]! < 0) {
+      depth[jump] = d + 1;
+      queue[tail++] = jump;
+    }
     for (const dir of DIRS) {
       const nx = x + FACING_DELTA[dir].dx;
       const ny = y + FACING_DELTA[dir].dy;

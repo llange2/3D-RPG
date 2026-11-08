@@ -44,7 +44,8 @@ describe("interior generators", () => {
         check(map, `${kind} #${i}`);
         if (kind === "dungeon") {
           expect(map.rooms.length).toBeGreaterThanOrEqual(5);
-          expect(map.rooms.length).toBeLessThanOrEqual(27);
+          // (a tower has 2 or 3 floors of rooms of its own: up to 30)
+          expect(map.rooms.length).toBeLessThanOrEqual(30);
         }
         // a castle is the keep alone (31st playtest, no yard): 17 to 21 cells a side, a throne, a king and four statues, started inside the gate
         if (kind === "castle") {

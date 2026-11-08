@@ -19,6 +19,7 @@ import {
   GROUND,
   SIDE_DELTA,
   WORLD_SIZES,
+  isTower,
   poiBounds,
   poiEntrances,
   isTileWalkable,
@@ -51,6 +52,8 @@ export const MOUNTAIN_LEVEL = 40000;
  */
 const POI_SIZE: Record<PoiKind, number> = { town: 2, castle: 2, dungeon: 1, cave: 1 };
 const PYRAMID_SIZE = 3;
+/** A dungeon built as a tower (layout dungeon_5) is 2 x 2 tiles wide, no road leads to it (`isTower`). */
+const TOWER_SIZE = 2;
 
 const SIDES: readonly { side: PoiSide; dx: number; dy: number }[] = [
   { side: "S", dx: 0, dy: 1 },
@@ -789,14 +792,22 @@ export class World {
   /** The places of an island with their sizes and entrance sides, and the roads between them. */
   private planIsland(isl: Island, pois: Poi[]): RegionPlan {
     if (pois.length < 2) return { pois, connectors: [] };
-    const { edges, parent } = this.connections(isl.index, pois);
+    // no road leads to a tower (quest document 1.7): it stands in the open and the party walks up to it. The others are joined as ever; a tower faces the nearest of them, and a bare way
+    // (`RoadSeg.bare`: cleared ground, not drawn as a road) keeps it reachable, as a tower may hold a key or an orb that the quests need
+    const roaded = pois.filter((p) => !isTower(p));
+    if (roaded.length === 0) return { pois, connectors: [] };
+    const { edges, parent } = this.connections(isl.index, roaded);
     // a place faces the place its road hangs on (the anchor keeps its random side): every road of it ends at the door
-    for (let i = 1; i < pois.length; i++) {
-      const p = pois[i]!;
-      const q = pois[parent[i]!]!;
+    const faceTowards = (p: Poi, q: Poi): void => {
       const dx = q.x - p.x;
       const dy = q.y - p.y;
       p.side = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "E" : "W") : dy > 0 ? "S" : "N";
+    };
+    for (let i = 1; i < roaded.length; i++) faceTowards(roaded[i]!, roaded[parent[i]!]!);
+    for (const p of pois) {
+      if (!isTower(p)) continue;
+      const near = roaded.reduce((best, q) => (Math.abs(q.x - p.x) + Math.abs(q.y - p.y) < Math.abs(best.x - p.x) + Math.abs(best.y - p.y) ? q : best), roaded[0]!);
+      faceTowards(p, near);
     }
     const lava = isl.biome === BIOME.LAVA;
     // on a lava island the roads are streams of lava through the mountains, one or two tiles wide, the whole way
@@ -805,7 +816,11 @@ export class World {
       const width = rngFor(this.seed, LAYER.ROAD, "lava-width", isl.index, n).int(1000) < LAVA_WIDE ? 2 : 1;
       return segs.map((seg) => seg.asLava(width));
     };
-    const connectors = edges.flatMap(([a, b], i) => stream(this.route(pois[a]!, pois[b]!, this.roadSeed("C", isl.index, i), pois), i));
+    const connectors = edges.flatMap(([a, b], i) => stream(this.route(roaded[a]!, roaded[b]!, this.roadSeed("C", isl.index, i), pois), i));
+    pois.filter(isTower).forEach((tower, n) => {
+      const near = roaded.reduce((best, q) => (Math.abs(q.x - tower.x) + Math.abs(q.y - tower.y) < Math.abs(best.x - tower.x) + Math.abs(best.y - tower.y) ? q : best), roaded[0]!);
+      connectors.push(...this.route(tower, near, this.roadSeed("T", isl.index, n), pois).map((seg) => seg.asBare()));
+    });
     if (lava) connectors.push(...stream(this.lavaEntry(isl, pois), edges.length));
     return { pois, connectors };
   }
@@ -857,7 +872,12 @@ export class World {
       pyramids = thinned.pyramids;
     }
     this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords, this.castleSpells, pyramids);
-    for (const p of placed.flat()) if (this.dungeonRefs.get(p.id)?.klass === "C") p.size = PYRAMID_SIZE;
+    for (const p of placed.flat()) {
+      const ref = this.dungeonRefs.get(p.id);
+      if (ref?.klass === "C") p.size = PYRAMID_SIZE;
+      // a dungeon built as a tower stands on 2 x 2 tiles (quest document 1.7)
+      else if (ref?.layout === "dungeon_5") p.size = TOWER_SIZE;
+    }
     this.plans = this.layout.islands.map((isl, i) => this.planIsland(isl, placed[i]!));
     // the bridge between the start island and the level-3 island: a road from a place on the level-2 half to the place of the other island nearest to it
     for (const isl of this.layout.islands) {
@@ -865,7 +885,9 @@ export class World {
       const other = this.layout.islands[isl.bridge]!;
       const mine = this.plans[isl.index]!;
       const theirs = this.plans[other.index]!;
-      const nearest = (list: readonly Poi[], to: Island, tier?: number): Poi | undefined => {
+      const nearest = (all: readonly Poi[], to: Island, tier?: number): Poi | undefined => {
+        // (no road leads to a tower, the bridge does not either)
+        const list = all.filter((p) => !isTower(p));
         const pool = tier === undefined ? list : list.filter((p) => p.tier === tier);
         const choice = pool.length > 0 ? pool : list;
         return choice.reduce<Poi | undefined>((best, p) => (best === undefined || Math.abs(p.x - to.x) + Math.abs(p.y - to.y) < Math.abs(best.x - to.x) + Math.abs(best.y - to.y) ? p : best), undefined);
@@ -1072,6 +1094,8 @@ export class World {
     let onRoad = false;
     let onLava = false;
     let open = false;
+    // (a tile that only a bare way to a tower crosses is plain ground)
+    let onlyBare = true;
     for (const road of this.chunkRoads[chunk]!) {
       if (!road.contains(tx, ty)) continue;
       if (road.lava) {
@@ -1079,6 +1103,7 @@ export class World {
         continue;
       }
       onRoad = true;
+      if (!road.bare) onlyBare = false;
       // where two roads share a tile, either of them may open the pass
       if (inRock && this.opensUp(road, tx, ty)) open = true;
       else if (!inRock) break;
@@ -1086,7 +1111,7 @@ export class World {
     if (onRoad) {
       if (ground === GROUND.WATER || ground === GROUND.LAVA_POOL) ground = GROUND.BRIDGE;
       else if (inRock && !open) ground = GROUND.PASS;
-      else ground = GROUND.ROAD;
+      else ground = onlyBare ? GROUND.LAND : GROUND.ROAD;
       deco = DECO.NONE;
     } else if (onLava && !cleared) {
       ground = GROUND.LAVA_POOL;

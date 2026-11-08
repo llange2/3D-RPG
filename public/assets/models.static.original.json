@@ -4245,5 +4245,59 @@
   "surface": 1,
   "fromObj": false,
   "mean": 0.567
+ },
+ "blk_wooden_floor": {
+  "file": "models-original/blk_wooden_floor.glb",
+  "tris": 1400,
+  "bytes": 895808,
+  "bounds": [
+   -0.9503620266914368,
+   -0.06462112069129944,
+   -0.9501301050186157,
+   0.9485160112380981,
+   0.08965699374675751,
+   0.9485720992088318
+  ],
+  "animations": [],
+  "groundTop": 0.05,
+  "surface": 0.085,
+  "fromObj": false,
+  "mean": 0.318
+ },
+ "poi_tower": {
+  "file": "models-original/poi_tower.glb",
+  "tris": 10314,
+  "bytes": 5862208,
+  "bounds": [
+   -0.4819290041923523,
+   -0.9517441987991333,
+   -0.5444321632385254,
+   0.48394501209259033,
+   0.9507091045379639,
+   0.5473519563674927
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "surface": 0.28,
+  "fromObj": false,
+  "mean": 0.484
+ },
+ "obj_spiral_staircase": {
+  "file": "models-original/obj_spiral_staircase.glb",
+  "tris": 9372,
+  "bytes": 4624332,
+  "bounds": [
+   -0.6944569945335388,
+   -0.9514561891555786,
+   -0.6899280548095703,
+   0.6939899921417236,
+   0.9506531357765198,
+   0.6892901659011841
+  ],
+  "animations": [],
+  "groundTop": -0.9,
+  "surface": -0.2625,
+  "fromObj": false,
+  "mean": 0.369
  }
 }

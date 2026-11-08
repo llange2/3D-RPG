@@ -308,6 +308,7 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "shrine": case "fountain": return "event";
     case "riddle": case "gong": case "lever": case "head": case "chalice": case "machine": return "event";
     case "qportal": return "teleporter_city";
+    case "stairs": return "event";
     default: return null;
   }
 }
@@ -635,6 +636,7 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "king": return "The king";
         case "skullmiser": return "The Skull Miser";
         case "qportal": return "Portal back to the entrance";
+        case "stairs": return a.params.up === true ? "Spiral staircase up" : "Door down";
         case "portal": return "Portal";
         case "work": return "Job master: work a week for gold";
         default: break;

@@ -731,6 +731,9 @@ export const STATIC_MODELS: ModelSpec[] = [
   { ...S("poi_town", "new:Village (poi_town).glb", 9000, 1024), normals: "smooth", ...REPLACED_ITEMS[47] },
   // the cottage: a house that stands in the place of every third rustic caravan (`world/caravans.ts`, the caravan landmarks), and the pirate ship of ue_quest_4
   S("obj_cottage", "new:Cottage.glb", 3000, 1024),
+  // the tower of the layout dungeon_5 (quest document 1.7, the user's models): the building on the overworld (2 x 2 tiles, 10 314 triangles) and the spiral staircase inside (9 372)
+  { ...S("poi_tower", "new:Tower.glb", 6000, 1024), normals: "smooth" },
+  S("obj_spiral_staircase", "new:Spiral_Staircase.glb", 4500, 1024),
   S("obj_pirate_ship", "new:Pirate Ship.glb", 4500, 1024),
   // the Capybara (7. 11. 2026, the user's model): the Easter egg mascot that waits behind a brittle wall of the start town (`world/mascots.ts`)
   S("obj_capybara", "new:Capybara.glb", 3000, 1024),
@@ -855,6 +858,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   { ...S("blk_cave_ceiling", "new:Cave Ceiling (tex_cave_ceiling).glb", 1000, 1024), rotateX: 90, capped: true },
   // the castle's floor (it lies flat in the file already). The castle has no 3D wall and the spaceship no 3D floor and no 3D ceiling: all stay flat
   { ...S("blk_fortress_floor", "new:Castle_floor.glb", 1400, 1024), capped: true },
+  // the tower's wooden floor (quest document 1.7, 1.9 x 0.15 x 1.9, lying flat in the file): one slab per cell like the castle's, drawn above the flat `tex_wooden_floor`
+  { ...S("blk_wooden_floor", "new:Wooden_floor.glb", 1400, 1024), capped: true },
   // the wall pieces of "Full 3D", standing upright in the files (the thin side along z, the relief towards +z): one per wall face, the city's 0.94 x 0.96 and
   // 0.05 thick, the dungeon's 0.66 x 0.96 and 0.14 thick, and the dungeon's broken wall, 0.64 x 0.96 and 0.24 thick. Their relief has undercuts: a
   // reduction tears black cracks into it (it did in the castle's), so they keep what the source has, 2300 to 3200 triangles

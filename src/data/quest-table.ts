@@ -7,7 +7,13 @@
 export const QUEST_IDS = ["quest_1", "quest_2", "quest_3", "quest_4", "quest_5", "quest_6"] as const;
 export type QuestId = (typeof QUEST_IDS)[number];
 
-export const DUNGEON_LAYOUTS = ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4"] as const;
+/**
+ * The layouts of the dungeons. `dungeon_5` is the tower (quest document 1.7: the table of the quests calls it dungeon_5, the section that describes it dungeon_6; the table is
+ * what the generator follows): quests 2, 4 and 5 are built in it, the others never.
+ */
+export const DUNGEON_LAYOUTS = ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4", "dungeon_5"] as const;
+/** The layouts every quest that is not restricted may use: all but the tower (quest 6 is built in dungeon_1 to dungeon_4, the caves and the castle). */
+const PLAIN_DUNGEONS = ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4"] as const;
 export const CAVE_LAYOUTS = ["cave_1", "cave_2", "cave_3"] as const;
 export type LayoutId = (typeof DUNGEON_LAYOUTS)[number] | (typeof CAVE_LAYOUTS)[number] | "castle_1" | "spaceship_1";
 
@@ -26,11 +32,11 @@ export interface QuestDef {
 
 export const QUESTS: Readonly<Record<QuestId, QuestDef>> = {
   quest_1: { id: "quest_1", name: "The Moaning Statues", layouts: ["dungeon_2", "dungeon_4"], groups: LAND_GROUPS }, // (quest document 1.3: never in the maze, the field of statues needs a hall)
-  quest_2: { id: "quest_2", name: "Direction of Faces", layouts: ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4"], groups: LAND_GROUPS },
+  quest_2: { id: "quest_2", name: "Direction of Faces", layouts: ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4", "dungeon_5"], groups: LAND_GROUPS },
   quest_3: { id: "quest_3", name: "The Gongs", layouts: ["dungeon_4", "cave_1", "cave_2", "cave_3"], groups: ["beast", "plant"] },
-  quest_4: { id: "quest_4", name: "Calculations", layouts: ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4"], groups: LAND_GROUPS },
+  quest_4: { id: "quest_4", name: "Calculations", layouts: ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4", "dungeon_5"], groups: LAND_GROUPS },
   quest_5: { id: "quest_5", name: "The Final Boss", layouts: [...DUNGEON_LAYOUTS, ...CAVE_LAYOUTS], groups: LAND_GROUPS },
-  quest_6: { id: "quest_6", name: "Riddle", layouts: [...DUNGEON_LAYOUTS, ...CAVE_LAYOUTS], groups: LAND_GROUPS },
+  quest_6: { id: "quest_6", name: "Riddle", layouts: [...PLAIN_DUNGEONS, ...CAVE_LAYOUTS], groups: LAND_GROUPS },
 };
 
 /** Quest 6 is also built in a castle (levels 2 to 4) and in the spaceship (level 5, robots only). */
@@ -135,6 +141,14 @@ export const ENGINE_CRYSTAL_FLAG = "ship:engine";
 export const CRATE_ITEM = 301;
 export const BROKEN_CRYSTAL_ITEM = 302;
 export const CONSOLE_ITEM = 303;
+/**
+ * The stairs of a tower (quest document 1.7): the spiral staircase of the user (`obj_spiral_staircase`, a pseudo item like the ones above) and, on the floor above, the Fort door of the
+ * castle (old item 100, the castle's gate) that leads down again.
+ */
+export const STAIRCASE_ITEM = 304;
+export const FORT_DOOR_ITEM = 100;
+/** The staircase file is 1.4 wide and 1.9 high: 2.3 times that fills a cell (3.2) and reaches the 4.5 of a dungeon's walls (4.4). */
+export const STAIRCASE_SCALE = 2.3;
 /** The console is 3 times its file (1.5 times the first size, 3 units wide: a cell) and may reach into the cells around it; this many cells around it stay free of objects (user, 6. 11. 2026). */
 export const CONSOLE_SCALE = 3;
 export const CONSOLE_CLEAR = 2;

@@ -13,11 +13,12 @@ import { BONES_FIND_CHANCE, CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS, RAT_TRAP, SE
 import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
 import { WALL_DECO_ITEMS, WALL_DECO_SPACING, pickWallDeco } from "../data/wall-deco";
-import type { MonsterGroup } from "../data/quest-table";
+import { FORT_DOOR_ITEM, STAIRCASE_ITEM, type MonsterGroup } from "../data/quest-table";
 import { monsterGroup } from "../data/tables";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { TRAP_DAMAGE } from "../data/rules";
+import { stairLinks } from "../interiors/stairs";
 import { analyzeTopology, type Topology } from "../interiors/topology";
 import { blocksPassage } from "../interiors/passage";
 import { CELL, FACING_DELTA, type InteriorMap } from "../interiors/types";
@@ -121,6 +122,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   for (const v of map.dungeon?.vaults ?? []) hiddenWalls.add(idx(v.seal.x, v.seal.y));
   const seen = new Uint8Array(map.width * map.height);
   const queue = new Int32Array(map.width * map.height);
+  const jumps = stairLinks(map);
   const reachableCount = (): number => {
     seen.fill(0);
     let head = 0;
@@ -138,6 +140,12 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       const i = queue[head++]!;
       const x = i % map.width;
       const y = (i - x) / map.width;
+      // the stairs of a tower take the party to the other floor
+      const jump = jumps.get(i);
+      if (jump !== undefined && !seen[jump] && !blockedCells.has(jump)) {
+        seen[jump] = 1;
+        queue[tail++] = jump;
+      }
       for (const d of ["N", "E", "S", "W"] as const) {
         const nx = x + FACING_DELTA[d].dx;
         const ny = y + FACING_DELTA[d].dy;
@@ -258,6 +266,14 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     if (!anchors.byKind.roomCenter.some((r) => r.x === to.x && r.y === to.y)) occupied.add(idx(to.x, to.y));
   });
 
+  // the stairs of a tower (quest document 1.7): a spiral staircase up, and on the floor above at the same place the Fort door that leads down again; each lands the party in front of
+  // the other. All four cells stay bare (the arrival must be free, and the stairs are no place for an object)
+  (map.dungeon?.tower?.stairs ?? []).forEach((s, i) => {
+    actions.push({ uid: `${map.key}#stairs:${i}:up`, kind: "stairs", x: s.up.x, y: s.up.y, params: { item: STAIRCASE_ITEM, tx: s.land.x, ty: s.land.y, up: true, facing: s.facing } });
+    actions.push({ uid: `${map.key}#stairs:${i}:down`, kind: "stairs", x: s.down.x, y: s.down.y, params: { item: FORT_DOOR_ITEM, tx: s.front.x, ty: s.front.y, up: false, facing: s.facing } });
+    for (const p of [s.up, s.front, s.down, s.land]) occupied.add(idx(p.x, p.y));
+  });
+
   // The puzzle of the theme comes first: it reserves its hall and its cells before the ordinary rules fill the place.
   const questUids = new Map<string, number>();
   const roomCentres = new Set(anchors.byKind.roomCenter.map((a) => idx(a.x, a.y)));
@@ -311,7 +327,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // the cells where a rune, a wrong answer or a portal sets the party down: no group of monsters starts on one of them (36th playtest, point 4; the game moves a monster that
   // wandered there since)
   const landings = new Set<number>();
-  for (const act of actions) if ((act.kind === "teleporter" || act.kind === "riddle" || act.kind === "qportal") && (act.params.tx !== 0 || act.params.ty !== 0) && act.params.tx !== undefined) landings.add(idx(Number(act.params.tx), Number(act.params.ty)));
+  for (const act of actions) if ((act.kind === "teleporter" || act.kind === "riddle" || act.kind === "qportal" || act.kind === "stairs") && (act.params.tx !== 0 || act.params.ty !== 0) && act.params.tx !== undefined) landings.add(idx(Number(act.params.tx), Number(act.params.ty)));
 
   // the Crow's perch and the Capybara's pocket are not actions but they are there: their cells are taken, and solid while the mascot sits on them
   for (const site of map.sites ?? []) {

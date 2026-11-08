@@ -10,7 +10,7 @@ import { MINIMAP_CELLS } from "../../src/game/minimap";
 import { CELL, FACING_DELTA, generateInterior } from "../../src/interiors";
 import { createDefaultParty } from "../../src/sim/party";
 import { overworldMascotSpots } from "../../src/world/mascots";
-import { BIOME, CHUNK_SIZE, DECO, GROUND, isTileWalkable, poiBounds, poiEntrances, type Poi, type TileInfo } from "../../src/world/types";
+import { BIOME, CHUNK_SIZE, DECO, GROUND, isTileWalkable, isTower, poiBounds, poiEntrances, type Poi, type TileInfo } from "../../src/world/types";
 import { World } from "../../src/world/world";
 import { buildWalkGrid, flood } from "../helpers/reach";
 
@@ -145,7 +145,8 @@ describe("nineteenth playtest: roads end at the entrance (points 6 and 11)", () 
             const front = entrances[0]!;
             // (a place alone on its island has no road to walk)
             // (nor has a place of a lava island: its ways are streams of lava that end at the cleared ground round the place)
-            if (world.region(rx, ry).pois.length > 1 && world.islands[rx]!.biome !== BIOME.LAVA) expect(isRoad(world.tile(front.x, front.y).ground), `${p.id} has no road at its door`).toBe(true);
+            // (nor has a tower: no road leads to it, quest document 1.7, a bare way of plain ground does)
+            if (world.region(rx, ry).pois.length > 1 && world.islands[rx]!.biome !== BIOME.LAVA && !isTower(p)) expect(isRoad(world.tile(front.x, front.y).ground), `${p.id} has no road at its door`).toBe(true);
             // a road that stops at a wall of the place (not at its door) is a fault, a rare one when a road has to pass another place
             const { dx, dy } = { N: { dx: 0, dy: -1 }, E: { dx: 1, dy: 0 }, S: { dx: 0, dy: 1 }, W: { dx: -1, dy: 0 } }[p.side];
             for (let y = bb.y0 - 1; y <= bb.y1 + 1; y++) {
