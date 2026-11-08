@@ -8,7 +8,7 @@ import { planPlaces, thinOutPlaces } from "../interiors/dungeonPlan";
 import { SHOWCASE_ID, SHOWCASE_NAME } from "../interiors/showcase";
 import type { DungeonRef } from "../interiors/types";
 import { FIELD_UNIT, ISLAND_EDGE, buildLayout, fieldAt, isqrt, tierOn, wrapDist2, type Island, type Layout } from "./islands";
-import { roadThrough, type Pt, type RoadSeg } from "./roads";
+import { RoadSeg, roadThrough, type Pt } from "./roads";
 import {
   BIOME,
   CHUNK_SIZE,
@@ -87,6 +87,8 @@ const SHORE_LAND: ReadonlySet<Ground> = new Set([GROUND.LAND, GROUND.ROAD, GROUN
 const FLATTEN = 2;
 /** The ring of lava round a place on a lava island (see `composeTile`); the footprint itself stays a block. */
 const LAVA_RING = 1;
+/** The lane cut into the rock for the wagon of a locked place on a lava island (see `hintAlleys`). */
+const ALLEY_LENGTH = 2;
 /** Tiles of sea in a row that the lava stream into an island may cross on its way to the open sea (see `lavaEntry`). */
 const LANDING_GAP = 3;
 /**
@@ -821,8 +823,65 @@ export class World {
       const near = roaded.reduce((best, q) => (Math.abs(q.x - tower.x) + Math.abs(q.y - tower.y) < Math.abs(best.x - tower.x) + Math.abs(best.y - tower.y) ? q : best), roaded[0]!);
       connectors.push(...this.route(tower, near, this.roadSeed("T", isl.index, n), pois).map((seg) => seg.asBare()));
     });
-    if (lava) connectors.push(...stream(this.lavaEntry(isl, pois), edges.length));
+    if (lava) {
+      connectors.push(...stream(this.lavaEntry(isl, pois), edges.length));
+      connectors.push(...this.hintAlleys(pois, connectors));
+    }
     return { pois, connectors };
+  }
+
+  /** Where the wagon with the hint stands at a locked place on a lava island: the end of the lane cut into the rock for it (`hintAlleys`), by place id. */
+  private readonly alleys = new Map<string, Pt[]>();
+
+  /**
+   * 51st playtest, point 11: a locked place (a dungeon that asks for a key, a pyramid that asks for a key card) on a lava island is all rock and lava, so the wagon of the hint found
+   * no ground within three tiles and stood far away. Now a lane of `ALLEY_LENGTH` tiles of dirt leads out from the ring of lava round the place, and the wagon stands at its end. The lane
+   * starts on the first tile beyond the ring and runs north, south, east or west (in this order, never to the side of the entrance) in the column or row of the footprint's far edge,
+   * as far as the rock is free: nothing but rock round it, no lava stream, no other place within three tiles.
+   */
+  private hintAlleys(pois: readonly Poi[], others: readonly RoadSeg[]): RoadSeg[] {
+    const out: RoadSeg[] = [];
+    const sides: PoiSide[] = ["N", "S", "E", "W"];
+    for (const p of pois) {
+      if (!this.dungeonRefs.get(p.id)?.requires) continue;
+      const b = poiBounds(p);
+      for (const side of sides) {
+        if (side === p.side) continue;
+        const { dx, dy } = SIDE_DELTA[side];
+        // the lane runs along `dx`/`dy`; it starts beyond the ring of lava and keeps to the last column (or row) of the footprint
+        const start = { x: dx === 0 ? b.x1 : dx > 0 ? b.x1 + LAVA_RING + 1 : b.x0 - LAVA_RING - 1, y: dy === 0 ? b.y1 : dy > 0 ? b.y1 + LAVA_RING + 1 : b.y0 - LAVA_RING - 1 };
+        const tiles: Pt[] = [];
+        for (let k = 0; k < ALLEY_LENGTH; k++) tiles.push({ x: start.x + dx * k, y: start.y + dy * k });
+        const free = tiles.every((t) => {
+          const base = this.baseTile(this.wrapX(t.x), this.wrapY(t.y));
+          if (base.landBiome !== BIOME.LAVA || base.ground !== GROUND.LAND) return false;
+          if (others.some((r) => r.distance(t.x, t.y) <= 1) || out.some((r) => r.distance(t.x, t.y) <= 1)) return false;
+          return pois.every((q) => {
+            const qb = poiBounds(q);
+            // (beyond the ring of lava of its own place, three tiles from the others)
+            const near = q === p ? LAVA_RING : 3;
+            return t.x < qb.x0 - near || t.x > qb.x1 + near || t.y < qb.y0 - near || t.y > qb.y1 + near;
+          });
+        });
+        if (!free) continue;
+        out.push(new RoadSeg(tiles[0]!, tiles[tiles.length - 1]!, 1, false, false, true));
+        this.alleys.set(p.id, tiles);
+        break;
+      }
+    }
+    return out;
+  }
+
+  /** The end of the lane for the wagon at a locked place on a lava island, or undefined (any other place). */
+  hintAlleyEnd(poiId: string): Pt | undefined {
+    const tiles = this.hintAlleyTiles(poiId);
+    return tiles[tiles.length - 1];
+  }
+
+  /** The tiles of the lane at a locked place on a lava island, from the lava ring outwards; empty for any other place. */
+  hintAlleyTiles(poiId: string): readonly Pt[] {
+    this.plan();
+    return this.alleys.get(poiId) ?? [];
   }
 
   /**
@@ -1097,11 +1156,16 @@ export class World {
     const inRock = ground === GROUND.MOUNTAIN;
     let onRoad = false;
     let onLava = false;
+    let onAlley = false;
     let open = false;
     // (a tile that only a bare way to a tower crosses is plain ground)
     let onlyBare = true;
     for (const road of this.chunkRoads[chunk]!) {
       if (!road.contains(tx, ty)) continue;
+      if (road.alley) {
+        onAlley = true;
+        continue;
+      }
       if (road.lava) {
         onLava = true;
         continue;
@@ -1121,6 +1185,12 @@ export class World {
       ground = GROUND.LAVA_POOL;
       biome = base.landBiome;
       deco = DECO.NONE;
+    } else if (onAlley && !cleared) {
+      // the lane at a locked place: plain dirt in the rock (the lava island's land is dirt), the wagon with the hint stands at its end
+      ground = GROUND.LAND;
+      biome = base.landBiome;
+      deco = DECO.NONE;
+      elevation = base.elevation;
     }
 
     // 3. POI footprints override roads: the model stands on plain ground and blocks it

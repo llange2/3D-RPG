@@ -61,7 +61,7 @@ describe("30th playtest", () => {
 
   it("builds the Catacombs of Varvaa of seed jade-hold-129 without a tube", { timeout: 120_000 }, () => {
     const world = new World("jade-hold-129", "default");
-    const place = world.allPois().find((p) => p.name === "Catacombs of Varvaa")!;
+    const place = world.allPois().find((p) => p.id === "p:0:0:171" /* the Catacombs of Varvaa before the 51st playtest doubled the names */)!;
     expect(longestCorridor(generateInterior(world, place, 0))).toBeLessThanOrEqual(MAX_STRAIGHT);
   });
 
@@ -88,7 +88,7 @@ describe("30th playtest", () => {
 
   it("lights every crystal of a place in its own colour", { timeout: 120_000 }, () => {
     const world = new World("jade-hold-129", "default");
-    const place = world.allPois().find((p) => p.name === "Catacombs of Varvaa")!;
+    const place = world.allPois().find((p) => p.id === "p:0:0:171" /* the Catacombs of Varvaa before the 51st playtest doubled the names */)!;
     const map = generateInterior(world, place, 0);
     const content = generateContent(map, RULE_SETS[map.kind], { rootSeed: world.rootSeed });
     // a crystal of a riddle, a shrine or the decoration: each one lights its own cell

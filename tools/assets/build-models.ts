@@ -695,6 +695,10 @@ const S = (key: string, source: string, maxTris: number, texSize = 512, animated
  * Rustic lantern (76), which the generated world uses as `poi_castle`, `poi_town` and `obj_lantern` too, and the Mermaid fountain (89). `rotateY` turns the new model to face as the old one did.
  */
 const REPLACED_ITEMS: Record<number, Pick<ModelSpec, "source" | "rotateY">> = {
+  // the rustic caravan, the dungeon entrance and the pyramid (51st playtest, point 12: the user's upgrades of the old models; `Rustic_Caravan.glb`, `Dungeon_entrance.glb` and `Pyramid.glb`)
+  26: { source: "new:Rustic_Caravan.glb" },
+  41: { source: "new:Dungeon_entrance.glb" },
+  43: { source: "new:Pyramid.glb" },
   44: { source: "new:Castle.glb" },
   47: { source: "new:Village (poi_town).glb" },
   76: { source: "new:Rustic lantern (obj_lantern).glb" },
@@ -757,8 +761,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_deco_demon_2", "new:Decoration_demon_2.glb", 4000, 512),
   S("obj_deco_lion", "new:Decoration_lion.glb", 4000, 512),
   S("poi_hut", "Hut.obj", 1200),
-  S("poi_pyramid", "Pyramid.obj", 900),
-  S("poi_dungeon", "Dungeon entrance.obj", 1200),
+  { ...S("poi_pyramid", "new:Pyramid.glb", 900), ...REPLACED_ITEMS[43] },
+  { ...S("poi_dungeon", "new:Dungeon_entrance.glb", 1200), ...REPLACED_ITEMS[41] },
   S("poi_cave", "Cave entrance.glb", 1200),
   S("poi_gate", "Castle Gate.glb", 1500),
   S("poi_portal", "Portal.obj", 600),

@@ -154,5 +154,7 @@
  * in the big rooms of the dungeons and towers (`actions/beams.ts`, params `side`, `bearing`) and no longer one of the random props; a place that must hide a coin, a skull or a pearl always has an ordinary chest for it (`#chest_spare:0`).
  * 59 = the wooden stairs of the towers (49th playtest, point 3): the stairs fill their cell and rise a storey to the Fort door, so the staircase's foot cell is no longer kept open (`rimSpot`, other
  * rims are drawn); the cell above the stairs is a shaft one storey higher (`towerShafts`, rendering only).
+ * 60 = the 51st playtest: a tower furnishes with the table, the intact bookshelf, the fireplace, the alchemy table, the table with food and stored goods first, never with a gravestone (`towerDecor`); the names of
+ * dungeons, caves and towers have twice as many parts (`data/names.ts`); a locked place on a lava island has a lane of dirt cut into the rock for its hint wagon (`RoadSeg.alley`, `World.hintAlleys`).
  */
-export const GEN_VERSION = 59;
+export const GEN_VERSION = 60;

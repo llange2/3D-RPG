@@ -1,7 +1,7 @@
 import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, type MonsterDef } from "../data/tables";
 import { earlyMissChance, fairyReduction, isV4, RULES } from "./balance";
-import { addCondition, anyoneLeft, armor, attr, canAct, equippedItems, fightSpeed, getBaseValue, isRifted, itemBonus, pyRound, removeCondition, resistance } from "./character";
+import { addCondition, anyoneLeft, armor, attr, canAct, equippedItems, fightSpeed, getBaseValue, isRifted, itemBonus, pyRound, removeCondition, resistanceShare } from "./character";
 import { cheats } from "./cheats";
 import { sumBonus } from "./items";
 import { hasEffect, protectionLevel } from "./party";
@@ -84,11 +84,11 @@ export function spellDamageToMonster(monster: MonsterDef, damage: number, type: 
 const ELEMENTS = new Set(["fire", "ice", "acid", "magic"]);
 
 /**
- * What is left of an elemental hit on `target`: reduced by the resistance in percent (worn items count), then by flat spell
- * protection and the Fairy mascot, never below 0 (the old apply_trap_damage and calculate_monster_damage do the same).
+ * What is left of an elemental hit on `target`: reduced by the resistance in percent (worn items count, at most `RESISTANCE_CAP` = 80 %), then by flat spell
+ * protection (Protection from Elements: the caster's level in points) and the Fairy mascot (30 points), never below 0 (the old apply_trap_damage and calculate_monster_damage do the same).
  */
 export function elementalDamage(party: Party, target: Character, element: "acid" | "fire" | "ice" | "magic", damage: number): number {
-  let total = pyRound(damage * (1 - resistance(target, element) / 100));
+  let total = pyRound(damage * (1 - resistanceShare(target, element) / 100));
   total -= protectionLevel(party, element);
   // BALANCE v4: the Fairy takes 30 off (the old game's constant is 20; the generated constants.json stays untouched)
   if (party.mascot === "Fairy") total -= fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION);

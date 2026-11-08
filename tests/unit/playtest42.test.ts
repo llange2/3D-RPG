@@ -84,7 +84,7 @@ describe("42nd playtest, points 5 and 6: quest 2, the Catacombs of Kela", () => 
     }
     expect(checked).toBeGreaterThan(0);
     // (the Catacombs of Kela, a maze, are one of those with runes)
-    const kela = world.allPois().find((p) => p.name === "Catacombs of Kela")!;
+    const kela = world.allPois().find((p) => p.id === "p:0:0:233" /* the Catacombs of Kela before the 51st playtest doubled the names */)!;
     expect(planDungeon(world, kela)?.quest).toBe("quest_2");
     expect(generateInterior(world, kela).dungeon?.endRoom?.isolated).toBe(true);
     expect(withRunes).toBeGreaterThan(0);

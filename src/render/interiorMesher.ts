@@ -279,15 +279,25 @@ function addDoorFrame(b: Bucket, frame: DoorFrame, H: number): void {
   side(0, 1, DOOR_OPENING_WIDTH, DOOR_OPENING_HEIGHT, H);
   side(0, -1, DOOR_OPENING_WIDTH, DOOR_OPENING_HEIGHT, H);
   // (the underside is a ceiling quad: the same corners in the same order, here for the box's rectangle)
-  const [x0, x1] = frame.axis === "x" ? [cx - depth, cx + depth] : [cx - open, cx + open];
-  const [z0, z1] = frame.axis === "x" ? [cz - open, cz + open] : [cz - depth, cz + depth];
+  // 51st playtest, point 3: the picture ran once over the depth of 0.48 and was far too tight. Along the doorway it is now the wall's across the cell (`u` is the same function of `s` as on the
+  // faces of the lintel, so the stones' joints carry on from the stones above); across the depth it is the one row of stones that lies right over the lintel's lower edge (up to `UNDERSIDE_V1`):
+  // one stone deep, no joint across (the lintel's lower edge is the picture's `y / H`, as on the faces).
   const y = DOOR_OPENING_HEIGHT;
-  const ua = b.vertex([x0, y, z1], [0, -1, 0], [0, 0], 0.93);
-  const ub = b.vertex([x1, y, z1], [0, -1, 0], [1, 0], 0.93);
-  const uc = b.vertex([x1, y, z0], [0, -1, 0], [1, 1], 0.93);
-  const ud = b.vertex([x0, y, z0], [0, -1, 0], [0, 1], 0.93);
+  const corner = (sc: number, tc: number): number => {
+    const [px, pz] = at(sc, tc);
+    const v = y / H + ((tc + depth) / (2 * depth)) * (UNDERSIDE_V1 - y / H);
+    return b.vertex([px, y, pz], [0, -1, 0], [(sc + half) / CELL_SIZE, v], 0.93);
+  };
+  // the corners in the order of the old quad: for a door walked through east to west (axis "x") (-t, +s), (+t, +s), (+t, -s), (-t, -s), else (-s, +t), (+s, +t), (+s, -t), (-s, -t)
+  const [ua, ub, uc, ud] =
+    frame.axis === "x"
+      ? [corner(open, -depth), corner(open, depth), corner(-open, depth), corner(-open, -depth)]
+      : [corner(-open, depth), corner(open, depth), corner(open, -depth), corner(-open, -depth)];
   b.indices.push(ua, ub, uc, ua, uc, ud);
 }
+
+/** The upper end of that row: the next joint above the lintel's lower edge (pixel 162 of 512 from the top, measured on `tex_dungeon_wall`). */
+const UNDERSIDE_V1 = (512 - 162) / 512;
 
 /**
  * Builds floors, ceilings and wall faces. Only faces that border a floor cell exist, so a 96x96 dungeon stays at a few

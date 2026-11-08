@@ -1562,6 +1562,25 @@ Vier Punkte, alles Darstellung und Ton, der Generator bleibt gleich. Tests: `tes
 3. **Zauber-Buttons vorladen:** Bild-Blatt der Zauber und Platte „Select“ wurden schon beim Start geladen, aber nur als `Image`-Variable, die der Browser verwerfen kann. `keepSpellArtWarm()` (`ui/warmUp.ts`, aus `main.ts`) hängt eine Platte und einen Button fast unsichtbar (Deckkraft 0,01, unter allem, 128 und 110 px wie im Fenster) dauerhaft in die Seite, damit Blatt, Button und ihre Texturen im Speicher der Grafikkarte bleiben. „Who casts?“ wartet jetzt auch auf `preloadButtonArt()`. Nicht im Browser gemessen (ein Ladeflackern lässt sich im Headless-Lauf nicht zuverlässig sehen): beim nächsten Playtest prüfen.
 4. **Fackeln vor dem Turm:** die Standfackeln (`proc_torch`, `proc_flame`, `TORCH_SCALE`, das Material `procedural-glow`) sind entfernt, das Turmmodell hat seine Wandfackeln neben der Tür selbst. Die Lichtquellen bleiben, vorn links und rechts der Tür (`towerTorchSpots`: 0,8 vor der Wand, 1,8 seitlich, wo die Wandfackeln des Modells sitzen), auf **Höhe des Erdgeschosses** (`y` 2,5, vorher 3,2) und **schwächer** (Intensität 1,5 statt 3,6, Reichweite 10 statt 11). Der Pool nimmt eine Lampe ab 18 Einheiten Abstand und blendet sie bis 14 ein: bei 5 Feldern vor dem Turm hat sie Stufe 0,7 bis 0,9 (gemessen, `lit` 0,73 / 0,86), bei 7 Feldern ist sie aus.
 
+### Der 51. Playtest (8. 11. 2026, `GEN_VERSION` 60, `tests/unit/playtest51.test.ts`)
+
+1. **Dragon Breath** schießt je Monster ein Projektil seines Elements (`launchPartyShots`, `SPELL_PROJECTILE`), keine Linie mehr; Prismatic Light behält die Linien.
+2. **Laterne (Item 76)** hängt 0,6 tiefer (`Y_OFFSET`/`LANTERN_DROP` in `data/item-tuning.ts`, ein Nutzer-Maß für Modell und Licht), die Kette ist zu sehen; ihr Licht ist das der Turmfackeln (`TOWER_TORCH_LAMP`: warm, schwach, weit).
+3. **Türsturz im Turm** (`addDoorFrame`): die Unterseite zeigt die Wandtextur im Maßstab der Wand (u wie auf den Seitenflächen, damit die Fugen mit den Steinen darüber fluchten) und genau eine Steinreihe in der Tiefe (`UNDERSIDE_V1`, Pixel 162 von 512 der Textur `tex_dungeon_wall`).
+4. **Turmdeko** (`towerDecor` in `actions/rules.ts`): Holztisch (94), heiles Bücherregal (75), Kamin (71), Alchemietisch (15), Tisch mit Essen (14) und Lagersachen (13) zu drei Vierteln, nie der Grabstein (32); Holzbalken kommen weiter aus `planBeams`. Reicht das Theme für keinen der bevorzugten Gegenstände, bleibt es bei den übrigen.
+5. Die **Infobox** oben rechts schreibt Landschaft und Ortsart groß (`capitalise` in `hudInfo`: „Meadow“).
+6. **Namen** von Dungeons, Höhlen und Türmen: doppelt so viele Endungen, Anfänge und Mittelstücke (`data/names.ts`); Städte und Burgen behalten ihre Listen. Die Namen aller Dungeons und Höhlen ändern sich dadurch; Tests, die einen Ort nach dem Namen suchten, nehmen jetzt seine Id.
+7. **Schlafende Helden** (`Game.camp`): Monster im Aktionsradius plus 4 (`CAMP_RADIUS`) kommen zum Lager, die Monster haben `CAMP_TURNS` Züge.
+8. **Monster ohne Weg um die anderen** (`monsterTurn`): Fernkämpfer bleiben stehen, die anderen rücken auf dem Weg durch die anderen vor, soweit die Felder frei sind.
+9. **Pyramide verlassen**: „Leave Bridge sector?“ (`placeTitle`).
+10. **Schlüssel und Keycards** werden beim Aufschließen verbraucht (Frage „Use the key?“ in `promptEnterPoi`), der Ort bleibt mit `unlocked:<Ort>` (`unlockedFlag` in `questLog.ts`) für immer offen; wer ihn schon besucht hat, gilt als aufgeschlossen. Jeder Schlüssel öffnet genau einen Ort, `checkKeyChain` prüft es.
+11. **Hinweis-Karawane auf Lavainseln**: von der Lavafassung des gesperrten Ortes führt eine Gasse aus zwei Dirt-Kacheln in den Fels (`World.hintAlleys`, `RoadSeg.alley`, Richtung N, S, O, W, nie zur Eingangsseite, in der letzten Spalte der Grundfläche), der Wagen steht an ihrem Ende. Seed `frost-mere-472`, klein, `few`: 91/23 und 91/22, Wagen auf 91/22.
+12. **Neue Modelle** aus `.ignore/new_models`: `Cottage.glb`, `Village (poi_town).glb` (nur andere Texturen), `Pyramid.glb` (Item 43 und `poi_pyramid`), `Dungeon_entrance.glb` (Item 41, `poi_dungeon`), `Rustic_Caravan.glb` (Item 26). Die Maße bleiben die der Altmodelle (`HEIGHT_FACTOR`/`WIDTH_FACTOR` für 26 und 43); beide Sätze neu gebaut (`--only=<Schlüssel>`, mit und ohne `--original`).
+13. **Resistenzen**: Resistenz in Prozent, höchstens 80 % (`RESISTANCE_CAP`, `resistanceShare`); danach Protection from Elements (Stufe des Zaubernden in Punkten) und Fee (30 Punkte), nie unter 0 (`elementalDamage`, in der Kampagne `trapDamageTo`). Vorher gab es keine Kappung.
+14. `old_code`: siehe Antwort an den Nutzer (nur für Export und Asset-Pipeline, zur Laufzeit nicht nötig).
+15. **Piratenschiff**: ist die Gruppe nicht auf dem Floß (an Land oder im Flachwasser), fährt es auch in Sichtweite zurück zum Ausgangsort (`pirateTurn`).
+16. **Floß** liegt höher (`RAFT_DECK` 0,3 statt 0,18).
+
 ## Konsistenzcheck der Zauber (8. 11. 2026, kein `GEN_VERSION`)
 
 Alle 78 Zauber wurden gegen ihre Beschreibung geprüft (Text aus `spell-sheet.json`, Wirkung in `sim/spells.ts`, `sim/encounter.ts`, `Game.castSpells`). Entscheidungen des Nutzers je Abweichung:

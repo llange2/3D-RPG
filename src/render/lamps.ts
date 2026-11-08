@@ -1,5 +1,6 @@
 import { runeActive } from "../actions/quests";
 import { heapGone } from "../actions/registry";
+import { LANTERN_DROP } from "../data/item-tuning";
 import { ENGINE_CRYSTAL_FLAG, LIFE_FLAG } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
@@ -88,7 +89,8 @@ export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
   4: GOLD_LAMP, // heap of treasure
   ...Object.fromEntries([17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 65, 66, 122, 123, 124].map((item) => [item, GOLD_LAMP])), // quest keys and key cards
   68: COMPUTER_LAMP,
-  76: { y: 3.2, color: [1, 0.78, 0.45] }, // Rustic lantern, hangs from the ceiling
+  // Rustic lantern, hangs from the ceiling on its chain; since the 51st playtest (point 2) it shines like the torches of the tower: warm, weak and wide
+  76: { y: 3.2 - LANTERN_DROP, color: TOWER_TORCH_LAMP.color, range: TOWER_TORCH_LAMP.range, intensity: TOWER_TORCH_LAMP.intensity },
   71: { y: 1.4, color: [1, 0.6, 0.3] }, // Abandoned fireplace
 };
 

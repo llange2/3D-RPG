@@ -1,6 +1,6 @@
 import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation";
 import { BLOCKS as CAMPAIGN_BLOCKS } from "../campaign/blocks";
-import { LegacyEngine, hasItem, textOf, tidy, trapReloading, trapRotation, type CampaignHost } from "../campaign/engine";
+import { LegacyEngine, hasItem, removeItems, textOf, tidy, trapReloading, trapRotation, type CampaignHost } from "../campaign/engine";
 import { arrival, loadCampaignMap } from "../campaign/loader";
 import type { CampaignMapModel } from "../campaign/model";
 import { crossesSlab, slabBetween, stepFacing, type SlabMap } from "../campaign/slabs";
@@ -95,7 +95,7 @@ import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
 import { CAVE_EXPLORER, SENSE_STEPS, pickOf, senseFlag, senseLine, wallsSensed } from "./caveSense";
-import { SKULL_MISER_MET,clueFlag, hintHeardFlag, lockSeenFlag, placeSegments, reachedFlag, worldQuestLog, type QuestLogView } from "./questLog";
+import { SKULL_MISER_MET,clueFlag, hintHeardFlag, lockSeenFlag, placeSegments, reachedFlag, unlockedFlag, worldQuestLog, type QuestLogView } from "./questLog";
 import { capybaraSpot, overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
@@ -235,13 +235,18 @@ const IDENTIFY_RADIUS = 14;
 /** Models of the mascots' places: the five mascots, the empty bird perch and the empty blue mushroom. */
 const MASCOT_MODELS = [...Object.values(MASCOT_ITEM), BIRD_PERCH, BLUE_MUSHROOM].map((id) => itemModelKey(id)).filter((k): k is string => !!k).concat(CAPYBARA_MODEL);
 /** The old item 126 "Float": the raft the party stands on while it crosses deep water (Walk on Water, Seafarer). */
+const capitalise = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
+/** Sleeping heroes lure monsters from this much further than they act (51st playtest, point 7), and the monsters get as many turns as it takes to cross that distance and two more. */
+const CAMP_LURE = 4;
+const CAMP_RADIUS = MONSTER_ACTION_RADIUS + CAMP_LURE;
+const CAMP_TURNS = CAMP_RADIUS + 2;
 const RAFT_ITEM = 126;
 const RAFT_OWNER = "raft";
 /**
  * Height of the deck above the water: the old raft stood 26 cm out of it and looked like a plate lying on the sea. Lower than about 10 cm the painted ground tiles
  * (drawn with a depth bias, `FLAT_Z_OFFSET`) swallow it a few cells away: at 6 cm only the ends of the planks showed.
  */
-const RAFT_DECK = 0.18;
+const RAFT_DECK = 0.3; // 51st playtest, point 16: 0.18 left the raft partly under water
 /** The raft is the old model scaled evenly, see below. */
 const RAFT_SCALE = 3;
 /** The model's height (`Float.glb`, 0.269 high before scaling) and its lowest point, which the prop renderer rests on `y` less 2 cm. */
@@ -2084,8 +2089,8 @@ export class Game {
   }
 
   /**
-   * One step of the party and the ship's answer: out of sight (farther than the view distance) it goes back to its home, in sight it sails `PIRATE_SPEED` fields towards the party over deep and
-   * shallow water, and next to a party on the raft it takes the party aboard (`pirateMeeting`).
+   * One step of the party and the ship's answer: out of sight (farther than the view distance) it goes back to its home, in sight it sails `PIRATE_SPEED` fields towards a party on the raft over deep and
+   * shallow water (towards its home if the party is on land), and next to a party on the raft it takes the party aboard (`pirateMeeting`).
    */
   private async pirateTurn(tx: number, ty: number): Promise<void> {
     const ship = this.pirateHere();
@@ -2096,8 +2101,20 @@ export class Game {
       if (ship.x !== home.x || ship.y !== home.y) this.state.pirate = { x: home.x, y: home.y };
       return;
     }
+    const taken = (x: number, y: number) => this.enc.monsters.some((m) => m.hp > 0 && this.world.wrapX(m.x) === x && this.world.wrapY(m.y) === y);
+    if (!this.onRaft()) {
+      // 51st playtest, point 15: a party that is on land (or in the shallows) is no prey: the ship sails back towards its home, `PIRATE_SPEED` fields a step
+      if (ship.x === home.x && ship.y === home.y) return;
+      let to = pirateSail(this.world, ship, home, taken);
+      // (`pirateSail` stops next to its goal: the last field is the home itself)
+      if (pirateDistance(this.world, to, home) <= 1) to = { x: home.x, y: home.y };
+      if (to.x !== ship.x || to.y !== ship.y) {
+        this.pirateYaw = Math.atan2(wrapDelta(ship.x, to.x, this.world.width), -wrapDelta(ship.y, to.y, this.world.height));
+        this.state.pirate = { x: to.x, y: to.y };
+      }
+      return;
+    }
     if (pirateDistance(this.world, ship, party) > 1) {
-      const taken = (x: number, y: number) => this.enc.monsters.some((m) => m.hp > 0 && this.world.wrapX(m.x) === x && this.world.wrapY(m.y) === y);
       const to = pirateSail(this.world, ship, party, taken);
       if (to.x !== ship.x || to.y !== ship.y) {
         const dx = wrapDelta(ship.x, to.x, this.world.width);
@@ -2291,10 +2308,26 @@ export class Game {
         return;
       }
     }
-    // a key dungeon asks for its key, a pyramid for its key card; neither is used up (the old maps keep the item)
+    // a key dungeon asks for its key, a pyramid for its key card (each opens exactly one place, `checkKeyChain`). 51st playtest, point 10: using it takes it out of the inventory,
+    // and the place stays open for good (`unlocked:<place>`)
     const plan = planDungeon(this.world, poi);
     const need = plan?.requires ?? null;
-    if (need && !hasItem(this.state.party, need)) {
+    // (a place the party has been in before the flag existed counts as opened as well)
+    const unlocked = this.state.opened.has(unlockedFlag(poi.id)) || this.state.visited.has(poi.id);
+    if (need && !unlocked && hasItem(this.state.party, need)) {
+      const name = QUEST_ITEMS.find((q) => q.type === need)?.name ?? need;
+      const card = need.endsWith("_keycard");
+      const use = await this.ui.confirm(poi.name, card ? `Put the ${name} into the slot in the wall of the pyramid? The card stays in the slot, and the way in is open for good.` : `Unlock the heavy lock with the ${name}? The key is used up, and the way in is open for good.`, card ? "Use the card" : "Use the key", "Not now");
+      if (!use) {
+        this.player.locked = false;
+        return;
+      }
+      removeItems(this.state.party, need, 1);
+      this.state.opened.add(unlockedFlag(poi.id));
+      this.audio.play(9034);
+      this.ui.log(card ? `The ${name} disappears into the wall: the pyramid opens.` : `The ${name} turns in the lock and crumbles: the way is open.`, "good");
+      this.refresh();
+    } else if (need && !unlocked) {
       const name = QUEST_ITEMS.find((q) => q.type === need)?.name ?? need;
       const text = need.endsWith("_keycard") ? `A slot in the wall of the pyramid waits for a ${name}.` : `The way in is barred by a heavy lock. It needs the ${name}.`;
       this.audio.play(9014, 0.5);
@@ -2526,7 +2559,9 @@ export class Game {
         case "transfer":
           if (e.mode === "poi_exit") {
             this.player.locked = true;
-            const leave = await ui.confirm("Leave", `Leave ${rt?.poi.name ?? "this place"}?`, "Leave", "Stay");
+            // (51st playtest, point 9: in the spaceship the question names the section, "Leave Bridge sector?", not the pyramid)
+            const leaving = rt?.map.spaceship ? `${this.placeTitle()} sector` : rt?.poi.name ?? "this place";
+            const leave = await ui.confirm("Leave", `Leave ${leaving}?`, "Leave", "Stay");
             this.player.locked = false;
             if (leave) await this.exitInterior();
           }
@@ -3206,10 +3241,16 @@ export class Game {
       hits.forEach((e, i) => {
         const at = this.monsters.anchor(e.uid);
         if (!at) return;
-        if (area === "prismatic_light" || area === "dragon_breath") {
+        if (area === "prismatic_light") {
           // a line from the party to every monster in range at once, in the colour of the damage type it got; they fade within 0.7 s
           this.projectiles.beam(e.element ?? "magic", from, at);
           flights.set(e.uid, 0);
+          return;
+        }
+        if (area === "dragon_breath") {
+          // 51st playtest, point 1: one projectile of the rolled element to every monster, not a line (the shots fly side by side, each hit waits for its own)
+          const kind = SPELL_PROJECTILE[e.element ?? "magic"] ?? "magic";
+          flights.set(e.uid, this.projectiles.launch(kind, from, at));
           return;
         }
         if (area === "meteor_shower") {
@@ -4182,7 +4223,7 @@ export class Game {
 
   /**
    * Camping, as in the old `rest`: monsters that cannot reach the party do not matter. When some can, all but one of the heroes
-   * are asleep and the monsters get up to nine turns to arrive; if one stands next to the party by then, the camp is broken up
+   * are asleep and the monsters of the action radius and four tiles more (`CAMP_RADIUS`, 51st playtest, point 7: sleepers lure them) get up to `CAMP_TURNS` turns to arrive; if one stands next to the party by then, the camp is broken up
    * (and the sleepers stay asleep until they are hit, woken or twelve steps have passed). Otherwise the party rests eight hours.
    */
   private async camp(): Promise<void> {
@@ -4193,7 +4234,7 @@ export class Game {
       return;
     }
     const { tx, ty } = this.player;
-    const hunters = monstersReaching(this.gridView(), this.enc, tx, ty);
+    const hunters = monstersReaching(this.gridView(), this.enc, tx, ty, CAMP_RADIUS);
     const warning = hunters.length > 0 ? " Monsters are about: they will find the camp, and most of the party will be asleep when they do." : "";
     if (!(await this.ui.confirm("Rest", `Camp for eight hours? The party eats one ration (${party.food} left).${warning}`, "Rest", "Not now"))) return;
     this.busy = true;
@@ -4225,8 +4266,8 @@ export class Game {
     this.ui.log("The party is caught asleep!", "bad");
     this.refresh();
     const { tx, ty } = this.player;
-    for (let turn = 0; turn < 9; turn++) {
-      const events = monsterTurn(party, this.gridView(), this.enc, tx, ty, this.combatRng(), MONSTER_ACTION_RADIUS);
+    for (let turn = 0; turn < CAMP_TURNS; turn++) {
+      const events = monsterTurn(party, this.gridView(), this.enc, tx, ty, this.combatRng(), CAMP_RADIUS);
       this.handleEvents(events);
       updateBattleMode(this.enc, tx, ty, this.gridView());
       this.refresh();
@@ -4971,7 +5012,8 @@ export class Game {
     const tile = this.mode === "overworld" ? this.world.tile(this.player.tx, this.player.ty) : null;
     return {
       place: this.placeTitle(),
-      sub: rt?.campaign ? "campaign" : rt ? `${rt.map.theme.id.replace(/_/g, " ")} - level ${rt.poi.tier}` : `${tile ? OVERWORLD_THEMES[tile.biome === BIOME.OCEAN ? BIOME.MEADOW : tile.biome].id : ""}`,
+      // (51st playtest, point 5: the landscape starts with a capital, "Meadow")
+      sub: capitalise(rt?.campaign ? "campaign" : rt ? `${rt.map.theme.id.replace(/_/g, " ")} - level ${rt.poi.tier}` : `${tile ? OVERWORLD_THEMES[tile.biome === BIOME.OCEAN ? BIOME.MEADOW : tile.biome].id : ""}`),
       facing: this.player.facing,
       // the world is a globe: the position shown is the one on the map, not how far the party has walked past the seam
       x: this.mode === "overworld" ? this.world.wrapX(this.player.tx) : this.player.tx,

@@ -22,6 +22,8 @@ describe("lava ring round the places of a lava island", () => {
                 if (inside) continue;
                 const ring = x >= b.x0 - 1 && x <= b.x1 + 1 && y >= b.y0 - 1 && y <= b.y1 + 1;
                 const g = world.tile(x, y).ground;
+                // (51st playtest, point 11: the lane of dirt that leads out from a locked place to the wagon with the hint)
+                if (world.hintAlleyTiles(p.id).some((t) => t.x === x && t.y === y)) continue;
                 // (lava beside the sea is made land, `rawTile`: a stream that meets the sea lies bare, and so does the shore of a place at the coast)
                 const shore = [-2, -1, 0, 1, 2].some((ay) => [-2, -1, 0, 1, 2].some((ax) => {
                   const n = world.tile(x + ax, y + ay).ground;
