@@ -5572,6 +5572,8 @@ function xpReady(c: Character): boolean {
 }
 
 function stepSound(t: TileInfo): number {
+  // in the water the party swims: the three strokes of the old game take turns instead of footsteps
+  if (t.ground === GROUND.WATER || t.ground === GROUND.SHALLOW) return 9051;
   if (t.biome === BIOME.SNOW) return 9053;
   if (t.biome === BIOME.SWAMP) return 9054;
   return 9010;

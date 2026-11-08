@@ -23,7 +23,7 @@ export class AudioManager {
   private pendingTrack: number | null = null;
   private unlocked = false;
   private readonly supported: boolean;
-  private readonly footToggle = new Map<number, boolean>();
+  private readonly footToggle = new Map<number, number>();
   private readonly cache = new Map<string, HTMLAudioElement>();
   /**
    * Sound effects are decoded once and played from memory: a new `Audio` element has to load and decode its file first, which took
@@ -268,9 +268,9 @@ export class AudioManager {
     if (typeof entry === "string") name = entry;
     else if ("pick" in entry) name = entry.pick[Math.floor(Math.random() * entry.pick.length)]!;
     else {
-      const flip = !(this.footToggle.get(id) ?? false);
-      this.footToggle.set(id, flip);
-      name = entry.alternate[flip ? 0 : 1];
+      const turn = this.footToggle.get(id) ?? 0;
+      this.footToggle.set(id, (turn + 1) % entry.alternate.length);
+      name = entry.alternate[turn]!;
     }
     // (a sound with a gain above 1 is a quiet file made louder: the web audio gain node takes it, the cap is only there against a mistake)
     const level = Math.max(0, Math.min(SOUND_GAIN[id] ? 4 : 1, this.sfxVolume * volume * (id === 9006 ? 0.5 : 1) * (SOUND_GAIN[id] ?? 1)));

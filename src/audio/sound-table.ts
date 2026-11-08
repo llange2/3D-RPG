@@ -1,6 +1,6 @@
 /**
  * Sound ids of the old game (sound.py) and the files they play. An array means "pick one" for pain and swimming
- * sounds, `alternate` means left/right footsteps that take turns.
+ * sounds, `alternate` means files that take turns in order (left/right footsteps, the three swimming strokes).
  */
 export const MUSIC_TRACKS: Record<number, string> = {
   1: "town",
@@ -19,7 +19,7 @@ export const MUSIC_TRACKS: Record<number, string> = {
   9007: "town_guild",
 };
 
-export type SoundEntry = string | { pick: string[] } | { alternate: [string, string] };
+export type SoundEntry = string | { pick: string[] } | { alternate: string[] };
 
 export const SOUNDS: Record<number, SoundEntry> = {
   1: "ambience_fountain",
@@ -83,7 +83,7 @@ export const SOUNDS: Record<number, SoundEntry> = {
   9048: "gong",
   9049: "squeaky_lever",
   9050: "stone_move",
-  9051: { pick: ["swimming1", "swimming2", "swimming3"] },
+  9051: { alternate: ["swimming1", "swimming2", "swimming3"] }, // one stroke per step on water, in turn (a random pick repeated itself)
   9052: "squeaky_door",
   9053: { alternate: ["foot_left_snow", "foot_right_snow"] },
   9054: { alternate: ["foot_left_swamp", "foot_right_swamp"] },

@@ -63,8 +63,12 @@ export const CONSOLE_LAMP: LampKind = { y: 1.4, color: [0.35, 0.85, 1], range: 8
 /** The computer terminal of the spaceship glows blue (point 4). */
 export const COMPUTER_LAMP: LampKind = { y: 1.3, color: [0.3, 0.55, 1], range: 5, intensity: 2.3 };
 
-/** The torches in front of a tower (49th playtest): a warm flame, one to two tiles around; by day they add nothing like every lamp. The height is that of the flame (`TORCH_LIGHT_HEIGHT`). */
-export const TOWER_TORCH_LAMP: LampKind = { y: 3.2, color: [1, 0.62, 0.26], range: 11, intensity: 3.6 };
+/**
+ * The light of the two torches on the wall beside a tower's door (49th playtest, 50th: the model has the torches itself, only their light is placed, at the height of the ground floor,
+ * `TORCH_LIGHT_HEIGHT` in `terrainMesher.ts`). It is weak and wide: a faint warm glow on the ground that a party sees from five tiles away (the pool takes a lamp from 18 units away, at full
+ * strength from 14), not a floodlight. By day it adds nothing like every lamp.
+ */
+export const TOWER_TORCH_LAMP: LampKind = { y: 2.5, color: [1, 0.62, 0.26], range: 10, intensity: 1.5 };
 
 /** The map objects that give light, by the number of the old item: the crystals, the traps' elements, the chalice, wells, altar, runes, portal, orb, fireplace and lantern. */
 export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
