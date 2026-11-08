@@ -725,7 +725,8 @@ describe("spells", () => {
     expect(result).toMatchObject({ kind: "attack", damage: 8, penetrate: false, undead: null });
     expect(["acid", "ice", "fire"]).toContain((result as { type: string }).type);
     expect(party.characters[3]!.sp).toBe(100 - 2);
-    expect(castSpell(party, 3, 19, r)).toMatchObject({ kind: "attack", undead: true, type: "fire", penetrate: true });
+    // Turn Undead strikes one undead monster (`turn_undead` in `specialSpell`), Dragon Breath all of them (`dragon_breath`, an area spell)
+    expect(castSpell(party, 3, 19, r)).toMatchObject({ kind: "attack", special: "turn_undead", type: "fire", penetrate: false });
     // Pain hits the living and the dead alike since the spell sheet dropped "Doesn't affect undead"
     expect(castSpell(party, 3, 12, r)).toMatchObject({ kind: "attack", undead: null, type: "physical" });
   });

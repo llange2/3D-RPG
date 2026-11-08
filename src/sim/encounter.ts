@@ -749,7 +749,7 @@ export function spellInLine(party: Party, view: GridView, enc: Encounter, px: nu
 }
 
 /** Spells with a rule of their own for whom they hit and how hard. */
-export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm" | "prismatic_light";
+export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm" | "prismatic_light" | "dragon_breath" | "turn_undead";
 
 /** The elements Elemental Storm throws; every monster gets one of them at random. */
 export const ELEMENTAL_STORM_ELEMENTS: readonly string[] = ["fire", "ice", "acid"];
@@ -759,12 +759,13 @@ export const PRISMATIC_ELEMENTS: readonly string[] = ["acid", "ice", "fire", "ma
 export const STAR_BURST_RADIUS = 3;
 
 /** The spells that need no target: they work from the party outwards (`areaSpell`). */
-export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" | "star_burst";
+export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" | "star_burst" | "dragon_breath";
 
 /**
  * Meteor Shower (fire), Elemental Storm (a random element for each monster) and Prismatic Light (a random one of four damage types for each monster): they need no target, they
  * hit every monster within the action radius, wall or no wall (the storm comes from the sky, the 6. 11. 2026 playtest). Prismatic Light is the exception: "hits all monsters in view"
  * (the second 8. 11. 2026 request), the monsters `inView` says the party sees; the beams end at them and do not go through a wall. Star Burst (48th playtest, point 2) goes off at the party and hits every monster within `STAR_BURST_RADIUS` tiles, also without a clear line.
+ * Dragon Breath ("Hits all monsters", 8. 11. 2026) reaches every monster of the action radius like the storm, with the one element the cast rolled (`magic.type`).
  * `magic.damage` is what the spell rolled, the resistance of each monster takes its share.
  */
 export function areaSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, kind: AreaSpell, magic: { damage: number; type: string }, inView?: (m: MonsterInstance) => boolean): CombatEvent[] {
@@ -799,6 +800,8 @@ export const MASS_DISTORTION_CHANCE = 0.2;
 /** Finger of Death: the chance to kill, and the highest treasure level it works on. */
 export const FINGER_CHANCE = 0.5;
 export const FINGER_MAX_LEVEL = 2;
+/** Turn Undead: what the undead monster in front of the party loses, whatever it resists (the user, 8. 11. 2026: weaker undead are destroyed by it). */
+export const TURN_UNDEAD_DAMAGE = 100;
 
 /**
  * Star Burst, Holy Word, Mass Distortion and Finger of Death (the spell sheet's own rules). Like the beams they need a clear line to the
@@ -826,6 +829,10 @@ export function specialSpell(party: Party, view: GridView, enc: Encounter, px: n
         if (monsterById(m.defId).treasure_level >= 5 || !(rng.float() < MASS_DISTORTION_CHANCE)) continue;
         strike(m, Math.max(1, Math.floor(m.hp / 2)));
       }
+      break;
+    case "turn_undead":
+      // one undead monster, no resistance and no armour: 100 points, or more when the cast rolled more (the Orb); the sheet's "destroys" is a monster with 100 hit points or fewer
+      if (isUndead(target.defId)) strike(target, Math.max(TURN_UNDEAD_DAMAGE, magic.damage));
       break;
     case "finger_of_death": {
       const def = monsterById(target.defId);

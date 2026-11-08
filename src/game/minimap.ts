@@ -346,7 +346,7 @@ export function knownContent(content: MapContent, opened: ReadonlySet<string>, e
 }
 
 /**
- * Draws an interior. `traps` (keys `x,y`) are the traps to mark: seen, gone off or found by the Crow (see `Game.trapsShown`). `eye`: Wizard's Eye is on, the whole map shows. `detect`: Wizard's Eye or Detect Monster, monsters show wherever they are (the game hands over only the monsters in the viewing cone otherwise, `Game.mappedMonsters`). `icons`: the symbols of the old game; without them the map is coloured squares.
+ * Draws an interior. `traps` (keys `x,y`) are the traps to mark: seen, gone off or found by the Crow (see `Game.trapsShown`). `eye`: Wizard's Eye is on, the whole map shows. `detect`: Detect Monster is on, monsters show wherever they are (the game hands over only the monsters in the viewing cone otherwise, `Game.mappedMonsters`). `icons`: the symbols of the old game; without them the map is coloured squares.
  */
 export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, content: MapContent, explored: Explored, opened: Set<string>, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, traps: ReadonlySet<string> = new Set(), view?: MapView, icons?: MinimapIcons | null, eye = false, detect = false): void {
   const ctx = canvas.getContext("2d")!;

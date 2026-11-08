@@ -48,7 +48,7 @@ describe("the spell sheet", () => {
     }
     expect(SPELLS[2]!.title).toBe("Pandora's box");
     expect(SPELLS[20]!.title).toBe("Stone Skin");
-    expect(SPELLS[24]!.title).toBe("Wizard Eye");
+    expect(SPELLS[24]!.title).toBe("Wizard's Eye");
   });
 
   it("implements every spell", () => {
@@ -110,7 +110,7 @@ describe("reviving", () => {
     expect(p.characters[3]!.sp).toBe(sp);
   });
 
-  it("Resurrect brings back the rotten at full health for a point of Endurance, and ages the caster", () => {
+  it("Resurrect brings back the rotten with one hit point for a point of Endurance, and ages the caster", () => {
     const p = party();
     const rotten = p.characters[0]!;
     rotten.conditions = ["Rotten"];
@@ -119,20 +119,33 @@ describe("reviving", () => {
     expect(castSpell(p, 3, 70, rng("a"), { target: 0 })).toMatchObject({ kind: "revive", endurance: true });
     expect(rotten.end).toBe(end - 1);
     expect(rotten.conditions).toEqual(["Healthy"]);
-    expect(rotten.hp).toBe(rotten.health);
+    expect(rotten.hp).toBe(1);
     expect(p.characters[3]!.magicAge).toBe(5);
+  });
+
+  it("Raise Dead takes only the dead and Resurrect only the rotten, and a refusal costs nothing (8. 11. 2026)", () => {
+    const p = party();
+    const hero = p.characters[0]!;
+    const sp = p.characters[3]!.sp;
+    hero.conditions = ["Rotten"];
+    expect(castSpell(p, 3, 65, rng("a"), { target: 0 })).toMatchObject({ kind: "fizzle", reason: "no_effect" });
+    hero.conditions = ["Dead"];
+    expect(castSpell(p, 3, 70, rng("a"), { target: 0 })).toMatchObject({ kind: "fizzle", reason: "no_effect" });
+    expect(p.characters[3]!.sp).toBe(sp);
+    expect(hero.conditions).toEqual(["Dead"]);
   });
 
   it("nobody with no Endurance left comes back", () => {
     const p = party();
     const hero = p.characters[0]!;
-    hero.conditions = ["Dead"];
     hero.end = 0;
     const sp = p.characters[3]!.sp;
+    hero.conditions = ["Dead"];
     expect(castSpell(p, 3, 65, rng("a"), { target: 0 })).toMatchObject({ kind: "fizzle", reason: "cannot_revive" });
+    hero.conditions = ["Rotten"];
     expect(castSpell(p, 3, 70, rng("a"), { target: 0 })).toMatchObject({ kind: "fizzle", reason: "cannot_revive" });
     expect(p.characters[3]!.sp).toBe(sp);
-    expect(hero.conditions).toEqual(["Dead"]);
+    expect(hero.conditions).toEqual(["Rotten"]);
   });
 
   it("Divine Intervention cures everybody but the rotten, raises the dead, heals fully and ages the caster", () => {
