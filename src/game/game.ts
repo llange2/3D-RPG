@@ -4,6 +4,7 @@ import { LegacyEngine, hasItem, textOf, tidy, trapReloading, trapRotation, type 
 import { arrival, loadCampaignMap } from "../campaign/loader";
 import type { CampaignMapModel } from "../campaign/model";
 import { crossesSlab, slabBetween, stepFacing, type SlabMap } from "../campaign/slabs";
+import { beamBetween } from "../actions/beams";
 import { CAMPAIGN_START, facingOfRotation, mapSlugOf, type TrapKind } from "../campaign/types";
 import { CampaignView } from "../render/campaignView";
 import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, heapGone, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, isVisibleTrap, validateContent } from "../actions";
@@ -103,7 +104,7 @@ import { cursorStepped, setCursorFade } from "../ui/cursor";
 import { h } from "../ui/dom";
 import { thousands } from "../core/format";
 import { UI, randomSeed, type HudInfo, type Option } from "../ui/ui";
-import { TRAP_RELOAD_STEPS, TREASURE_HEAP, type ServiceKind } from "../actions/registry";
+import { SUPPORT_BEAM, TRAP_RELOAD_STEPS, TREASURE_HEAP, type ServiceKind } from "../actions/registry";
 
 type Mode = "title" | "overworld" | "interior";
 
@@ -123,6 +124,8 @@ interface InteriorRuntime {
   noMonster?: Set<number>;
   /** Campaign maps only: brittle walls the party can step up to (they are in `blocked` for everybody else), with the border their wall piece stands on. */
   slabs?: SlabMap;
+  /** The support beams of a generated dungeon: the side (E or S) of the cell where a beam stands on the edge to its neighbour; no step crosses it (`beamBetween`). */
+  beams?: Map<number, Facing>;
   campaign?: CampaignRuntime;
 }
 
@@ -162,6 +165,9 @@ const METEOR_IMPACT_LIGHT: BurstSpec = { from: [1, 0.85, 0.5], to: [1, 0.4, 0.08
 /** Said when a spell that would carry the party away is cast in melee, and when the party tries to step away from it. */
 const IN_MELEE_SPELL = "That spell cannot be cast during a fight: the party cannot leave its field while monsters are next to it.";
 const IN_MELEE_STEP = "The party cannot step away from a fight: monsters are next to it.";
+/** Climbing a staircase of a tower: this many footsteps, this far apart (seconds), while the party cannot move (48th playtest, point y). */
+const STAIR_STEPS = 4;
+const STAIR_STEP_SECONDS = 0.3;
 /** How many open quests of the generated world the short list beside the minimap shows. */
 const HUD_QUESTS = 3;
 const HUD_QUEST_CHARS = 42;
@@ -668,7 +674,7 @@ export class Game {
       const rt = this.interior;
       const { map } = rt;
       return {
-        walkable: (x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !rt.blocked.has(y * map.width + x) && !rt.noMonster?.has(y * map.width + x) && !this.isClosedDoor(x, y, settled) && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y),
+        walkable: (x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !rt.blocked.has(y * map.width + x) && !rt.noMonster?.has(y * map.width + x) && !this.isClosedDoor(x, y, settled) && !this.enteredByParty(x, y) && !this.mascotSpotAt(x, y) && rt.actionAt.get(y * map.width + x)?.kind !== "stairs",
         water: () => false,
         // campaign maps have open ground that blocks nothing (water) and tiles that do (mountains, forests)
         opaque: (x, y) => {
@@ -683,7 +689,7 @@ export class Game {
         // doors stop a shot
         obstacle: (x, y) => !!rt.campaign && rt.blocked.has(y * map.width + x),
         // the party can stand in front of a brittle wall's wall piece, and nothing reaches across it
-        wallBetween: (x0, y0, x1, y1) => slabBetween(rt.slabs, map.width, x0, y0, x1, y1),
+        wallBetween: (x0, y0, x1, y1) => slabBetween(rt.slabs, map.width, x0, y0, x1, y1) || beamBetween(rt.beams, map.width, x0, y0, x1, y1),
         // a monster that has noticed the party opens the sliding doors of the spaceship (not its airlocks, they have levers)
         opensDoor: (x, y) => {
           const a = rt.actionAt.get(y * map.width + x);
@@ -784,7 +790,8 @@ export class Game {
       const i = y * map.width + x;
       // a brittle wall's cell is open to the party from the side opposite its wall piece; the wall piece itself is a wall
       const open = !blocked.has(i) || !!this.interior.slabs?.has(i);
-      return cell === CELL.FLOOR && open && (ghost || !crossesSlab(this.interior.slabs, map.width, this.player.tx, this.player.ty, x, y)) && !this.isClosedDoor(x, y);
+      // the party never walks into a staircase or a Fort door of a tower: bumping into one climbs it (`climbStairs`)
+      return cell === CELL.FLOOR && open && (ghost || !(crossesSlab(this.interior.slabs, map.width, this.player.tx, this.player.ty, x, y) || beamBetween(this.interior.beams, map.width, this.player.tx, this.player.ty, x, y))) && !this.isClosedDoor(x, y) && this.interior.actionAt.get(i)?.kind !== "stairs";
     }
     const t = this.world.tile(x, y);
     // shallow water (a ford, a shore) is swum, not walked: only for the Swimmer, and for whoever can cross deep water
@@ -908,7 +915,9 @@ export class Game {
       this.sceneChanged();
       this.props.setInstances(this.lootOwner, []);
       this.mode = "interior";
-      this.interior = { poi, map, content, blocked, actionAt };
+      const beams = new Map<number, Facing>();
+      for (const a of content.actions) if (a.kind === "decor" && Number(a.params.item) === SUPPORT_BEAM && (a.params.side === "E" || a.params.side === "S")) beams.set(a.y * map.width + a.x, a.params.side);
+      this.interior = { poi, map, content, blocked, actionAt, beams };
       this.syncQuestBlocks();
       this.enc = createEncounter();
       // the sliding doors of the spaceship are shut when the level is entered (a save may have been made with one open), the airlocks keep their state; they open and close as long as their sound plays
@@ -1296,6 +1305,12 @@ export class Game {
       this.ambushGrace = false;
       return;
     }
+    // a rune or a teleporter may have set the party down elsewhere in the same place: what follows (the monsters' turn, what the party senses) is about where it stands now, not the cell
+    // it came by (48th playtest, point x: a Perceptive party was asked about a brittle wall beside the cell of a staircase, on the floor it had just left)
+    if (this.mode === "interior") {
+      x = this.player.tx;
+      y = this.player.ty;
+    }
 
     if (this.ambushGrace) {
       // an ambush springs the monsters up in front of the party; the party gets the first move
@@ -1471,6 +1486,11 @@ export class Game {
           return;
         }
         this.audio.play(9014, 0.35);
+        return;
+      }
+      // a staircase or a Fort door of a tower: the party does not walk into it, it climbs it
+      if (a?.kind === "stairs") {
+        await this.climbStairs(a);
         return;
       }
       // a wall that can be broken is just a wall to a party that cannot tell
@@ -2296,6 +2316,41 @@ export class Game {
     const dy = y - this.player.ty;
     if (dx === ahead.dx && dy === ahead.dy) return "front";
     return dx === -ahead.dx && dy === -ahead.dy ? "behind" : "side";
+  }
+
+  /**
+   * The party walks into a staircase or a Fort door of a tower (48th playtest, point y): it is not drawn into the cell (it stood inside the staircase's model). Movement is held, four
+   * footsteps sound, and the party is set down at the other end, where it is free again. In a fight nothing is climbed.
+   */
+  private async climbStairs(a: ActionInstance): Promise<void> {
+    if (this.busy || this.over || this.player.locked) return;
+    if (this.enc.battleMode) {
+      this.audio.play(9014, 0.5);
+      this.ui.log(IN_MELEE_STEP, "bad");
+      return;
+    }
+    const epoch = this.fxEpoch;
+    this.player.locked = true;
+    try {
+      for (let i = 0; i < STAIR_STEPS; i++) {
+        this.audio.play(9010, 0.6);
+        this.state.steps++;
+        this.passTime(stepMinutes(this.outdoors(), this.state.party.talents));
+        await new Promise<void>((resolve) => setTimeout(resolve, STAIR_STEP_SECONDS * 1000));
+        if (epoch !== this.fxEpoch) return;
+      }
+      await this.useAction(a);
+    } finally {
+      this.player.locked = false;
+    }
+    if (epoch !== this.fxEpoch || this.over) return;
+    // set down at the other end: what the party sees and what the monsters do is about where it stands now
+    const { tx, ty } = this.player;
+    this.syncSurroundings();
+    this.minimapDirty = true;
+    updateBattleMode(this.enc, tx, ty, this.gridView());
+    this.refresh();
+    if (!this.enc.battleMode) await this.noticeBrittleWall(tx, ty);
   }
 
   /**
@@ -3442,6 +3497,8 @@ export class Game {
       if (blocked.has(i) && !rt.slabs?.has(i)) return false;
       if (this.isClosedDoor(x, y)) return false;
     }
+    // a jump does not pass a support beam either
+    for (let x = x0, y = y0; x !== x1 || y !== y1; x += sx, y += sy) if (beamBetween(rt.beams, map.width, x, y, x + sx, y + sy)) return false;
     return !crossesSlab(rt.slabs, map.width, x0, y0, x1, y1);
   }
 

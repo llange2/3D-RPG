@@ -41,7 +41,7 @@ describe("the tower optimisation (48th playtest, second list)", () => {
       ref.tower!.stairs.forEach((s, i) => {
         const up = content.actions.find((a) => a.uid === `${map.key}#stairs:${i}:up`)!;
         // the wall is behind the way the party looks when it arrives
-        const wall = { N: 180, E: 270, S: 0, W: 90 }[s.facing];
+        const wall = { N: 270, E: 0, S: 90, W: 180 }[s.facing];
         expect(up.params.bearing).toBe(wall);
         // the cell where the lowest step lies is open floor and holds nothing
         expect(map.cells[s.foot.y * map.width + s.foot.x]).toBe(CELL.FLOOR);

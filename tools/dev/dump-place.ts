@@ -11,7 +11,7 @@ import { World } from "../../src/world/world";
 
 const [seed = "frost-gate-324", size = "default", name = "Aldhold", ...rest] = process.argv.slice(2);
 const world = new World(seed, size as WorldSize, (process.env.DUNGEONS ?? "maximum") as never);
-const poi = world.allPois().find((p) => p.name.toLowerCase() === name.toLowerCase());
+const poi = world.allPois().find((p) => p.name.toLowerCase() === name.toLowerCase() || p.id === name);
 if (!poi) {
   console.log("not found; places:", world.allPois().map((p) => `${p.name} (${p.kind})`).join(", "));
   process.exit(1);

@@ -351,11 +351,18 @@ export function actionTrigger(a: { kind: ActionKind; params: Record<string, unkn
   return hasObject(a) ? "interact" : ACTION_DEFS[a.kind].trigger;
 }
 
+/**
+ * The wooden support beam (item 99, a truss 3 wide and 0.4 thick) stands on the EDGE between two cells, not on a cell (48th playtest, point 6): both cells stay walkable, only the step across the
+ * edge is blocked (`Game.beams`, `beamBetween`). It is a plain decoration without a text. NOTE for a later free movement (no grid): the beam itself is solid, it blocks the passage through
+ * its own plane, whatever cell the party stands in.
+ */
+export const SUPPORT_BEAM = 99;
+
 /** Objects that stand on their cell and block it: chests, shrines, fountains and the statues of towns. */
 export function blocksCell(a: { kind: ActionKind; params: Record<string, unknown> }): boolean {
   // a ring head blocks only while it stands on its cell (a lever sets and removes it): the game decides that (`ringBlocked` in quests.ts)
   if (a.kind === "head") return a.params.mode === "rotate";
-  return a.kind === "qportal" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "machine" || a.kind === "tube" || a.kind === "chalice" || a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
+  return a.kind === "qportal" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "machine" || a.kind === "tube" || a.kind === "chalice" || a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && Number(a.params.item) !== SUPPORT_BEAM && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
 }
 
 export function kindForLegacyId(id: number): ActionKind | null {

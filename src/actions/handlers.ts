@@ -19,7 +19,7 @@ import { FACING_NAMES, gongsStruck, headFacing, ringSolved, rotationSolved, rune
 import { answerMatches } from "../data/riddles";
 import { CONSOLE_SEEN_FLAG, CRATE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL } from "../data/quest-table";
 import * as SHIP from "../data/ship-texts";
-import { trapElementOf, type ServiceKind } from "./registry";
+import { SUPPORT_BEAM, trapElementOf, type ServiceKind } from "./registry";
 
 export type Effect =
   /** `tone`: how the log shows it when the action is no trap itself (the trap of a chest says "bad" for its hit and "good" for a miss). */
@@ -983,6 +983,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "decor": {
+      // the support beam is a plain decoration: it says nothing
+      if (Number(p.item) === SUPPORT_BEAM) return { effects, consumed: false };
       effects.push({ type: "text", text: propLine(Number(p.item), action.uid) });
       // a pile of bones that hides something (one in five, fixed by the generator): the party finds it the first time it steps on the pile (the game asks a decoration once)
       if (SEARCHABLE_DECOR.includes(Number(p.item)) && p.find === 1) {

@@ -17,9 +17,13 @@ import type { PropInstance } from "./terrainMesher";
 /** The altar (item 35) is 60 % of the size the wells have (31st playtest, point 6); a prop rests its lowest point on the floor whatever its scale. */
 export const ALTAR_SCALE = 0.9;
 
-/** The wall reliefs hang with their middle 2.0 above the floor (the moose king's carving), and their back lies a hand's breadth inside the wall. */
+/**
+ * The wall reliefs hang with their middle 2.0 above the floor (the moose king's carving), and their back lies 0.03 inside the wall. They lay 0.1 inside it (a hand's breadth), which put
+ * the plate behind the figure (its front lies 0.13 to 0.16 in front of the back, times the scale) a hair behind the wall's face: the wall's stones showed through the frame (48th playtest, "see
+ * through the wall", `.ignore/screen.png`).
+ */
 const DECO_LIFT = 2.0 - 0.95 * DECO_SCALE;
-const DECO_BURY = 0.1;
+const DECO_BURY = 0.03;
 /** Half the width of a cell (`CELL_SIZE` 3): where the wall stands. */
 const WALL_AT = 1.5;
 

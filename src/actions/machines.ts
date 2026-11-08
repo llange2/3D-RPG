@@ -86,6 +86,18 @@ export function placeMachines(env: QuestEnv): void {
 }
 
 /**
+ * The chests a coin, a skull or a pearl may be hidden in: ordinary ones, not locked by a quest, not in the end room, the machines' room or a treasure chamber behind a brittle wall (an item that
+ * only a party with the Perceptive talent can reach, or that waits for a quest, would be lost to the others).
+ */
+export function eligibleChests(map: InteriorMap, actions: readonly ActionInstance[], onlyAlarm = false): ActionInstance[] {
+  const end = map.dungeon?.endRoom;
+  const machines = map.dungeon?.machines;
+  const inRoom = (a: ActionInstance, r?: { x: number; y: number; w: number; h: number }) => !!r && a.x >= r.x && a.y >= r.y && a.x < r.x + r.w && a.y < r.y + r.h;
+  const vaults = map.dungeon?.vaults ?? [];
+  return actions.filter((a) => a.kind === "treasure" && typeof a.params.quest !== "string" && a.params.lock === undefined && !inRoom(a, end) && !inRoom(a, machines) && !vaults.some((v) => inRoom(a, v)) && (!onlyAlarm || a.params.warn === "alarm"));
+}
+
+/**
  * Hides the Quatloo coins and silver skulls of a place in its ordinary chests: the ones that are no part of a quest (a chest with a quest item, a lock or an
  * alarm of the castle's king stays as it is). One item to a chest, as many chests as there are items; a place with fewer chests than items keeps the rest
  * in the chests that are there (a chest takes several).
@@ -93,12 +105,7 @@ export function placeMachines(env: QuestEnv): void {
 export function hideInChests(map: InteriorMap, actions: ActionInstance[], coins: number, skulls: number, seed: SeedState, onlyAlarm = false, pearls = 0): void {
   const items: string[] = [...Array.from({ length: coins }, () => "quest_quatloo_coin"), ...Array.from({ length: skulls }, () => "quest_silver_skull"), ...Array.from({ length: pearls }, () => PEARL)];
   if (items.length === 0) return;
-  const end = map.dungeon?.endRoom;
-  const machines = map.dungeon?.machines;
-  const inRoom = (a: ActionInstance, r?: { x: number; y: number; w: number; h: number }) => !!r && a.x >= r.x && a.y >= r.y && a.x < r.x + r.w && a.y < r.y + r.h;
-  // (nor in a treasure chamber behind a brittle wall: a coin or a skull that only a party with the Perceptive talent can reach would be lost to the others)
-  const vaults = map.dungeon?.vaults ?? [];
-  const chests = actions.filter((a) => a.kind === "treasure" && typeof a.params.quest !== "string" && a.params.lock === undefined && !inRoom(a, end) && !inRoom(a, machines) && !vaults.some((v) => inRoom(a, v)) && (!onlyAlarm || a.params.warn === "alarm"));
+  const chests = eligibleChests(map, actions, onlyAlarm);
   if (chests.length === 0) return;
   const rng = new Rng(derive(seed, "hide-in-chests"));
   const order = rng.shuffle(chests);

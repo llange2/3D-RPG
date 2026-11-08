@@ -10,7 +10,7 @@ import { sectionAt } from "../interiors/spaceship";
 import { stairLinks, towerFloorAt } from "../interiors/stairs";
 import { analyzeTopology, type Topology } from "../interiors/topology";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
-import { ACTION_DEFS, blocksCell } from "./registry";
+import { ACTION_DEFS, SUPPORT_BEAM, blocksCell } from "./registry";
 import type { MapContent } from "./types";
 
 const DIRS = Object.keys(FACING_DELTA) as Facing[];
@@ -64,7 +64,7 @@ export function themeIssues(map: InteriorMap, content: MapContent): string[] {
     const swapped = !!map.dungeon?.tower && a.params.trap === "generic" && ["guillotine", "pit", "spring"].includes(theme.trap);
     if (a.kind === "trap" && !a.uid.includes("trapfield") && a.params.trap !== theme.trap && !swapped) issues.push(`${a.uid}: ${String(a.params.trap)} trap in ${theme.id}, which has ${theme.trap}`);
     if (a.kind === "trap" && map.dungeon?.tower && (a.params.trap === "guillotine" || ((a.params.trap === "pit" || a.params.trap === "spring") && towerFloorAt(map.dungeon.tower, a.x) > 0))) issues.push(`${a.uid}: a ${String(a.params.trap)} trap in a tower, off its ground floor or with a blade`);
-    if (a.kind === "decor" && Number(a.params.item) !== 76 && !WALL_DECO_ITEMS.includes(Number(a.params.item)) && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
+    if (a.kind === "decor" && Number(a.params.item) !== 76 && Number(a.params.item) !== SUPPORT_BEAM && !WALL_DECO_ITEMS.includes(Number(a.params.item)) && !theme.props.includes(Number(a.params.item))) issues.push(`${a.uid}: prop ${String(a.params.item)} does not belong to ${theme.id}`);
     // the objects of a quest (runes, gongs, statues, levers) belong to the quest, whoever lives here
     for (const item of [a.params.item, a.params.chest]) if (["decor", "treasure", "shrine"].includes(a.kind) && typeof item === "number" && forbidden.has(item) && a.params.quest === undefined) issues.push(`${a.uid}: prop ${item} does not suit ${theme.inhabitants}`);
     if (typeof a.params.quest === "string") for (let i = 0; i < Number(a.params.count ?? 1); i++) found.push(a.params.quest);
