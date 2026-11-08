@@ -1,12 +1,11 @@
 /**
  * What a step on lava does to the party (the user's rule, 28th playtest): every hero who is not dead takes `LAVA_DAMAGE` points of fire damage per step, cut
  * down like every other hit of fire: by the hero's fire resistance, by Protection from Elementals (fire; as many points as the caster has levels) and by the Fairy.
- * A hovering party (Levitate) does not touch the lava.
+ * Levitate does not help: it only keeps the party out of pit traps (the spell's text, 8. 11. 2026).
  */
 import type { Rng } from "../core/rng";
 import { anyoneLeft, isAlive } from "./character";
 import { applyHit, elementalDamage } from "./combat";
-import { hasEffect } from "./party";
 import type { Condition, Party } from "./types";
 
 export const LAVA_DAMAGE = 25;
@@ -25,8 +24,6 @@ export interface LavaStep {
 }
 
 export function walkOnLava(party: Party, rng: Rng): LavaStep {
-  const none: LavaStep = { hits: [], defeated: false };
-  if (hasEffect(party, "levitate")) return none;
   const hits: LavaHit[] = [];
   party.characters.forEach((c, i) => {
     if (!isAlive(c)) return;

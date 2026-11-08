@@ -133,7 +133,7 @@ describe("28th playtest, point 1: the lava islands", () => {
     }
   });
 
-  it("burns every hero for 25 points of fire on each step, less by Protection from Elementals and the Fairy, never when hovering", () => {
+  it("burns every hero for 25 points of fire on each step, less by Protection from Elementals and the Fairy, also when hovering", () => {
     const open = createDefaultParty();
     expect(walkOnLava(open, rng("lava")).hits.length).toBeGreaterThan(0);
     const bare = bareParty();
@@ -155,10 +155,10 @@ describe("28th playtest, point 1: the lava islands", () => {
     const fairy = bareParty();
     fairy.mascot = "Fairy";
     expect(walkOnLava(fairy, rng("lava")).hits).toEqual([]);
-    // a hovering party does not touch the lava
+    // Levitate only keeps the party out of pit traps (8. 11. 2026): a hovering party is burnt like any other
     const hover = bareParty();
     hover.effects.push({ kind: "levitate", until: hover.minutes + 480 });
-    expect(walkOnLava(hover, rng("lava")).hits).toEqual([]);
+    expect(walkOnLava(hover, rng("lava")).hits.map((h) => h.damage)).toEqual(wanted);
     // the dead are not burnt again
     const dead = bareParty();
     dead.characters[0]!.conditions = ["Dead"];

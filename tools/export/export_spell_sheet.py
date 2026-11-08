@@ -27,8 +27,27 @@ DESCRIPTION_ADDITIONS = {
     2: "Can be cast 3 times a day.",  # Pandora's box (`Party.pandora`, 3 per game day)
 }
 
-# Sentences of the sheet that the user rewrote (8. 11. 2026, 48th playtest): spell id -> (old text, new text). Prismatic Light only hits what the party sees, its beams do not pass walls.
-DESCRIPTION_REPLACEMENTS = {73: ("Hits all monsters.", "Hits all monsters in view.")}
+# Sentences of the sheet that the user rewrote (8. 11. 2026, 48th playtest): spell id -> list of (old text, new text); a pair only applies while the old text is still there.
+# Prismatic Light only hits what the party sees, its beams do not pass walls. The rest is the spell consistency check of 8. 11. 2026: the text follows the spell
+# (lines instead of "all monsters", acid instead of poison, ...) or the spell was changed to follow the text (Awaken, Dragon Breath, Turn Undead, Levitate, Resurrect).
+DESCRIPTION_REPLACEMENTS = {
+    73: [("Hits all monsters.", "Hits all monsters in view."), ("90-100 random", "90-110 random")],  # Prismatic Light: the data say 90 to 110
+    14: [("10 poison damage", "10 acid damage")],  # Toxic Cloud
+    19: [("Damages or destroys a group of undead monsters.", "Does 100 damage to one undead monster. Nothing reduces it.")],  # Turn Undead
+    38: [("to all monsters.", "to all monsters in a line.")],  # Acid Spray
+    39: [("to all monsters.", "to all monsters in a line.")],  # Cold Ray
+    60: [("to all monsters and heals party", "to all monsters in a line and heals the party")],  # Moon Ray
+    45: [("to an another biome", "to another biome. Works only outside.")],  # Nature's Gate
+    62: [("walk through doors or brittle walls", "walk through a door or wall.")],  # Etherealise
+    70: [("Revives a rotten character,", "Revives a rotten character with 1 hit point,")],  # Resurrect
+    28: [("2â€“12", "2-12")],  # Power Cure: the workbook carries an en dash that was read in the wrong encoding
+    31: [("unabled", "unable")],  # Immobilize
+    41: [("lowering ist chance", "lowering its chance")],  # Clumsy
+    48: [("Paralysed", "Paralyzed")],  # Cure Paralysis: the condition is called Paralyzed in the game
+}
+
+# Names the user corrected: spell id -> name.
+NAME_REPLACEMENTS = {24: "Wizard's Eye"}
 
 
 def clean(value):
@@ -47,12 +66,10 @@ def export_spells() -> int:
         description = clean(d["Description"])
         if spell_id in DESCRIPTION_ADDITIONS and DESCRIPTION_ADDITIONS[spell_id] not in description:
             description = f"{description} {DESCRIPTION_ADDITIONS[spell_id]}"
-        if spell_id in DESCRIPTION_REPLACEMENTS:
-            old, new = DESCRIPTION_REPLACEMENTS[spell_id]
-            if "in view" not in description:
-                description = description.replace(old, new)
+        for old, new in DESCRIPTION_REPLACEMENTS.get(spell_id, []):
+            description = description.replace(old, new)
         out[str(spell_id)] = {
-            "name": clean(d["Name"]),
+            "name": NAME_REPLACEMENTS.get(spell_id, clean(d["Name"])),
             "description": description,
             "explanation": clean(d.get("Explanation")) or "",
             "status": clean(d["Comment"]) or "",

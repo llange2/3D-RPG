@@ -1543,3 +1543,24 @@ Rückmeldungen des Nutzers zur Turmoptimierung (`tests/unit/beams.test.ts`, `tow
 - **Punkt 6, Holzbalken** (Item 99, `SUPPORT_BEAM` in `registry.ts`): kein Zufallsobjekt der Deko mehr, kein Text, **kein Hindernis**. Er steht auf der **Kante** zwischen zwei Zellen (Aktion auf einer Zelle, Parameter `side` E oder S, `bearing`), beide Zellen sind begehbar, nur der Schritt über die Kante ist gesperrt (`beamBetween` in `actions/beams.ts`; `Game.beams`, `canEnter`, `wallBetween` für Monster, Sprünge). **Der Balken selbst ist solide** (Kommentar an `SUPPORT_BEAM` und `beams.ts` für eine spätere Freibewegung). Muster (`planBeams`): je großem Raum (ab 24 Zellen, 60 %) **ein** Muster, alle Balken des Raums in gleicher Richtung, höchstens 10 (`BEAMS_PER_ROOM`): einzeln, Reihe (alle 2 bis 4 Zellen entlang der gesperrten Achse), Spalte (alle 2 bis 4 Zellen quer dazu) oder Gitter aus beiden; nie nebeneinander, nie an Wand, Tür, Raummitte oder Landezelle, und **die Karte bleibt zusammenhängend** (`reachableWithBeams` mit den Treppensprüngen; schlägt es fehl, bekommt der Raum keine Balken). Dungeons und Türme, nicht Höhlen, Burgen, Raumschiff.
 - **Punkt z, Pandora's Box:** die Beschreibung endet mit „Can be cast 3 times a day.“ (`DESCRIPTION_ADDITIONS` im Exporter, Eintrag in `spell-sheet.json`; die Regel selbst gab es: `PANDORA_PER_DAY`).
 - **Nebenfund:** `generateContent` kann einem Ort, der eine Münze, einen Schädel oder eine Perle verstecken muss, keine gewöhnliche Truhe gegeben haben (Undercroft of Kelvaa, Welt `ue-a`: nur Truhen im Endraum und in der Schatzkammer, ein Silberschädel ging verloren: `quests12-ue.test.ts`). Jetzt stellt `rules.ts` dann eine Ersatztruhe (`#chest_spare:0`) an einen freien Rand, außer Landezellen, Raummitten und Durchgängen. Diagnose: `tools/dev/ue-skulls.ts <Seed>`.
+
+## Konsistenzcheck der Zauber (8. 11. 2026, kein `GEN_VERSION`)
+
+Alle 78 Zauber wurden gegen ihre Beschreibung geprüft (Text aus `spell-sheet.json`, Wirkung in `sim/spells.ts`, `sim/encounter.ts`, `Game.castSpells`). Entscheidungen des Nutzers je Abweichung:
+
+| Zauber | Entscheidung | Umsetzung |
+|---|---|---|
+| Awaken (1) | Zauber anpassen | weckt alle schlafenden Helden, keine Zielwahl (`SpellResult` `awaken`) |
+| Acid Spray (38), Moon Ray (60) | Text | „…in a line“ (`DESCRIPTION_REPLACEMENTS`) |
+| Cold Ray (39) | Text und blaue Linie | „…in a line“; `Game.launchPartyShots` zeichnet je getroffenem Monster eine blaue Linie (`Projectiles.beam("ice", …)`) statt des Eiszapfens |
+| Dragon Breath (50) | Zauber anpassen | Flächenzauber wie Meteor Shower (`isAreaSpell`, `areaSpell` `dragon_breath`): alle Monster im Aktionsradius, ein zufälliges Element je Wurf, Linien wie Prismatic Light |
+| Toxic Cloud (14), Prismatic Light (73) | Text | „acid“ statt „poison“, „90-110“ statt „90-100“ |
+| Resurrect (70) | Text und Zauber | nur Verrottete, 1 LP (Raise Dead nur Tote, 1 LP) |
+| Etherealise (62) | Text und Zauber | „…through a door or wall“; der Sprung über 2 Felder brauchte nur ein freies Zielfeld und ging schon durch gewöhnliche Mauern (keine Codeänderung) |
+| Wizard's Eye (24) | Zauber anpassen | zeigt keine Monster mehr (`mappedMonsters`, `drawMinimap`); nur Detect Monster zeigt sie überall; Tooltip „the whole map shows“ |
+| Levitate (21) | Zauber anpassen | hält nur aus Fallgruben: `canSwim`/`canSail`, `walkOnLava` und `Game.canCross` (Kampagnenwasser) kennen es nicht mehr; das Altspiel kannte nur die Fallen (`action_handler.py`) |
+| Nature's Gate (45) | Text | „Works only outside.“ |
+| Turn Undead (19) | Zauber anpassen | ein Untoter, `TURN_UNDEAD_DAMAGE` (100) ohne Resistenz (Sonderregel `turn_undead` in `specialSpell`); ein lebendes Ziel lehnt `spellRefusal` vor dem Bezahlen ab; Untote mit höchstens 100 LP sind damit zerstört |
+| Tippfehler | korrigiert | Power Cure („2–12“, Kodierungsfehler), „unabled“, „ist“, „Wizard's Eye“, „Paralyzed“ |
+
+Der Exporter hat jetzt eine Liste von Ersetzungen je Zauber (`DESCRIPTION_REPLACEMENTS`) und `NAME_REPLACEMENTS`. Lief er im Worktree, fehlte `old_code` am relativen Pfad: `DOCS` von außen setzen. Der Lauf übernahm auch den aktuellen `status` der Excel („done“ statt „to implement“; das Feld liest kein Code). Nicht geändert, weil nicht entschieden: Begriffe „energy“/„cold“ in den Texten (im Code `magic`/`ice`), „group of monsters“ heißt weiter „Linie durch das Ziel“, Lloyd's Beacon, Town Portal, Protection from Elements, Light, Super Shelter, die Suppress-Zauber und Pandora's box ohne Städte stehen in der Zusammenfassung der Prüfung. Tests: `tests/unit/spellConsistency.test.ts`; Browser: `tools/dev/check-spell-consistency.ts`, dazu `check-playtest48.ts <Ordner> cast flat cedar-peak-198 day 39,50,19`.
