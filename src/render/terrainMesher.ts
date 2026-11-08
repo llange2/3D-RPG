@@ -29,6 +29,8 @@ export interface PropInstance {
   /** Pitch and roll in radians, applied before the yaw (a trap door lies flat by a roll of 270 degrees). */
   rotX?: number;
   rotZ?: number;
+  /** A turn about the model's own up axis (y), made before everything else: spins a model whose long axis is y about that axis (the icicle of a flying ice spell). */
+  spin?: number;
   /** `y` is the height of the model's origin instead of its lowest point. For rolled items, whose lowest point is not at the bottom of the model. */
   atOrigin?: boolean;
   lod?: { model: string; scale: number };

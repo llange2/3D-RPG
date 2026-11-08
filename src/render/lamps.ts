@@ -12,6 +12,8 @@ export interface LampKind {
   color: [number, number, number];
   range?: number;
   intensity?: number;
+  /** The share of its light the lamp keeps by day outside (0 = none, the default: by day lamps add nothing). A spell's light must show in the sun as well (48th playtest, point 6). */
+  daylight?: number;
 }
 
 /** A lamp on a map: where it hangs and what it gives (`Game.updateLamps` hands the lights of the pool to the nearest ones). */

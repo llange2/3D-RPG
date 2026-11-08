@@ -1222,24 +1222,6 @@
   "fromObj": true,
   "mean": 0.45
  },
- "blk_pillars_city": {
-  "file": "models-original/blk_pillars_city.glb",
-  "tris": 496,
-  "bytes": 368528,
-  "bounds": [
-   -1.25,
-   0,
-   -1.25,
-   1.25,
-   2,
-   1.25
-  ],
-  "animations": [],
-  "groundTop": 2,
-  "surface": 2,
-  "fromObj": true,
-  "mean": 0.63
- },
  "blk_floor": {
   "file": "models-original/blk_floor.glb",
   "tris": 2762,
@@ -4245,5 +4227,23 @@
   "surface": 0.645,
   "fromObj": false,
   "mean": 0.249
+ },
+ "blk_city_pillar": {
+  "file": "models-original/blk_city_pillar.glb",
+  "tris": 2999,
+  "bytes": 1197764,
+  "bounds": [
+   -0.29945918917655945,
+   -1,
+   -0.2997192144393921,
+   0.29945918917655945,
+   1,
+   0.2997192144393921
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "surface": 1,
+  "fromObj": false,
+  "mean": 0.567
  }
 }

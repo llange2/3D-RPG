@@ -838,7 +838,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   // texture differs by kind of place: the dungeon gets the fortress wall's stone, a castle its pillar texture, a town its columns
   { ...S("blk_pillars_dungeon", "4 pillars.obj", 700, 512), texture: "textures/tex_fortress_wall.jpg" },
   { ...S("blk_pillars_castle", "4 pillars.obj", 700, 512), texture: "textures/tex_fortress_pillar.jpg" },
-  { ...S("blk_pillars_city", "4 pillars.obj", 700, 512), texture: "textures/tex_city_columns.jpg" },
+  // the town's pillars are the user's own single column (0.6 x 2.0 x 0.6, centred on its origin), four of them stand on the corners of a pillar cell
+  { ...S("blk_city_pillar", "new:City_pillar.glb", 3000, 1024), keepNormalMap: true },
   // the city's walls that can be broken and what is left of them (blocks 5 and 6): they look like any other city wall until broken
   { ...S("blk_city_brittle", "City brittle wall.glb", 300, 1024), drop: ["Cube"] },
   { ...S("blk_city_cracked", "City cracked wall.glb", 600, 1024), drop: ["Cube"] },

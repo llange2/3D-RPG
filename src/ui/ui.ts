@@ -98,6 +98,8 @@ export class UI {
   private actionsEl!: HTMLElement;
   private readonly focus: HTMLElement;
   private readonly flash: HTMLElement;
+  /** A bright tint over the whole picture that fades out through orange (Star Burst). */
+  private readonly glow: HTMLElement;
   readonly minimap: HTMLCanvasElement;
   /** Covers everything while a map is built (the old game's loading screen). */
   readonly loading: LoadingScreen;
@@ -130,6 +132,7 @@ export class UI {
     this.minimap.height = 176;
     this.focus = h("div", { class: "focusbar hud-hide" });
     this.flash = h("div", { class: "dim-overlay" });
+    this.glow = h("div", { class: "light-flash" });
     const actions = (this.actionsEl = h(
       "div",
       { class: "actions" },
@@ -150,6 +153,7 @@ export class UI {
       this.logEl,
       this.partyBar,
       actions,
+      this.glow,
       this.flash,
     );
     this.loading = new LoadingScreen(this.root);
@@ -305,6 +309,23 @@ export class UI {
   hurtFlash(): void {
     this.flash.classList.add("on");
     setTimeout(() => this.flash.classList.remove("on"), 80);
+  }
+
+  /**
+   * A bright light over the whole picture that fades out within `seconds`, white at the start and orange in the middle (Star Burst, 48th playtest point 2). The point light at
+   * the party lights the scene; this tint carries it into the sky and the far walls, which a light with a range cannot reach.
+   */
+  lightFlash(seconds: number): void {
+    this.glow.getAnimations().forEach((a) => a.cancel());
+    this.glow.animate(
+      // (the tint is added to the picture, `mix-blend-mode: screen`: it brightens instead of muddying it)
+      [
+        { backgroundColor: "rgb(255,255,255)", opacity: 0.95, offset: 0 },
+        { backgroundColor: "rgb(255,160,55)", opacity: 0.6, offset: 0.45 },
+        { backgroundColor: "rgb(255,110,20)", opacity: 0, offset: 1 },
+      ],
+      { duration: seconds * 1000, easing: "ease-out" },
+    );
   }
 
   setFocus(name: string | null, hp = 0, max = 1): void {

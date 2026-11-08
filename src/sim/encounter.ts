@@ -749,20 +749,37 @@ export function spellInLine(party: Party, view: GridView, enc: Encounter, px: nu
 }
 
 /** Spells with a rule of their own for whom they hit and how hard. */
-export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm";
+export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm" | "prismatic_light";
 
 /** The elements Elemental Storm throws; every monster gets one of them at random. */
 export const ELEMENTAL_STORM_ELEMENTS: readonly string[] = ["fire", "ice", "acid"];
+/** The damage types of Prismatic Light (the spell sheet's list); every monster gets one of them at random, and its beam shines in that colour. */
+export const PRISMATIC_ELEMENTS: readonly string[] = ["acid", "ice", "fire", "magic"];
+/** Star Burst: everything within this many tiles of the party (a circle, not a square). */
+export const STAR_BURST_RADIUS = 3;
+
+/** The spells that need no target: they work from the party outwards (`areaSpell`). */
+export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" | "star_burst";
 
 /**
- * Meteor Shower (fire) and Elemental Storm (a random element for each monster): they need no target, they hit every monster within the action radius, wall or no wall
- * (the storm comes from the sky, the 6. 11. 2026 playtest). `magic.damage` is what the spell rolled, the resistance of each monster takes its share.
+ * Meteor Shower (fire), Elemental Storm (a random element for each monster) and Prismatic Light (a random one of four damage types for each monster): they need no target, they
+ * hit every monster within the action radius, wall or no wall (the storm comes from the sky, the 6. 11. 2026 playtest; the light of the prism reaches round corners, the 8. 11. 2026
+ * playtest). Star Burst (48th playtest, point 2) goes off at the party and hits every monster within `STAR_BURST_RADIUS` tiles, also without a clear line.
+ * `magic.damage` is what the spell rolled, the resistance of each monster takes its share.
  */
-export function areaSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, kind: "meteor_shower" | "elemental_storm", magic: { damage: number; type: string }): CombatEvent[] {
+export function areaSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, kind: AreaSpell, magic: { damage: number; type: string }): CombatEvent[] {
   const events: CombatEvent[] = [];
-  const caught = enc.monsters.filter((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= MONSTER_ACTION_RADIUS);
+  const caught = enc.monsters.filter((m) => {
+    if (m.hp <= 0 || isPhased(m)) return false;
+    if (kind === "star_burst") return (m.x - px) ** 2 + (m.y - py) ** 2 <= STAR_BURST_RADIUS ** 2;
+    return Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= MONSTER_ACTION_RADIUS;
+  });
   for (const m of caught) {
-    const element = kind === "meteor_shower" ? "fire" : ELEMENTAL_STORM_ELEMENTS[rng.int(ELEMENTAL_STORM_ELEMENTS.length)]!;
+    const element =
+      kind === "meteor_shower" ? "fire"
+      : kind === "elemental_storm" ? ELEMENTAL_STORM_ELEMENTS[rng.int(ELEMENTAL_STORM_ELEMENTS.length)]!
+      : kind === "prismatic_light" ? PRISMATIC_ELEMENTS[rng.int(PRISMATIC_ELEMENTS.length)]!
+      : magic.type;
     const damage = spellDamageToMonster(monsterById(m.defId), magic.damage, element);
     m.hp -= damage;
     events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage, element });
@@ -771,9 +788,6 @@ export function areaSpell(party: Party, view: GridView, enc: Encounter, px: numb
   finishSpell(party, view, enc, px, py, rng, events);
   return events;
 }
-
-/** Star Burst: everything within this many tiles of the target. */
-export const STAR_BURST_RADIUS = 3;
 /** Holy Word: undead with more health than this lose a share of it instead of a fixed amount. */
 export const HOLY_WORD_BIG = 600;
 export const HOLY_WORD_DAMAGE = 150;
@@ -798,14 +812,6 @@ export function specialSpell(party: Party, view: GridView, enc: Encounter, px: n
     killIfDead(party, enc, m, rng, events);
   };
   switch (kind) {
-    case "star_burst":
-      for (const m of [...enc.monsters]) {
-        if (m.hp <= 0 || isPhased(m)) continue;
-        if ((m.x - target.x) ** 2 + (m.y - target.y) ** 2 > STAR_BURST_RADIUS ** 2) continue;
-        if (m !== target && !lineOfSight(view, enc, target.x, target.y, m.x, m.y)) continue;
-        strike(m, spellDamageToMonster(monsterById(m.defId), magic.damage, magic.type));
-      }
-      break;
     case "holy_word":
       for (const m of monstersOnLine(view, enc, px, py, target)) {
         if (!isUndead(m.defId)) continue;

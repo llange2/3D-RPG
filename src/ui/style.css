@@ -378,6 +378,7 @@ html.ending-on #game-cursor { display: none; }
 .focusbar .bar { margin: 4px 0 0; }
 .dim-overlay { position: absolute; inset: 0; background: #7a0000; opacity: 0; pointer-events: none; transition: opacity 0.9s; }
 .dim-overlay.on { opacity: 0.45; transition: none; }
+.light-flash { position: absolute; inset: 0; background: transparent; opacity: 0; mix-blend-mode: screen; pointer-events: none; }
 #view { image-rendering: auto; }
 
 /* ---------- spell window: the pictures of the spells on a wide scroll ---------- */

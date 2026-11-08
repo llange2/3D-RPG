@@ -39,7 +39,7 @@ import { markResume, registryFile, takeResume } from "../render/modelSet";
 import { MENU_KEY, actionOf, assignKey, defaultKeys, primaryKey, GAME_ACTIONS } from "./keybindings";
 import { QUALITY_LEVELS, QUALITY_NAMES, applyQuality, qualityOf } from "./quality";
 import { PropRenderer } from "../render/props";
-import { PROJECTILE_MODELS, Projectiles, flightSeconds, type Point, type ProjectileKind } from "../render/projectiles";
+import { PROJECTILE_MODELS, Projectiles, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
 import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, type PropInstance } from "../render/terrainMesher";
@@ -54,8 +54,8 @@ import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
   alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters,
-  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS,
-  type CombatEvent, type Encounter, type GridView, type MonsterInstance,
+  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS, STAR_BURST_RADIUS,
+  type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
 import { RIFT_TURNS, SPELL_AGING, castSpell, isAreaSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, lastCastOf, noteCast, quickCastOf, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
@@ -153,6 +153,10 @@ type PartyAttackEvent = Extract<CombatEvent, { type: "party_attack" }>;
 const METEOR_HEIGHT = 11;
 const METEOR_FALL_SECONDS = 0.5;
 const STORM_FRONT = 1.2;
+/** Star Burst (48th playtest, point 2): a bright light at the party that dies down within 0.7 s, white first and then orange. Strong and wide, and it shows by day too. */
+const STAR_BURST_LIGHT: BurstSpec = { from: [1, 1, 1], to: [1, 0.45, 0.08], peak: 14, range: 40, seconds: 0.7, daylight: 1 };
+/** The flash where a meteor lands: it must show (point 3), so it is strong and also there by day. */
+const METEOR_IMPACT_LIGHT: BurstSpec = { from: [1, 0.85, 0.5], to: [1, 0.4, 0.08], peak: 7, range: 12, seconds: 0.5, daylight: 0.8 };
 
 /** Said when a spell that would carry the party away is cast in melee, and when the party tries to step away from it. */
 const IN_MELEE_SPELL = "That spell cannot be cast during a fight: the party cannot leave its field while monsters are next to it.";
@@ -3103,19 +3107,34 @@ export class Game {
    * has to wait for the shot to arrive. `spell` is the kind of a cast spell: it is one projectile aimed at the farthest
    * monster it hits; without it every ranged attack is a volley of arrows.
    */
-  private launchPartyShots(events: CombatEvent[], spell?: ProjectileKind, area?: "meteor_shower" | "elemental_storm"): Map<string, number> {
+  private launchPartyShots(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell): Map<string, number> {
     const flights = new Map<string, number>();
     const hits = events.filter((e): e is PartyAttackEvent => e.type === "party_attack" && e.kind !== "melee");
     const from = this.muzzle();
+    if (area === "star_burst") {
+      // no projectile: a bright light at the party that dies down through orange within 0.7 s, and the same over the whole picture (48th playtest, point 2)
+      const { x, y, z } = this.player;
+      this.projectiles.burst({ x, y, z }, STAR_BURST_LIGHT);
+      this.ui.lightFlash(STAR_BURST_LIGHT.seconds);
+      for (const e of hits) flights.set(e.uid, 0);
+      return flights;
+    }
     if (area) {
       hits.forEach((e, i) => {
         const at = this.monsters.anchor(e.uid);
         if (!at) return;
+        if (area === "prismatic_light") {
+          // a line from the party to every monster in range at once, in the colour of the damage type it got; they fade within 0.7 s
+          this.projectiles.beam(e.element ?? "magic", from, at);
+          flights.set(e.uid, 0);
+          return;
+        }
         if (area === "meteor_shower") {
-          // fireballs fall out of the sky onto every monster, a little aslant and one after the other
+          // fireballs fall out of the sky onto every monster, straight down with the tail up (48th playtest, point 3), one after the other; where one lands it flashes
           const delay = (i % 8) * 0.06;
-          const start = { x: at.x + ((i % 3) - 1) * 1.4, y: at.y + METEOR_HEIGHT, z: at.z + ((i % 2) * 2 - 1) * 1.4 };
+          const start = { x: at.x, y: at.y + METEOR_HEIGHT, z: at.z };
           this.later(delay, () => this.projectiles.launch("fire", start, at, 1, METEOR_FALL_SECONDS));
+          this.later(delay + METEOR_FALL_SECONDS, () => this.projectiles.burst(at, METEOR_IMPACT_LIGHT));
           flights.set(e.uid, delay + METEOR_FALL_SECONDS);
           return;
         }
@@ -3188,7 +3207,7 @@ export class Game {
    * the party's arrows and spells fly first and their hits show when they arrive, then the monsters answer (their shots
    * fly as well). Melee has no flight, so it all shows at once.
    */
-  private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: "meteor_shower" | "elemental_storm"): void {
+  private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell): void {
     const party = this.state.party;
     const flights = this.launchPartyShots(events, spell, area);
     const landing = (uid: string) => flights.get(uid) ?? 0;
@@ -3476,6 +3495,8 @@ export class Game {
     if (isAreaSpell(spellId)) {
       // the meteors fall from the sky: no roof, no storm of fire
       if (spellId === 72 && !(this.outsideNow() || this.interior?.map.theme.open)) return "Meteor Shower only works outside.";
+      // Star Burst goes off at the party and reaches three tiles (a circle), the others the whole action radius
+      if (spellId === 76) return near(STAR_BURST_RADIUS).length > 0 ? null : "There is no monster in range.";
       return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS) ? null : "There is no monster in range.";
     }
     if (isAttackSpell(spellId)) {
@@ -3774,12 +3795,17 @@ export class Game {
     recalcValues(c, this.state.party.talents, false, this.state.party.mascot);
   }
 
-  private async castSpells(): Promise<void> {
+  /** Test helper: hero `who` casts `spellId` at once, without the menus (the spell must be known and paid for as in the game). */
+  async debugCast(who: number, spellId: number): Promise<void> {
+    await this.castSpells({ who, pick: { spellId } as SpellChoice });
+  }
+
+  private async castSpells(forced?: { who: number; pick: SpellChoice }): Promise<void> {
     if (this.busy || this.over || this.inFlight()) return;
     const party = this.state.party;
     const caster = this.enc.battleMode && this.enc.attacker !== null && canAct(party.characters[this.enc.attacker]!) ? this.enc.attacker : null;
-    let who = caster;
-    let pick: SpellChoice | null = null;
+    let who = forced ? forced.who : caster;
+    let pick: SpellChoice | null = forced ? forced.pick : null;
     if (who === null) {
       const casters = party.characters.map((c, i) => ({ c, i })).filter(({ c }) => c.spells.length > 0 && canAct(c));
       if (casters.length === 0) {
@@ -3824,8 +3850,9 @@ export class Game {
         this.ui.log(FIZZLE_TEXT[result.reason]?.(c.name) ?? `The spell fizzles (${result.reason.replace(/_/g, " ")}).`, "bad");
         break;
       case "attack": {
-        // Meteor Shower and Elemental Storm hit every monster in the action radius: nothing to aim at (6. 11. 2026)
-        if (result.special === "meteor_shower" || result.special === "elemental_storm") {
+        // Meteor Shower, Elemental Storm and Prismatic Light hit every monster in the action radius, Star Burst every one within three tiles of the party: nothing to aim at
+        // (6. 11. 2026, 48th playtest points 2 and 5)
+        if (result.special === "meteor_shower" || result.special === "elemental_storm" || result.special === "prismatic_light" || result.special === "star_burst") {
           const { tx, ty } = this.player;
           const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), result.special, { damage: result.damage, type: result.type });
           // the sound of every element that falls (the storm throws all three)
@@ -5244,7 +5271,7 @@ export class Game {
       light.diffuse.set(lamp.color[0], lamp.color[1], lamp.color[2]);
       light.range = lamp.range ?? LAMP_RANGE;
       // the mascot orb keeps a share of its light by day, so that the gold glow shows in the forest as well
-      const share = lamp.key.startsWith(MASCOT_ORB_KEY) ? Math.max(need, 0.4) : need;
+      const share = lamp.key.startsWith(MASCOT_ORB_KEY) ? Math.max(need, 0.4) : Math.max(need, lamp.daylight ?? 0);
       light.intensity = (lamp.intensity ?? LAMP_INTENSITY) * share * slot.level;
     });
   }

@@ -239,8 +239,6 @@ export class PropRenderer {
         const dim = MODEL_DIM[key];
         if (dim !== undefined) std.diffuseColor = std.diffuseColor.scale(dim);
         mesh.material = std;
-        // the strip of the town's columns (720 x 5360) is drawn twice as wide as the column is round: squeezed to half its width (the user's wish)
-        if (key === "blk_pillars_city" && std.diffuseTexture) (std.diffuseTexture as Texture).uScale = 2;
         const texture = std.diffuseTexture;
         if (texture && !FIXED_LEVEL(key) && !this.exposed.some((e) => e.texture === texture)) {
           this.exposed.push({ texture, day: texture.level, mean: info.mean });
@@ -319,7 +317,15 @@ export class PropRenderer {
         const [sx, sy, sz] = p.scaleXYZ ?? [p.scale, p.scale, p.scale];
         // yaw, pitch and roll are applied as roll first, then pitch, then yaw: the order of the old engine's rotation=(pitch, yaw, roll)
         const lift = p.atOrigin ? 0 : model.base * sy + model.sink;
-        Matrix.ComposeToRef(new Vector3(sx, sy, sz), Quaternion.RotationYawPitchRoll(p.rotY, p.rotX ?? 0, p.rotZ ?? 0), new Vector3(x, p.y - lift, z), m);
+        const turn = Quaternion.RotationYawPitchRoll(p.rotY, p.rotX ?? 0, p.rotZ ?? 0);
+        // a spin about the model's y axis comes first (row vectors: the left matrix is applied first)
+        let rotation = turn;
+        if (p.spin) {
+          const turned = new Matrix();
+          turn.toRotationMatrix(turned);
+          rotation = Quaternion.FromRotationMatrix(Matrix.RotationY(p.spin).multiply(turned));
+        }
+        Matrix.ComposeToRef(new Vector3(sx, sy, sz), rotation, new Vector3(x, p.y - lift, z), m);
         m.copyToArray(buf, i * 16);
       });
       model.buffers.set(owner, buf);

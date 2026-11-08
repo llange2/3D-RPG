@@ -101,9 +101,13 @@ export function caveModelKeys(map: InteriorMap): string[] {
 
 /**
  * The pillars of a generated level are the old game's "4 pillars" (four columns on the corners of one cell, fortress block 40), with the
- * texture of the place: the stone of the fortress wall in a dungeon, the pillar texture in a castle, the columns of the city in a town.
+ * texture of the place: the stone of the fortress wall in a dungeon, the pillar texture in a castle. A town uses the user's single column
+ * (`blk_city_pillar`), four of which stand on the corners of a pillar cell (`SINGLE_PILLARS`).
  */
-const PILLAR_MODELS: Partial<Record<InteriorMap["kind"], string>> = { dungeon: "blk_pillars_dungeon", fortress: "blk_pillars_castle", town: "blk_pillars_city" };
+const PILLAR_MODELS: Partial<Record<InteriorMap["kind"], string>> = { dungeon: "blk_pillars_dungeon", fortress: "blk_pillars_castle", town: "blk_city_pillar" };
+
+/** Pillar models that are one column (centred on their origin, 2 high and 0.6 wide) and not four: the view places one per corner of the cell. */
+const SINGLE_PILLARS: ReadonlySet<string> = new Set(["blk_city_pillar"]);
 
 /** The model of a map's pillars, if it has any. */
 export function pillarModelKeys(map: InteriorMap): string[] {
@@ -766,7 +770,16 @@ export class InteriorView {
       // the model is 2 high and 2.5 wide, its columns centred on the corners of the cell: 1.5 makes them one cell apart, and the height
       // reaches the ceiling (the old game used 2.05 for the 4.2 of its fortress walls)
       const height = wallHeightOf(map) / 2;
-      for (const p of map.pillars ?? []) instances.push({ model: pillar, x: cellCenterX(p.x), y: 0, z: cellCenterZ(p.y), rotY: 0, scale: 1.5, scaleXYZ: [1.5, height, 1.5] });
+      // one column: the model is 2 high, so scale 1.5 reaches the town's wall height of 3 and makes it 0.9 wide; the columns sit where the four-pillar
+      // model had them, on the corners of the cell
+      if (SINGLE_PILLARS.has(pillar)) {
+        const reach = CELL_SIZE / 2;
+        for (const p of map.pillars ?? []) {
+          for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+            instances.push({ model: pillar, x: cellCenterX(p.x) + sx * reach, y: 0, z: cellCenterZ(p.y) + sz * reach, rotY: 0, scale: height, scaleXYZ: [height, height, height] });
+          }
+        }
+      } else for (const p of map.pillars ?? []) instances.push({ model: pillar, x: cellCenterX(p.x), y: 0, z: cellCenterZ(p.y), rotY: 0, scale: 1.5, scaleXYZ: [1.5, height, 1.5] });
     }
     // the models of the debug showcase that no old item stands for, turned to look south at the party
     for (const e of map.showcase?.extras ?? []) instances.push({ model: e.model, x: cellCenterX(e.x), y: e.lift ?? 0, z: cellCenterZ(e.y), rotY: Math.PI, scale: e.scale, ...(e.height ? { scaleXYZ: [e.scale, e.scale * e.height, e.scale] as [number, number, number] } : {}) });

@@ -1,4 +1,5 @@
 import type { Scene } from "@babylonjs/core/scene";
+import { GlowBeams } from "./glowBeams";
 import { LASER_LAMP, LaserFactory, type LaserBolt } from "./lasers";
 import type { LampKind } from "./lamps";
 import type { PropRenderer } from "./props";
@@ -19,7 +20,11 @@ interface Pose {
   /** Pitch and roll in degrees that turn the model's long axis along the flight (+z after the yaw). */
   pitch: number;
   roll: number;
+  /** A turn in degrees about the model's own long axis (y), made before the pitch: it turns the picture the party sees from behind, not the direction of flight. */
+  spin?: number;
 }
+
+const ICE_SPIN = 45;
 
 const POSES: Record<Exclude<ProjectileKind, "laser">, Pose> = {
   // the fletching is a flat vane (0.54 high, 0.17 wide): rolled by 90 degrees it lies flat, so the party sees the feathers from behind
@@ -27,7 +32,8 @@ const POSES: Record<Exclude<ProjectileKind, "laser">, Pose> = {
   // the flame tails of the fireball and of the "physical attack" are at the +y end of their models, the icicle's tip too
   // (checked on a side view with `npm run sheet:projectiles`)
   fire: { model: "proj_fire", scale: 0.55, pitch: -90, roll: 0 },
-  ice: { model: "proj_ice", scale: 0.6, pitch: 90, roll: 0 },
+  // the icicle is a flat shard that came out slanted on the screen: turned about its long axis by 45 degrees against the clock (48th playtest, point 4)
+  ice: { model: "proj_ice", scale: 0.6, pitch: 90, roll: 0, spin: ICE_SPIN },
   magic: { model: "proj_magic", scale: 0.5, pitch: 0, roll: 0 },
   physical: { model: "proj_physical", scale: 0.55, pitch: -90, roll: 0 },
   acid: { model: "proj_poison", scale: 0.45, pitch: 0, roll: 0 },
@@ -48,6 +54,10 @@ const TILE = 3;
 /** The flash of Elemental Storm: how long it fades out (the user, 6. 11. 2026), and how much bigger than a flying one the element is drawn. */
 export const FLASH_SECONDS = 0.3;
 const FLASH_SCALE = 2.2;
+/** How much of its light a spell keeps by day outside. */
+const SPELL_DAYLIGHT = 0.55;
+/** Prismatic Light: the lines fade out over this long (the user, 8. 11. 2026). */
+export const BEAM_SECONDS = 0.7;
 
 /** How long a projectile needs over `tiles` tiles. */
 export function flightSeconds(tiles: number): number {
@@ -81,11 +91,37 @@ interface Flash {
  */
 export const PROJECTILE_LAMPS: Readonly<Partial<Record<ProjectileKind, Omit<LampKind, "y">>>> = {
   laser: LASER_LAMP,
-  fire: { color: [1, 0.5, 0.12], range: 6.5, intensity: 3.4 },
-  acid: { color: [0.4, 1, 0.15], range: 6.5, intensity: 3.2 },
-  ice: { color: [0.35, 0.68, 1], range: 6.5, intensity: 3.2 },
-  magic: { color: [0.88, 0.35, 1], range: 6.5, intensity: 3.2 },
+  // `daylight`: the light shows in the sun as well, not only in the dark (48th playtest, point 6: by day no spell shone)
+  fire: { color: [1, 0.5, 0.12], range: 6.5, intensity: 3.4, daylight: SPELL_DAYLIGHT },
+  acid: { color: [0.4, 1, 0.15], range: 6.5, intensity: 3.2, daylight: SPELL_DAYLIGHT },
+  ice: { color: [0.35, 0.68, 1], range: 6.5, intensity: 3.2, daylight: SPELL_DAYLIGHT },
+  magic: { color: [0.88, 0.35, 1], range: 6.5, intensity: 3.2, daylight: SPELL_DAYLIGHT },
 };
+
+/** The colour of a damage type's light and beams (`PROJECTILE_LAMPS`), also for the types that fly as another picture (poison is acid, physical has none: white). */
+export function elementColor(element: string): [number, number, number] {
+  const kind: ProjectileKind = element === "ice" ? "ice" : element === "fire" ? "fire" : element === "acid" || element === "poison" ? "acid" : "magic";
+  return PROJECTILE_LAMPS[kind]!.color;
+}
+
+/** A light with no model that comes and goes (Star Burst, the impact of a meteor): where it starts, how it changes and how long it lasts. */
+export interface BurstSpec {
+  /** The colour at the start and from `half` of the way through on (it passes from one to the other over the first half). */
+  from: [number, number, number];
+  to: [number, number, number];
+  /** Full intensity at the start, it dies down to nothing at the end. */
+  peak: number;
+  range: number;
+  seconds: number;
+  daylight: number;
+}
+
+interface Burst {
+  id: number;
+  at: Point;
+  t: number;
+  spec: BurstSpec;
+}
 
 /** A moving light of the lamp pool: a laser or a spell in flight (`Game.updateLamps`). */
 export interface ProjectileGlow {
@@ -100,6 +136,8 @@ export interface ProjectileGlow {
 export class Projectiles {
   private flights: Flight[] = [];
   private flashes: Flash[] = [];
+  private bursts: Burst[] = [];
+  private beams: GlowBeams | null = null;
   private drawn = false;
   private lasers: LaserFactory | null = null;
   private static readonly OWNER = "projectiles";
@@ -138,15 +176,41 @@ export class Projectiles {
   /** An element appears at `at` and fades out over `FLASH_SECONDS` (Elemental Storm). Only the three elements have a picture. */
   flash(kind: "fire" | "ice" | "acid", at: Point): void {
     this.flashes.push({ pose: POSES[kind], at, t: 0 });
+    // the element shines for as long as it stands there (48th playtest, point 6: the storm had no light)
+    const color = PROJECTILE_LAMPS[kind]!.color;
+    this.burst(at, { from: color, to: color, peak: 4, range: 8, seconds: FLASH_SECONDS, daylight: SPELL_DAYLIGHT });
+  }
+
+  /** A light with no model at `at` (Star Burst at the party, the impact of a meteor): `spec` says what it does. */
+  burst(at: Point, spec: BurstSpec): void {
+    this.bursts.push({ id: Projectiles.flights++, at, t: 0, spec });
+  }
+
+  /**
+   * Prismatic Light: a line of light from `from` to `to` in the colour of `element`, there at once and gone after `BEAM_SECONDS`. The monster's end also shines for as long
+   * (a light of the pool, so only the two nearest ones show).
+   */
+  beam(element: string, from: Point, to: Point): void {
+    const color = elementColor(element);
+    this.beams ??= this.scene ? new GlowBeams(this.scene) : null;
+    this.beams?.add(color, from, to, BEAM_SECONDS);
+    this.burst(to, { from: color, to: color, peak: 3.4, range: 6.5, seconds: BEAM_SECONDS, daylight: SPELL_DAYLIGHT });
   }
 
   get active(): boolean {
-    return this.flights.length > 0 || this.flashes.length > 0;
+    return this.flights.length > 0 || this.flashes.length > 0 || this.bursts.length > 0 || (this.beams?.active ?? false);
   }
 
-  /** The lasers and the spells in flight, as moving lights (the colour of the beam or of the element). */
+  /** The lasers and the spells in flight, as moving lights (the colour of the beam or of the element), and the bursts of light. */
   glows(): ProjectileGlow[] {
     const out: ProjectileGlow[] = [];
+    for (const b of this.bursts) {
+      const k = Math.min(1, b.t / b.spec.seconds);
+      // the colour changes over the first half (white to orange for Star Burst), the light dies down over the whole time
+      const c = Math.min(1, k / 0.5);
+      const mix = (i: 0 | 1 | 2) => b.spec.from[i] + (b.spec.to[i] - b.spec.from[i]) * c;
+      out.push({ key: `burst:${b.id}`, x: b.at.x, y: b.at.y, z: b.at.z, lamp: { color: [mix(0), mix(1), mix(2)], range: b.spec.range, intensity: b.spec.peak * (1 - k) ** 1.2, daylight: b.spec.daylight } });
+    }
     for (const f of this.flights) {
       const lamp = PROJECTILE_LAMPS[f.kind];
       if (!lamp) continue;
@@ -157,6 +221,11 @@ export class Projectiles {
   }
 
   update(dt: number): void {
+    if (this.bursts.length > 0) {
+      for (const b of this.bursts) b.t += dt;
+      this.bursts = this.bursts.filter((b) => b.t < b.spec.seconds);
+    }
+    this.beams?.update(dt);
     if (this.flights.length === 0 && this.flashes.length === 0 && !this.drawn) return;
     for (const f of this.flights) f.t += dt;
     for (const f of this.flashes) f.t += dt;
@@ -177,7 +246,7 @@ export class Projectiles {
         continue;
       }
       const pose = f.pose!;
-      list.push({ model: pose.model, x, y, z, rotY: f.yaw, rotX: (pose.pitch * Math.PI) / 180 + tilt, rotZ: (pose.roll * Math.PI) / 180, scale: pose.scale, atOrigin: true });
+      list.push({ model: pose.model, x, y, z, rotY: f.yaw, rotX: (pose.pitch * Math.PI) / 180 + tilt, rotZ: (pose.roll * Math.PI) / 180, ...(pose.spin ? { spin: (pose.spin * Math.PI) / 180 } : {}), scale: pose.scale, atOrigin: true });
     }
     // the elements of a storm: upright, and all of one model fade together (they appear at the same moment); a model without a flash is solid again
     const fade = new Map<string, number>();
@@ -192,6 +261,8 @@ export class Projectiles {
   }
 
   clear(): void {
+    this.bursts = [];
+    this.beams?.clear();
     for (const f of this.flights) f.laser?.dispose();
     for (const model of new Set(this.flashes.map((f) => f.pose.model))) this.props.setVisibility(model, 1);
     this.flights = [];
