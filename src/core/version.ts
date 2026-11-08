@@ -152,5 +152,7 @@
  * foot cell is open floor (`TowerLayout.stairs[].foot`, so the layout draws other rims), towers are named "Tower of ..." (`towerName`), and the Kudo crab lives on water only (`TERRAIN_OVERRIDES`).
  * 58 = the tower follow-up (bug_fix_46): the staircase turned a quarter circle clockwise from the wall (its end cell, not its foot, must be open), the wooden support beam is an edge decoration in regular patterns
  * in the big rooms of the dungeons and towers (`actions/beams.ts`, params `side`, `bearing`) and no longer one of the random props; a place that must hide a coin, a skull or a pearl always has an ordinary chest for it (`#chest_spare:0`).
+ * 59 = the wooden stairs of the towers (49th playtest, point 3): the stairs fill their cell and rise a storey to the Fort door, so the staircase's foot cell is no longer kept open (`rimSpot`, other
+ * rims are drawn); the cell above the stairs is a shaft one storey higher (`towerShafts`, rendering only).
  */
-export const GEN_VERSION = 58;
+export const GEN_VERSION = 59;

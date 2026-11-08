@@ -1,7 +1,7 @@
 import { hash2, valueNoise2 } from "../core/noise";
 import { COTTAGE_MODEL, COTTAGE_SCALE, COTTAGE_SCALE_XYZ, tunedItemModels } from "../data/item-tuning";
 import { CARAVAN_ITEM, COTTAGE_EVERY } from "../world/caravans";
-import { BIOME, CHUNK_SIZE, DECO, GROUND, TILE_SIZE, isTileWalkable, isTower, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
+import { BIOME, CHUNK_SIZE, DECO, GROUND, SIDE_DELTA, TILE_SIZE, isTileWalkable, isTower, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
 import { poiFront, type PoiSide, type World } from "../world/world";
 import { flatTerrainOf, type FlatTileSet } from "./flatGround";
 import { tileHeight, tileToWorldX, tileToWorldZ, usesTileModels } from "./heights";
@@ -490,7 +490,16 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
 
   // points of interest are drawn once, by the chunk that holds their centre
   // (the world is a globe: a place across the seam is found at the position it has beside this chunk)
-  for (const poi of world.poisInRect(x0, y0, x0 + CHUNK_SIZE - 1, y0 + CHUNK_SIZE - 1)) props.push(poiProp(poi, ch, x0, y0, tileAt));
+  for (const poi of world.poisInRect(x0, y0, x0 + CHUNK_SIZE - 1, y0 + CHUNK_SIZE - 1)) {
+    props.push(poiProp(poi, ch, x0, y0, tileAt));
+    // two torches light the way in to a tower (it stands in the open, no road leads to it)
+    if (isTower(poi)) {
+      const lx = poi.x - x0;
+      const ly = poi.y - y0;
+      const base = (ch(lx, ly) + ch(lx + 1, ly) + ch(lx + 1, ly + 1) + ch(lx, ly + 1)) / 4;
+      for (const spot of towerTorchSpots(poi)) for (const model of TORCH_MODELS) props.push({ model, x: spot.x, y: base, z: spot.z, rotY: 0, scale: TORCH_SCALE });
+    }
+  }
 
   // pack groups into shared buffers; every group is one contiguous index range = one submesh
   const names = [...groups.keys()].sort();
@@ -523,6 +532,28 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
     ii += g.indices.length;
   }
   return out;
+}
+
+/** The models of a torch (the post and the unlit flame, `proceduralProps.ts`). */
+export const TORCH_MODELS = ["proc_torch", "proc_flame"] as const;
+/** How far in front of the tower's wall a torch stands, and how far from the door to either side (the door is in the middle of the front). */
+const TORCH_AHEAD = 1.2;
+const TORCH_ASIDE = 2.0;
+/** A torch is drawn 1.6 times as big as its model (a tile is 3 units wide and the tower 9 high: a 1.7 post vanished beside it); the flame hangs 1.6 x 2 above the ground. */
+export const TORCH_SCALE = 1.6;
+export const TORCH_LIGHT_HEIGHT = 3.2;
+
+/** Where the two torches in front of a tower stand (49th playtest): world coordinates, either side of the door. */
+export function towerTorchSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { x: number; z: number }[] {
+  const b = poiBounds(poi);
+  const cx = tileToWorldX(b.x0) + (poi.size * TILE_SIZE) / 2;
+  const cz = tileToWorldZ(b.y0) - (poi.size * TILE_SIZE) / 2;
+  // the front as a direction on the ground: grid y grows south, which is -z
+  const d = SIDE_DELTA[poi.side];
+  const fx = d.dx;
+  const fz = -d.dy;
+  const ahead = (poi.size * TILE_SIZE) / 2 + TORCH_AHEAD;
+  return [-1, 1].map((k) => ({ x: cx + fx * ahead - fz * TORCH_ASIDE * k, z: cz + fz * ahead + fx * TORCH_ASIDE * k }));
 }
 
 /** Yaw that turns a model whose front is +z (north) towards a side; grid y grows south, which is -z. */

@@ -733,7 +733,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_cottage", "new:Cottage.glb", 3000, 1024),
   // the tower of the layout dungeon_5 (quest document 1.7, the user's models): the building on the overworld (2 x 2 tiles, 10 314 triangles) and the spiral staircase inside (9 372)
   { ...S("poi_tower", "new:Tower.glb", 6000, 1024), normals: "smooth" },
-  S("obj_spiral_staircase", "new:Spiral_Staircase.glb", 4500, 1024),
+  // the straight wooden stairs of the tower (49th playtest, replaces the spiral staircase): 9 376 triangles (4 800 in the reduced set), 1.45 x 1.12 x 1.9, rising towards -z; the game stretches them to a cell and a storey
+  S("obj_wooden_stairs", "new:Wooden_Stairs.glb", 4800, 1024),
   S("obj_pirate_ship", "new:Pirate Ship.glb", 4500, 1024),
   // the Capybara (7. 11. 2026, the user's model): the Easter egg mascot that waits behind a brittle wall of the start town (`world/mascots.ts`)
   S("obj_capybara", "new:Capybara.glb", 3000, 1024),

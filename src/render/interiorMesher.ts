@@ -36,7 +36,9 @@ const FLAT_LIFT = 0.02;
  * textures were drawn for these proportions (tex_dungeon_wall is 341 x 512 px, tex_fortress_wall 357 x 512), so a wall
  * shows its texture once over the full height, like the old cubes (uv v = 1). Cyber maps are `dungeon` here.
  */
-const WALL_HEIGHT: Record<InteriorKind, number> = { dungeon: CELL_SIZE * 1.5, fortress: CELL_SIZE * 1.4, cave: CELL_SIZE, town: CELL_SIZE };
+/** The wall of a dungeon (and so of a tower): the height of one storey, which the stairs of a tower climb. */
+export const TOWER_STOREY = CELL_SIZE * 1.5;
+const WALL_HEIGHT: Record<InteriorKind, number> = { dungeon: TOWER_STOREY, fortress: CELL_SIZE * 1.4, cave: CELL_SIZE, town: CELL_SIZE };
 
 export function wallHeightOf(map: InteriorMap): number {
   return WALL_HEIGHT[map.kind];
@@ -100,10 +102,32 @@ export function modelFloorCells(map: InteriorMap, holes: ReadonlySet<number> = n
   return out;
 }
 
+const shaftCache = new WeakMap<InteriorMap, ReadonlyMap<number, Facing>>();
+
+/**
+ * The stair cells of a tower (49th playtest): grid index -> the side that is open, the one towards the cell in front of the stairs. Above such a cell is a shaft: the walls round it
+ * and its ceiling are one storey higher, so the wooden stairs, which rise a storey to the Fort door at their top, have the room they climb through. Empty for every other map.
+ */
+export function towerShafts(map: InteriorMap): ReadonlyMap<number, Facing> {
+  const known = shaftCache.get(map);
+  if (known) return known;
+  const out = new Map<number, Facing>();
+  for (const s of map.dungeon?.tower?.stairs ?? []) {
+    const dx = s.front.x - s.up.x;
+    const dy = s.front.y - s.up.y;
+    const open = (Object.keys(FACING_DELTA) as Facing[]).find((f) => FACING_DELTA[f].dx === dx && FACING_DELTA[f].dy === dy);
+    if (open) out.set(s.up.y * map.width + s.up.x, open);
+  }
+  shaftCache.set(map, out);
+  return out;
+}
+
 /** The 3D ceiling model over this cell, if it has a ceiling and its texture has a model (`CEILING_MODELS`). */
 export function ceilingModelAt(map: InteriorMap, cx: number, cy: number): string | null {
   const i = cy * map.width + cx;
   if (map.cells[i] !== CELL.FLOOR) return null;
+  // (the ceiling over the stairs of a tower is the flat one, a storey higher: the models hang at the height of the room's)
+  if (towerShafts(map).has(i)) return null;
   if (!map.styles) return ceilingModelOfTexture(map.theme.ceiling) ?? null;
   const style = map.styles.list[map.styles.cell[i]!];
   return style && style.cls === "floor" && style.ceiling ? (ceilingModelOfTexture(style.ceiling) ?? null) : null;
@@ -294,6 +318,16 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
   };
   const styles = map.styles;
   const cellAt = (x: number, y: number): number => (x < 0 || y < 0 || x >= map.width || y >= map.height ? CELL.SOLID : map.cells[y * w + x]!);
+  const shafts = towerShafts(map);
+  /** A wall face from `y0` to `y1` on one side of a cell, its texture once over that height; it points into the cell (`n`). */
+  const wallQuad = (b: Bucket, bl: readonly [number, number], br: readonly [number, number], n: [number, number, number], s: number, y0: number, y1: number): void => {
+    const a = b.vertex([bl[0], y0, bl[1]], n, [0, 0], s);
+    const t1 = b.vertex([bl[0], y1, bl[1]], n, [0, 1], s);
+    const t2 = b.vertex([br[0], y1, br[1]], n, [1, 1], s);
+    const e = b.vertex([br[0], y0, br[1]], n, [1, 0], s);
+    // front face toward the cell (checked in the browser: the order bottom-left, bottom-right, top-right faces the other way)
+    b.indices.push(a, t2, t1, a, e, t2);
+  };
 
   // door niches of town buildings: the cell behind the doorway gets the door texture
   const doorFaces = new Set<string>();
@@ -341,7 +375,9 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
       }
       if (here === CELL.LOW) continue; // no ceiling, no walls
 
-      const roof = H + liftAt(cx, cy);
+      const shaft = shafts.get(cy * w + cx);
+      // (above the stairs of a tower the room is one storey higher: walls and ceiling)
+      const roof = shaft ? 2 * H : H + liftAt(cx, cy);
       if (styles ? styles.list[style]!.ceiling : map.theme.ceiling) {
         const c = bucket(styles ? `ceiling:${style}` : "ceiling", cx, cy);
         // (a tower's ceiling hangs a little lower than its walls end, so that the half stone at the top of the wall is hidden behind it)
@@ -365,7 +401,16 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
         const nx = cx + FACING_DELTA[dir].dx;
         const ny = cy + FACING_DELTA[dir].dy;
         const kind = cellAt(nx, ny);
-        if (kind === CELL.FLOOR) continue;
+        if (kind === CELL.FLOOR) {
+          const beside = shafts.get(ny * w + nx);
+          if (shaft !== undefined && shaft === dir) {
+            // the open side of the stairs: nothing below the ceiling of the room in front, but the shaft goes on above it, one storey of wall over the opening
+            wallQuad(bucket("wall", cx, cy), bl, br, n, shade * (dir === "N" || dir === "S" ? 1 : 0.93), H, 2 * H);
+            continue;
+          }
+          // the stairs fill their cell: on every side but the open one they have a wall, also where a floor cell lies beside them
+          if (shaft === undefined && (beside === undefined || beside === OPPOSITE[dir])) continue;
+        }
         if (covered.has(`${cx},${cy},${dir}`)) continue;
         if (styles && kind === CELL.LOW) continue; // open ground next door
         // the walls of a cave are models (the rock pieces of the old game) where the model is loaded: they stand on the wall cells and
@@ -386,12 +431,11 @@ export function meshInterior(map: InteriorMap, cracked: Set<string> = new Set(),
         if (panel && options.models!.has(panel)) panels.push({ x: cx, y: cy, dir, model: panel, grow: [] });
         const b = bucket(material, cx, cy);
         const s = shade * (dir === "N" || dir === "S" ? 1 : 0.93);
-        const a = b.vertex([bl[0], 0, bl[1]], n, [0, 0], s);
-        const t1 = b.vertex([bl[0], roof, bl[1]], n, [0, 1], s);
-        const t2 = b.vertex([br[0], roof, br[1]], n, [1, 1], s);
-        const d = b.vertex([br[0], 0, br[1]], n, [1, 0], s);
-        // front face toward the cell (checked in the browser: the order bottom-left, bottom-right, top-right faces the other way)
-        b.indices.push(a, t2, t1, a, d, t2);
+        if (shaft !== undefined) {
+          // a storey of wall under a storey of wall: the texture once over each
+          wallQuad(b, bl, br, n, s, 0, H);
+          wallQuad(b, bl, br, n, s, H, 2 * H);
+        } else wallQuad(b, bl, br, n, s, 0, roof);
       }
     }
   }

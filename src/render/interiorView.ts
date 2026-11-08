@@ -282,7 +282,26 @@ export class InteriorView {
     this.buildObjects();
     this.doors.show(map, content, opened, this.owner);
     this.pushCastleGate();
+    this.pushStairDoors();
     this.glow.show(map.showcase?.lines ?? []);
+  }
+
+  /**
+   * The wooden stairs of a tower end in the Fort door (49th playtest): on the back wall of the stair cell, one storey up, where the top of the stairs reaches it. It is the door the
+   * stairs on the floor above lead down to (the same model, old item 100), stood on the stairs' last step like the castle gate stands on the exit cell.
+   */
+  private pushStairDoors(): void {
+    const map = this.map;
+    const stairs = map?.dungeon?.tower?.stairs;
+    const key = map ? castleGateModelKeys(map)[0] : undefined;
+    if (!map || !stairs || !key || !this.props.has(key)) return;
+    const info = ITEM_MODELS[String(CASTLE_GATE_ITEM)]!;
+    const storey = wallHeightOf(map);
+    this.props.setInstances(
+      `${this.owner}:stairdoor`,
+      stairs.map((s) => ({ model: key, x: cellCenterX(s.up.x), y: storey, z: cellCenterZ(s.up.y), rotY: (Math.atan2(s.up.x - s.front.x, s.front.y - s.up.y) + 2 * Math.PI) % (2 * Math.PI), scale: info.scale, scaleXYZ: info.scale3 })),
+    );
+    this.props.flush();
   }
 
   /** The gate of a generated castle stands on the exit cell, its slab on the edge towards the wall behind it (where the other places have a door texture). */
@@ -1058,6 +1077,7 @@ export class InteriorView {
       this.props.removeOwner(`${this.owner}:float`);
       this.props.removeOwner(`${this.owner}:turn`);
       this.props.removeOwner(`${this.owner}:gate`);
+      this.props.removeOwner(`${this.owner}:stairdoor`);
     }
     this.headFacings.clear();
     this.turnPending.clear();

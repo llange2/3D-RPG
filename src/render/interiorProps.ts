@@ -1,10 +1,11 @@
 import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
 import { DECO_MODELS, DECO_SCALE } from "../data/wall-deco";
-import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM, STAIRCASE_SCALE } from "../data/quest-table";
+import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
 import { isGlbItem, itemModelKey, itemProp } from "./itemProps";
+import { CELL_SIZE, TOWER_STOREY } from "./interiorMesher";
 import type { PropInstance } from "./terrainMesher";
 
 /**
@@ -43,8 +44,8 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?:
   // the broken crystal is as big as the intact one it turns into (item 67, 0.87 x 2.0 x 0.86 in the original set; the file is 0.43 x 0.95 x 0.43), and it rests on the floor the same way
   [BROKEN_CRYSTAL_ITEM]: { model: "obj_power_crystal_broken", scale: 2.03, scale3: [2.03, 2.1, 2.0] },
   [CONSOLE_ITEM]: { model: "obj_spaceship_console", scale: CONSOLE_SCALE },
-  // the spiral staircase of a tower (quest document 1.7): the file is 1.39 x 1.9 x 1.38, scaled to fill a cell (3 units) and to reach the 4.5 of the dungeon's walls
-  [STAIRCASE_ITEM]: { model: "obj_spiral_staircase", scale: STAIRCASE_SCALE },
+  // the wooden stairs of a tower (quest document 1.7, 49th playtest): the file is 1.45 x 1.12 x 1.9; `stairsScale` stretches them over a whole cell and one storey of the tower
+  [STAIRCASE_ITEM]: { model: "obj_wooden_stairs", scale: 1 },
   // the wall reliefs of the dungeons (45th playtest, point 4): the files are 1.3 x 1.9 around their middle, as big as the moose king's carving (scale 1.2); the middle hangs at the height of the
   // moose's (2.0), so the lowest point is 2.0 - 0.95 * 1.2 above the floor
   ...Object.fromEntries(Object.entries(DECO_MODELS).map(([item, model]) => [item, { model, scale: DECO_SCALE, lift: DECO_LIFT }])),
@@ -94,6 +95,15 @@ export function themeModelKeys(content: MapContent): string[] {
   return [...keys];
 }
 
+/**
+ * The scale that stretches the wooden stairs (rising towards -z in the file, centred on the origin) over one cell and one storey: the width and the length of the cell, the height of a
+ * tower's wall. Without the register's bounds (a test without assets) the file's size is taken from the measure of the file.
+ */
+export function stairsScale(bounds: readonly number[] | undefined): [number, number, number] {
+  const b = bounds ?? [-0.726, -0.558, -0.952, 0.725, 0.561, 0.95];
+  return [CELL_SIZE / (b[3]! - b[0]!), TOWER_STOREY / (b[4]! - b[1]!), CELL_SIZE / (b[5]! - b[2]!)];
+}
+
 /** The prop for a themed object, or null when the action shows nothing of the theme (then the view picks a chest or well by chance). `bearing` is degrees, 0 = north. */
 export function themedProp(a: ActionInstance, x: number, z: number, bearing: number, staticInfo: Record<string, StaticModelInfo>, opened: ReadonlySet<string> = new Set(), content?: MapContent): PropInstance | null {
   let item = shownItem(a);
@@ -124,6 +134,10 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   // a pulled lever has turned half a circle, so that its handle lies on the other side (the campaign turns its levers the same way)
   if (a.kind === "lever" && leverPulled(a, opened)) bearing += 180;
   const own = OWN_MODELS[item];
+  if (own && item === STAIRCASE_ITEM) {
+    // the stairs fill their cell from the front edge to the back edge and rise a storey, whatever the file's size (the bounds are in the register)
+    return { model: own.model, x, y: 0, z, rotY: (bearing * Math.PI) / 180, scale: 1, scaleXYZ: stairsScale(staticInfo[own.model]?.bounds) };
+  }
   if (own && item in DECO_MODELS) {
     // the files are centred on their middle: the relief is pushed back so that its back plane lies in the wall (the moose's carving has its origin in front of it)
     const back = (staticInfo[own.model]?.bounds?.[2] ?? -0.2) * own.scale;

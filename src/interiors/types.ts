@@ -187,7 +187,11 @@ export interface TowerLayout {
   /** The top left cell of every floor's bounding square, and its edge length (a floor is a disk in it). */
   floors: { x: number; y: number; size: number }[];
   stairs: {
-    /** The spiral staircase on the lower floor, and the cell in front of it (where the party arrives when it comes down the gate of the floor above). */
+    /**
+     * The wooden stairs on the lower floor, and the cell in front of it (where the party arrives when it comes down the gate of the floor above). The stairs fill their cell from the
+     * front edge to the back edge and rise to the Fort door at the back; the space above the cell is a shaft one storey higher than the floor, with walls round it and the ceiling on top
+     * (`towerShafts` in `render/interiorMesher.ts`).
+     */
     up: { x: number; y: number };
     front: { x: number; y: number };
     /** The Fort door on the floor above, and the cell in front of it (where the party arrives when it climbs the staircase). */
@@ -195,11 +199,6 @@ export interface TowerLayout {
     land: { x: number; y: number };
     /** The way from the wall into the room (the party arrives facing it, on both floors). */
     facing: Facing;
-    /**
-     * The cell beside the staircase where its upper end lies (the staircase is turned a quarter circle clockwise from the wall: its foot is at the wall, its end on the next side clockwise):
-     * it must be open floor, so that the stairs have a free place beside them (48th playtest, tower optimisation).
-     */
-    foot: { x: number; y: number };
   }[];
 }
 

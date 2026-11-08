@@ -63,6 +63,9 @@ export const CONSOLE_LAMP: LampKind = { y: 1.4, color: [0.35, 0.85, 1], range: 8
 /** The computer terminal of the spaceship glows blue (point 4). */
 export const COMPUTER_LAMP: LampKind = { y: 1.3, color: [0.3, 0.55, 1], range: 5, intensity: 2.3 };
 
+/** The torches in front of a tower (49th playtest): a warm flame, one to two tiles around; by day they add nothing like every lamp. The height is that of the flame (`TORCH_LIGHT_HEIGHT`). */
+export const TOWER_TORCH_LAMP: LampKind = { y: 3.2, color: [1, 0.62, 0.26], range: 11, intensity: 3.6 };
+
 /** The map objects that give light, by the number of the old item: the crystals, the traps' elements, the chalice, wells, altar, runes, portal, orb, fireplace and lantern. */
 export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
   117: CRYSTAL_LAMP,

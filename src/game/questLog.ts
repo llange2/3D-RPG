@@ -1,5 +1,6 @@
 import { ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ORBS_FOR_KING, PEARL, PEARLS_IN_WORLD, POWER_CRYSTAL, SKULLS_FOR_RING, type QuestId } from "../data/quest-table";
 import { MONSTERS, QUEST_ITEMS } from "../data/tables";
+import { wagonTale, caravansOf } from "../world/caravans";
 import type { Poi } from "../world/types";
 import type { World } from "../world/world";
 
@@ -17,6 +18,8 @@ export const SKULL_MISER_MET = "skullmiser:met";
 /** The party has been aboard the pirate ship (`Game.pirateMeeting`); the pearls handed in are `pearls=<n>`. */
 export const PIRATE_MET = "pirate:met";
 export const lockSeenFlag = (poiId: string): string => `lock:${poiId}`;
+/** The party has been told by the wagon near a locked place where its key or key card lies (`Game.visitHintWagon`, 49th playtest). */
+export const hintHeardFlag = (poiId: string): string => `hint:${poiId}`;
 export const reachedFlag = (poiId: string): string => `reached:${poiId}`;
 /** A thing the heroes have found out in a place (the words of a statue, what a hero heard in his mind): the text rides in the flag, so the save format stays as it is. */
 export const clueFlag = (poiId: string, text: string): string => `clue:${poiId}|${text}`;
@@ -140,9 +143,14 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     if (visited.has(poi.id)) {
       if (!need.endsWith("_keycard")) places.add(poi.name);
       done.push(`Opened ${kind} (${at(poi)}) with the ${itemName(need)}.`);
-    } else if (opened.has(lockSeenFlag(poi.id)) || input.carried(need) > 0) {
+    } else if (opened.has(lockSeenFlag(poi.id)) || opened.has(hintHeardFlag(poi.id)) || input.carried(need) > 0) {
       if (!need.endsWith("_keycard")) places.add(poi.name);
-      open.push(input.carried(need) > 0 ? `Use the ${itemName(need)} to open ${kind} at ${at(poi)}.` : `Find the ${itemName(need)} to open ${kind} at ${at(poi)}.`);
+      const line = input.carried(need) > 0 ? `Use the ${itemName(need)} to open ${kind} at ${at(poi)}.` : `Find the ${itemName(need)} to open ${kind} at ${at(poi)}.`;
+      open.push(line);
+      // what the wagon near the place told about the key (the tale, without the first sentence about the tea)
+      const wagon = opened.has(hintHeardFlag(poi.id)) ? caravansOf(world, poi)[0] : undefined;
+      const tale = wagon ? wagonTale(world, wagon)?.split("\n\n")[1] : undefined;
+      if (tale) notes[line] = tale;
     }
   }
 

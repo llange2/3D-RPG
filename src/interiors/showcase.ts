@@ -1,5 +1,4 @@
 import { INTERIOR_THEMES } from "../data/interior-themes";
-import { STAIRCASE_SCALE } from "../data/quest-table";
 import { COTTAGE_HEIGHT_FACTOR, COTTAGE_SCALE, tunedItemModels } from "../data/item-tuning";
 import { PERSONAS } from "../data/personas";
 import { DECO_MODELS, DECO_SCALE } from "../data/wall-deco";
@@ -27,7 +26,7 @@ export const OVERWORLD_EXTRAS = ["obj_cottage", "obj_pirate_ship"] as const;
 /** The user's spaceship models of quest_7 (loaded for the showcase until the spaceship's own loading names them): the crate, the broken power crystal and the console. */
 export const SPACESHIP_EXTRAS = ["obj_futuristic_box", "obj_power_crystal_broken", "obj_spaceship_console"] as const;
 /** The user's models of the tower (quest document 1.7): the spiral staircase inside, and the building the tower is on the overworld (the Fort door the stairs down use is item 100, shown as an item). */
-export const TOWER_EXTRAS = ["obj_spiral_staircase", "poi_tower"] as const;
+export const TOWER_EXTRAS = ["obj_wooden_stairs", "poi_tower"] as const;
 /** `lift`: how far a model's lowest point stands above the floor (none of these needs it: the prop renderer rests the lowest point on the floor). */
 export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: number; lift?: number }[] = [
   { model: "obj_fountain", scale: 1.3 },
@@ -39,7 +38,7 @@ export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: 
   { model: "obj_power_crystal_broken", scale: 2.03, height: 1.03 },
   { model: "obj_spaceship_console", scale: 3 },
   // the tower (quest document 1.7): the staircase as it stands in the tower, and the building small enough for a cell
-  { model: "obj_spiral_staircase", scale: STAIRCASE_SCALE },
+  { model: "obj_wooden_stairs", scale: 1.6 },
   { model: "poi_tower", scale: 1.5 },
   // the wall reliefs of the dungeons (45th playtest, point 4): they stand upright on their cell here, nothing hangs
   ...Object.values(DECO_MODELS).map((model) => ({ model, scale: DECO_SCALE })),
