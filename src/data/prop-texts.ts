@@ -63,7 +63,6 @@ const PROP_LINES: Record<number, readonly string[]> = {
   95: ["A stone statue of a noble stranger. The pigeons have opinions about him.", "A weathered statue of someone important. Which is why nobody remembers who."],
   97: ["Ancient books. The dust is thicker than the pages.", "A shelf of very old books. They smell like a cellar and a secret."],
   98: ["A gallows. The rope is new."],
-  99: ["A wooden beam holds up the ceiling. It creaks as if it knew something."],
   101: ["A hut. Something inside snores. Loudly."],
   102: ["A burnt-out hut. It smells of smoke and bad decisions."],
   103: ["A banner of the good kingdoms hangs here, a little faded."],

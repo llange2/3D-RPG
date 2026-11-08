@@ -22,7 +22,10 @@ OUT = ROOT / "src" / "data"
 
 
 # What the user added to the descriptions of the sheet (the workbook in old_code is read-only, 6. 11. 2026): spell id -> sentence appended.
-DESCRIPTION_ADDITIONS = {72: "Works only outside."}  # Meteor Shower
+DESCRIPTION_ADDITIONS = {
+    72: "Works only outside.",  # Meteor Shower
+    2: "Can be cast 3 times a day.",  # Pandora's box (`Party.pandora`, 3 per game day)
+}
 
 # Sentences of the sheet that the user rewrote (8. 11. 2026, 48th playtest): spell id -> (old text, new text). Prismatic Light only hits what the party sees, its beams do not pass walls.
 DESCRIPTION_REPLACEMENTS = {73: ("Hits all monsters.", "Hits all monsters in view.")}

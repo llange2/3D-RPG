@@ -104,16 +104,17 @@ function partition(rng: Rng, size: number, zones: readonly Rect[], rooms: number
 interface Spot {
   p: { x: number; y: number };
   f: { x: number; y: number };
-  /** The cell beside `p` where the lowest step of the staircase lies (see `TowerLayout.stairs`). */
+  /** The cell beside `p` where the upper end of the staircase lies (see `TowerLayout.stairs`). */
   foot: { x: number; y: number };
   facing: Facing;
 }
 
 /**
- * The side of the staircase on which its lowest step lies, by the side of the floor the stairs stand at (the wall is on that side): the staircase turns its top end to the wall, and its
- * first step then lies about 55 degrees from the wall, counter-clockwise (measured on `obj_spiral_staircase`, `tools/dev` scan: the steps turn 315 degrees from the foot to the top).
+ * The side of the staircase on which its upper end lies, by the side of the floor the stairs stand at (the wall is on that side). The staircase is turned a quarter circle clockwise
+ * from the wall (the user's correction at Tower of Torela 17/13: turned with its top end to the wall, its foot stood free and its end was not in the wall): its lowest step then
+ * lies against the wall, about 35 degrees from it, and its upper end on the next side clockwise (measured on `obj_spiral_staircase`: the steps turn 315 degrees from the foot to the top).
  */
-const FOOT_SIDE: Record<Facing, Facing> = { N: "W", W: "S", S: "E", E: "N" };
+const FOOT_SIDE: Record<Facing, Facing> = { N: "E", E: "S", S: "W", W: "N" };
 
 /** The spot of a transition at the rim of the disk on one side, `offset` cells along the rim from the middle, or null if the rim there is too narrow for it. */
 function rimSpot(size: number, side: Facing, offset: number): Spot | null {
@@ -138,7 +139,7 @@ function rimSpot(size: number, side: Facing, offset: number): Spot | null {
   const side2 = { x: f.x - inward.dy, y: f.y - inward.dx };
   const beyond = { x: f.x + inward.dx, y: f.y + inward.dy };
   if (![f, side1, side2, beyond].every((q) => inDisk(size, q.x, q.y))) return null;
-  // the foot of the staircase lies beside it, where the rim of the disk may have cut the floor away: the stairs need that cell to start from
+  // the upper end of the staircase lies beside it, where the rim of the disk may have cut the floor away: the stairs need that cell to be open
   const swing = FACING_DELTA[FOOT_SIDE[side]];
   const foot = { x: p.x + swing.dx, y: p.y + swing.dy };
   if (!inDisk(size, foot.x, foot.y)) return null;

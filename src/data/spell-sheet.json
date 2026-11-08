@@ -7,7 +7,7 @@
  },
  "2": {
   "name": "Pandora's box",
-  "description": "Opens a dimensional rift and randomly pulls an entity into your reality.",
+  "description": "Opens a dimensional rift and randomly pulls an entity into your reality. Can be cast 3 times a day.",
   "explanation": "Chances:\n30%: receive 1-100 gold\n30%: receive a random L1 item\n20%: random L1 monster appears\n5%: receive 101 - 200 gold\n5%: receive a random L2 item\n5%: random L2 monster appears\n4%: receive 1000 - 10000 gold\n1%: Dragon Lord (ID 83) appears",
   "status": "to implement"
  },

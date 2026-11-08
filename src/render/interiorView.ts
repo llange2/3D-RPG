@@ -708,7 +708,7 @@ export class InteriorView {
         }
       }
       // the wooden support beam stands on the edge between two cells, where the beams of the ceiling run (48th playtest, point 6)
-      if (themed && shownItem(a) === SUPPORT_BEAM) this.setOnCellEdge(themed, map, a);
+      if (themed && shownItem(a) === SUPPORT_BEAM) this.setOnCellEdge(themed, a);
       if (themed) {
         // a banner or a carving hangs a hand's breadth from the flat wall: with the 3D wall pieces on it stands out of the wall by their depth too, or their stones cut through the cloth
         if (this.panelList.length > 0 && WALL_HUNG.has(shownItem(a) ?? -1)) {
@@ -874,21 +874,13 @@ export class InteriorView {
    * or none does (a pillar in the open), `pick` decides, so the choice stays stable.
    */
   /**
-   * Moves a flat prop (the support beam: a truss 3 wide and 0.4 thick) from the middle of its cell to the edge of the cell in front of it, so that it stands between two cells in line
-   * with the beams of the ceiling (whose frame runs along the cell edges). If that neighbour is no open floor it takes the edge behind it; if neither is, it stays where it is.
+   * Moves a flat prop (the support beam: a truss 3 wide and 0.4 thick) from the middle of its cell to the edge of the cell on its `side` (E or S, the action says so, and its bearing
+   * turns the plane across that side), so that it stands between two cells in line with the beams of the ceiling (whose frame runs along the cell edges; 48th playtest, point 6).
    */
-  private setOnCellEdge(p: PropInstance, map: InteriorMap, a: ActionInstance): void {
-    const sx = Math.round(Math.sin(p.rotY));
-    const sz = Math.round(Math.cos(p.rotY));
-    // (the world's z runs against the grid's y)
-    const open = (dir: 1 | -1): boolean => {
-      const x = a.x + sx * dir;
-      const y = a.y - sz * dir;
-      return x >= 0 && y >= 0 && x < map.width && y < map.height && map.cells[y * map.width + x] === CELL.FLOOR && !this.wallLike.has(y * map.width + x);
-    };
-    const dir = open(1) ? 1 : open(-1) ? -1 : 0;
-    p.x += sx * dir * (CELL_SIZE / 2);
-    p.z += sz * dir * (CELL_SIZE / 2);
+  private setOnCellEdge(p: PropInstance, a: ActionInstance): void {
+    if (a.params.side !== "E" && a.params.side !== "S") return;
+    p.x += Math.round(Math.sin(p.rotY)) * (CELL_SIZE / 2);
+    p.z += Math.round(Math.cos(p.rotY)) * (CELL_SIZE / 2);
   }
 
   private faceOpen(map: InteriorMap, a: ActionInstance, pick: number): number {

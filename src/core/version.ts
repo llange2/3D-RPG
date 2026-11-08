@@ -150,5 +150,7 @@
  * monster around the party (the plan of the world draws the layouts of quests 2, 4 and 5 from five dungeon layouts now, so most dungeons changed).
  * 57 = the tower optimisation (48th playtest, second list): a tower has no guillotine and pits and spear traps only on its ground floor (a magical trap in their place, `towerTrap`), no door beside a staircase, the staircase's
  * foot cell is open floor (`TowerLayout.stairs[].foot`, so the layout draws other rims), towers are named "Tower of ..." (`towerName`), and the Kudo crab lives on water only (`TERRAIN_OVERRIDES`).
+ * 58 = the tower follow-up (bug_fix_46): the staircase turned a quarter circle clockwise from the wall (its end cell, not its foot, must be open), the wooden support beam is an edge decoration in regular patterns
+ * in the big rooms of the dungeons and towers (`actions/beams.ts`, params `side`, `bearing`) and no longer one of the random props; a place that must hide a coin, a skull or a pearl always has an ordinary chest for it (`#chest_spare:0`).
  */
-export const GEN_VERSION = 57;
+export const GEN_VERSION = 58;

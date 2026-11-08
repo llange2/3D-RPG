@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildMapContent } from "../../src/actions";
 import { WALL_HUNG_ITEMS } from "../../src/actions/rules";
+import { SUPPORT_BEAM } from "../../src/actions/registry";
 import { DEBUG_LEVELS, debugLevels } from "../../src/game/debug";
 import { MAP_OPEN_CELLS } from "../../src/game/minimap";
 import { Builder } from "../../src/interiors/builder";
@@ -18,7 +19,7 @@ const poiFor = (kind: Poi["kind"], i: number, tier: number): Poi => ({ id: `p:t:
 describe("the 21st playtest, point 10: no object in a passage of one cell", () => {
   const world = new World("objects-21", "default");
   const OBJECT_KINDS = new Set(["decor", "treasure", "shrine", "fountain", "gong", "lever", "talent", "work", "portal"]);
-  // (the banners and the other wall decorations hang on the wall: they stand in no passage)
+  // (the banners and the other wall decorations hang on the wall: they stand in no passage; a support beam stands on the edge of its cell and blocks nothing)
   const WALL_BANNERS = WALL_HUNG_ITEMS;
 
   it("puts no decoration, chest, shrine or person on a cell of a straight street, corridor or tunnel that is one cell wide", () => {
@@ -36,7 +37,7 @@ describe("the 21st playtest, point 10: no object in a passage of one cell", () =
     }
     for (const { poi, map } of all) {
       const content = buildMapContent(world, poi, map);
-      const objectsHere = content.actions.filter((a) => OBJECT_KINDS.has(a.kind) && !(a.kind === "decor" && WALL_BANNERS.includes(Number(a.params.item))));
+      const objectsHere = content.actions.filter((a) => OBJECT_KINDS.has(a.kind) && !(a.kind === "decor" && (WALL_BANNERS.includes(Number(a.params.item)) || Number(a.params.item) === SUPPORT_BEAM)));
       const taken = new Set(objectsHere.map((a) => a.y * map.width + a.x));
       // a way the party can walk: floor without another object (a street that ends at a person is a dead end for the object before it)
       for (const a of objectsHere) {

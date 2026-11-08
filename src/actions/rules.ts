@@ -3,7 +3,7 @@ import { QUEST_PROP, SHRINE_EFFECT, type DungeonTheme } from "../data/dungeon-th
 import { buildCastleContent } from "./castle";
 import { buildShowcaseContent } from "./showcase";
 import { buildSpaceshipContent } from "./spaceship";
-import { hideInChests, placeMachines } from "./machines";
+import { eligibleChests, hideInChests, placeMachines } from "./machines";
 import { placeVaults } from "./vaults";
 import { hideSpells } from "./spellScrolls";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
@@ -25,7 +25,8 @@ import { CELL, FACING_DELTA, type InteriorMap } from "../interiors/types";
 import { computeAnchors, type AnchorSet } from "./anchors";
 import { themeBoss, themeMonsters } from "./monsterPool";
 import { finishQuest, placeQuest, type QuestEnv, type QuestResult } from "./questGen";
-import { ACTION_DEFS, SERVICES, blocksCell } from "./registry";
+import { ACTION_DEFS, SERVICES, SUPPORT_BEAM, blocksCell } from "./registry";
+import { planBeams } from "./beams";
 import { evalExpr, resolveParam, type ExprVars } from "./expr";
 import type { ActionInstance, ActionKind, Anchor, MapContent, ParamValue, Rule, RuleSet, SpawnPoint } from "./types";
 
@@ -269,8 +270,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   // the stairs of a tower (quest document 1.7): a spiral staircase up, and on the floor above at the same place the Fort door that leads down again; each lands the party in front of
   // the other. All four cells stay bare (the arrival must be free, and the stairs are no place for an object)
   (map.dungeon?.tower?.stairs ?? []).forEach((s, i) => {
-    // the staircase stands with its top end against the wall (a bearing of its own: the compass direction of the wall, which is behind the way the party looks when it arrives)
-    const wallBearing = { N: 180, E: 270, S: 0, W: 90 }[s.facing];
+    // the staircase is turned a quarter circle clockwise from the wall (a bearing of its own: the compass direction of the wall, which is behind the way the party looks when it arrives, plus 90)
+    const wallBearing = { N: 270, E: 0, S: 90, W: 180 }[s.facing];
     actions.push({ uid: `${map.key}#stairs:${i}:up`, kind: "stairs", x: s.up.x, y: s.up.y, params: { item: STAIRCASE_ITEM, tx: s.land.x, ty: s.land.y, up: true, facing: s.facing, bearing: wallBearing } });
     actions.push({ uid: `${map.key}#stairs:${i}:down`, kind: "stairs", x: s.down.x, y: s.down.y, params: { item: FORT_DOOR_ITEM, tx: s.front.x, ty: s.front.y, up: false, facing: s.facing } });
     for (const p of [s.up, s.front, s.down, s.land, s.foot]) occupied.add(idx(p.x, p.y));
@@ -357,6 +358,16 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       hung.push(a);
       actions.push({ uid: `${map.key}#wall_deco:${hung.length - 1}`, kind: "decor", x: a.x, y: a.y, params: { item } });
       occupied.add(idx(a.x, a.y));
+    });
+  }
+
+  // the wooden support beams (48th playtest, point 6): trusses on the edge between two cells, in regular patterns in the big rooms (`actions/beams.ts`), a plain decoration. Only a cell that holds
+  // nothing, is no landing and no middle of a room takes one; the places keep their connection with every beam taken together
+  if (dt && map.kind === "dungeon" && map.dungeon?.quest !== "spaceship") {
+    const usable = (x: number, y: number): boolean => map.cells[idx(x, y)] === CELL.FLOOR && !occupied.has(idx(x, y)) && !anchors.protectedCells.has(idx(x, y)) && !roomCentres.has(idx(x, y)) && !landings.has(idx(x, y));
+    planBeams(map, new Rng(derive(mapSeed, "support-beams")), usable, stairLinks(map)).forEach((b, n) => {
+      actions.push({ uid: `${map.key}#beam:${n}`, kind: "decor", x: b.x, y: b.y, params: { item: SUPPORT_BEAM, side: b.side, bearing: b.side === "E" ? 90 : 180 } });
+      occupied.add(idx(b.x, b.y));
     });
   }
 
@@ -533,6 +544,17 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   if (questEnv && map.dungeon?.vaults) placeVaults(questEnv);
   // Seth Squirm and the machines, the Quatloo coins and silver skulls in the ordinary chests (ue_quest_1 and ue_quest_2)
   if (questEnv) placeMachines(questEnv);
+  // a place that has to hide a coin, a skull or a pearl has at least one ordinary chest for it: the rules may have set none (or only those in the end room and a treasure chamber), and the item,
+  // which the quest of the world needs, would be lost (bug_fix_46: Undercroft of Kelvaa, world ue-a, a skull less)
+  if (dt && map.dungeon && map.dungeon.coins + map.dungeon.skulls + (map.dungeon.pearls ?? 0) > 0 && eligibleChests(map, actions).length === 0) {
+    const pool = [...anchors.byKind.roomEdge, ...anchors.byKind.deadEnd, ...anchors.byKind.corridor];
+    const spot = new Rng(derive(mapSeed, "spare-chest")).shuffle(pool).find((a) => isFree(a, false) && map.cells[idx(a.x, a.y)] === CELL.FLOOR && !roomCentres.has(idx(a.x, a.y)) && !landings.has(idx(a.x, a.y)) && !wouldDisconnect(idx(a.x, a.y)) && !splitsPassage(a.x, a.y));
+    if (spot) {
+      actions.push({ uid: `${map.key}#chest_spare:0`, kind: "treasure", x: spot.x, y: spot.y, params: { level: baseTier, gold: baseTier * 60, items: 0, chest: dt.chest } });
+      occupied.add(idx(spot.x, spot.y));
+      blockedCells.add(idx(spot.x, spot.y));
+    }
+  }
   if (map.dungeon) hideInChests(map, actions, map.dungeon.coins, map.dungeon.skulls, mapSeed, false, map.dungeon.pearls);
   // and the spell scrolls the plan of the world assigned to this place (34th playtest)
   if (map.dungeon) hideSpells(map, actions, map.dungeon.spells, mapSeed);

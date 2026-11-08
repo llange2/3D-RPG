@@ -196,8 +196,8 @@ export interface TowerLayout {
     /** The way from the wall into the room (the party arrives facing it, on both floors). */
     facing: Facing;
     /**
-     * The cell beside the staircase where its lowest step lies (the staircase stands with its top end against the wall, and its foot swings round to one side): it must be open floor, so
-     * that the stairs have a free place to start from (48th playtest, tower optimisation).
+     * The cell beside the staircase where its upper end lies (the staircase is turned a quarter circle clockwise from the wall: its foot is at the wall, its end on the next side clockwise):
+     * it must be open floor, so that the stairs have a free place beside them (48th playtest, tower optimisation).
      */
     foot: { x: number; y: number };
   }[];
