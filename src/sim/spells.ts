@@ -10,21 +10,20 @@ import type { Character, ClassName, Condition, Item, LastCast, Party, Place, Tim
 
 /** Single-target projectile spells (the old "non-penetrating" list). */
 const SINGLE_TARGET = new Set([3, 5, 8, 15, 29, 51, 59, 71, 74, 77]);
-/** Spells that hit everything on the line through the target. Pain and Turn Undead have their own entry (`LIVING_OR_UNDEAD`). */
-const PENETRATING = new Set([10, 14, 37, 38, 39, 44, 49, 50, 53, 60, 63, 68, 73]);
-/** Spells whose rule for whom they hit is in `specialSpell` (`sim/encounter.ts`); Meteor Shower and Elemental Storm are area spells (`areaSpell`). */
-const SPECIAL: Record<number, SpecialSpell> = { 43: "finger_of_death", 64: "mass_distortion", 69: "holy_word", 76: "star_burst", 72: "meteor_shower", 75: "elemental_storm", 73: "prismatic_light" };
+/** Spells that hit everything on the line through the target (the sheet says "group" or "all monsters in a line"). Pain has its own entry in `castSpell`. */
+const PENETRATING = new Set([10, 14, 37, 38, 39, 44, 49, 53, 60, 63, 68]);
+/** Spells whose rule for whom they hit is in `specialSpell` (`sim/encounter.ts`); Meteor Shower, Elemental Storm, Prismatic Light, Star Burst and Dragon Breath are area spells (`areaSpell`). */
+const SPECIAL: Record<number, SpecialSpell> = { 43: "finger_of_death", 64: "mass_distortion", 69: "holy_word", 76: "star_burst", 72: "meteor_shower", 75: "elemental_storm", 73: "prismatic_light", 50: "dragon_breath", 19: "turn_undead" };
 /**
- * Meteor Shower, Elemental Storm and Prismatic Light hit every monster in the action radius, Star Burst every one within three tiles of the party: they need nothing
+ * Meteor Shower, Elemental Storm, Prismatic Light and Dragon Breath hit every monster in the action radius, Star Burst every one within three tiles of the party: they need nothing
  * to aim at (`areaSpell`).
  */
-export const isAreaSpell = (id: number): boolean => id === 72 || id === 75 || id === 73 || id === 76;
+export const isAreaSpell = (id: number): boolean => id === 72 || id === 75 || id === 73 || id === 76 || id === 50;
 /** Spells that change the monster the party is looking at (no damage). */
 const MONSTER_EFFECTS = new Set([31, 41]);
 
 /** Condition cures: spell id to the conditions it removes. */
 const CURES: Record<number, Condition[]> = {
-  1: ["Sleeping"],
   9: ["Weak"],
   35: ["Poisoned"],
   40: ["Diseased"],
@@ -85,6 +84,8 @@ export type SpellResult =
   | { kind: "attack"; spellId: number; damage: number; type: string; penetrate: boolean; undead: boolean | null; special?: SpecialSpell; healed?: { target: number; amount: number }[] }
   | { kind: "heal"; target: number; amount: number; /** Half For Me: the hit points the caster paid. */ paid?: number }
   | { kind: "cure"; target: number; removed: Condition[] }
+  /** Awaken: everybody in the party who was asleep (no target to pick); the list is empty when nobody slept. */
+  | { kind: "awaken"; awakened: number[] }
   /** `condition` is null when the hero did not have it (the spell is paid for all the same). */
   | { kind: "suppress"; target: number; condition: Condition | null }
   | { kind: "revive"; target: number; /** Resurrect took a point of Endurance. */ endurance?: boolean }
@@ -142,7 +143,7 @@ export function isSpellImplemented(id: number): boolean {
     id in CURES ||
     id in SUPPRESS ||
     REVIVES.has(id) ||
-    [6, 12, 17, 19, 20, 21, 24, 25, 30, 33, 34, 36, 46, 56, 57, 60, 78].includes(id)
+    [1, 6, 12, 17, 20, 21, 24, 25, 30, 33, 34, 36, 46, 56, 57, 60, 78].includes(id)
   );
 }
 
@@ -222,7 +223,7 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
   const target = options.target !== undefined ? party.characters[options.target] : undefined;
   if (needsTarget(spellId) && !target) return { kind: "fizzle", reason: "needs_target" };
 
-  if (SINGLE_TARGET.has(spellId) || PENETRATING.has(spellId) || spellId === 12 || spellId === 19 || spellId in SPECIAL) {
+  if (SINGLE_TARGET.has(spellId) || PENETRATING.has(spellId) || spellId === 12 || spellId in SPECIAL) {
     pay();
     const types = spell.dam_type ?? ["magic"];
     const special = SPECIAL[spellId];
@@ -232,8 +233,8 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
       damage: attackDamage(spell, caster, rng, party.mascot),
       type: types[rng.int(types.length)]!,
       penetrate: !SINGLE_TARGET.has(spellId) && !special,
-      // Pain hits the living and the dead alike since the spell sheet dropped "Doesn't affect undead"; Turn Undead only the undead
-      undead: spellId === 19 ? true : null,
+      // Pain hits the living and the dead alike since the spell sheet dropped "Doesn't affect undead"; Turn Undead (`turn_undead`) checks the undead itself
+      undead: null,
     };
     if (special) result.special = special;
     if (spellId === 60) {
@@ -264,10 +265,9 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
 
   if (REVIVES.has(spellId)) {
     const t = target!;
-    const dead = t.conditions.includes("Dead");
-    const rotten = t.conditions.includes("Rotten");
-    // Raise Dead brings back the dead; Resurrect also the rotten (what the old game called eradicated). Nobody with no Endurance left comes back.
-    if (!(dead || (spellId === 70 && rotten))) return { kind: "fizzle", reason: "no_effect" };
+    // Raise Dead brings back only the dead; Resurrect only the rotten (what the old game called eradicated), the user's rule of 8. 11. 2026. Both leave the hero with 1 hit point.
+    // Nobody with no Endurance left comes back.
+    if (!t.conditions.includes(spellId === 70 ? "Rotten" : "Dead")) return { kind: "fizzle", reason: "no_effect" };
     if (t.end <= 0) return { kind: "fizzle", reason: "cannot_revive" };
     pay();
     removeCondition(t, "Dead");
@@ -277,10 +277,22 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
       // the price: a point of Endurance for good, and the caster is five years older
       t.end -= 1;
       recalcValues(t, party.talents, false, party.mascot);
-      t.hp = t.health;
       caster.magicAge = (caster.magicAge ?? 0) + SPELL_AGING;
-    } else t.hp = 1;
+    }
+    t.hp = 1;
     return { kind: "revive", target: options.target!, endurance: spellId === 70 };
+  }
+
+  if (spellId === 1) {
+    // Awaken wakes the whole party: nobody is picked (the sheet: "all sleeping members of the party")
+    pay();
+    const awakened: number[] = [];
+    party.characters.forEach((c, i) => {
+      if (!c.conditions.includes("Sleeping")) return;
+      removeCondition(c, "Sleeping");
+      awakened.push(i);
+    });
+    return { kind: "awaken", awakened };
   }
 
   if (spellId === 46) {
@@ -431,7 +443,7 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
 /** Spells that need something to aim at: a monster in sight. */
 export function isAttackSpell(id: number): boolean {
   if (isAreaSpell(id)) return false;
-  return SINGLE_TARGET.has(id) || PENETRATING.has(id) || id === 12 || id === 19 || id in SPECIAL || MONSTER_EFFECTS.has(id);
+  return SINGLE_TARGET.has(id) || PENETRATING.has(id) || id === 12 || id in SPECIAL || MONSTER_EFFECTS.has(id);
 }
 
 /** Spells that only work on a monster next to the party. */

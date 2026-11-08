@@ -211,14 +211,14 @@ export function hasEffect(party: Party, kind: TimedEffect["kind"]): boolean {
  */
 export const surroundings = { inDeepWater: false };
 
-/** Can the party cross shallow water (a ford, a shore)? The Swimmer can, as in the old game's rivers; so can the Seafarer and whoever floats or walks on water by a spell. */
+/** Can the party cross shallow water (a ford, a shore)? The Swimmer can, as in the old game's rivers; so can the Seafarer and whoever walks on water by a spell (Levitate only keeps the party out of pits, 8. 11. 2026). */
 export function canSwim(party: Party): boolean {
-  return party.talents.includes("talent_swimmer") || party.talents.includes("talent_seafarer") || hasEffect(party, "levitate") || hasEffect(party, "walk_on_water");
+  return party.talents.includes("talent_swimmer") || party.talents.includes("talent_seafarer") || hasEffect(party, "walk_on_water");
 }
 
-/** Can the party cross deep water? Only the Seafarer, or a spell that lets it walk on water (Levitate also lifts it over lava). */
+/** Can the party cross deep water? Only the Seafarer, or the spell Walk on Water. */
 export function canSail(party: Party): boolean {
-  return party.talents.includes("talent_seafarer") || hasEffect(party, "levitate") || hasEffect(party, "walk_on_water");
+  return party.talents.includes("talent_seafarer") || hasEffect(party, "walk_on_water");
 }
 
 export function protectionLevel(party: Party, element: "acid" | "fire" | "ice" | "magic"): number {

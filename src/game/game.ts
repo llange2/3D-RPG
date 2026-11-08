@@ -19,7 +19,7 @@ import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
 import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
-import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, talentInfo } from "../data/tables";
+import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { towerFloorAt } from "../interiors/stairs";
@@ -1676,7 +1676,7 @@ export class Game {
     const water = rt.campaign.model.blockDef(abs.x, abs.y)?.water;
     if (!water) return false;
     const party = this.state.party;
-    return party.talents.includes(`talent_${water}`) || hasEffect(party, "levitate") || hasEffect(party, "walk_on_water");
+    return party.talents.includes(`talent_${water}`) || hasEffect(party, "walk_on_water");
   }
 
   private campaignHost(model: CampaignMapModel): CampaignHost {
@@ -3190,7 +3190,7 @@ export class Game {
    * has to wait for the shot to arrive. `spell` is the kind of a cast spell: it is one projectile aimed at the farthest
    * monster it hits; without it every ranged attack is a volley of arrows.
    */
-  private launchPartyShots(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell): Map<string, number> {
+  private launchPartyShots(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell, line = false): Map<string, number> {
     const flights = new Map<string, number>();
     const hits = events.filter((e): e is PartyAttackEvent => e.type === "party_attack" && e.kind !== "melee");
     const from = this.muzzle();
@@ -3206,7 +3206,7 @@ export class Game {
       hits.forEach((e, i) => {
         const at = this.monsters.anchor(e.uid);
         if (!at) return;
-        if (area === "prismatic_light") {
+        if (area === "prismatic_light" || area === "dragon_breath") {
           // a line from the party to every monster in range at once, in the colour of the damage type it got; they fade within 0.7 s
           this.projectiles.beam(e.element ?? "magic", from, at);
           flights.set(e.uid, 0);
@@ -3228,6 +3228,15 @@ export class Game {
         this.projectiles.flash(element, front);
         flights.set(e.uid, 0);
       });
+      return flights;
+    }
+    if (spell && line) {
+      // Cold Ray: one blue line to every monster of the line it hits (the lines lie on top of each other), gone within 0.7 s
+      for (const e of hits) {
+        const at = this.monsters.anchor(e.uid);
+        if (at) this.projectiles.beam("ice", from, at);
+        flights.set(e.uid, 0);
+      }
       return flights;
     }
     if (spell) {
@@ -3290,9 +3299,9 @@ export class Game {
    * the party's arrows and spells fly first and their hits show when they arrive, then the monsters answer (their shots
    * fly as well). Melee has no flight, so it all shows at once.
    */
-  private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell): void {
+  private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell, line = false): void {
     const party = this.state.party;
-    const flights = this.launchPartyShots(events, spell, area);
+    const flights = this.launchPartyShots(events, spell, area, line);
     const landing = (uid: string) => flights.get(uid) ?? 0;
     // the monsters answer when the party's last shot has landed
     const answer = Math.max(0, ...flights.values());
@@ -3602,6 +3611,8 @@ export class Game {
       const m = this.focusMonster();
       if (!m) return "There is nothing to aim at.";
       if (needsAdjacent(spellId) && !isAdjacent(m.x, m.y, tx, ty, view)) return "That spell only works on a monster next to the party.";
+      // Turn Undead strikes the one monster in front of the party, and only an undead one; nothing is spent on a living target
+      if (spellId === 19 && !isUndead(m.defId)) return "Turn Undead only works on the undead.";
       return null;
     }
     switch (spellId) {
@@ -3949,9 +3960,9 @@ export class Game {
         this.ui.log(FIZZLE_TEXT[result.reason]?.(c.name) ?? `The spell fizzles (${result.reason.replace(/_/g, " ")}).`, "bad");
         break;
       case "attack": {
-        // Meteor Shower, Elemental Storm and Prismatic Light hit every monster in the action radius, Star Burst every one within three tiles of the party: nothing to aim at
+        // Meteor Shower, Elemental Storm, Prismatic Light and Dragon Breath hit every monster in the action radius, Star Burst every one within three tiles of the party: nothing to aim at
         // (6. 11. 2026, 48th playtest points 2 and 5)
-        if (result.special === "meteor_shower" || result.special === "elemental_storm" || result.special === "prismatic_light" || result.special === "star_burst") {
+        if (result.special === "meteor_shower" || result.special === "elemental_storm" || result.special === "prismatic_light" || result.special === "star_burst" || result.special === "dragon_breath") {
           const { tx, ty } = this.player;
           const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), result.special, { damage: result.damage, type: result.type }, this.monsterSeen());
           // the sound of every element that falls (the storm throws all three)
@@ -3970,7 +3981,8 @@ export class Game {
           : result.penetrate
             ? spellInLine(party, this.gridView(), this.enc, tx, ty, this.combatRng(), target.uid, magic, result.undead)
             : partyAttack(party, this.gridView(), this.enc, tx, ty, this.combatRng(), { kind: "magic", targetUid: target.uid, magic });
-        this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic");
+        // Cold Ray is a blue line of light from the party through the monsters it hits, like the lines of Prismatic Light (the user, 8. 11. 2026), not a flying bolt
+        this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic", undefined, result.spellId === 39);
         for (const healed of result.healed ?? []) this.ui.avatarEffect(healed.target, "cure_hp");
         if (result.healed?.length) this.ui.log("Moonlight washes over the party and heals it.", "good");
         break;
@@ -3986,6 +3998,11 @@ export class Game {
         this.audio.play(9031);
         for (const fx of cureEffects(result.removed)) this.ui.avatarEffect(result.target, fx);
         this.ui.log(result.removed.length ? `${party.characters[result.target]!.name} is cured of ${result.removed.join(", ")}.` : "It had no effect.", result.removed.length ? "good" : "info");
+        break;
+      case "awaken":
+        this.audio.play(9031);
+        for (const i of result.awakened) for (const fx of cureEffects(["Sleeping"])) this.ui.avatarEffect(i, fx);
+        this.ui.log(result.awakened.length ? `${result.awakened.map((i) => party.characters[i]!.name).join(", ")} wake${result.awakened.length === 1 ? "s" : ""} up.` : "Nobody was asleep.", result.awakened.length ? "good" : "info");
         break;
       case "suppress":
         this.audio.play(9031);
@@ -4237,7 +4254,7 @@ export class Game {
     // opens 25 cells across (the user's wish); zooming out is one wheel step away
     let view: MapViewport = { ...here(), cells: clampCells(MAP_OPEN_CELLS, limits) };
     // 42nd playtest, point 12: Wizard's Eye uncovers the minimap only; the big map is uncovered by walking, as ever (`eye` stays off here)
-    const monsters = this.mappedMonsters(false);
+    const monsters = this.mappedMonsters();
     const detect = this.detectOn();
     // the game stands still while the map is open, so what the Crow sees is the same until it is closed
     const traps = this.trapsShown();
@@ -5033,12 +5050,12 @@ export class Game {
   }
 
   /**
-   * The monsters the maps may show (36th playtest): only the ones inside the viewing cone, where nothing hides them. Wizard's Eye and Detect Monster lift that
-   * (Eye shows every monster of the level, Detect Monster the same, the maps then skip the ground check).
+   * The monsters the maps may show (36th playtest): only the ones inside the viewing cone, where nothing hides them. Detect Monster lifts that (every monster of the level,
+   * the maps then skip the ground check). Wizard's Eye does not: it uncovers the map and no monster (the spell sheet, 8. 11. 2026).
    */
-  private mappedMonsters(withEye = true): { x: number; y: number }[] {
+  private mappedMonsters(): { x: number; y: number }[] {
     const alive = this.enc.monsters.filter((m) => m.hp > 0).map((m) => ({ x: m.x, y: m.y }));
-    if ((withEye && this.eyeOn()) || this.detectOn() || alive.length === 0) return alive;
+    if (this.detectOn() || alive.length === 0) return alive;
     const { tx, ty, facing } = this.player;
     const seen = new Set<string>();
     for (const [x, y] of visibleCells(this.gridView().opaque, tx, ty, facing, this.sightRadius())) seen.add(`${x},${y}`);
@@ -5060,7 +5077,7 @@ export class Game {
   private drawMinimap(): void {
     const canvas = this.ui.minimap;
     const monsters = this.mappedMonsters();
-    const detect = this.detectOn() || this.eyeOn();
+    const detect = this.detectOn();
     if (this.mode === "interior" && this.interior) {
       const rt = this.interior;
       drawInteriorMap(canvas, rt.map, rt.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, undefined, this.trapsShown(), undefined, this.minimapIcons, this.eyeOn(), detect);
