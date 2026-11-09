@@ -517,6 +517,47 @@ export function quickCastOption(party: Party, quick: QuickCast): Option<SpellCho
 /** The spell every hero's column shows before anybody has cast anything: Light. */
 const LIGHT_SPELL = 6;
 
+/** What a spell's mouse-over says: its name, its kind, level and cost, and what it does. `sp` (the caster's spell points) adds "not enough spell points". */
+function spellLines(s: (typeof SPELLS)[number], sp?: number): HTMLElement[] {
+  return [
+    h("div", { class: "spell-name", text: s.title }),
+    h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${s.mana} spell point${s.mana === 1 ? "" : "s"}${sp !== undefined && sp < s.mana ? " - not enough spell points" : ""}` }),
+    h("div", { text: s.text }),
+  ];
+}
+
+/**
+ * The mouse-over of a spell's plate (52nd playtest, point 4; 50th bug fix: the plate of the cast-last spell in "Who casts?" said only "Light (1 SP)" and, after the first cast, "- the spell cast last"
+ * instead of the text): name, cost and description at the plate, in every window that shows one. It hangs in the overlay (`.modal-back`): the scroll has a `filter`, which makes it the frame of
+ * fixed boxes, and clips them. `onShow` runs when it appears (the spell window also fills the field under its grid).
+ */
+function attachSpellTip(el: HTMLElement, spellId: number, sp?: number, onShow?: () => void): void {
+  const s = SPELLS[spellId];
+  if (!s) return;
+  const tip = h("div", { class: "spell-tip" }, ...spellLines(s, sp));
+  el.setAttribute("aria-label", `${s.title} (${s.mana} SP)`);
+  const show = (): void => {
+    const back = el.closest(".modal-back");
+    if (!back) return;
+    onShow?.();
+    tip.style.visibility = "hidden";
+    back.append(tip);
+    const over = back.getBoundingClientRect();
+    const at = el.getBoundingClientRect();
+    const margin = 8;
+    // above the plate where it fits, else below; centred on it and kept inside the window
+    const x = Math.max(margin, Math.min(over.width - tip.offsetWidth - margin, at.left - over.left + at.width / 2 - tip.offsetWidth / 2));
+    const above = at.top - over.top - tip.offsetHeight - margin;
+    tip.style.left = `${x}px`;
+    tip.style.top = `${above >= margin ? above : at.bottom - over.top + margin}px`;
+    tip.style.visibility = "visible";
+  };
+  el.addEventListener("mouseenter", show);
+  el.addEventListener("focus", show);
+  el.addEventListener("mouseleave", () => tip.remove());
+  el.addEventListener("blur", () => tip.remove());
+}
+
 /**
  * "Who casts?" (36th playtest, point 5): the portraits of the heroes with magical abilities side by side, under each the blue bar of the spell points as wide as the portrait,
  * the picture of the spell cast last (greyed out when this hero cannot cast it now; Light while nothing has been cast) and a "Select" button on the user's plate.
@@ -544,12 +585,13 @@ export async function pickCaster(ui: UI, party: Party, heroes: number[], aimed: 
               "button",
               {
                 class: `caster-spell${block ? " off" : ""}`,
-                title: `${spell?.title ?? "Spell"}${spell ? ` (${spell.mana} SP)` : ""}${own ? " - the spell cast last" : ""}`,
                 onclick: () => (block ? sound?.(9014) : close({ who: i, repeat: true })),
               },
               spellPlate(last),
               isPlaceholderIcon(last) ? h("span", { class: "spell-caption", text: spell?.title ?? "" }) : null,
             );
+            // the same mouse-over from the first cast on, whether or not this hero has cast anything (before it: Light): name, cost and what the spell does
+            attachSpellTip(icon, last, c.sp);
             return h(
               "div",
               { class: "caster-col" },
@@ -620,32 +662,6 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
   const picked = await ui.modal<SpellChoice | number | null>(
     (close) => {
       const info = h("div", { class: "spell-info" });
-      // 52nd playtest, point 4: the mouse-over shows the spell (name, cost, text) at the plate, not only in the field under the grid. It hangs in the overlay (`.modal-back`): the
-      // scroll has a `filter`, which makes it the frame of fixed boxes, and clips them
-      const tip = h("div", { class: "spell-tip" });
-      const spellLines = (s: (typeof SPELLS)[number]): HTMLElement[] => [
-        h("div", { class: "spell-name", text: s.title }),
-        h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${s.mana} spell point${s.mana === 1 ? "" : "s"}${c.sp < s.mana ? " - not enough spell points" : ""}` }),
-        h("div", { text: s.text }),
-      ];
-      const showTip = (slot: HTMLElement, id: number): void => {
-        const s = SPELLS[id];
-        const back = slot.closest(".modal-back");
-        if (!s || !back) return;
-        clear(tip);
-        tip.append(...spellLines(s));
-        tip.style.visibility = "hidden";
-        back.append(tip);
-        const over = back.getBoundingClientRect();
-        const at = slot.getBoundingClientRect();
-        const margin = 8;
-        // above the plate where it fits, else below; centred on it and kept inside the window
-        const x = Math.max(margin, Math.min(over.width - tip.offsetWidth - margin, at.left - over.left + at.width / 2 - tip.offsetWidth / 2));
-        const above = at.top - over.top - tip.offsetHeight - margin;
-        tip.style.left = `${x}px`;
-        tip.style.top = `${above >= margin ? above : at.bottom - over.top + margin}px`;
-        tip.style.visibility = "visible";
-      };
       const describe = (id: number | null): void => {
         clear(info);
         const s = id === null ? undefined : SPELLS[id];
@@ -653,7 +669,7 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           info.append(h("div", { class: "small", text: "Choose a spell. Point at one to read what it does." }));
           return;
         }
-        info.append(...spellLines(s));
+        info.append(...spellLines(s, c.sp));
       };
       // alphabetical by name, whatever order the spells were learnt in
       const slots = [...c.spells].sort((a, b) => (SPELLS[a]?.title ?? "").localeCompare(SPELLS[b]?.title ?? "")).map((id) => {
@@ -672,17 +688,8 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           isPlaceholderIcon(id) ? h("span", { class: "spell-caption", text: s.title }) : null,
           h("span", { class: "spell-cost", text: String(s.mana) }),
         );
-        slot.setAttribute("aria-label", `${s.title} (${s.mana} SP)`);
-        slot.addEventListener("mouseenter", () => {
-          describe(id);
-          showTip(slot, id);
-        });
-        slot.addEventListener("mouseleave", () => tip.remove());
-        slot.addEventListener("blur", () => tip.remove());
-        slot.addEventListener("focus", () => {
-          describe(id);
-          showTip(slot, id);
-        });
+        // (the mouse-over at the plate, and the field under the grid with the same text)
+        attachSpellTip(slot, id, c.sp, () => describe(id));
         return slot;
       });
       describe(null);

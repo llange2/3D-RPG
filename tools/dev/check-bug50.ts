@@ -44,6 +44,26 @@ try {
     await sleep(2500);
   }
   const state = () => evalJs<string>(`(() => { const r = __game.game.r; const p = __game.state.party; return JSON.stringify({ torch: +r.torch.intensity.toFixed(2), range: r.torch.range, effects: p.effects.map((e) => e.kind), lampsOn: r.lamps.map((l) => l.isEnabled()) }); })()`);
+  if (when === "tip") {
+    // the mouse-over of the cast-last plate in "Who casts?": before any cast (Light) and after one, its text must be name, cost and description both times
+    const hover = async (name: string) => {
+      await page.keyboard.press("f");
+      await sleep(1200);
+      const plate = await page.$(".caster-spell");
+      const box = plate ? await plate.boundingBox() : null;
+      if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await sleep(600);
+      console.log(`${name}:`, await evalJs<string>(`JSON.stringify({ title: document.querySelector(".caster-spell")?.getAttribute("title") ?? null, tip: document.querySelector(".spell-tip")?.textContent ?? null })`));
+      await shot(name);
+    };
+    await hover("tip-before");
+    // cast Light with the first hero (the plate itself repeats the spell cast last: click it)
+    await evalJs(`(() => { document.querySelector(".caster-spell")?.click(); })()`);
+    await sleep(2500);
+    await hover("tip-after");
+    await browser.close();
+    process.exit(0);
+  }
   if (when === "first" || when === "firstnight") {
     // the first spell of a game: a fireball of 1 s flies from the muzzle seven tiles out; every frame's time and the strongest light of the pool are recorded
     if (when === "firstnight") await evalJs(`(() => { const p = __game.state.party; p.minutes = ${24 * 60 + 23 * 60}; __game.game.refresh(); })()`);
