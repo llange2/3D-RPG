@@ -5403,7 +5403,8 @@ export class Game {
       this.enableLampLights();
     }
     this.syncTowerLamps();
-    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0 && this.towerLamps.length === 0 && beams.length === 0) return;
+    // (a light of the pool that still holds a lamp goes on until it has faded out: a shot's light was left shining where the last shot ended in a scene without any other lamp, 50th bug fix)
+    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0 && this.towerLamps.length === 0 && beams.length === 0 && !this.lampSlots.some((s) => s.lamp)) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
     const { x, z } = this.player;
