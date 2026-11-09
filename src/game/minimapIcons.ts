@@ -57,6 +57,7 @@ export class MinimapIcons {
   /** Side of one symbol on the sheet, in pixels. */
   readonly cell: number;
   private readonly tiles = new Map<string, HTMLCanvasElement>();
+  private readonly means = new Map<string, [number, number, number]>();
   /** Cells narrower than this lose the dark edge of their tile (0: never). Set by each map before it draws: the big map zoomed out wants it, the small one does not. */
   gridMin = 0;
 
@@ -148,6 +149,41 @@ export class MinimapIcons {
     tile.getContext("2d")!.drawImage(from, sx + e, sy + e, n, n, 0, 0, n, n);
     this.tiles.set(id, tile);
     return tile;
+  }
+
+  /** The average colour of the inside of a picture on the sheet or of a made tile (without the dark edge), as red, green, blue of 0 to 255: what the zoomed-out map paints a tile with. */
+  private meanOf(key: string, from: CanvasImageSource, sx: number, sy: number): [number, number, number] {
+    const cached = this.means.get(key);
+    if (cached) return cached;
+    const e = Math.round((EDGE_PX * this.cell) / 48);
+    const n = this.cell - 2 * e;
+    const probe = document.createElement("canvas");
+    probe.width = n;
+    probe.height = n;
+    const ctx = probe.getContext("2d", { willReadFrequently: true })!;
+    ctx.drawImage(from, sx + e, sy + e, n, n, 0, 0, n, n);
+    const px = ctx.getImageData(0, 0, n, n).data;
+    const sum = [0, 0, 0];
+    let weight = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      const a = px[i + 3]! / 255;
+      for (let c = 0; c < 3; c++) sum[c]! += px[i + c]! * a;
+      weight += a;
+    }
+    const mean: [number, number, number] = weight > 0 ? [sum[0]! / weight, sum[1]! / weight, sum[2]! / weight] : [0, 0, 0];
+    this.means.set(key, mean);
+    return mean;
+  }
+
+  /** The average colour of a ground tile (with its drawing). */
+  meanGround(name: GroundName, drawing?: DrawingName): [number, number, number] {
+    return this.meanOf(`ground:${name}+${drawing ?? ""}`, this.ground(name, drawing), 0, 0);
+  }
+
+  /** The average colour of a symbol of the sheet (water, for the zoomed-out map). */
+  meanSymbol(name: SymbolName): [number, number, number] {
+    const at = this.source(name);
+    return this.meanOf(`symbol:${name}`, this.sheet, at.x, at.y);
   }
 
   /** Draws a ground tile (with its drawing) into the square at `x, y` of side `w`. */

@@ -70,7 +70,7 @@ import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, FULL_DUNGEON_DENSITY, GROU
 import { chunkSpawns, type OverworldSpawn } from "../world/spawns";
 import { World } from "../world/world";
 import { MinimapIcons } from "./minimapIcons";
-import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, type MapEvent, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend } from "./minimap";
+import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, type MapEvent, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend, makeOverview } from "./minimap";
 import { FACING_VEC, PlayerRig, type MoveDir } from "./player";
 import { downloadText, pickTextFile } from "./fileTransfer";
 import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllKeys, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode, teleportTargets } from "./debug";
@@ -281,6 +281,12 @@ const LAMPS: Readonly<Record<number, LampKind>> = ITEM_LAMPS;
 const MONSTER_GLOW: ReadonlyMap<number, MonsterLamp> = new Map(Object.values(MONSTERS).flatMap((m) => (MONSTER_LAMPS[m.name] ? [[m.id, MONSTER_LAMPS[m.name]!] as [number, MonsterLamp]] : [])));
 /** Lamps farther from the party than this are ignored (units); the pool serves the nearest ones. */
 const LAMP_REACH = 18;
+/**
+ * How far a shot's light still counts: as far as the monsters act. Their radius is a square of `MONSTER_ACTION_RADIUS` tiles (3 units each), so a monster at its corner is
+ * `√2` times as far; three units more let the light fade out behind the farthest one (52nd playtest, point 3: with the 18 units of the lamps a shot dimmed from 14 and was gone
+ * before it reached a monster seven tiles away).
+ */
+const PROJECTILE_REACH = MONSTER_ACTION_RADIUS * 3 * Math.SQRT2 + 3;
 const LAMP_INTENSITY = 1.7;
 /** Seconds a lamp takes to fade in or out of a light of the pool. */
 const LAMP_FADE = 0.4;
@@ -4303,6 +4309,9 @@ export class Game {
     const events = interior ? [] : this.overworldEvents();
     // only a party with the Cartographer talent has a map to read (35th playtest): the big map stays black, the minimap beside the cards is there for everybody. The campaign keeps its old rules.
     const blank = !this.state.campaign && !this.state.party.talents.includes("talent_cartographer");
+    // 52nd playtest, point 8: the outside map zoomed far out is drawn from a picture of the whole world, made now in the background (the game stands still while the map is open)
+    const overview = interior || blank ? null : makeOverview(this.world, this.state.explored, eye, this.minimapIcons);
+    overview?.start();
     const draw = () => {
       if (blank) {
         const ctx = canvas.getContext("2d")!;
@@ -4318,7 +4327,7 @@ export class Game {
       if (interior) {
         drawInteriorMap(canvas, interior.map, interior.content, this.state.explored, this.state.opened, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, traps, view, this.minimapIcons, eye, detect);
       } else {
-        drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, eye, view, this.minimapIcons, detect, events);
+        drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, eye, view, this.minimapIcons, detect, events, overview);
       }
     };
     const show = (next: MapViewport) => {
@@ -4448,6 +4457,7 @@ export class Game {
       );
     });
     removeKeys();
+    overview?.stop();
   }
 
   private async menu(): Promise<void> {
@@ -5402,23 +5412,25 @@ export class Game {
       ? this.monsters.glowing(this.glowModels).map((g) => ({ ...MONSTER_GLOW.get(g.defId)!, x: g.x, y: g.y, z: g.z, key: `m:${g.uid}` }))
       : [];
     // so do the lasers of the robots (a blue light) and the spells in flight (orange for fire, green for acid, blue for ice, pink for magic): a light flies along with each, and fades in and out quickly
-    for (const b of beams) carried.push({ ...b.lamp, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE });
+    for (const b of beams) carried.push({ ...b.lamp, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE, reach: PROJECTILE_REACH, priority: true });
     // the Orb in the party is no longer at its place: its lamp goes out with it
     const orbAway = this.state.party.mascot === "Orb";
     const near = [...this.lamps, ...this.lootLamps, ...this.mascotLamps, ...this.towerLamps, ...carried]
       .filter((lamp) => !(orbAway && lamp.key.startsWith(MASCOT_ORB_KEY)))
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
-      .filter((e) => e.d < LAMP_REACH)
-      .sort((a, b) => a.d - b.d)
+      .filter((e) => e.d < (e.lamp.reach ?? LAMP_REACH))
+      .sort((a, b) => Number(b.lamp.priority ?? false) - Number(a.lamp.priority ?? false) || a.d - b.d)
       .slice(0, this.lampSlots.length);
+    // a shot that finds no free light takes one from the lamps of the map at once: it must shine from the muzzle on, not after their slow fade
+    const shotWaits = near.some((n) => n.lamp.priority && !this.lampSlots.some((s) => s.lamp?.key === n.lamp.key)) && !this.lampSlots.some((s) => !s.lamp);
     for (const slot of this.lampSlots) {
       if (!slot.lamp) continue;
       const key = slot.lamp.key;
       const e = near.find((n) => n.lamp.key === key);
-      const step = Math.min(dt, 0.1) / (slot.lamp.fade ?? LAMP_FADE);
+      const step = Math.min(dt, 0.1) / (!e && shotWaits ? LASER_LAMP_FADE : (slot.lamp.fade ?? LAMP_FADE));
       if (e) {
         slot.lamp = e.lamp;
-        const target = Math.min(1, (LAMP_REACH - e.d) / 4);
+        const target = Math.min(1, ((e.lamp.reach ?? LAMP_REACH) - e.d) / 4);
         slot.level = slot.level < target ? Math.min(target, slot.level + step) : Math.max(target, slot.level - step);
       } else {
         slot.level -= step;

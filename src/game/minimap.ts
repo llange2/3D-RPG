@@ -8,6 +8,7 @@ import type { World } from "../world/world";
 import { landmarkBoon, landmarkName } from "./landmarkBoons";
 import { BIG_MAP_GRID_MIN, placeGroundOf } from "./minimapIcons";
 import type { DrawingName, GroundName, MinimapIcons, PlaceGround, PlaceName, SymbolName } from "./minimapIcons";
+import { OVERVIEW_CELLS, OverworldOverview, packColor } from "./minimapOverview";
 import type { Explored } from "./state";
 
 const BIOME_COLOR: Record<number, string> = {
@@ -166,12 +167,128 @@ function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t
   }
 }
 
+/** The colour of a tile on the zoomed-out map (52nd playtest, point 8), the average of the picture `drawOverworldTile` would draw: roads and mountains keep their colours, a wood is its trees' green. */
+function overviewColor(icons: MinimapIcons | null, t: TileInfo): number {
+  if (!icons) {
+    const hex = tileColor(t);
+    return packColor(parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16));
+  }
+  const ground = groundName(t);
+  let c: [number, number, number];
+  switch (t.ground) {
+    case GROUND.WATER:
+      c = icons.meanSymbol("water");
+      break;
+    case GROUND.SHALLOW: {
+      // the deep water's picture under a light veil, as on the detailed map
+      const w = icons.meanSymbol("water");
+      c = [w[0] + (255 - w[0]) * 0.32, w[1] + (255 - w[1]) * 0.32, w[2] + (255 - w[2]) * 0.32];
+      break;
+    }
+    case GROUND.MOUNTAIN:
+      c = icons.meanGround(ground, "mountain");
+      break;
+    case GROUND.ROAD:
+    case GROUND.PASS:
+    case GROUND.BRIDGE:
+      c = icons.meanGround("road");
+      break;
+    case GROUND.LAVA_POOL:
+      c = icons.meanGround("lava");
+      break;
+    case GROUND.POI_BLOCK:
+      c = icons.meanGround(ground);
+      break;
+    default:
+      c = t.deco === DECO.TREE ? icons.meanGround(ground, t.biome === BIOME.DESERT ? "palms" : "trees") : icons.meanGround(ground);
+  }
+  return packColor(c[0], c[1], c[2]);
+}
+
+/** The picture of the whole world for the big map zoomed out (`drawOverworldMap`'s `overview`): made in the background from what the party has seen, `revealAll` shows everything. */
+export function makeOverview(world: World, explored: Explored, revealAll: boolean, icons: MinimapIcons | null): OverworldOverview {
+  // (one colour per kind of tile: the lookups of the sheet are cached, but not free for a hundred thousand tiles)
+  const cache = new Map<number, number>();
+  const colorOf = (t: TileInfo): number => {
+    const key = (((t.ground * 16 + t.biome) * 4 + (t.deco === DECO.TREE ? 1 : 0)) * 2 + (t.dirt ? 1 : 0)) * 2 + (t.deco === 5 ? 1 : 0);
+    let packed = cache.get(key);
+    if (packed === undefined) {
+      packed = overviewColor(icons, t);
+      cache.set(key, packed);
+    }
+    return packed;
+  };
+  return new OverworldOverview(world, explored, revealAll, colorOf);
+}
+
+/** How big a place is drawn on the zoomed-out map, in pixels, at most (the party's arrow always) and at least: a town of two tiles would be three pixels wide. */
+const OVERVIEW_MARK = 12;
+const OVERVIEW_MARK_MIN = 7;
+/** From this many cells across (the whole world on the biggest worlds) the map shows only towns, castles and pyramids, and no events. */
+const OVERVIEW_FAR_CELLS = 160;
+
+/**
+ * The big map zoomed far out: the picture of the whole world (`OverworldOverview`) and, on top, what the party must still find at this scale: places and the party's arrow at a size
+ * that can be seen, events as dots, monsters as dots. `s` is the pixels one tile takes.
+ */
+function drawOverview(canvas: HTMLCanvasElement, overview: OverworldOverview, world: World, explored: Explored, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells: number, revealAll: boolean, view: MapView, icons: MinimapIcons | null | undefined, detect: boolean, events: readonly MapEvent[]): void {
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#0a0705";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const s = overview.draw(ctx, canvas.width, view.x, view.y, cells);
+  const half = Math.floor(cells / 2);
+  const at = (x: number, y: number): { cx: number; cy: number } => ({ cx: (x - view.x + half) * s, cy: (y - view.y + half) * s });
+  const inView = (x: number, y: number): boolean => Math.abs(x - view.x) <= half && Math.abs(y - view.y) <= half;
+  // the whole world in the picture, hundreds of places: only the ones that matter at this scale (a dungeon is a dot the eye cannot tell from the next)
+  const far = cells >= OVERVIEW_FAR_CELLS;
+  for (const poi of world.poisInRect(view.x - half - 2, view.y - half - 2, view.x + half + 2, view.y + half + 2)) {
+    // (the list holds the copies of places across the seam as well: the world is shown once)
+    if (poi.x < 0 || poi.y < 0 || poi.x >= world.width || poi.y >= world.height) continue;
+    if (far && poiSymbolOf(poi) === "dungeon") continue;
+    if (!revealAll && !explored.hasOverworld(poi.x, poi.y)) continue;
+    const b = poiBounds(poi);
+    const { cx, cy } = at(b.x0 + poi.size / 2, b.y0 + poi.size / 2);
+    const w = Math.max(OVERVIEW_MARK_MIN, Math.min(OVERVIEW_MARK, poi.size * s * 1.5));
+    if (icons) icons.drawPlace(ctx, poiSymbolOf(poi), placeGroundAt(world, poi.x, poi.y), cx - w / 2, cy - w / 2, w);
+    else {
+      ctx.fillStyle = "#ffd54a";
+      ctx.fillRect(cx - w / 2, cy - w / 2, w, w);
+    }
+  }
+  for (const ev of far ? [] : events) {
+    const x = world.wrapX(ev.x);
+    const y = world.wrapY(ev.y);
+    if (!inView(x, y) || (!revealAll && !explored.hasOverworld(ev.x, ev.y))) continue;
+    const { cx, cy } = at(x + 0.5, y + 0.5);
+    ctx.fillStyle = ev.done ? "#777" : "#ffd54a";
+    ctx.fillRect(cx - 2, cy - 2, 4, 4);
+  }
+  ctx.fillStyle = "#ff3a2a";
+  for (const m of monsters) {
+    const x = world.wrapX(m.x);
+    const y = world.wrapY(m.y);
+    if (!inView(x, y) || (!detect && !explored.hasOverworld(m.x, m.y))) continue;
+    const { cx, cy } = at(x + 0.5, y + 0.5);
+    ctx.fillRect(cx - 1.5, cy - 1.5, 3, 3);
+  }
+  const me = { x: world.wrapX(px), y: world.wrapY(py) };
+  if (inView(me.x, me.y)) {
+    const { cx, cy } = at(me.x + 0.5, me.y + 0.5);
+    party(ctx, cx, cy, facing, OVERVIEW_MARK, icons);
+  }
+}
+
 /**
  * Draws the surroundings of the party, or of `view` when the map has been moved. `cells` is the number of tiles shown across the canvas. `icons`: the symbols of the
  * old game; without them the map is coloured squares. The world is a globe: the small map goes on round the seam, the big map (the one given a `view`) shows the world
  * once, tiles beyond its edge stay dark, and the party, places and monsters stand at their place in the world (the party's arrow jumps to the other side at the edge).
  */
-export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explored: Explored, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, revealAll = false, view?: MapView, icons?: MinimapIcons | null, detect = false, events: readonly MapEvent[] = []): void {
+export function drawOverworldMap(canvas: HTMLCanvasElement, world: World, explored: Explored, px: number, py: number, facing: Facing, monsters: MiniMonster[], cells = MINIMAP_CELLS, revealAll = false, view?: MapView, icons?: MinimapIcons | null, detect = false, events: readonly MapEvent[] = [], overview?: OverworldOverview | null): void {
+  // 52nd playtest, point 8: far zoomed out the map is a picture of the whole world, not a hundred thousand tiles drawn one by one
+  if (overview && view && cells >= OVERVIEW_CELLS) {
+    drawOverview(canvas, overview, world, explored, px, py, facing, monsters, cells, revealAll, view, icons, detect, events);
+    return;
+  }
   const ctx = canvas.getContext("2d")!;
   const s = canvas.width / cells;
   const half = Math.floor(cells / 2);

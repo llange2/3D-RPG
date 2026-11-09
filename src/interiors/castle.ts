@@ -112,6 +112,21 @@ export function generateCastle(rng: Rng, ctx: BuildContext, alignment: Alignment
   if (!entry) throw new Error("castle: the gate of the keep opens on no cell of the keep");
   const spawn = { x: exit.x + FACING_DELTA[entry].dx, y: exit.y + FACING_DELTA[entry].dy, facing: entry };
 
+  // 52nd playtest, point 5 (Quinkeep of glade-keep-429): the king never shuts the way. In a throne chamber of three cells he is the only way from the cell in front of him to the cells
+  // beside him (and to the chests in their nooks), so the party went round by the walls that gave way below, half the keep away. The rock at each corner next to him gives way first:
+  // two open cells beside him that meet at a right angle are joined by a step round him, the antechamber of his chamber is three cells wide
+  const beside = dirs.map(([dx, dy]) => ({ dx, dy })).filter(({ dx, dy }) => b.isFloor(king.x + dx, king.y + dy) && !(king.x + dx === throne.x && king.y + dy === throne.y));
+  for (const p of beside) {
+    for (const q of beside) {
+      if (p.dx * q.dx + p.dy * q.dy !== 0 || p.dx * 2 + p.dy > q.dx * 2 + q.dy) continue;
+      const cx = king.x + p.dx + q.dx;
+      const cy = king.y + p.dy + q.dy;
+      if (b.isFloor(cx, cy) || cx < 2 || cy < 2 || cx > W - 3 || cy > H - 3 || (cx === exit.x && cy === exit.y)) continue;
+      b.set(cx, cy, CELL.FLOOR);
+      keep.add(b.idx(cx, cy));
+    }
+  }
+
   // the king may stand in the only way into a nook of the throne room (the keep with the throne room of three cells): the walls beside that way give
   // way, so that no cell of the keep is shut off by him
   const fixed = new Set<number>([b.idx(throne.x, throne.y), b.idx(king.x, king.y), ...statues.map((s) => b.idx(s.x, s.y))]);

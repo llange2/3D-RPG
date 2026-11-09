@@ -40,6 +40,9 @@ export const GRIP_TWEAK: Record<string, { shift: readonly [number, number, numbe
   wpn_shield1: { shift: [0, 0, -8], turn: [0, 0, 0] },
   wpn_shield2: { shift: [0, 0, -8], turn: [0, 0, 0] },
   wpn_shield3: { shift: [0, 0, -8], turn: [0, 0, 0] },
+  // 52nd playtest, point 6: the Archer's bow (upright, belly towards +x, its grip half a unit along the belly) in the left hand at the frames of the draw of `Archery_Shot_1`: upright, its belly along
+  // the arm that holds it, the grip in the palm. Found by trying every turn in steps of 45 degrees against the frames 30 to 56 of the clip (`check-playtest52.ts bowfit`, the same answer at each)
+  wpn_bow: { shift: [-14.1, -15.1, 0], turn: [90, 45, 0] },
 };
 
 export const HAND_FIT: Record<Hand, PandaFit> = {

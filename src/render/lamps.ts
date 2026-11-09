@@ -25,6 +25,10 @@ export interface LampSource extends LampKind {
   key: string;
   /** Seconds the light needs to fade in and out, instead of `LAMP_FADE` (a laser bolt lives for half a second and must shine from the start). */
   fade?: number;
+  /** How far from the party the lamp still counts, instead of `LAMP_REACH`: a shot lights the ground as far as the monsters act (52nd playtest, point 3). */
+  reach?: number;
+  /** The lamp gets a light of the pool before the lamps of the map, whatever their distance: a shot is only there for a moment and must shine from the muzzle on (point 2). */
+  priority?: boolean;
 }
 
 /** The crystals shine in their own colour, strongly, one to two cells around (30th playtest, point 5); the texture of both is a teal. */

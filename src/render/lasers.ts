@@ -8,7 +8,7 @@ import type { Scene } from "@babylonjs/core/scene";
 import type { LampKind } from "./lamps";
 
 /** The blue of the robots' lasers: the light that flies along with the beam (`Game.updateLamps`) has the same colour. */
-export const LASER_LAMP: Omit<LampKind, "y"> = { color: [0.25, 0.55, 1], range: 6.5, intensity: 3.4 };
+export const LASER_LAMP: Omit<LampKind, "y"> = { color: [0.25, 0.55, 1], range: 9, intensity: 3.4 };
 
 /** The bolt is a thin cylinder (a beam of this length flying point first) with a wider, soft one around it that gives the shine. */
 const LENGTH = 1.5;

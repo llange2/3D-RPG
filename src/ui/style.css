@@ -406,6 +406,13 @@ html.ending-on #game-cursor { display: none; }
 }
 .spell-info { min-height: 5.2em; margin: 4px auto 2px; max-width: 760px; text-align: center; }
 .spell-info .spell-name { font-family: var(--font-head); font-size: 20px; color: #4a2a08; }
+/* the mouse-over of a plate (52nd playtest, point 4): name, cost and text beside the pointer, in the overlay so that the scroll's filter does not clip it */
+.spell-tip {
+  position: absolute; z-index: 40; max-width: min(360px, 90vw); box-sizing: border-box; padding: 8px 12px; border-radius: 8px; pointer-events: none;
+  background: #2b1b0cf5; color: #f3e3b8; border: 1px solid #8f6b2c; box-shadow: 0 4px 16px #000c; font-size: 15px; line-height: 1.35;
+}
+.spell-tip .spell-name { font-family: var(--font-head); font-size: 18px; color: #f5d98a; }
+.spell-tip .small { color: #d6bd86; }
 
 /* a hero in the Dimensional Rift is out of this world: purple and faint, and the card says so */
 .card.rifted .portrait { filter: sepia(1) hue-rotate(235deg) saturate(3) brightness(0.9); opacity: 0.55; }
