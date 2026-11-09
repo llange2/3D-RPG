@@ -92,10 +92,10 @@ interface Flash {
 export const PROJECTILE_LAMPS: Readonly<Partial<Record<ProjectileKind, Omit<LampKind, "y">>>> = {
   laser: LASER_LAMP,
   // `daylight`: the light shows in the sun as well, not only in the dark (48th playtest, point 6: by day no spell shone)
-  fire: { color: [1, 0.5, 0.12], range: 6.5, intensity: 3.4, daylight: SPELL_DAYLIGHT },
-  acid: { color: [0.4, 1, 0.15], range: 6.5, intensity: 3.2, daylight: SPELL_DAYLIGHT },
-  ice: { color: [0.35, 0.68, 1], range: 6.5, intensity: 3.2, daylight: SPELL_DAYLIGHT },
-  magic: { color: [0.88, 0.35, 1], range: 6.5, intensity: 3.2, daylight: SPELL_DAYLIGHT },
+  fire: { color: [1, 0.5, 0.12], range: 9, intensity: 3.4, daylight: SPELL_DAYLIGHT },
+  acid: { color: [0.4, 1, 0.15], range: 9, intensity: 3.2, daylight: SPELL_DAYLIGHT },
+  ice: { color: [0.35, 0.68, 1], range: 9, intensity: 3.2, daylight: SPELL_DAYLIGHT },
+  magic: { color: [0.88, 0.35, 1], range: 9, intensity: 3.2, daylight: SPELL_DAYLIGHT },
 };
 
 /** The colour of a damage type's light and beams (`PROJECTILE_LAMPS`), also for the types that fly as another picture (poison is acid, physical has none: white). */

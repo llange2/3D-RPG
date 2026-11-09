@@ -620,6 +620,32 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
   const picked = await ui.modal<SpellChoice | number | null>(
     (close) => {
       const info = h("div", { class: "spell-info" });
+      // 52nd playtest, point 4: the mouse-over shows the spell (name, cost, text) at the plate, not only in the field under the grid. It hangs in the overlay (`.modal-back`): the
+      // scroll has a `filter`, which makes it the frame of fixed boxes, and clips them
+      const tip = h("div", { class: "spell-tip" });
+      const spellLines = (s: (typeof SPELLS)[number]): HTMLElement[] => [
+        h("div", { class: "spell-name", text: s.title }),
+        h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${s.mana} spell point${s.mana === 1 ? "" : "s"}${c.sp < s.mana ? " - not enough spell points" : ""}` }),
+        h("div", { text: s.text }),
+      ];
+      const showTip = (slot: HTMLElement, id: number): void => {
+        const s = SPELLS[id];
+        const back = slot.closest(".modal-back");
+        if (!s || !back) return;
+        clear(tip);
+        tip.append(...spellLines(s));
+        tip.style.visibility = "hidden";
+        back.append(tip);
+        const over = back.getBoundingClientRect();
+        const at = slot.getBoundingClientRect();
+        const margin = 8;
+        // above the plate where it fits, else below; centred on it and kept inside the window
+        const x = Math.max(margin, Math.min(over.width - tip.offsetWidth - margin, at.left - over.left + at.width / 2 - tip.offsetWidth / 2));
+        const above = at.top - over.top - tip.offsetHeight - margin;
+        tip.style.left = `${x}px`;
+        tip.style.top = `${above >= margin ? above : at.bottom - over.top + margin}px`;
+        tip.style.visibility = "visible";
+      };
       const describe = (id: number | null): void => {
         clear(info);
         const s = id === null ? undefined : SPELLS[id];
@@ -627,12 +653,7 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           info.append(h("div", { class: "small", text: "Choose a spell. Point at one to read what it does." }));
           return;
         }
-        const short = c.sp < s.mana;
-        info.append(
-          h("div", { class: "spell-name", text: s.title }),
-          h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${s.mana} spell point${s.mana === 1 ? "" : "s"}${short ? " - not enough spell points" : ""}` }),
-          h("div", { text: s.text }),
-        );
+        info.append(...spellLines(s));
       };
       // alphabetical by name, whatever order the spells were learnt in
       const slots = [...c.spells].sort((a, b) => (SPELLS[a]?.title ?? "").localeCompare(SPELLS[b]?.title ?? "")).map((id) => {
@@ -642,7 +663,6 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           "button",
           {
             class: `spell-slot${ok ? "" : " off"}`,
-            title: `${s.title} (${s.mana} SP)`,
             onclick: () => {
               if (ok) close(id);
               else sound?.(9014);
@@ -652,8 +672,17 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           isPlaceholderIcon(id) ? h("span", { class: "spell-caption", text: s.title }) : null,
           h("span", { class: "spell-cost", text: String(s.mana) }),
         );
-        slot.addEventListener("mouseenter", () => describe(id));
-        slot.addEventListener("focus", () => describe(id));
+        slot.setAttribute("aria-label", `${s.title} (${s.mana} SP)`);
+        slot.addEventListener("mouseenter", () => {
+          describe(id);
+          showTip(slot, id);
+        });
+        slot.addEventListener("mouseleave", () => tip.remove());
+        slot.addEventListener("blur", () => tip.remove());
+        slot.addEventListener("focus", () => {
+          describe(id);
+          showTip(slot, id);
+        });
         return slot;
       });
       describe(null);

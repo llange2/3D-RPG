@@ -3,6 +3,7 @@ import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
 import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import type { AnimationGroup } from "@babylonjs/core/Animations/animationGroup";
 import type { Skeleton } from "@babylonjs/core/Bones/skeleton";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import "@babylonjs/core/Rendering/outlineRenderer"; // registers `renderOverlay`, the tint of a monster in another dimension
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
@@ -11,7 +12,7 @@ import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/loaders/glTF";
-import { equipmentModel } from "../data/equipment";
+import { BOW_MODEL, BOW_MONSTERS, equipmentModel } from "../data/equipment";
 import { MONSTERS } from "../data/tables";
 import { assetUrl, type MonsterModelInfo, type StaticModelInfo } from "./assets";
 import { GRIP_TWEAK, GRIP_Y, holdInHand, type Hand } from "./equipment";
@@ -20,6 +21,14 @@ import { toStandardMaterial } from "./props";
 
 const ATTACK_NAMES = ["Charged_Upward_Slash", "Left_Slash", "Axe_Spin_Attack", "Archery_Shot_1", "mage_soell_cast_3", "mage_soell_cast_4", "Charged_Spell_Cast_1", "Sweeping_Kick"];
 const IDLE_NAMES = ["Alert", "Idle_11", "Idle_9", "Idle_3"];
+/**
+ * The attack clips that are drawn turned about the model's vertical axis (radians, positive is clockwise seen from above): the Archer's shot is made with the body turned away from the target, so
+ * that the bow points at the party it is turned clockwise (52nd playtest, point 1: the user asked for a quarter circle). Measured at the frames 30 to 56 of the clip (the bow's belly against the way
+ * to the camera, `check-playtest52.ts archer`) the shot points 109 to 123 degrees past the party without a turn: 90 degrees leaves it 20 to 35 degrees off, 120 within 10 to 20. It turns in
+ * `ATTACK_TURN_SPEED` radians a second when the clip starts and back when it ends.
+ */
+const ATTACK_TURN: Readonly<Record<string, number>> = { Archery_Shot_1: (120 * Math.PI) / 180 };
+const ATTACK_TURN_SPEED = 9;
 /** How long a monster takes to walk one tile; the game times a monster's attack after its step by it. */
 export const MONSTER_STEP_SECONDS = 0.28;
 const MOVE_SECONDS = MONSTER_STEP_SECONDS;
@@ -101,6 +110,11 @@ interface View {
   walking: boolean;
   dying: number | null;
   attackUntil: number;
+  /** The turn the running attack clip asks for and the turn drawn now (`ATTACK_TURN`). */
+  attackTurn: number;
+  turned: number;
+  /** The bow of an Archer: in the hand during the shooting clip only. */
+  bow: AbstractMesh[];
   bobSeed: number;
   /** A monster that appears out of nowhere (an ambush) fades in: seconds so far and in all. Null once it is solid. */
   fade: { t: number; seconds: number } | null;
@@ -156,7 +170,7 @@ export class MonsterRenderer {
     const def = MONSTERS[defId];
     const wanted: [Hand, string | null][] = [
       ["right", equipmentModel(def?.anim_weapon)],
-      ["left", equipmentModel(def?.anim_shield)],
+      ["left", BOW_MONSTERS.has(defId) ? BOW_MODEL : equipmentModel(def?.anim_shield)],
     ];
     const out: { hand: Hand; container: AssetContainer; key: string }[] = [];
     for (const [hand, key] of wanted) {
@@ -229,12 +243,20 @@ export class MonsterRenderer {
     const holder = new TransformNode(`monster:${uid}`, this.scene);
     for (const root of entries.rootNodes) root.parent = holder;
     // the old game's `assign_item`: the weapon in the right hand, the shield in the left, hung under the hand joints of the skeleton so that they follow its clips
+    const bow: AbstractMesh[] = [];
     for (const { hand, container: itemContainer, key } of kit) {
       const joint = holder.getDescendants(false, (n) => n.name === `${uid}:${hand === "right" ? "RightHand" : "LeftHand"}`)[0] as TransformNode | undefined;
       if (!joint) continue;
       const copy = itemContainer.instantiateModelsToScene((n) => `${uid}:${hand}:${n}`, false);
       for (const root of copy.rootNodes) {
-        for (const mesh of root.getChildMeshes(true)) holdInHand(mesh, joint, hand, GRIP_Y[key] ?? 0, GRIP_TWEAK[key]);
+        for (const mesh of root.getChildMeshes(true)) {
+          holdInHand(mesh, joint, hand, GRIP_Y[key] ?? 0, GRIP_TWEAK[key]);
+          // the bow is only there while the Archer shoots
+          if (key === BOW_MODEL) {
+            mesh.setEnabled(false);
+            bow.push(mesh);
+          }
+        }
         root.dispose();
       }
     }
@@ -268,6 +290,9 @@ export class MonsterRenderer {
       walking: false,
       dying: null,
       attackUntil: 0,
+      attackTurn: 0,
+      turned: 0,
+      bow,
       bobSeed: Math.random() * 10,
       fade: fadeSeconds > 0 ? { t: 0, seconds: fadeSeconds } : null,
       phased: false,
@@ -298,6 +323,8 @@ export class MonsterRenderer {
 
   private playIdle(view: View): void {
     for (const g of view.groups) g.stop();
+    view.attackTurn = 0;
+    for (const m of view.bow) m.setEnabled(false);
     // a person loops the clip the old game gave him (chatting, bowing, squatting), the others one of the idle clips
     const g = (view.npc ? this.group(view, [view.npc.idle]) : undefined) ?? this.group(view, IDLE_NAMES) ?? view.groups[0];
     g?.start(true, view.npc ? 1 : 0.8 + (view.bobSeed % 0.4));
@@ -392,6 +419,9 @@ export class MonsterRenderer {
     if (!g) return;
     for (const other of v.groups) other.stop();
     g.start(false);
+    const clip = ATTACK_NAMES.find((n) => g.name.includes(n));
+    v.attackTurn = (clip && ATTACK_TURN[clip]) || 0;
+    for (const m of v.bow) m.setEnabled(clip === "Archery_Shot_1");
     v.attackUntil = this.time + 1.1;
     v.walking = false;
   }
@@ -410,6 +440,7 @@ export class MonsterRenderer {
     }
     v.dying = Number.POSITIVE_INFINITY;
     for (const g of v.groups) g.stop();
+    for (const m of v.bow) m.setEnabled(false);
     let finished = false;
     const finish = () => {
       if (finished) return;
@@ -472,7 +503,10 @@ export class MonsterRenderer {
         // back (checked model by model in the browser)
         const dx = camX - v.holder.position.x;
         const dz = camZ - v.holder.position.z;
-        v.holder.rotation.y = Math.atan2(dx, dz);
+        // (an attack clip that is made sideways to its target is turned in by its own quarter circle, `ATTACK_TURN`)
+        const rest = v.attackTurn - v.turned;
+        v.turned += Math.sign(rest) * Math.min(Math.abs(rest), ATTACK_TURN_SPEED * dt);
+        v.holder.rotation.y = Math.atan2(dx, dz) + v.turned;
       }
     }
   }

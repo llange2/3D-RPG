@@ -4299,5 +4299,23 @@
   "surface": 0.12,
   "fromObj": false,
   "mean": 0.322
+ },
+ "wpn_bow": {
+  "file": "models-original/wpn_bow.glb",
+  "tris": 3096,
+  "bytes": 1117460,
+  "bounds": [
+   -0.09449711187148746,
+   -1.2981314477989354,
+   -0.09953498840332031,
+   0.5856796243576605,
+   1.298098910431885,
+   0.09903804957866669
+  ],
+  "animations": [],
+  "groundTop": -1.2,
+  "surface": 0.195,
+  "fromObj": false,
+  "mean": 0.396
  }
 }

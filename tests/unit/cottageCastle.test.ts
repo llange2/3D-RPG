@@ -160,6 +160,8 @@ describe("the pirate ship is the user's model", () => {
     expect(first.rotY).toBeCloseTo(-Math.PI / 2, 6);
     expect(first.y).toBeLessThan(0);
     ship.place(10, 20, Math.PI);
+    // (52nd playtest, point 7: the ship turns to a new heading instead of jumping, in well under a second)
+    ship.update(1);
     expect(calls.instances["pirate-ship"]![0]!.rotY).toBeCloseTo(Math.PI / 2, 6);
     expect(ship.shown).toBe(true);
   });

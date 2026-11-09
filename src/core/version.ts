@@ -156,5 +156,7 @@
  * rims are drawn); the cell above the stairs is a shaft one storey higher (`towerShafts`, rendering only).
  * 60 = the 51st playtest: a tower furnishes with the table, the intact bookshelf, the fireplace, the alchemy table, the table with food and stored goods first, never with a gravestone (`towerDecor`); the names of
  * dungeons, caves and towers have twice as many parts (`data/names.ts`); a locked place on a lava island has a lane of dirt cut into the rock for its hint wagon (`RoadSeg.alley`, `World.hintAlleys`).
+ * 61 = the 52nd playtest: the king never shuts a way (`generateCastle`): the rock at the corners beside him gives way, so that his chamber of three cells has a step round him and the party reaches the king's
+ * chests from the cell in front of him.
  */
-export const GEN_VERSION = 60;
+export const GEN_VERSION = 61;

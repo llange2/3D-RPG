@@ -46,6 +46,8 @@ export interface ModelSpec {
   keepNormalMap?: boolean;
   /** Turns the model about the vertical axis (degrees), for a model that was made facing another way than the old one. */
   rotateY?: number;
+  /** Turns the model about the z axis (degrees) first of all, before `rotateX` and `rotateY`: the bow of the Archer comes out of the modelling tool slanted by 45 degrees. */
+  rotateZ?: number;
   /**
    * Base colour (linear 0 to 1) for a source that has no material at all: the lion of the decorations comes as bare geometry and would show in the engine's default grey.
    * Parts that do have a material keep it.
@@ -252,13 +254,20 @@ async function processDoc(doc: Document, spec: ModelSpec, profile: ModelProfile)
   doc.setLogger(new Logger(Logger.Verbosity.WARN));
   for (const node of doc.getRoot().listNodes()) if (spec.drop?.includes(node.getName())) node.dispose();
   if (spec.dropFlat) dropFlatTriangles(doc);
-  if (spec.rotateX || spec.rotateY) {
+  if (spec.rotateX || spec.rotateY || spec.rotateZ) {
     // a rotation on the nodes that hang directly under the scene: the geometry stays as it is, bounds and ground top read the world matrix
     const half = (deg: number) => [Math.sin((deg * Math.PI) / 360), Math.cos((deg * Math.PI) / 360)] as const;
     const [sx, cx] = half(spec.rotateX ?? 0);
     const [sy, cy] = half(spec.rotateY ?? 0);
-    // qy * qx: first about x, then about the vertical axis
-    const q: [number, number, number, number] = [cy * sx, sy * cx, -sy * sx, cy * cx];
+    const [sz, cz] = half(spec.rotateZ ?? 0);
+    // qy * qx * qz: first about z, then about x, then about the vertical axis (without rotateZ this is the old [cy * sx, sy * cx, -sy * sx, cy * cx])
+    const mul = (a: readonly [number, number, number, number], b: readonly [number, number, number, number]): [number, number, number, number] => [
+      a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+      a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+      a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+      a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2],
+    ];
+    const q = mul([0, sy, 0, cy], mul([sx, 0, 0, cx], [0, 0, sz, cz]));
     for (const scene of doc.getRoot().listScenes()) for (const node of scene.listChildren()) node.setRotation(q);
   }
   if (spec.heightfield) heightfieldDoc(doc, spec.heightfield.cells, spec.heightfield.uvSpan);
@@ -893,6 +902,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("wpn_shield3", "Shield 3.glb", 600, 256),
   S("wpn_axe", "Axe.glb", 600, 256),
   S("wpn_hammer", "Battle Hammer.glb", 600, 256),
+  // the Archer's bow (the user's file, 8. 11. 2026): it comes slanted, its long axis along (-1, 1) with the belly towards (1, 1); turned by -45 degrees about z it stands upright with the belly towards +x
+  { ...S("wpn_bow", "new:Bow.glb", 1500, 512), rotateZ: -45 },
   ...campaignItemModels(),
 ];
 
