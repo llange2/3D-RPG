@@ -7,7 +7,7 @@ import { RIDDLES_WORLD } from "../../src/data/riddles";
 import { MASCOTS } from "../../src/ui/panels";
 import { World } from "../../src/world/world";
 import { createDefaultParty } from "../../src/sim/party";
-import { recordThievery, rollChance, thieveryEntries, thieverySummary } from "../../src/sim/thieveryLog";
+import { rollChance } from "../../src/sim/journal";
 import { questInterior } from "../helpers/quests";
 
 const of = (content: ReturnType<typeof questInterior>["content"], kind: string) => content.actions.filter((a) => a.kind === kind);
@@ -89,22 +89,7 @@ describe("40th playtest, point 7: the temporary thievery log", () => {
     expect(rollChance(30, 20)).toBeCloseTo(11 / 21, 6);
   });
 
-  it("notes an attempt with the heroes' skills and sums up chance and result", () => {
-    thieveryEntries.length = 0;
-    const party = createDefaultParty();
-    recordThievery(party, [0, 1], "chest", 2, 9, 12);
-    recordThievery(party, [0, 1], "chest", 2, 1000, 3);
-    const [a, b] = thieveryEntries;
-    expect(a!.success).toBe(true);
-    expect(a!.heroes.length).toBe(2);
-    expect(b!.success).toBe(false);
-    expect(b!.chance).toBe(0);
-    const sum = thieverySummary("chest");
-    expect(sum.attempts).toBe(2);
-    expect(sum.successes).toBe(1);
-    expect(sum.actual).toBe(50);
-    thieveryEntries.length = 0;
-  });
+  // the entries of the log (since the balance journal they are filed in the save) are tested in `journal.test.ts`
 });
 
 describe("40th playtest, point 11: no riddle of another age", () => {

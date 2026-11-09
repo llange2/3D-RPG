@@ -48,8 +48,8 @@ import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, land
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
-import { addCondition, canAct, recalcValues, xpToNextLevel } from "../sim/character";
-import { onThievery, thieveryEntries, thieverySummary } from "../sim/thieveryLog";
+import { addCondition, canAct, recalcValues, worstCondition, xpToNextLevel } from "../sim/character";
+import { journalEmit, pushJournal, setJournalSink, type FightEvent, type JournalEntry, type JournalEvent, type Stamp } from "../sim/journal";
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
 import { monsterById } from "../sim/combat";
@@ -85,7 +85,7 @@ import { hutScene } from "../data/hut-texts";
 import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { readSettings, writeSettings, type Settings } from "./settings";
-import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, deleteNamedSave, findNamedSave, listNamedSaves, readNamedSave, writeNamedSave, LISTED_KINDS, SAVE_SLOTS, MAX_SAVE_NAME, cleanSaveName, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
+import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, deleteNamedSave, findNamedSave, listNamedSaves, readNamedSave, writeNamedSave, takeJournalDropped, LISTED_KINDS, SAVE_SLOTS, MAX_SAVE_NAME, cleanSaveName, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
 import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
@@ -239,6 +239,35 @@ const capitalise = (text: string): string => text.charAt(0).toUpperCase() + text
 /** Sleeping heroes lure monsters from this much further than they act (51st playtest, point 7), and the monsters get as many turns as it takes to cross that distance and two more. */
 const CAMP_LURE = 4;
 const CAMP_RADIUS = MONSTER_ACTION_RADIUS + CAMP_LURE;
+
+/** TEMPORARY (balance journal): a fight with no blow for this many steps is over, the party has walked away (`Game.noteFight`). */
+const FIGHT_IDLE_STEPS = 30;
+/** TEMPORARY (balance journal): every so many steps a snapshot of the time line is filed. */
+const SNAP_EVERY_STEPS = 200;
+
+/** TEMPORARY (balance journal): what `Game.noteFight` has counted of the fight being fought. */
+interface FightTally {
+  hp0: number[];
+  /** The monsters met: uid to definition id. */
+  seen: Map<string, number>;
+  rounds: number;
+  dealt: { melee: number; ranged: number; magic: number };
+  pAtk: number;
+  pHit: number;
+  taken: Record<string, number>;
+  mAtk: number;
+  mHit: number;
+  killed: number;
+  wolf: number;
+  xp: number;
+  gold: number;
+  items: number;
+  lastStep: number;
+  tier: number;
+  mascot: string;
+  /** The stamp of the first blow. */
+  begin: Stamp;
+}
 const CAMP_TURNS = CAMP_RADIUS + 2;
 const RAFT_ITEM = 126;
 const RAFT_OWNER = "raft";
@@ -490,31 +519,138 @@ export class Game {
     return true;
   }
 
+  // ---------------------------------------------------------------- balance journal
+
+  /** TEMPORARY (balance journal, `sim/journal.ts`): the fight being counted, null between fights. */
+  private fight: FightTally | null = null;
+  /** The step of the last snapshot of the time line. */
+  private lastSnap = 0;
+
   /**
-   * TEMPORARY (40th playtest, point 7, `sim/thieveryLog.ts`): every lock the party tries goes to the log of the game, to the console and to the browser storage (`mm3-thievery-log`),
-   * and `window.__thievery` hands over the entries and the sums, so the real chance of the thievery roll can be read off a playthrough (the aim is about 70 % for the median ninja at an ordinary chest).
+   * TEMPORARY (balance journal, `sim/journal.ts`): what the sim reports (locks, traps, level-ups, heroes who went down) is stamped with the step, the minute and the place and filed in the state,
+   * which every save carries. Nothing goes to the console or the log of the game; `tools/balance/read-journal.ts` reads it off an exported save.
    */
-  private watchThievery(): void {
-    const pct = (n: number) => `${Math.round(n)}%`;
-    onThievery((e, all) => {
-      const mine = thieverySummary(e.kind);
-      this.ui.log(
-        `Thievery (${e.kind}, tier ${e.tier}, lock ${e.difficulty}): ${e.success ? "picked" : "failed"}. Best roll ${e.best}, chance ${pct(e.chance * 100)} (${e.heroes.map((r) => `${r.name} ${r.classType} L${r.level}: up to ${r.skill}`).join("; ")}). All ${e.kind}s so far: ${mine.attempts}, expected ${pct(mine.expected)}, actual ${pct(mine.actual)}.`,
-        e.success ? "good" : "info",
-      );
-      console.info("[thievery]", JSON.stringify(e), JSON.stringify(all));
-      try {
-        localStorage.setItem("mm3-thievery-log", JSON.stringify({ summary: all, chests: thieverySummary("chest"), entries: thieveryEntries.slice(-300) }));
-      } catch {
-        // storage may be blocked; the console and `window.__thievery` still have it
+  private watchJournal(): void {
+    setJournalSink((event) => this.fileJournal(event));
+  }
+
+  private fileJournal(event: JournalEvent): void {
+    const s = this.state;
+    if (!s || this.mode === "title") return;
+    pushJournal(s.journal, Object.assign(event, this.journalStamp()) as JournalEntry);
+  }
+
+  /** Step, minute and place of this moment. */
+  private journalStamp(): Stamp {
+    const s = this.state;
+    const at = s.at;
+    return { s: s.steps, m: s.party.minutes, at: at.mode === "overworld" ? "ow" : at.poiId, x: this.player?.tx ?? at.x, y: this.player?.ty ?? at.y };
+  }
+
+  /** The tier of the place the party is in. */
+  private journalTier(): number {
+    if (this.interior) return this.interior.content.tier;
+    return this.player ? this.world.tierAt(this.player.tx, this.player.ty) : 1;
+  }
+
+  /** A snapshot of the time line: every 200 steps, and when the party goes between the overworld and a place or loads a game. */
+  private journalSnap(why: string): void {
+    const s = this.state;
+    const party = s.party;
+    this.lastSnap = s.steps;
+    journalEmit({ t: "snap", why, tier: this.journalTier(), heroes: party.characters.map((c) => ({ lvl: c.level, xp: c.xp, hp: c.hp, health: c.health, cond: worstCondition(c) })), gold: party.gold, bank: party.bankGold, food: party.food, kills: s.kills });
+  }
+
+  /**
+   * TEMPORARY (balance journal): counts a fight from the events of the sim, which `handleEvents` gets before it shows anything. The first batch starts the count (the hit points of that
+   * batch are added back to the heroes to get those from before it); the fight ends when no monster is left within the radius they act in ("won"), when the party defeats ("lost"),
+   * when the scene changes or the party walked away and nothing happened for a while ("left").
+   */
+  private noteFight(events: CombatEvent[]): void {
+    const party = this.state.party;
+    const blows = events.some((e) => e.type === "party_attack" || e.type === "monster_attack");
+    if (!blows && !events.some((e) => e.type === "monster_dead" || e.type === "defeat")) return;
+    if (this.fight && this.state.steps - this.fight.lastStep > FIGHT_IDLE_STEPS) this.endFight("left");
+    let f = this.fight;
+    if (!f) {
+      const hp0 = party.characters.map((c) => c.hp);
+      for (const e of events) if (e.type === "monster_attack") hp0[e.target] = (hp0[e.target] ?? 0) + e.damage;
+      f = this.fight = { hp0, seen: new Map(), rounds: 0, dealt: { melee: 0, ranged: 0, magic: 0 }, pAtk: 0, pHit: 0, taken: {}, mAtk: 0, mHit: 0, killed: 0, wolf: 0, xp: 0, gold: 0, items: 0, lastStep: this.state.steps, tier: this.journalTier(), mascot: party.mascot, begin: this.journalStamp() };
+    }
+    f.lastStep = this.state.steps;
+    if (blows) f.rounds++;
+    for (const e of events) {
+      switch (e.type) {
+        case "party_attack":
+          f.seen.set(e.uid, e.defId);
+          f.pAtk++;
+          if (e.damage > 0) f.pHit++;
+          f.dealt[e.kind] += e.damage;
+          break;
+        case "monster_attack": {
+          const defId = this.enc.monsters.find((m) => m.uid === e.uid)?.defId ?? f.seen.get(e.uid);
+          if (defId !== undefined) f.seen.set(e.uid, defId);
+          f.mAtk++;
+          if (e.damage > 0) f.mHit++;
+          const kind = e.ranged ? `${e.damageType}/ranged` : e.damageType;
+          f.taken[kind] = (f.taken[kind] ?? 0) + e.damage;
+          break;
+        }
+        case "wolf_kill":
+          f.wolf++;
+          break;
+        case "monster_dead":
+          f.seen.set(e.uid, e.defId);
+          f.killed++;
+          f.xp += e.xp;
+          f.gold += e.loot.gold;
+          if (e.loot.item) f.items++;
+          break;
+        default:
+          break;
       }
+    }
+    if (events.some((e) => e.type === "defeat")) this.endFight("lost");
+    // won: every monster that took part is gone (one that stands about but never fought belongs to no fight yet)
+    else if (![...f.seen.keys()].some((uid) => this.enc.monsters.some((m) => m.uid === uid && m.hp > 0))) this.endFight("won");
+  }
+
+  /** Files the fight being counted. */
+  private endFight(out: FightEvent["out"]): void {
+    const f = this.fight;
+    this.fight = null;
+    if (!f || !this.state) return;
+    const counts = new Map<number, number>();
+    for (const defId of f.seen.values()) counts.set(defId, (counts.get(defId) ?? 0) + 1);
+    const s = this.state;
+    const entry = journalEmit({
+      t: "fight",
+      out,
+      endS: s.steps,
+      endM: s.party.minutes,
+      tier: f.tier,
+      rounds: f.rounds,
+      mon: [...counts].map(([id, n]) => ({ id, n })).sort((a, b) => a.id - b.id),
+      heroes: this.state.party.characters.map((c, i) => ({ name: c.name, cls: c.classType, lvl: c.level, hp0: f.hp0[i] ?? c.hp, hp1: c.hp, health: c.health })),
+      dealt: f.dealt,
+      pAtk: f.pAtk,
+      pHit: f.pHit,
+      taken: f.taken,
+      mAtk: f.mAtk,
+      mHit: f.mHit,
+      killed: f.killed,
+      wolf: f.wolf,
+      xp: f.xp,
+      gold: f.gold,
+      items: f.items,
+      mascot: f.mascot,
     });
-    (window as unknown as { __thievery: unknown }).__thievery = { entries: thieveryEntries, summary: thieverySummary, clear: () => thieveryEntries.splice(0) };
+    // the sink stamped the end; a fight is filed where and when it began
+    Object.assign(entry, f.begin);
   }
 
   /** Shows the title screen and starts or continues a game. */
   async start(defaultSeed: string): Promise<void> {
-    this.watchThievery();
     this.mode = "title";
     this.ui.setHudVisible(false);
     this.audio.setAmbient(new Map());
@@ -636,6 +772,11 @@ export class Game {
 
   private async beginPlay(): Promise<void> {
     cheats.god = false; // the debug cheats are for one game
+    // TEMPORARY (balance journal): a fight of the game before is not this game's, and the time line goes on from the steps of this one
+    this.fight = null;
+    this.lastSnap = this.state.steps;
+    // every way into a game comes through here (title, load, `?autostart=1`, the resume after a reload), so the sink is set here and not in `start`
+    this.watchJournal();
     this.ui.setHudVisible(true);
     // the portraits of the chosen heroes in all their states, before the first frame (45th playtest, point 5)
     await this.preloadPortraits();
@@ -850,6 +991,8 @@ export class Game {
     await afterFrames(this.r.scene, 2);
     await loading.hide();
     this.player.locked = false;
+    // TEMPORARY (balance journal): the party has arrived in a new scene (the start of a game, a load, a place, the way out of it)
+    this.journalSnap("scene");
   }
 
   /** The loading screen must not outlive a map that could not be loaded (the party would be stuck behind it). */
@@ -987,6 +1130,7 @@ export class Game {
   /** The old scene is gone: shots in the air vanish and effects that were still waiting for them are dropped. */
   private sceneChanged(): void {
     this.fxEpoch++;
+    this.endFight("left");
     this.lootHeld.clear();
     this.volleyUntil = 0;
     this.projectiles.clear();
@@ -1283,6 +1427,7 @@ export class Game {
     // the cell was reached in this scene: an action on it may leave it (the exit of a town, a portal, a ladder), and `x, y` mean nothing in the next one
     const epoch = this.fxEpoch;
     s.steps++;
+    if (s.steps - this.lastSnap >= SNAP_EVERY_STEPS) this.journalSnap("steps");
     cursorStepped();
     this.syncSurroundings();
     // a levitating party does not walk: the wind takes the place of the footsteps
@@ -3348,6 +3493,7 @@ export class Game {
    */
   private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell, line = false): void {
     const party = this.state.party;
+    this.noteFight(events);
     const flights = this.launchPartyShots(events, spell, area, line);
     const landing = (uid: string) => flights.get(uid) ?? 0;
     // the monsters answer when the party's last shot has landed
@@ -4918,6 +5064,12 @@ export class Game {
     const ok = writeSave(this.state, slot);
     this.lastAutosave = this.state.steps;
     if (!ok) this.ui.log("Could not save (browser storage unavailable).", "bad");
+    this.noteJournalDropped();
+  }
+
+  /** TEMPORARY (balance journal): the browser had no room for a save with the journal; the save was made without it. */
+  private noteJournalDropped(): void {
+    if (takeJournalDropped()) this.ui.log("The browser storage is nearly full: this save was written without the balance journal. Export the saves (Esc > Debug) and delete old ones.", "bad");
   }
 
   /** Writes the game under a name of the player's choice; false (and a note in the log) when the browser refuses. */
@@ -4926,6 +5078,7 @@ export class Game {
     this.prepareSave();
     const ok = writeNamedSave(this.state, name);
     if (!ok) this.ui.log("Could not save (browser storage unavailable or full).", "bad");
+    this.noteJournalDropped();
     return ok;
   }
 

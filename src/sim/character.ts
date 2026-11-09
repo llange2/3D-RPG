@@ -3,6 +3,7 @@ import { BASE_CLASS, BASE_RACE, CONSTANTS } from "../data/tables";
 import { healthFlat, isV4, orbManaBonus, xpStepV4 } from "./balance";
 import { isTwoHanded, sumBonus } from "./items";
 import { removeCondition } from "./conditions";
+import { journalEmit } from "./journal";
 import {
   ATTRIBUTES,
   BAG_SLOTS,
@@ -284,11 +285,14 @@ export function xpToNextLevel(c: Character, level = c.level): number {
 
 /** Raises the level by `levels` (the old training grounds: pay, get the XP, level up). */
 export function levelUp(c: Character, talents: readonly string[], levels = 1, mascot = ""): void {
+  const from = c.level;
   for (let i = 0; i < levels; i++) {
     c.xp += xpToNextLevel(c);
     c.level += 1;
   }
   recalcValues(c, talents, true, mascot);
+  // TEMPORARY (balance journal, `sim/journal.ts`): the pace of the levels
+  if (levels > 0) journalEmit({ t: "level", name: c.name, cls: c.classType, from, to: c.level, xp: c.xp });
 }
 
 export function canAct(c: Character): boolean {
