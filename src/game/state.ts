@@ -1,6 +1,7 @@
 import { GEN_VERSION } from "../core/version";
 import type { Facing } from "../interiors/types";
 import type { Item, Party } from "../sim/types";
+import type { JournalEntry } from "../sim/journal";
 import { createDefaultParty, normalizeParty } from "../sim/party";
 import { Rng, seedFromString } from "../core/rng";
 import { newProgress, type CampaignProgress } from "../campaign/engine";
@@ -135,6 +136,8 @@ export interface GameState {
   visited: Set<string>;
   steps: number;
   kills: number;
+  /** TEMPORARY (balance journal, `sim/journal.ts`): what happened in this playthrough, for balancing; goes into every save. */
+  journal: JournalEntry[];
 }
 
 export function newGameState(seed: string, start: { x: number; y: number; facing: Facing }, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY): GameState {
@@ -155,6 +158,7 @@ export function newGameState(seed: string, start: { x: number; y: number; facing
     visited: new Set(),
     steps: 0,
     kills: 0,
+    journal: [],
   };
 }
 
@@ -197,6 +201,8 @@ export interface SaveFile {
     steps: number;
     kills: number;
     campaign?: CampaignSave | null;
+    /** TEMPORARY (balance journal): absent in older saves, and in a save the browser had no room for with it (`setSaveItem`). */
+    journal?: JournalEntry[];
   };
 }
 
@@ -223,8 +229,38 @@ export function toSaveFile(state: GameState): SaveFile {
       steps: state.steps,
       kills: state.kills,
       campaign: state.campaign,
+      journal: state.journal,
     },
   };
+}
+
+/**
+ * Stores a save under a key. TEMPORARY (balance journal): the journal makes a save bigger and every slot keeps a copy of it, so when the browser refuses (quota), the save is
+ * written once more without the journal: a game is never lost for the sake of the log. Returns whether the save was stored, and `withJournal` says whether it carries the journal.
+ */
+function setSaveItem(key: string, file: SaveFile): { stored: boolean; withJournal: boolean } {
+  try {
+    localStorage.setItem(key, JSON.stringify(file));
+    return { stored: true, withJournal: true };
+  } catch {
+    // fall through to the retry without the journal
+  }
+  if (!file.state.journal || file.state.journal.length === 0) return { stored: false, withJournal: false };
+  try {
+    const { journal: _dropped, ...state } = file.state;
+    localStorage.setItem(key, JSON.stringify({ ...file, state }));
+    return { stored: true, withJournal: false };
+  } catch {
+    return { stored: false, withJournal: false };
+  }
+}
+
+/** Set when the last save had to leave the journal out; the game shows a line in its log (`takeJournalDropped`). */
+let journalDropped = false;
+export function takeJournalDropped(): boolean {
+  const was = journalDropped;
+  journalDropped = false;
+  return was;
 }
 
 export function fromSaveFile(file: SaveFile): GameState {
@@ -247,6 +283,7 @@ export function fromSaveFile(file: SaveFile): GameState {
     steps: s.steps,
     kills: s.kills,
     campaign: s.campaign ?? null,
+    journal: Array.isArray(s.journal) ? s.journal : [],
   };
 }
 
@@ -274,12 +311,9 @@ export const kindOfState = (state: Pick<GameState, "campaign">): GameKind => (st
 
 /** Writes a save to localStorage, in the slots of the kind of game being played. Returns false if the browser refuses (private mode, quota). */
 export function writeSave(state: GameState, slot: SaveSlot = "auto"): boolean {
-  try {
-    localStorage.setItem(KEYS[kindOfState(state)][slot], JSON.stringify(toSaveFile(state)));
-    return true;
-  } catch {
-    return false;
-  }
+  const result = setSaveItem(KEYS[kindOfState(state)][slot], toSaveFile(state));
+  if (result.stored && !result.withJournal) journalDropped = true;
+  return result.stored;
 }
 
 export function readSave(kind: GameKind, slot: SaveSlot = "auto"): SaveFile | null {
@@ -367,7 +401,9 @@ export function storeNamedSave(file: SaveFile, name: string): boolean {
     const index = readIndex();
     const old = index.find((e) => e.kind === kind && sameName(e.name, clean));
     const id = old?.id ?? `${Date.now().toString(36)}${index.length.toString(36)}`;
-    localStorage.setItem(namedKey(id), JSON.stringify(file));
+    const result = setSaveItem(namedKey(id), file);
+    if (!result.stored) return false;
+    if (!result.withJournal) journalDropped = true;
     const entry: NamedSave = { id, name: clean, kind, note: describeSave(file), savedAt: file.savedAt };
     localStorage.setItem(NAMED_INDEX, JSON.stringify([...index.filter((e) => e.id !== id), entry]));
     return true;

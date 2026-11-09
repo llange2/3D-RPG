@@ -6,7 +6,7 @@
  *
  * Usage: tsx tools/dev/check-thievery.ts <outDir> [url]      (default url http://localhost:5173/)
  */
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
 
@@ -58,8 +58,8 @@ try {
   }
   if (!chest) throw new Error("no locked chest with a trap found");
 
-  // `?autostart=1` skips `Game.start`, which hooks up the temporary log
-  await page.evaluate(`(() => { if (!window.__thievery) __game.game.watchThievery(); window.__thievery.clear(); })()`);
+  // the balance journal (`src/sim/journal.ts`) lives in the state; start from an empty one
+  await page.evaluate(`(() => { __game.state.journal.length = 0; })()`);
   const fumbleWords = "slips in the lock|turns the pick the wrong way|forces the lock";
   let fumbles = 0;
   let picked = 0;
@@ -79,25 +79,33 @@ try {
     })()`);
     await sleep(120);
     const after = (await page.evaluate(`(document.body.innerText.match(/${fumbleWords}/g) ?? []).length`)) as number;
-    const last = (await page.evaluate(`window.__thievery.entries[window.__thievery.entries.length - 1]`)) as { success: boolean } | undefined;
-    if (last?.success) picked++;
+    const last = (await page.evaluate(`__game.state.journal.filter((e) => e.t === "lock").slice(-1)[0]`)) as { ok: boolean } | undefined;
+    if (last?.ok) picked++;
     if (after > before) {
       fumbles++;
       if (!shotFumble) {
         shotFumble = true;
         await shot("fumble.png");
       }
-    } else if (last?.success && !shotPick) {
+    } else if (last?.ok && !shotPick) {
       shotPick = true;
       await shot("picked.png");
     }
     // a hero that fell to the trap or a window the chest opened: close it and go on
     await page.keyboard.press("Escape");
   }
-  const sum = (await page.evaluate(`window.__thievery.summary("chest")`)) as { attempts: number; expected: number; actual: number };
-  const lastEntry = (await page.evaluate(`window.__thievery.entries[0]`)) as { difficulty: number; heroes: { name: string; classType: string; level: number; skill: number; chance: number }[] };
-  notes.push(`lock asks ${lastEntry.difficulty}; heroes: ${lastEntry.heroes.map((h) => `${h.classType} L${h.level} skill ${h.skill} ${(h.chance * 100).toFixed(0)} %`).join("; ")}`);
-  notes.push(`${attempts} attempts: picked ${picked} (${((picked / attempts) * 100).toFixed(0)} %), logged expected ${sum.expected.toFixed(0)} %, actual ${sum.actual.toFixed(0)} %`);
+  const locks = (await page.evaluate(`__game.state.journal.filter((e) => e.t === "lock")`)) as { diff: number; ok: boolean; p: number; heroes: { name: string; cls: string; lvl: number; skill: number; p: number; a: number[]; roll: number }[] }[];
+  const lastEntry = locks[0]!;
+  notes.push(`lock asks ${lastEntry.diff}; heroes: ${lastEntry.heroes.map((h) => `${h.cls} L${h.lvl} attrs ${h.a.join("/")} skill ${h.skill} roll ${h.roll} ${(h.p * 100).toFixed(0)} %`).join("; ")}`);
+  const expected = (locks.reduce((s, l) => s + l.p, 0) / locks.length) * 100;
+  const actual = (locks.filter((l) => l.ok).length / locks.length) * 100;
+  notes.push(`${attempts} attempts: picked ${picked} (${((picked / attempts) * 100).toFixed(0)} %), journal: ${locks.length} locks, expected ${expected.toFixed(0)} %, actual ${actual.toFixed(0)} %`);
+  // the journal must be in the save (what the tester exports)
+  const inSave = (await page.evaluate(`__game.state.journal.length`)) as number;
+  notes.push(`journal entries in the state: ${inSave}`);
+  await page.evaluate(`__game.game.save("quick")`);
+  const rawSave = (await page.evaluate(`localStorage.getItem("mm3-seed-rpg:quicksave:v1")`)) as string;
+  writeFileSync(join(outDir, "saves.json"), JSON.stringify({ format: "mm3-saves", exportedAt: new Date().toISOString(), saves: [{ kind: "world", slot: "quick", save: JSON.parse(rawSave) }], named: [] }));
   notes.push(`traps set off by a failed attempt: ${fumbles} of ${attempts - picked} failures (aim: one in five)`);
 } finally {
   await browser.close();

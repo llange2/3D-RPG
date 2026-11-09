@@ -1,3 +1,4 @@
+import { journalEmit } from "./journal";
 import type { Character, Condition, Party } from "./types";
 
 const HOUR = 60;
@@ -88,6 +89,8 @@ export function tickConditions(party: Party): ConditionEvent[] {
         addCondition(c, "Dead", party.minutes);
         c.hp = 0;
         events.push({ character: index, condition: cond, outcome: "died" });
+        // TEMPORARY (balance journal, `sim/journal.ts`)
+        journalEmit({ t: "down", name: c.name, cls: c.classType, lvl: c.level, cond: "Dead", by: cond.toLowerCase(), dmg: 0 });
       } else if (timer.then === "weak") {
         removeCondition(c, cond);
         removeCondition(c, "Weak");
