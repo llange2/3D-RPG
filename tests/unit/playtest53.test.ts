@@ -172,7 +172,7 @@ describe("a shot never grazes a wall corner on a slanted line (point 26)", () =>
     const enc = createEncounter();
     enc.monsters.push(createMonster("shooter", archer.id, 0, 1));
     enc.monsters[0]!.alerted = true;
-    enc.monsters[0]!.immobile = true; // it stays where it is: the shot from there is the question
+    enc.monsters[0]!.immobile = 99; // it stays where it is: the shot from there is the question
     const events = monsterTurn(party, gridOf(rows), enc, 3, 0, new Rng(seedFromString("corner")));
     expect(events.some((e) => e.type === "monster_attack")).toBe(false);
   });
