@@ -4200,7 +4200,7 @@ export class Game {
       case "suppress":
         this.audio.play(9031);
         if (result.condition) for (const fx of cureEffects([result.condition])) this.ui.avatarEffect(result.target, fx);
-        this.ui.log(result.condition ? `${party.characters[result.target]!.name}'s ${result.condition.toLowerCase()} is held back: the time to find a cure starts over.` : "It had no effect.", result.condition ? "good" : "info");
+        this.ui.log(result.condition ? `${party.characters[result.target]!.name}'s ${result.condition.toLowerCase()} is held back: the time left to find a cure is doubled.` : "It had no effect.", result.condition ? "good" : "info");
         break;
       case "revive":
         this.audio.play(9031);

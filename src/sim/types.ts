@@ -122,6 +122,8 @@ export interface CharacterMods {
   rift?: number;
   /** Temporary points on an attribute or a resistance (a well, fountain or stone head of the open land, `sim/boons.ts`); each key goes with its `TimedEffect` of kind `boon`. */
   boon?: Partial<Record<BoonKey, number>>;
+  /** Suppress Poison / Madness / Disease: the time to death of that condition was doubled once; the mark goes when the condition is cured. */
+  suppressed?: Partial<Record<Condition, true>>;
 }
 
 /** What a boon of the open land raises: an attribute, or a resistance in percent. */

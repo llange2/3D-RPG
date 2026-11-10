@@ -44,6 +44,14 @@ DESCRIPTION_REPLACEMENTS = {
     31: [("unabled", "unable")],  # Immobilize
     41: [("lowering ist chance", "lowering its chance")],  # Clumsy
     48: [("Paralysed", "Paralyzed")],  # Cure Paralysis: the condition is called Paralyzed in the game
+    # bug_fix_50 (10. 11. 2026): the damage type of the three "energy" spells is magic (the game has no energy element).
+    8: [("energy damage", "magical damage")],  # Energy Blast
+    76: [("energy damage", "magical damage")],  # Star Burst
+    77: [("energy damage", "magical damage")],  # Implosion
+    # The Suppress spells double the time that is left until the condition kills (`suppressCondition`).
+    11: [('Reduces "Poisoned" status on one character to minimum.', "Doubles the time left until one character dies of poison. Holds until the character is cured.")],  # Suppress Poison
+    18: [('Reduces "Crazy" status on one character to minimum.', "Doubles the time left until one character dies of madness. Holds until the character is cured.")],  # Suppress Madness
+    23: [('Reduces "Diseased" status on one character to minimum.', "Doubles the time left until one character dies of disease. Holds until the character is cured.")],  # Suppress Disease
 }
 
 # Names the user corrected: spell id -> name.
@@ -68,9 +76,15 @@ def export_spells() -> int:
             description = f"{description} {DESCRIPTION_ADDITIONS[spell_id]}"
         for old, new in DESCRIPTION_REPLACEMENTS.get(spell_id, []):
             description = description.replace(old, new)
+        # Column H "Scales with level": the effect and the mana cost grow with the caster's level (bug_fix_50, 10. 11. 2026).
+        # SPELLS.json also flags Dimensional Rift and Power Shield, the sheet does not: the sheet decides.
+        scales = bool(d.get("Scales with level"))
+        if scales:
+            description = f"{description} Costs {int(d['Mana'])} mana per caster level."
         out[str(spell_id)] = {
             "name": NAME_REPLACEMENTS.get(spell_id, clean(d["Name"])),
             "description": description,
+            "scalesWithLevel": scales,
             "explanation": clean(d.get("Explanation")) or "",
             "status": clean(d["Comment"]) or "",
         }

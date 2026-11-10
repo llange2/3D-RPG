@@ -48,15 +48,30 @@ export function addCondition(c: Character, cond: Condition, now: number): void {
 export function removeCondition(c: Character, cond: Condition): void {
   c.conditions = c.conditions.filter((x) => x !== cond);
   if (c.conditionDue) delete c.conditionDue[cond];
+  if (c.mods?.suppressed) delete c.mods.suppressed[cond];
   if (c.conditions.length === 0) c.conditions.push("Healthy");
 }
 
-/** What the "Suppress" spells do: the condition stays, but its timer starts over (the old game removed the event and set it again). */
-export function restartCondition(c: Character, cond: Condition, now: number): boolean {
+/**
+ * What the "Suppress" spells do (bug_fix_50, 10 Nov 2026): the condition stays, but the time that is left to find a cure doubles.
+ * The doubling holds until the hero is cured (the mark goes with `removeCondition`), so casting again does nothing; further strikes
+ * still take their two hours off, as before. Returns false when there is nothing to suppress or it is suppressed already.
+ */
+export function suppressCondition(c: Character, cond: Condition, now: number): boolean {
   const timer = CONDITION_TIMERS[cond];
   if (!timer || !c.conditions.includes(cond)) return false;
-  (c.conditionDue ??= {})[cond] = now + timer.minutes;
+  const marks = ((c.mods ??= {}).suppressed ??= {});
+  if (marks[cond]) return false;
+  const due = (c.conditionDue ??= {});
+  const left = Math.max(0, (due[cond] ?? now + timer.minutes) - now);
+  due[cond] = now + left * 2;
+  marks[cond] = true;
   return true;
+}
+
+/** True while a Suppress spell holds the condition back. */
+export function isSuppressed(c: Character, cond: Condition): boolean {
+  return c.mods?.suppressed?.[cond] === true;
 }
 
 export interface ConditionEvent {

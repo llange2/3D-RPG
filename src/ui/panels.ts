@@ -2,7 +2,7 @@ import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables
 import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
 import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
-import { SPELL_GRID, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
+import { SPELL_GRID, spellCost, validTarget, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type BoonKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
@@ -503,7 +503,8 @@ export function quickCastOption(party: Party, quick: QuickCast): Option<SpellCho
   const spell = SPELLS[quick.spellId];
   const who = party.characters[quick.caster]?.name ?? party.lastCast?.caster ?? "";
   const label = `${who} - ${spell ? spell.title : `Spell ${quick.spellId}`}`;
-  const cost = spell ? `${spell.mana} SP` : "";
+  const caster = party.characters[quick.caster];
+  const cost = spell ? `${caster ? spellCost(spell, caster) : spell.mana} SP` : "";
   return {
     label,
     // only the spell is repeated: who it works on (and the element of a protection spell) is asked again
@@ -517,11 +518,15 @@ export function quickCastOption(party: Party, quick: QuickCast): Option<SpellCho
 /** The spell every hero's column shows before anybody has cast anything: Light. */
 const LIGHT_SPELL = 6;
 
-/** What a spell's mouse-over says: its name, its kind, level and cost, and what it does. `sp` (the caster's spell points) adds "not enough spell points". */
-function spellLines(s: (typeof SPELLS)[number], sp?: number): HTMLElement[] {
+/**
+ * What a spell's mouse-over says: its name, its kind, level and cost, and what it does. `caster` makes the cost the one this hero pays
+ * (a spell that scales with level costs more the higher the level, 53rd playtest point 16) and adds "not enough spell points".
+ */
+function spellLines(s: (typeof SPELLS)[number], caster?: Character): HTMLElement[] {
+  const cost = caster ? spellCost(s, caster) : s.mana;
   return [
     h("div", { class: "spell-name", text: s.title }),
-    h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${s.mana} spell point${s.mana === 1 ? "" : "s"}${sp !== undefined && sp < s.mana ? " - not enough spell points" : ""}` }),
+    h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${cost} spell point${cost === 1 ? "" : "s"}${caster && caster.sp < cost ? " - not enough spell points" : ""}` }),
     h("div", { text: s.text }),
   ];
 }
@@ -531,11 +536,11 @@ function spellLines(s: (typeof SPELLS)[number], sp?: number): HTMLElement[] {
  * instead of the text): name, cost and description at the plate, in every window that shows one. It hangs in the overlay (`.modal-back`): the scroll has a `filter`, which makes it the frame of
  * fixed boxes, and clips them. `onShow` runs when it appears (the spell window also fills the field under its grid).
  */
-function attachSpellTip(el: HTMLElement, spellId: number, sp?: number, onShow?: () => void): void {
+function attachSpellTip(el: HTMLElement, spellId: number, caster?: Character, onShow?: () => void): void {
   const s = SPELLS[spellId];
   if (!s) return;
-  const tip = h("div", { class: "spell-tip" }, ...spellLines(s, sp));
-  el.setAttribute("aria-label", `${s.title} (${s.mana} SP)`);
+  const tip = h("div", { class: "spell-tip" }, ...spellLines(s, caster));
+  el.setAttribute("aria-label", `${s.title} (${caster ? spellCost(s, caster) : s.mana} SP)`);
   const show = (): void => {
     const back = el.closest(".modal-back");
     if (!back) return;
@@ -591,7 +596,7 @@ export async function pickCaster(ui: UI, party: Party, heroes: number[], aimed: 
               isPlaceholderIcon(last) ? h("span", { class: "spell-caption", text: spell?.title ?? "" }) : null,
             );
             // the same mouse-over from the first cast on, whether or not this hero has cast anything (before it: Light): name, cost and what the spell does
-            attachSpellTip(icon, last, c.sp);
+            attachSpellTip(icon, last, c);
             return h(
               "div",
               { class: "caster-col" },
@@ -669,12 +674,13 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           info.append(h("div", { class: "small", text: "Choose a spell. Point at one to read what it does." }));
           return;
         }
-        info.append(...spellLines(s, c.sp));
+        info.append(...spellLines(s, c));
       };
       // alphabetical by name, whatever order the spells were learnt in
       const slots = [...c.spells].sort((a, b) => (SPELLS[a]?.title ?? "").localeCompare(SPELLS[b]?.title ?? "")).map((id) => {
         const s = SPELLS[id]!;
-        const ok = isSpellImplemented(id) && c.sp >= s.mana;
+        const cost = spellCost(s, c);
+        const ok = isSpellImplemented(id) && c.sp >= cost;
         const slot = h(
           "button",
           {
@@ -686,10 +692,10 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           },
           spellPlate(id),
           isPlaceholderIcon(id) ? h("span", { class: "spell-caption", text: s.title }) : null,
-          h("span", { class: "spell-cost", text: String(s.mana) }),
+          h("span", { class: "spell-cost", text: String(cost) }),
         );
         // (the mouse-over at the plate, and the field under the grid with the same text)
-        attachSpellTip(slot, id, c.sp, () => describe(id));
+        attachSpellTip(slot, id, c, () => describe(id));
         return slot;
       });
       describe(null);
@@ -728,7 +734,7 @@ export async function askSpellDetails(ui: UI, party: Party, spellId: number): Pr
   }
   if (needsTarget(spellId)) {
     const backpack = ITEM_SPELLS.has(spellId);
-    const target = await pickHeroPortrait(ui, party, backpack ? "Whose backpack?" : "On whom?", () => true, !backpack);
+    const target = await pickHeroPortrait(ui, party, backpack ? "Whose backpack?" : "On whom?", (c) => validTarget(spellId, c), !backpack);
     if (target === null) return null;
     choice.target = target;
   }

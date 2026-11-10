@@ -255,11 +255,13 @@ export const MONSTERS: Record<number, MonsterDef> = Object.fromEntries(
 );
 export const MONSTER_IDS: number[] = Object.keys(MONSTERS).map(Number).sort((a, b) => a - b);
 
-const SHEET = SPELL_SHEET as Record<string, { name: string; description: string; explanation: string }>;
+const SHEET = SPELL_SHEET as Record<string, { name: string; description: string; explanation: string; scalesWithLevel?: boolean }>;
 export const SPELLS: Record<number, SpellDef> = Object.fromEntries(
   Object.entries(SPELLS_RAW as unknown as Record<string, Omit<SpellDef, "id" | "title" | "text" | "explanation">>).map(([id, s]) => {
     const sheet = SHEET[id];
-    return [Number(id), { ...s, id: Number(id), title: sheet?.name ?? textsRaw[s.name] ?? `Spell ${id}`, text: sheet?.description ?? textsRaw[s.description] ?? "", explanation: sheet?.explanation ?? "" } as SpellDef];
+    // column H "Scales with level" of the sheet decides (the raw table also flags Dimensional Rift and Power Shield, which the sheet does not)
+    const scales = sheet?.scalesWithLevel ?? s.scales_with_level;
+    return [Number(id), { ...s, scales_with_level: scales, id: Number(id), title: sheet?.name ?? textsRaw[s.name] ?? `Spell ${id}`, text: sheet?.description ?? textsRaw[s.description] ?? "", explanation: sheet?.explanation ?? "" } as SpellDef];
   }),
 );
 
