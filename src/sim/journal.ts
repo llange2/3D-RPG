@@ -51,7 +51,7 @@ export interface LockEvent {
   tier: number;
   /** The uid of the chest or door. */
   uid: string;
-  /** Average level of the heroes who can act, and the level the lock was worked out for (clamped to the tier, `lockLevel`). */
+  /** Average level of the heroes who can act, and the level the lock was worked out for (raised to the entry of the tier, `lockLevel`). */
   lvl: number;
   lockLvl: number;
   diff: number;
