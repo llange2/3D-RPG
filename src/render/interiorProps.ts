@@ -1,6 +1,6 @@
 import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
-import { DECO_MODELS, DECO_SCALE } from "../data/wall-deco";
+import { DECO_MODELS, DECO_PLATE, DECO_SCALE } from "../data/wall-deco";
 import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
@@ -25,6 +25,8 @@ export const ALTAR_SCALE = 0.9;
  */
 const DECO_LIFT = 2.0 - 0.95 * DECO_SCALE;
 const DECO_BURY = 0.03;
+/** How far the plane of a relief's backing plate stands in front of the wall's face: a hair, so that plate and wall do not fight for the same pixels (53rd playtest, point 4). */
+const DECO_FLUSH = 0.01;
 /** Half the width of a cell (`CELL_SIZE` 3): where the wall stands. */
 const WALL_AT = 1.5;
 
@@ -58,7 +60,8 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?:
 export const WALL_HUNG: ReadonlySet<number> = new Set(WALL_HUNG_ITEMS);
 
 /** Old items whose model has its working side (the lectern's sloping top) where the others have their back: turned by this many degrees on top of the rule above. */
-const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180, 13: 180 }; // (13, the storage equipment, showed its back to the room: 36th playtest, point 10)
+// (13, the storage equipment, was in this list since the 36th playtest, point 10; the sacks then stood behind the crate, toward the wall, in the Vault of Itha 23/59: 53rd playtest, point 21, turned back by half a circle)
+const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180 };
 
 /** The stone coffins (old items 127 and 128) and the turns they get on top of the wall rule: 90 or 135 degrees, clockwise or against it. */
 const SARCOPHAGI: ReadonlySet<number> = new Set([127, 128]);
@@ -141,7 +144,10 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   if (own && item in DECO_MODELS) {
     // the files are centred on their middle: the relief is pushed back so that its back plane lies in the wall (the moose's carving has its origin in front of it)
     const back = (staticInfo[own.model]?.bounds?.[2] ?? -0.2) * own.scale;
-    const push = WALL_AT + DECO_BURY + back;
+    // 53rd playtest, point 4: the plane of the relief's backing plate lies `DECO_FLUSH` in front of the wall, whatever the model's depth (a relief whose plate is thick stood far out). In "Full 3D"
+    // the view moves the relief out by the depth of the wall pieces afterwards (`buildObjects`). A model without a measured plate keeps the old rule.
+    const plate = DECO_PLATE[own.model];
+    const push = plate !== undefined ? WALL_AT - DECO_FLUSH + plate * own.scale : WALL_AT + DECO_BURY + back;
     const rotY = (bearing * Math.PI) / 180;
     return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
   }

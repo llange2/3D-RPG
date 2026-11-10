@@ -5,6 +5,8 @@ import { MONSTERS, SPELLS } from "../../src/data/tables";
 import { addCondition, gainAttribute, recalcValues } from "../../src/sim/character";
 import { castSpell, spellCost, validTarget } from "../../src/sim/spells";
 import { questInterior } from "../helpers/quests";
+import { clueFlag, reachedFlag, worldQuestLog } from "../../src/game/questLog";
+import { World } from "../../src/world/world";
 import { letterHints } from "../../src/data/letter-hints";
 import { carriedItems, createDefaultParty, normalizeParty } from "../../src/sim/party";
 import { buyBackItem, sellItem, sellPrice } from "../../src/sim/economy";
@@ -237,6 +239,25 @@ describe("no name is told twice in the hints of one word (point 12)", () => {
         for (const [name, n] of seen) expect(n, `${word} ${seed}: ${name} told ${n} times\n${hints.join("\n")}`).toBe(1);
       }
     }
+  });
+});
+
+describe("the quest log keeps the clues of a cave for the mouse-over (point 5)", () => {
+  it("shows what the party read in a cave, open and done", () => {
+    const world = new World("pearl-shore-794", "default");
+    const cave = world.allPois().find((p) => p.kind === "cave" && world.dungeonRef(p.id)?.quest === "quest_6");
+    expect(cave).toBeDefined();
+    const visited = new Set([cave!.id]);
+    const text = "The first brother was called Conrad.";
+    const opened = new Set([clueFlag(cave!.id, text)]);
+    const before = worldQuestLog({ world, opened, visited, carried: () => 0 });
+    const line = before.open.find((l) => l.includes(cave!.name));
+    expect(line).toBeDefined();
+    expect(before.notes?.[line!]).toBe(text);
+    opened.add(reachedFlag(cave!.id));
+    const after = worldQuestLog({ world, opened, visited, carried: () => 0 });
+    const doneLine = after.done.find((l) => l.includes(cave!.name));
+    expect(after.notes?.[doneLine!]).toBe(text);
   });
 });
 

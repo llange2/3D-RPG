@@ -641,10 +641,37 @@ export class InteriorView {
       const ny = s.y + oy!;
       return !(nx === cx && ny === cy) && nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && map.cells[ny * map.width + nx] === CELL.FLOOR;
     }).length;
-    const pick = open(sides[1]!) > open(sides[0]!) ? sides[1]! : sides[0]!;
+    // 53rd playtest, point 11 (Sanctum of Caelimaa 42/35): the side is the one the party comes from, the one it reaches from the way in without going through this wall; the pocket behind it
+    // (a 3 x 2 treasure chamber has more open neighbours than the street) took the slab to its own edge, with the slopes of the hole facing the chamber. Where both sides or neither
+    // are reached (a wall that joins two parts of a place), the more open side decides as before.
+    const reached = this.reachableWithout(map, cx, cy);
+    const reachedSides = reached ? sides.filter((s) => reached.has(s.y * map.width + s.x)) : [];
+    const pick = reachedSides.length === 1 ? reachedSides[0]! : open(sides[1]!) > open(sides[0]!) ? sides[1]! : sides[0]!;
     // `out`: how far the slab's outer face stands beyond the edge, towards the open side (the wall pieces of "Full 3D" stand that far in front of the wall)
     const reach = CELL_SIZE / 2 + out - thick / 2;
     return { dx: pick.sx * reach, dz: pick.sz * reach, sx: pick.sx, sz: pick.sz };
+  }
+
+  /** The floor cells (`y * width + x`) the party reaches from the way in without stepping on cell (`cx`, `cy`), or null when the map has no spawn. */
+  private reachableWithout(map: InteriorMap, cx: number, cy: number): Set<number> | null {
+    if (!map.spawn) return null;
+    const seen = new Set<number>();
+    const skip = cy * map.width + cx;
+    const queue = [map.spawn.y * map.width + map.spawn.x];
+    seen.add(queue[0]!);
+    for (let head = 0; head < queue.length; head++) {
+      const i = queue[head]!;
+      const x = i % map.width;
+      const y = (i - x) / map.width;
+      for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]] as const) {
+        if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
+        const j = ny * map.width + nx;
+        if (j === skip || seen.has(j) || map.cells[j] !== CELL.FLOOR) continue;
+        seen.add(j);
+        queue.push(j);
+      }
+    }
+    return seen;
   }
 
   private pushBrokenPiece(instances: PropInstance[], map: InteriorMap, alongX: boolean, x: number, z: number, cx: number, cy: number): boolean {
@@ -655,7 +682,8 @@ export class InteriorView {
     const sy = wallHeightOf(map) / (b[4] - b[1]);
     const sz = (PANEL_DEPTH * 2) / (b[5] - b[2]);
     const shift = this.brokenWallShift(map, cx, cy, alongX, PANEL_DEPTH * 2);
-    instances.push({ model: piece, x: x + shift.dx, y: -b[1] * sy, z: z + shift.dz, rotY: alongX ? Math.PI / 2 : 0, scale: sx, scaleXYZ: [sx, sy, sz], atOrigin: true });
+    // the broken side faces the side the slab stands on (the party's): turned by the side, not by the axis alone, which put the hole's slopes towards the pocket when the street lay on the other side
+    instances.push({ model: piece, x: x + shift.dx, y: -b[1] * sy, z: z + shift.dz, rotY: Math.atan2(shift.sx, shift.sz), scale: sx, scaleXYZ: [sx, sy, sz], atOrigin: true });
     return true;
   }
 
