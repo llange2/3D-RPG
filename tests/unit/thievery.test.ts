@@ -91,7 +91,7 @@ describe("thievery locks", () => {
     }
   });
 
-  it("grows with the level, also above the levels of the tier, and is easier on the first three levels", () => {
+  it("grows with the level above the levels of the tier up to the top of the next tier, and is easier on the first three levels", () => {
     for (const kind of Object.keys(LOCK_HARDNESS) as LockKind[]) {
       for (let tier = 1; tier <= 5; tier++) {
         let last = 0;
@@ -100,21 +100,25 @@ describe("thievery locks", () => {
           expect(d, `${kind} tier ${tier} level ${level}`).toBeGreaterThanOrEqual(last);
           last = d;
         }
-        // too early for the tier: the lock of the entry; grown out of it: the lock keeps growing (journal of 10 Nov 2026: a lock frozen at the exit of tier 1 was picked 41 of 41 times)
+        // too early for the tier: the lock of the entry; grown out of it: the lock keeps growing (journal 1: a lock frozen at the exit of tier 1 was picked 41 of 41 times) ...
         expect(lockDifficulty(kind, tier, 1)).toBeLessThanOrEqual(lockDifficulty(kind, tier, TIER_ENTRY[tier - 1]!));
         const exit = TIER_EXIT[tier - 1]!;
-        expect(lockDifficulty(kind, tier, exit + 4)).toBeGreaterThan(lockDifficulty(kind, tier, exit));
-        expect(lockLevel(tier, 99)).toBe(99);
-        expect(lockLevel(tier, exit + 4)).toBe(exit + 4);
+        // ... up to the exit of the next tier (journal 2: a tier 1 door for level 46 was out of reach of a ninja of level 46); tier 5 has no next tier
+        const top = tier < 5 ? TIER_EXIT[tier]! : Infinity;
+        expect(lockLevel(tier, 99)).toBe(tier < 5 ? top : 99);
+        expect(lockLevel(tier, exit + 1)).toBe(Math.min(exit + 1, top));
+        expect(lockDifficulty(kind, tier, exit + 1)).toBeGreaterThan(lockDifficulty(kind, tier, exit));
+        if (tier < 5) expect(lockDifficulty(kind, tier, 99)).toBe(lockDifficulty(kind, tier + 1, top));
       }
     }
-    // the case of the log: a tier 1 chest for a party of level 8 is harder than one for level 4, and the median ninja has the same chance as at level 4
+    // the cases of the two logs: a tier 1 chest for a party of level 8 is harder than for level 4, a tier 1 door for level 46 is the door of level 10 (17)
     expect(lockDifficulty("chest", 1, 8)).toBeGreaterThan(lockDifficulty("chest", 1, 4));
-    // the tiers rise for a party that comes too early (the lock of the entry); a party above the entry finds the same lock in every tier
+    expect(lockDifficulty("door", 1, 46)).toBe(lockDifficulty("door", 1, 10));
+    // the tiers rise for a party that comes too early (the lock of the entry); at any level a higher tier is never easier, and strictly harder up to its cap
     for (let tier = 2; tier <= 5; tier++) {
       expect(lockDifficulty("chest", tier, 1)).toBeGreaterThan(lockDifficulty("chest", tier - 1, 1));
       expect(lockDifficulty("chest", tier, TIER_ENTRY[tier - 1]! - 1)).toBeGreaterThan(lockDifficulty("chest", tier - 1, TIER_ENTRY[tier - 1]! - 1));
-      expect(lockDifficulty("chest", tier, 50)).toBe(lockDifficulty("chest", tier - 1, 50));
+      for (const level of [5, 20, 46, 99]) expect(lockDifficulty("chest", tier, level)).toBeGreaterThanOrEqual(lockDifficulty("chest", tier - 1, level));
     }
     // a king's chest is harder than a chest, a chest harder than a door
     for (const level of [5, 20, 40]) {

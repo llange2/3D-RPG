@@ -39,13 +39,17 @@ export function lockEase(level: number): number {
 }
 
 /**
- * The party level a lock is worked out for: the level of the party, but not below the entry of the tier. There is no upper clamp: the journal of the
- * 10 Nov 2026 (ninja, tier 1 chests at party level 5 to 8.5) showed that a lock frozen at the exit of the tier (level 4, difficulty 8) was picked 41 times
- * out of 41, while the ninja's skill had grown from 15 to 32+. `TIER_EXIT` stays the design band, it no longer clamps.
+ * The party level a lock is worked out for: the level of the party, not below the entry of the tier and not above the exit of the NEXT tier (tier 5 has none).
+ * Two journals of 10 Nov 2026 set the two limits:
+ *  - a lock frozen at the exit of its own tier (tier 1: level 4, difficulty 8) was picked 41 times out of 41 by a ninja of party level 5 to 8.5, so the lock has to grow beyond the tier;
+ *  - a tier 1 door worked out for level 46 (difficulty 114) was out of reach of a ninja of level 46 with the attributes of level 1 (skill 216, 71 % a try, the same roll
+ *    until the party steps), so the growth stops where the next tier ends: a tier 1 lock is never harder than the top of tier 2 (level 10, chest 23, door 17).
+ * Levels 5 to 10 in tier 1 (the case of the first log) are unchanged.
  */
 export function lockLevel(tier: number, level: number): number {
   const t = Math.min(TIER_ENTRY.length, Math.max(1, Math.round(tier))) - 1;
-  return Math.max(TIER_ENTRY[t]!, Math.round(level));
+  const top = t + 1 < TIER_EXIT.length ? TIER_EXIT[t + 1]! : Infinity;
+  return Math.min(top, Math.max(TIER_ENTRY[t]!, Math.round(level)));
 }
 
 /** What the best roll of the party has to reach to pick a lock of `kind` in a place of `tier`, for a party of the average level `level`. */
