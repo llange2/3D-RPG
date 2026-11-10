@@ -242,7 +242,9 @@ export class PropRenderer {
         if (info.fromObj) std.backFaceCulling = false;
         // the city's wall piece and floor tile (they keep their normal map) are double sided glTF with undercut relief: the faces of the engravings that look away from
         // the torch are drawn from behind, and without lighting from both sides those came out black at night (the "black spots" of the city walls). Not for OBJ (above)
-        if (!info.fromObj && std.bumpTexture) std.twoSidedLighting = true;
+        // The cottage (53rd playtest, point 9: "black spots" on the one at 142/88; not reproduced in four views by day and at night, so this is a precaution) is a double sided glTF as well:
+        // a face that is drawn from behind is lit from behind
+        if (!info.fromObj && (std.bumpTexture || key === "obj_cottage")) std.twoSidedLighting = true;
         // attack effects glow: the old game drew them with an unlit shader, and in a torch-lit dungeon they would fade out
         // a few tiles away from the party otherwise
         if (key.startsWith("proj_")) {
