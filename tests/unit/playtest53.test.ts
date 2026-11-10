@@ -4,6 +4,8 @@ import { Rng, seedFromString } from "../../src/core/rng";
 import { MONSTERS, SPELLS } from "../../src/data/tables";
 import { addCondition, gainAttribute, recalcValues } from "../../src/sim/character";
 import { castSpell, spellCost, validTarget } from "../../src/sim/spells";
+import { questInterior } from "../helpers/quests";
+import { letterHints } from "../../src/data/letter-hints";
 import { carriedItems, createDefaultParty, normalizeParty } from "../../src/sim/party";
 import { buyBackItem, sellItem, sellPrice } from "../../src/sim/economy";
 import { averageDamageLines, averageHit, meleeDamage, rangedDamage } from "../../src/sim/combat";
@@ -194,6 +196,46 @@ describe("a support beam shuts the way for monsters too (point 14)", () => {
     for (const [x, y] of way) {
       expect((at[0] === 3 && at[1] === 1 && x === 4 && y === 1) || (at[0] === 4 && at[1] === 1 && x === 3 && y === 1)).toBe(false);
       at = [x, y];
+    }
+  });
+});
+
+describe("the end room of a tower is a pocket reached by teleport, never a sealed room in the rock between the floors (point 6)", () => {
+  it("is isolated for the towers of quest 4 and 5 and keeps the hall wall or a pocket for quest 2", () => {
+    let checked = 0;
+    for (const quest of ["quest_4", "quest_5"] as const) {
+      for (let variant = 0; variant < 6; variant++) {
+        for (const tier of [1, 2, 3, 4, 5]) {
+          const { ref } = questInterior(quest, "dungeon_5", tier, variant);
+          expect(ref.endRoom, `${quest} ${tier} ${variant}`).toBeDefined();
+          expect(ref.endRoom!.isolated, `${quest} tier ${tier} variant ${variant}`).toBe(true);
+          expect(ref.endRoom!.seal).toBeUndefined();
+          checked++;
+        }
+      }
+    }
+    for (let variant = 0; variant < 6; variant++) {
+      const { ref } = questInterior("quest_2", "dungeon_5", 1 + (variant % 5), variant);
+      expect(ref.endRoom).toBeDefined();
+      expect(ref.hall).toBeDefined();
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+});
+
+describe("no name is told twice in the hints of one word (point 12)", () => {
+  const NAMES_ALL = [...new Set(["Aldric", "Arno", "Alma", "Aveline", "Anselm", "Agnes", "Ben", "Bram", "Brenna", "Bettina", "Benno", "Beatrix", "Conrad", "Cedric", "Clara", "Cora", "Caspar", "Charlotte"])];
+  it("gives every statue of CABBAGE, BANANA and ALABAMA its own name", () => {
+    for (const word of ["cabbage", "banana", "alabama", "abba"]) {
+      for (let seed = 0; seed < 300; seed++) {
+        const { hints } = letterHints(new Rng(seedFromString(`${word}-${seed}`)), word);
+        const seen = new Map<string, number>();
+        hints.forEach((text, i) => {
+          for (const name of NAMES_ALL) if (new RegExp(`\\b${name}\\b`).test(text)) seen.set(name, (seen.get(name) ?? 0) + 1 + (i < 0 ? 1 : 0));
+        });
+        for (const [name, n] of seen) expect(n, `${word} ${seed}: ${name} told ${n} times\n${hints.join("\n")}`).toBe(1);
+      }
     }
   });
 });

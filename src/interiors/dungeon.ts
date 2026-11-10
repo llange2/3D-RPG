@@ -73,9 +73,12 @@ export function finishDungeon(rng: Rng, ctx: BuildContext, plan: Plan): Interior
   });
   const r0 = rooms[0]![0]!;
   const { exit, spawn } = plan.exit ?? b.pickExit(r0.x + Math.floor(r0.w / 2), r0.y + r0.h - 1, (x, y) => b.roomOf[b.idx(x, y)] === 0 && b.isFloor(x - 1, y) && b.isFloor(x + 1, y));
-  // the end room: the quests that teleport the party into it (quest 1 and 3) leave it in the rock on its own, the others seal it
+  // the end room: the quests that teleport the party into it (quest 1 and 3) leave it in the rock on its own, the others seal it.
+  // 53rd playtest, point 6: so does a tower. Its floors are round and lie side by side with rock between them; a sealed room there lay in the rock outside the round plan (Tower of Pela),
+  // a wall that opens into nowhere. A pocket is reached by teleport once the question is answered, and a portal brings the party back (the hall of quest 2 keeps its own wall: `plan.endNear`).
   const wantsRoom = !!ctx.dungeon && quest !== "spaceship";
-  const endRoom = wantsRoom ? carveEndRoomFor(b, rng, spawn, quest === "quest_1" || quest === "quest_3", plan.endNear, ctx.dungeon?.orbs) : null;
+  const teleported = quest === "quest_1" || quest === "quest_3" || !!ctx.dungeon?.tower;
+  const endRoom = wantsRoom ? carveEndRoomFor(b, rng, spawn, teleported, plan.endNear, ctx.dungeon?.orbs) : null;
   // Seth Squirm and the machines of the Quatloo coins: a room behind a door
   const machines = ctx.dungeon?.seth ? carveMachineRoom(b, rng, spawn) : null;
   // 0 to 3 treasure chambers behind brittle walls (35th playtest)

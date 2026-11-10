@@ -4,6 +4,7 @@ import { loreLine } from "../data/lore";
 import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, emptyContainerLine, propLine } from "../data/prop-texts";
 import { RAT_TRAP, SEARCHABLE_DECOR, dodgeChance, trapDamageFor, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
 import { isBookshelf } from "../data/spell-loot";
+import { ITEM_RULES } from "../data/item-rules";
 import { LOCK_FUMBLE_CHANCE, lockDifficulty, lockLevel } from "../data/locks";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
@@ -716,8 +717,11 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "head": {
+      // 53rd playtest, point 28 (Depths of Zanana): the statues of the quest were titled "Stone head" whatever object they are; the title and the words follow the object
+      const noun = ITEM_RULES[Number(p.item)]?.name.toLowerCase() ?? "stone statue";
+      const title = noun.charAt(0).toUpperCase() + noun.slice(1);
       if (p.mode === "ring") {
-        effects.push({ type: "text", text: "A giant stone head. It seems to wait for something." });
+        effects.push({ type: "text", text: `${Number(p.item) === 33 ? "A giant stone head" : `A ${noun}`}. It seems to wait for something.` });
         return { effects, consumed: false };
       }
       if (p.mode === "moan") {
@@ -728,9 +732,9 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       const now = headFacing(action, ctx.opened ?? NONE);
       const facing = (now + 1) % 4;
       const hint = typeof p.hint === "string" ? `${p.hint} ` : "";
-      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Stone head", question: `${hint}The head is facing ${FACING_NAMES[now]}. Would you like to turn it ${FACING_NAMES[facing]}?`, yes: "Turn it", no: "Leave" }], consumed: false };
+      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title, question: `${hint}The ${noun} is facing ${FACING_NAMES[now]}. Would you like to turn it ${FACING_NAMES[facing]}?`, yes: "Turn it", no: "Leave" }], consumed: false };
       if (ctx.answer === null) return { effects, consumed: false };
-      effects.push({ type: "text", text: `The stone head turns with a grating sound and looks ${FACING_NAMES[facing]}.` });
+      effects.push({ type: "text", text: `The ${noun} turns with a grating sound and looks ${FACING_NAMES[facing]}.` });
       const next = turnHead(action, ctx.opened ?? NONE, facing);
       // the row is right when every head looks the way it should: the last turn opens the end room
       const after = new Set([...(ctx.opened ?? NONE)].filter((k) => !next.remove.includes(k)));

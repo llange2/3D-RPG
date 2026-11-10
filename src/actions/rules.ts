@@ -447,6 +447,13 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
         delete params.item;
         Object.assign(params, { chest: BARREL, level: 1, items: 0, gold: local.chance(500) ? Math.max(1, tier * 12 + local.range(3, 30)) : 0 });
       }
+      // 53rd playtest, point 10 (Sanctum of Caelimaa 47/52): a bookshelf stands with its back to a wall, so it never takes a cell without a wall beside it (the middle of a hall is one):
+      // another prop of the theme stands there, and a theme with nothing else leaves the cell empty
+      if (kind === "decor" && isBookshelf(params.item) && !(Object.keys(FACING_DELTA) as (keyof typeof FACING_DELTA)[]).some((f) => map.cells[idx(a.x + FACING_DELTA[f].dx, a.y + FACING_DELTA[f].dy)] !== CELL.FLOOR)) {
+        const others = dt ? plainProps(dt).filter((p) => !isBookshelf(p)) : [];
+        if (others.length === 0) return;
+        params.item = others[local.int(others.length)]!;
+      }
       // a bookshelf is a container as well (34th playtest): searched once, it may hold a spell scroll; it is never plain decoration
       if (kind === "decor" && isBookshelf(params.item)) {
         kind = "treasure";

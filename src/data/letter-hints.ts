@@ -36,6 +36,18 @@ const NAMES: Record<string, readonly string[]> = {
   Z: ["Zacharias", "Zeno", "Zora", "Zelda"],
 };
 
+/**
+ * A third name of each kind for every letter (53rd playtest, point 12): a word that repeats a letter needs more names than the two of a half (CABBAGE told of an "Aveline" twice in the
+ * quest of the Sanctum of Caelimaa). They are only taken when the names of the half are already used by another statue of the word, so no story that had no clash changes.
+ */
+const RESERVE: Record<string, readonly [male: string, female: string]> = {
+  A: ["Anselm", "Agnes"], B: ["Benno", "Beatrix"], C: ["Caspar", "Charlotte"], D: ["Dietmar", "Dagmar"], E: ["Emil", "Emma"], F: ["Florian", "Frieda"],
+  G: ["Gustav", "Gerda"], H: ["Hugo", "Henrietta"], I: ["Isidor", "Imke"], J: ["Julius", "Johanna"], K: ["Klaus", "Klara"], L: ["Ludwig", "Lotte"],
+  M: ["Moritz", "Marta"], N: ["Nikolaus", "Nadine"], O: ["Otto", "Ottilie"], P: ["Paul", "Pauline"], Q: ["Quincy", "Quinn"], R: ["Reinhold", "Ruth"],
+  S: ["Stefan", "Sophie"], T: ["Tobias", "Tilda"], U: ["Uwe", "Uta"], V: ["Viktor", "Valeska"], W: ["Wilhelm", "Wanda"], X: ["Xerxes", "Xiomara"],
+  Y: ["Yannick", "Yvette"], Z: ["Zander", "Zelma"],
+};
+
 const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"] as const;
 
 interface Story {
@@ -109,9 +121,12 @@ export function letterHints(rng: Rng, word: string): LetterHints {
   const story = STORIES[rng.int(STORIES.length)]!;
   const hints: string[] = [];
   const nameOf: (string | undefined)[] = [];
+  // the names the word has used so far: no two statues of one word name the same person unless the story says so ("same")
+  const used = new Set<string>();
   letters.split("").forEach((letter, i) => {
     const pool = NAMES[letter]!;
     const half = story.female ? pool.slice(2) : pool.slice(0, 2);
+    const spare = RESERVE[letter]?.[story.female ? 1 : 0];
     const ordinal = ORDINALS[i] ?? `${i + 1}th`;
     const before = nameOf[i - 1];
     const sameAsBefore = i > 0 && letters[i - 1] === letter && before !== undefined && rng.chance(600);
@@ -124,9 +139,13 @@ export function letterHints(rng: Rng, word: string): LetterHints {
       text = story.same.replace("{ord}", ordinal).replace("{twin}", ORDINALS[i - 1]!);
     } else {
       name = half[rng.int(half.length)]!;
+      // (the draw above is made in any case, so that the stream of the story stays the same)
+      // (a word with four of one letter runs out of the names of one kind and takes the other kind's)
+      if (used.has(name)) name = [...half, ...(spare ? [spare] : []), ...pool, ...(RESERVE[letter] ?? [])].find((n) => !used.has(n)) ?? name;
       text = (youngest ? story.last : story.line).replace("{ord}", ordinal).replace("{name}", name);
     }
     nameOf[i] = name;
+    used.add(name);
     hints.push(text);
   });
   return { hints, ask: story.ask };

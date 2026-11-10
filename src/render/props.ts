@@ -100,7 +100,17 @@ const MODEL_DIM: Record<string, number> = { blk_cave_exit: 0.65 };
  * textures are 110/66/25 and 49/32/17 of 255; the ratio of the two, scaled to the same lightness (the texture boost already levels that), is 0.83/0.90/1.27, and a little less than that
  * all over because the ceiling hangs in the shadow of the torch's light.
  */
-const MODEL_TINT: Record<string, readonly [number, number, number]> = { ci_99: [0.71, 0.77, 1.08] };
+const MODEL_TINT: Record<string, readonly [number, number, number]> = {
+  ci_99: [0.71, 0.77, 1.08],
+  // 53rd playtest, point 11: the slab of a broken dungeon wall is grey (mean 60/54/51), the walls beside it brown (46/38/31): the ratio of the two, normalised to red
+  blk_dungeon_wall_broken: [1.0, 0.92, 0.79],
+};
+
+/**
+ * Stretches the colour texture of a model (53rd playtest, point 15): the stone columns of the dungeons and castles showed their stone twice as dense as the walls beside them; the texture
+ * of the model is now twice as wide (`uScale` 0.5). `[u, v]` are the scale factors; each model loads a texture of its own, so no shared texture is touched.
+ */
+const TEXTURE_STRETCH: Record<string, readonly [number, number]> = { blk_pillars_dungeon: [0.5, 1], blk_pillars_castle: [0.5, 1] };
 
 /** Opacity of the see-through attack effects (the old game gave the fireball 0.7 and the poison cloud 0.3). */
 const PROJECTILE_ALPHA: Record<string, number> = { proj_fire: 0.85, proj_poison: 0.6 };
@@ -271,6 +281,11 @@ export class PropRenderer {
         if (dim !== undefined) std.diffuseColor = std.diffuseColor.scale(dim);
         const tint = MODEL_TINT[key];
         if (tint) std.diffuseColor = std.diffuseColor.multiply(new Color3(...tint));
+        const stretch = TEXTURE_STRETCH[key];
+        if (stretch && std.diffuseTexture) {
+          (std.diffuseTexture as Texture).uScale = stretch[0];
+          (std.diffuseTexture as Texture).vScale = stretch[1];
+        }
         mesh.material = std;
         const texture = std.diffuseTexture;
         if (texture && !FIXED_LEVEL(key) && !this.exposed.some((e) => e.texture === texture)) {
