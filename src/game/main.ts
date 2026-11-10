@@ -7,7 +7,7 @@ import { installCursor } from "../ui/cursor";
 import { preloadImages } from "../ui/dom";
 import { preloadButtonArt } from "../ui/buttonArt";
 import { preloadSpellIcons } from "../ui/spellIcons";
-import { keepSpellArtWarm } from "../ui/warmUp";
+import { keepSpellArtWarm, loadFonts } from "../ui/warmUp";
 import { preloadItemIcons } from "../ui/itemIcons";
 import { setTextureQuality } from "../render/assets";
 import { readSettings } from "./settings";
@@ -98,6 +98,8 @@ async function main(): Promise<void> {
     benchmark: (scenario: string) => runBenchmark(game, scenario),
   };
 
+  // all four faces of the two fonts are in before the first screen (53rd playtest, point 29): none jumps from the stand-in font to its own later
+  await loadFonts();
   // the model switch in the menu reloads the page; the game continues where it was saved
   bootDone();
   if (await game.resumeAfterReload()) return;
