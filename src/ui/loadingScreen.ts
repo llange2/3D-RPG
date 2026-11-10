@@ -91,6 +91,20 @@ export class LoadingScreen {
     this.percent.textContent = `${pct}%`;
   }
 
+  /**
+   * Sets the share and lets the browser draw it before the work goes on. The steps of building a map run on the main thread without a pause (generating, building the walls,
+   * placing the monsters): with `set` alone the number only changed when the browser got a frame anyway, so the screen showed 0 %, 60 % and 100 %.
+   */
+  async step(fraction: number): Promise<void> {
+    this.set(fraction);
+    if (this.shown) await painted();
+  }
+
+  /** Lets the browser draw what has been set so far (a pause in long work); nothing to wait for while the screen is down. */
+  async paint(): Promise<void> {
+    if (this.shown) await painted();
+  }
+
   /** Shows 100 %, waits a moment like the old game (`lingerMs`) and takes the screen down. */
   async hide(lingerMs = LINGER_MS): Promise<void> {
     if (!this.shown) return;

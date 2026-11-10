@@ -234,7 +234,20 @@ export function protectionLevel(party: Party, element: "acid" | "fire" | "ice" |
   return party.effects.filter((e) => e.kind === "protection" && e.element === element && e.until > party.minutes).reduce((sum, e) => sum + (e.amount ?? 0), 0);
 }
 
+/** The bank pays this share of the vault on every turn of the week ("Deposit gold for 0.5% interest per week"), compounding, in whole gold pieces. */
+export const BANK_INTEREST_PER_WEEK = 0.005;
+export const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
+
+/** The gold the bank adds after `weeks` turns of the week to `vault` (each week's interest is earned on the vault including the weeks before, and rounded down). */
+export function bankInterest(vault: number, weeks: number): number {
+  let total = Math.max(0, vault);
+  for (let w = 0; w < weeks && total > 0; w++) total += Math.floor(total * BANK_INTEREST_PER_WEEK);
+  return total - Math.max(0, vault);
+}
+
 export interface TimePassed {
+  /** Gold the bank paid into the vault in the weeks that turned (0 if none did, or the vault was empty). */
+  interest: number;
   daysPassed: number;
   /** Spells that ran out. */
   expired: TimedEffect[];
@@ -248,6 +261,10 @@ export function advanceTime(party: Party, minutes: number): TimePassed {
   party.minutes += minutes;
   const daysPassed = Math.floor(party.minutes / MINUTES_PER_DAY) - Math.floor(before / MINUTES_PER_DAY);
   for (let d = 0; d < daysPassed; d++) if (party.food > 0) party.food--;
+  // the week turns at every multiple of seven days of game time (saves from before the interest simply start paying from their next turn)
+  const weeksPassed = Math.floor(party.minutes / MINUTES_PER_WEEK) - Math.floor(before / MINUTES_PER_WEEK);
+  const interest = weeksPassed > 0 ? bankInterest(party.bankGold, weeksPassed) : 0;
+  party.bankGold += interest;
   const over = (e: TimedEffect) => e.until <= party.minutes && !(e.held && surroundings.inDeepWater);
   for (const e of party.effects) if (e.kind === "walk_on_water" && e.until <= party.minutes && surroundings.inDeepWater) e.held = true;
   const expired = party.effects.filter(over);
@@ -259,7 +276,7 @@ export function advanceTime(party: Party, minutes: number): TimePassed {
     if (e.kind === "rage" && hero?.mods) delete hero.mods.rage;
     if (e.kind === "boon" && e.character !== undefined) endBoon(party, e.character, e.stat);
   }
-  return { daysPassed, expired, conditions: tickConditions(party) };
+  return { interest, daysPassed, expired, conditions: tickConditions(party) };
 }
 
 export function clockText(party: Party): { day: number; hour: number; minute: number } {

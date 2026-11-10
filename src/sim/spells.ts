@@ -173,10 +173,12 @@ export function validTarget(spellId: number, c: Character): boolean {
 
 /**
  * Spell points the caster pays. A spell that "scales with level" (column H of the spell sheet) multiplies its effect by the caster's level,
- * and since the 53rd playtest (bug_fix_50, point 16) its cost too; every other spell costs the plain number.
+ * and since the 53rd playtest (bug_fix_50, point 16) its cost too, at half the rate since the 54th playtest (point 6); every other spell costs the plain number.
  */
+export const SCALING_COST_SHARE = 0.5;
 export function spellCost(spell: Pick<SpellDef, "mana" | "scales_with_level">, caster: Pick<Character, "level">): number {
-  return spell.scales_with_level ? spell.mana * Math.max(1, caster.level) : spell.mana;
+  // rounded up, so that a spell never costs nothing (a mana-1 spell at level 1 is 1, not 0.5)
+  return spell.scales_with_level ? Math.max(1, Math.ceil(spell.mana * Math.max(1, caster.level) * SCALING_COST_SHARE)) : spell.mana;
 }
 
 function attackDamage(spell: SpellDef, caster: Character, rng: Rng, mascot = ""): number {

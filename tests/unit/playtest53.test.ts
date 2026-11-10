@@ -30,7 +30,8 @@ describe("spell costs grow with the level of the caster (point 16)", () => {
     const party = createDefaultParty();
     const c = party.characters[0]!;
     c.level = 7;
-    expect(spellCost(SPELLS[8]!, c)).toBe(SPELLS[8]!.mana * 7);
+    // half the rate since the 54th playtest, rounded up
+    expect(spellCost(SPELLS[8]!, c)).toBe(Math.ceil((SPELLS[8]!.mana * 7) / 2));
     expect(spellCost(SPELLS[4]!, c)).toBe(SPELLS[4]!.mana);
     expect(spellCost(SPELLS[30]!, c)).toBe(SPELLS[30]!.mana);
   });
@@ -41,13 +42,15 @@ describe("spell costs grow with the level of the caster (point 16)", () => {
     const c = party.characters[i]!;
     c.level = 5;
     c.spells.push(28); // Power Cure, 5 mana per caster level
-    c.sp = 24;
+    const price = spellCost(SPELLS[28]!, c);
+    expect(price).toBe(Math.ceil((SPELLS[28]!.mana * 5) / 2));
+    c.sp = price - 1;
     const rng = new Rng(seedFromString("cost"));
     expect(castSpell(party, i, 28, rng, { target: 0 })).toEqual({ kind: "fizzle", reason: "mana" });
-    expect(c.sp).toBe(24);
+    expect(c.sp).toBe(price - 1);
     c.sp = 40;
     expect(castSpell(party, i, 28, rng, { target: 0 }).kind).toBe("heal");
-    expect(c.sp).toBe(40 - SPELLS[28]!.mana * 5);
+    expect(c.sp).toBe(40 - price);
   });
 
   it("says so in the text", () => {
@@ -357,7 +360,7 @@ describe("average damage per hit in the item tooltips (point 18)", () => {
     const spear = makeItem({ name: "Spear", type: "spear", bonus: { dam_min: 10, dam_max: 14 } });
     const lines = averageDamageLines(c, spear, c.inventory.right_hand ?? null, false);
     expect(lines).toHaveLength(1);
-    expect(lines[0]!.label).toBe("Average damage per hit");
+    expect(lines[0]!.label).toBe("Average melee damage per hit");
     // the weapon replaces the sword: its 12 on average plus the level term of the hero
     expect(lines[0]!.value).toBeCloseTo(averageHit(c, "melee", 10, 14), 1);
     expect(averageDamageLines(c, c.inventory.right_hand!, null, true)[0]!.value).toBeCloseTo(averageHit(c, "melee", 4, 8), 1);
@@ -372,7 +375,28 @@ describe("average damage per hit in the item tooltips (point 18)", () => {
     c.inventory.ranged_weapon = makeItem({ name: "Bow", type: "bow", bonus: { ranged_dam_min: 3, ranged_dam_max: 9 } });
     const ring = makeItem({ name: "Ring", type: "ring", bonus: { dam_min: 2, dam_max: 4 } });
     const lines = averageDamageLines(c, ring, null, false);
-    expect(lines.map((l) => l.label)).toEqual(["Average damage per hit (melee)", "Average damage per hit (ranged)"]);
+    expect(lines.map((l) => l.label)).toEqual(["Average melee damage per hit", "Average ranged damage per hit"]);
     expect(lines[1]!.value).toBeCloseTo(averageHit(c, "ranged", 5, 13), 1);
+  });
+
+  it("shows the change of a ring of Strength for blows and of a ring of Accuracy for shots (54th playtest, point 1)", () => {
+    const c = hero();
+    const strength = makeItem({ name: "Ring of Strength", type: "ring", bonus: { str: 20 } });
+    const meleeLines = averageDamageLines(c, strength, null, false);
+    expect(meleeLines.map((l) => l.label)).toEqual(["Average melee damage per hit"]);
+    const weapon = c.inventory.right_hand!;
+    const bare = averageHit(c, "melee", weapon.bonus.dam_min ?? 0, weapon.bonus.dam_max ?? 0);
+    expect(meleeLines[0]!.value).toBeGreaterThan(bare);
+    expect(meleeLines[0]!.value).toBeCloseTo(averageHit(c, "melee", weapon.bonus.dam_min ?? 0, weapon.bonus.dam_max ?? 0, { str: 20 }), 1);
+    // without a bow, Accuracy changes nothing the hero can use
+    const accuracy = makeItem({ name: "Ring of Accuracy", type: "ring", bonus: { acc: 20 } });
+    expect(averageDamageLines(c, accuracy, null, false)).toEqual([]);
+    c.inventory.ranged_weapon = makeItem({ name: "Bow", type: "bow", bonus: { ranged_dam_min: 3, ranged_dam_max: 9 } });
+    const shots = averageDamageLines(c, accuracy, null, false);
+    expect(shots.map((l) => l.label)).toEqual(["Average ranged damage per hit"]);
+    expect(shots[0]!.value).toBeGreaterThan(averageHit(c, "ranged", 3, 9));
+    // worn already: the hero's own values hold the ring, so the line equals the plain average of the hero
+    c.inventory.left_ring = strength;
+    expect(averageDamageLines(c, strength, null, true)[0]!.value).toBeCloseTo(averageHit(c, "melee", weapon.bonus.dam_min ?? 0, weapon.bonus.dam_max ?? 0), 1);
   });
 });

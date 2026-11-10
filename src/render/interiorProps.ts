@@ -27,6 +27,8 @@ const DECO_LIFT = 2.0 - 0.95 * DECO_SCALE;
 const DECO_BURY = 0.03;
 /** How far the plane of a relief's backing plate stands in front of the wall's face: a hair, so that plate and wall do not fight for the same pixels (53rd playtest, point 4). */
 const DECO_FLUSH = 0.01;
+/** The share of its depth (backing plate to the front-most point) that a relief is sunk into the wall (54th playtest, point 3). */
+export const DECO_SINK_SHARE = 1 / 3;
 /** Half the width of a cell (`CELL_SIZE` 3): where the wall stands. */
 const WALL_AT = 1.5;
 
@@ -147,7 +149,10 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
     // 53rd playtest, point 4: the plane of the relief's backing plate lies `DECO_FLUSH` in front of the wall, whatever the model's depth (a relief whose plate is thick stood far out). In "Full 3D"
     // the view moves the relief out by the depth of the wall pieces afterwards (`buildObjects`). A model without a measured plate keeps the old rule.
     const plate = DECO_PLATE[own.model];
-    const push = plate !== undefined ? WALL_AT - DECO_FLUSH + plate * own.scale : WALL_AT + DECO_BURY + back;
+    // 54th playtest, point 3 (Undercroft of Siletha 31/60): the figure still looked too far out of the wall, so the relief sinks by a third of its depth (plate to the front-most point) into it
+    const front = (staticInfo[own.model]?.bounds?.[5] ?? 0.2) * own.scale;
+    const sink = (front - (plate !== undefined ? plate * own.scale : back)) * DECO_SINK_SHARE;
+    const push = (plate !== undefined ? WALL_AT - DECO_FLUSH + plate * own.scale : WALL_AT + DECO_BURY + back) + Math.max(0, sink);
     const rotY = (bearing * Math.PI) / 180;
     return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
   }

@@ -50,7 +50,7 @@
  },
  "8": {
   "name": "Energy Blast",
-  "description": "Does 2-6 magical damage per caster level to one monster. Costs 5 mana per caster level.",
+  "description": "Does 2-6 magical damage per caster level to one monster. Costs 2.5 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -64,7 +64,7 @@
  },
  "10": {
   "name": "Sparks",
-  "description": "Does 2 magic damage per caster level to a group of monsters. Costs 2 mana per caster level.",
+  "description": "Does 2 magic damage per caster level to a group of monsters. Costs 1 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -113,7 +113,7 @@
  },
  "17": {
   "name": "Protection from Elements",
-  "description": "Gives the party damage reduction to either fire, cold, magic or acid. Costs 2 mana per caster level.",
+  "description": "Gives the party damage reduction to either fire, cold, magic or acid. Costs 1 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -134,7 +134,7 @@
  },
  "20": {
   "name": "Stone Skin",
-  "description": "Gives a character +1 AC per caster's level, but halves the target's speed for 12h Costs 2 mana per caster level.",
+  "description": "Gives a character +1 AC per caster's level, but halves the target's speed for 12h Costs 1 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -169,7 +169,7 @@
  },
  "25": {
   "name": "Rage",
-  "description": "Gives a character +1 damage per caster's level, but halves the target's armor for 12h Costs 2 mana per caster level.",
+  "description": "Gives a character +1 damage per caster's level, but halves the target's armor for 12h Costs 1 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -190,7 +190,7 @@
  },
  "28": {
   "name": "Power Cure",
-  "description": "Heals one character for 2-12 hit points per caster level. Costs 5 mana per caster level.",
+  "description": "Heals one character for 2-12 hit points per caster level. Costs 2.5 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -253,7 +253,7 @@
  },
  "37": {
   "name": "Lightning Bolt",
-  "description": "Does 4-6 magic damage per caster level to a group of monsters. Costs 6 mana per caster level.",
+  "description": "Does 4-6 magic damage per caster level to a group of monsters. Costs 3 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -267,7 +267,7 @@
  },
  "39": {
   "name": "Cold Ray",
-  "description": "Does 2-4 cold damage per caster level to all monsters in a line. Costs 6 mana per caster level.",
+  "description": "Does 2-4 cold damage per caster level to all monsters in a line. Costs 3 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -302,7 +302,7 @@
  },
  "44": {
   "name": "Fireball",
-  "description": "Does 3-7 fire damage per caster level to a group of monsters. Costs 6 mana per caster level.",
+  "description": "Does 3-7 fire damage per caster level to a group of monsters. Costs 3 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -344,7 +344,7 @@
  },
  "50": {
   "name": "Dragon Breath",
-  "description": "Hits all monsters for 5 damage per caster level. Costs 14 mana per caster level.",
+  "description": "Hits all monsters for 5 damage per caster level. Costs 7 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"
@@ -435,7 +435,7 @@
  },
  "63": {
   "name": "Dancing Sword",
-  "description": "Does 6-14 physical damage per caster level to a group of monsters Costs 3 mana per caster level.",
+  "description": "Does 6-14 physical damage per caster level to a group of monsters Costs 1.5 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"

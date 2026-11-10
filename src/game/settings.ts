@@ -38,12 +38,20 @@ export interface Settings {
   keys: KeyBindings;
   /** The keys are written on the action buttons of the screen ("Attack (Space)"). */
   showKeys: boolean;
+  /**
+   * Whom the party aims at among the monsters it can see and shoot at (Options > Controls > Range attack targets): the one closest to the party, or the one with the fewest
+   * hit points. A monster next to the party is always fought first. Absent in older stored settings: closest.
+   */
+  rangeTarget: RangeTarget;
 }
+
+export type RangeTarget = "closest" | "weakest";
+export const RANGE_TARGETS: readonly RangeTarget[] = ["closest", "weakest"];
 
 const KEY = "mm3-seed-rpg:settings:v1";
 /** The defaults are the "Medium" quality (`game/quality.ts`): flat ground, normal textures, medium distance, normal resolution, animated town scenes. */
 export function defaultSettings(): Settings {
-  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true };
+  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true, rangeTarget: "closest" };
 }
 export const DEFAULT_SETTINGS: Settings = defaultSettings();
 
@@ -87,6 +95,7 @@ export function parseSettings(raw: string | null): Settings {
   if (stored.keys !== undefined) out.keys = parseKeys(stored.keys);
   if (typeof stored.animatedTown === "boolean") out.animatedTown = stored.animatedTown;
   if (typeof stored.fadeCursor === "boolean") out.fadeCursor = stored.fadeCursor;
+  if (stored.rangeTarget === "closest" || stored.rangeTarget === "weakest") out.rangeTarget = stored.rangeTarget;
   if (stored.textureQuality === "normal" || stored.textureQuality === "high") out.textureQuality = stored.textureQuality;
   return out;
 }

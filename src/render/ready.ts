@@ -11,16 +11,24 @@ const POLL_MS = 40;
  *
  * `progress` gets the share of the visible meshes that are ready (0 to 1). Resolves with false when it timed out.
  */
-export async function whenDrawable(scene: Scene, progress: (share: number) => void): Promise<boolean> {
+export async function whenDrawable(scene: Scene, progress: (share: number) => void, paint?: () => Promise<void>): Promise<boolean> {
   const started = performance.now();
   for (;;) {
     let total = 0;
     let ready = 0;
+    // 54th playtest, point 5: the first pass over thousands of meshes starts their shaders and takes seconds without a pause, so the number stood still. With `paint`, the pass reports
+    // what it has checked every 40 ms and lets the page draw it before it goes on.
+    let slice = performance.now();
     for (const mesh of scene.meshes) {
       if (!mesh.isEnabled() || !mesh.subMeshes || mesh.subMeshes.length === 0) continue;
       total++;
       // the complete check asks the material for every sub mesh, which also starts the compilation of shaders not asked for yet
       if (mesh.isReady(true)) ready++;
+      if (paint && performance.now() - slice > POLL_MS) {
+        progress(ready / Math.max(1, scene.meshes.length));
+        await paint();
+        slice = performance.now();
+      }
     }
     // a texture that is still on its way counts as work, too (it is pending data of the scene until it has been decoded)
     const waiting = scene.getWaitingItemsCount();

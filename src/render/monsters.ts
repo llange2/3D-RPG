@@ -217,8 +217,16 @@ export class MonsterRenderer {
   }
 
   /** Resolves when every `add` called so far has finished, so the loading screen can wait for the monsters of a new map. */
-  async whenIdle(): Promise<void> {
-    while (this.adding.size > 0) await Promise.allSettled([...this.adding]);
+  async whenIdle(progress?: (share: number) => void): Promise<void> {
+    // `progress` gets the share of the monsters that were being added at the start and are done now (the loading screen's number: a map with many monsters waits here for seconds)
+    const total = this.adding.size;
+    while (this.adding.size > 0) {
+      if (!progress) await Promise.allSettled([...this.adding]);
+      else {
+        await Promise.race([...this.adding].map((p) => p.then(undefined, () => undefined)));
+        progress(Math.max(0, Math.min(1, 1 - this.adding.size / Math.max(1, total))));
+      }
+    }
   }
 
   /** Whether the registry of the model set in use has a model for this id (the persona models only exist once the assets were rebuilt). */

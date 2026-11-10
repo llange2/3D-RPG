@@ -617,6 +617,22 @@ function advanceRound(party: Party, view: GridView, enc: Encounter, px: number, 
  * another one is never chosen.
  */
 export function nearestInCone(view: GridView, enc: Encounter, px: number, py: number, fx: number, fy: number): MonsterInstance | null {
+  return seenInCone(view, enc, px, py, fx, fy)[0] ?? null;
+}
+
+/**
+ * The monster with the fewest hit points among all the party can see in that cone (the facing line is its middle): Options > Controls > "Range attack targets: weakest".
+ * Equal hit points go to the nearer one, then to the one more in front.
+ */
+export function weakestInCone(view: GridView, enc: Encounter, px: number, py: number, fx: number, fy: number): MonsterInstance | null {
+  // `seenInCone` is in the order near to far, and `min` keeps the first of equals
+  let best: MonsterInstance | null = null;
+  for (const m of seenInCone(view, enc, px, py, fx, fy)) if (!best || m.hp < best.hp) best = m;
+  return best;
+}
+
+/** Every monster in the cone in clear sight, nearest first (a tie goes to the one closer to the line the party faces). */
+function seenInCone(view: GridView, enc: Encounter, px: number, py: number, fx: number, fy: number): MonsterInstance[] {
   const candidates: { m: MonsterInstance; dist: number; side: number }[] = [];
   for (const m of enc.monsters) {
     if (m.hp <= 0 || isPhased(m)) continue;
@@ -629,8 +645,7 @@ export function nearestInCone(view: GridView, enc: Encounter, px: number, py: nu
     candidates.push({ m, dist: dx * dx + dy * dy, side: across });
   }
   candidates.sort((a, b) => a.dist - b.dist || a.side - b.side);
-  for (const c of candidates) if (lineOfSight(view, enc, px, py, c.m.x, c.m.y, true)) return c.m;
-  return null;
+  return candidates.filter((c) => lineOfSight(view, enc, px, py, c.m.x, c.m.y, true)).map((c) => c.m);
 }
 
 /**
