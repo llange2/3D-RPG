@@ -63,8 +63,12 @@ describe("the three castles (quest document 1.2, castle_1)", () => {
     const map = generateInterior(world, poi);
     const content = buildMapContent(world, poi, map);
     const party = createDefaultParty();
-    // the lock of the king's chest grows with the level of the party (`data/locks.ts`) and a party of level 1 never reaches it: the castles lie in tiers 2 to 4
-    for (const c of party.characters) c.level = 20;
+    // the lock of the king's chest grows with the level of the party (`data/locks.ts`, without an upper limit since 10 Nov 2026) and a party of level 1 never reaches it: the castles lie in tiers 2 to 4.
+    // The title says a thief picks it, so the heroes have the thievery of a thief (30) and a bit more (gear): the test is about the sequence (seal, alarm, lock), not about the balance of the lock
+    for (const c of party.characters) {
+      c.level = 20;
+      c.thievery = 60;
+    }
     const opened = new Set<string>();
     let attempt = 0;
     const use = (a: ActionInstance, answer?: string | null) => {
@@ -104,8 +108,11 @@ describe("the three castles (quest document 1.2, castle_1)", () => {
     const poi = castlesOf(world)[0]!;
     const content = buildMapContent(world, poi, generateInterior(world, poi));
     const party = createDefaultParty();
-    // a party that has come this far picks the simple lock of the chests in the niches (thievery grows with the level), so the alarm is the first thing in the way
-    for (const c of party.characters) c.level = 40;
+    // a party that has come this far picks the simple lock of the chests in the niches (the lock grows with the level, so the heroes get a thief's thievery: the roll cannot fail), so the alarm is the first thing in the way
+    for (const c of party.characters) {
+      c.level = 40;
+      c.thievery = 200;
+    }
     const opened = new Set<string>();
     const chests = content.actions.filter((a) => a.params.warn === "alarm");
     const run = (a: ActionInstance) => {

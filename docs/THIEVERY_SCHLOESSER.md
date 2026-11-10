@@ -39,14 +39,14 @@ Die Chance eines Helden mit dem Skill S gegen die Schwierigkeit D ist `1,5 × (1
 **Wie.** Wie die Falle (`trapDamageFor`) rechnet das Schloss erst bei der Probe aus der Stufe der Gruppe. Der Generator legt nur fest, *dass* ein Schloss da ist (`difficulty` = 1, eine Marke) und welche Falle es für einen Fehlschlag hat (`lockTrap`, `trapDamage`, `trapLevel`):
 
 ```
-L          = Ø Stufe der aktiven Helden, geklemmt auf TIER_ENTRY[tier] .. TIER_EXIT[tier]
+L          = Ø Stufe der aktiven Helden, nach unten auf TIER_ENTRY[tier] geklemmt, nach oben unbegrenzt
 refSkill   = L × (3,8 + 0,055 × L)             // Skill des Median-Ninjas, Anpassung an den Simulator
 ease       = min(1, 0,2 + 0,2 × L)             // Stufe 1 / 2 / 3: 0,4 / 0,6 / 0,8, ab Stufe 4: 1
 Schwierigkeit = max(1, round(Härte × refSkill × ease))
 ```
 
 * **Innerhalb eines Tiers bleibt die Chance gleich** (Ninja 67 bis 76 % an der Kiste, vorher 80 % → 100 %).
-* **Das Tier zählt weiter**: Tiers sind die Stufenbänder des Kampfsimulators (`TIER_ENTRY` 1 / 5 / 11 / 19 / 33, `TIER_EXIT` 4 / 10 / 18 / 32 / 50). Wer unter dem Eintritt ankommt, bekommt das Schloss der Eintrittsstufe und scheitert öfter. Wer das Tier überwachsen hat, findet das Schloss des Austritts und damit leichter.
+* **Das Tier zählt weiter**: Tiers sind die Stufenbänder des Kampfsimulators (`TIER_ENTRY` 1 / 5 / 11 / 19 / 33, `TIER_EXIT` 4 / 10 / 18 / 32 / 50). Wer unter dem Eintritt ankommt, bekommt das Schloss der Eintrittsstufe und scheitert öfter. **Wer das Tier überwachsen hat, findet ein weiter wachsendes Schloss** (seit dem 10. 11. 2026; vorher war die Stufe auch nach oben auf `TIER_EXIT` geklemmt, siehe Abschnitt 5).
 * **Stufen 1 bis 3 sind leichter** (`lockEase`): Kisten der Stufe 1 haben Schwierigkeit 1, der Held mit einem Skill von 1 bis 4 öffnet sie fast immer (Median-Ninja 100 %, Gruppe ohne Dieb/Ninja 96 %); auf Stufe 3 sind es 89 % und 63 %.
 * **Gruppenstufe** ist der Durchschnitt der Stufen der Helden, die handeln können (`lockPartyLevel`). Ein Neuling in einer erfahrenen Gruppe verschiebt sie kaum, und es gibt keinen Zirkelbezug (der beste Wurf bestimmt die Schwierigkeit nicht).
 
@@ -118,3 +118,18 @@ Die Kampagne behält ihre eigenen Truhen (`min_thievery`, Wurf des gewählten He
 ## 7. Werte ändern
 
 Ändern sich Ausrüstung, Attribute oder die Formel der Probe, schlägt der erste Test von `thievery.test.ts` (Zielchancen) oder der Test zu `refSkill` fehl. Dann `npx tsx tools/balance/thievery.ts --lever` laufen lassen, den Abschnitt „Härte“ in `LOCK_HARDNESS` übernehmen und gegebenenfalls `refSkill` nachfitten (Tabelle „refSkill gegen den Skill des Median-Ninjas“). Eine geänderte Härte oder `refSkill` ändert nur die Probe zur Spielzeit (kein Generatorwert hängt daran, `GEN_VERSION` bleibt); eine geänderte Falle (`lockTrap`, `LOCK_FUMBLE_CHANCE` ist Spielzeit, die Falle selbst Generator) braucht `GEN_VERSION` und `golden:update`.
+
+## 5. Auswertung des Journals vom 10. 11. 2026 (Ninja, Stufe 1 bis 10)
+
+Quelle: `.ignore/mm3-saves-2026-11-10-06-16-23.json` (Seed `pearl-shore-794`, 84 Versuche, `tools/balance/read-journal.ts`). Die Chance je Versuch ist aus den Skills im Journal nachgerechnet.
+
+| Bereich | Versuche | Gruppe erwartet | tatsächlich | Schloss | Ninja allein |
+|---|---|---|---|---|---|
+| Tier 1, Gruppenstufe 4 (im Band) | 13 Kisten | 83 % | 54 % (Pech) | 8 | 73 % |
+| Tier 1, Gruppenstufe 5 bis 6 | 20 Kisten | 99 % | 100 % | **8** | 97 % |
+| Tier 1, Gruppenstufe 8 bis 8,5 | 21 Kisten | 100 % | 100 % | **8** | 100 % |
+| Tier 2, Gruppenstufe 10 (im Band) | 14 Kisten | 78 % | 93 % | 23 | 68 % |
+
+**Befund.** Im Band stimmen die Zahlen (Ninja-Skill 15 / 22 / 32 / 36 / 43 bis 50 gegen `refSkill` 16 / 25 / 34 / 39 / 43). Der Fehler war die obere Klemme: die Gruppe blieb in Tier-1-Orten bis Stufe 8,5, das Schloss blieb auf Stufe 4 (Schwierigkeit 8) stehen, der Skill wuchs auf 32 und mehr, `Skill / 3` lag über dem Schloss, die Chance war 100 %. **Entscheidung des Nutzers: das Schloss wächst voll mit** (Faktor 1, keine obere Klemme): Ninja an der Kiste bei Stufe 5 bis 6 und 8 dann 73 % und 71 %, Gruppe 78 % und 77 %, das Gefühl von Stufe 4.
+
+Der einzige Fehlschlag in Tier 2 kam, als Ninja und Wizard „Crazy“ waren: nur Ritter und Paladin würfelten (Skill 4 und 9 gegen 23). Das ist gewollt, ohne Dieb oder Ninja ist eine Kiste schwer.

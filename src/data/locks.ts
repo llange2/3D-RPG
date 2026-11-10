@@ -6,8 +6,8 @@ import { MAP_ITEMS } from "./tables";
  * The difficulty is not stored in the place: the generator only says that a lock is there (`difficulty` is a marker, 1), the number is worked out when the party tries it, from the level of the
  * party, like the damage of a trap (`trapDamageFor`). The roll grows with the level (skill = (luck/accuracy + thievery) x level x 0.1), so a fixed number per tier was trivial from the middle of
  * the tier on (the 36th playtest log: a ninja of level 10 against 9, every roll was above it). Now the lock grows with the hero in step with it: for the median ninja the chance is the same on
- * every level of a tier. The tier still counts: the level is clamped to the levels the tier is meant for (`TIER_ENTRY` to `TIER_EXIT`), so a party that comes too early finds the lock of the
- * entry and fails more often, one that has outgrown the tier finds it easier.
+ * every level of a tier. The tier still counts at the bottom: a party that comes too early (below `TIER_ENTRY`) finds the lock of the entry and fails more often. Above the tier the lock keeps
+ * growing with the party (no clamp at `TIER_EXIT`), so a hero who stays in the places of a lower tier meets the same chance as everywhere else.
  *
  *   difficulty = HARDNESS[kind] x refSkill(level) x ease(level)
  *
@@ -38,10 +38,14 @@ export function lockEase(level: number): number {
   return Math.min(1, 0.2 + 0.2 * level);
 }
 
-/** The party level a lock is worked out for: the level of the party clamped to the levels of the tier. */
+/**
+ * The party level a lock is worked out for: the level of the party, but not below the entry of the tier. There is no upper clamp: the journal of the
+ * 10 Nov 2026 (ninja, tier 1 chests at party level 5 to 8.5) showed that a lock frozen at the exit of the tier (level 4, difficulty 8) was picked 41 times
+ * out of 41, while the ninja's skill had grown from 15 to 32+. `TIER_EXIT` stays the design band, it no longer clamps.
+ */
 export function lockLevel(tier: number, level: number): number {
   const t = Math.min(TIER_ENTRY.length, Math.max(1, Math.round(tier))) - 1;
-  return Math.min(TIER_EXIT[t]!, Math.max(TIER_ENTRY[t]!, Math.round(level)));
+  return Math.max(TIER_ENTRY[t]!, Math.round(level));
 }
 
 /** What the best roll of the party has to reach to pick a lock of `kind` in a place of `tier`, for a party of the average level `level`. */
