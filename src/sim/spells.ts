@@ -2,7 +2,7 @@ import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, SPELLS, walksOnLand, type SpellDef } from "../data/tables";
 import { orbSpellBonus } from "./balance";
 import { addCondition, canAct, canBeHealed, healHp, isAlive, recalcValues, removeCondition } from "./character";
-import { restartCondition } from "./conditions";
+import { suppressCondition } from "./conditions";
 import { generateItem } from "./items";
 import { MINUTES_PER_DAY, addEffect } from "./party";
 import type { SpecialSpell } from "./encounter";
@@ -159,6 +159,26 @@ export function needsBeaconChoice(id: number): boolean {
   return id === 32;
 }
 
+/**
+ * Whether a hero can be the target of a spell (bug_fix_50, point 22): nobody dead or rotten is, except for the one spell that brings them back
+ * (Raise Dead the dead, Resurrect the rotten). Healing also skips the petrified. The spells that open a backpack work on anybody.
+ */
+export function validTarget(spellId: number, c: Character): boolean {
+  if (ITEM_SPELLS.has(spellId)) return true;
+  if (spellId === 65) return c.conditions.includes("Dead") && !c.conditions.includes("Rotten");
+  if (spellId === 70) return c.conditions.includes("Rotten");
+  if (HEALS.has(spellId) || spellId === 56) return canBeHealed(c); // 56: Half For Me heals too
+  return isAlive(c);
+}
+
+/**
+ * Spell points the caster pays. A spell that "scales with level" (column H of the spell sheet) multiplies its effect by the caster's level,
+ * and since the 53rd playtest (bug_fix_50, point 16) its cost too; every other spell costs the plain number.
+ */
+export function spellCost(spell: Pick<SpellDef, "mana" | "scales_with_level">, caster: Pick<Character, "level">): number {
+  return spell.scales_with_level ? spell.mana * Math.max(1, caster.level) : spell.mana;
+}
+
 function attackDamage(spell: SpellDef, caster: Character, rng: Rng, mascot = ""): number {
   const lo = spell.dam_min ?? 0;
   const hi = Math.max(lo, spell.dam_max ?? lo);
@@ -215,13 +235,16 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
   if (!caster.spells.includes(spellId)) return { kind: "fizzle", reason: "not_known" };
   if (!canAct(caster)) return { kind: "fizzle", reason: "cannot_act" };
   if (!isSpellImplemented(spellId)) return { kind: "fizzle", reason: "not_implemented" };
-  if (caster.sp < spell.mana) return { kind: "fizzle", reason: "mana" };
+  const cost = spellCost(spell, caster);
+  if (caster.sp < cost) return { kind: "fizzle", reason: "mana" };
 
   const pay = () => {
-    caster.sp -= spell.mana;
+    caster.sp -= cost;
   };
   const target = options.target !== undefined ? party.characters[options.target] : undefined;
   if (needsTarget(spellId) && !target) return { kind: "fizzle", reason: "needs_target" };
+  // a refusal costs nothing: no spell on the dead or the rotten except the ones that raise them
+  if (target && needsTarget(spellId) && !validTarget(spellId, target)) return { kind: "fizzle", reason: "no_effect" };
 
   if (SINGLE_TARGET.has(spellId) || PENETRATING.has(spellId) || spellId === 12 || spellId in SPECIAL) {
     pay();
@@ -314,7 +337,7 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
   if (spellId in SUPPRESS) {
     pay();
     const condition = SUPPRESS[spellId]!;
-    return { kind: "suppress", target: options.target!, condition: restartCondition(target!, condition, party.minutes) ? condition : null };
+    return { kind: "suppress", target: options.target!, condition: suppressCondition(target!, condition, party.minutes) ? condition : null };
   }
 
   if (WORLD_SPELLS.has(spellId)) {
@@ -501,7 +524,7 @@ export function castBlock(party: Party, caster: number, spellId: number, aimed: 
   const c = party.characters[caster];
   if (!c || !spell || !c.spells.includes(spellId) || !isSpellImplemented(spellId)) return "gone";
   if (!canAct(c) || (turn !== null && turn !== caster)) return "cannot_act";
-  if (c.sp < spell.mana) return "mana";
+  if (c.sp < spellCost(spell, c)) return "mana";
   if (isAttackSpell(spellId) && !aimed) return "no_target";
   return null;
 }

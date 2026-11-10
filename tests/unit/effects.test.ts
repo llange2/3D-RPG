@@ -38,6 +38,7 @@ describe("pictures over a portrait", () => {
       "gui_levitate",
       "gui_power_shield",
       "gui_wizard_eye",
+      "gui_detect_monster",
     ];
     for (const name of all) expect(existsSync(join(UI, `tex_${name}.webp`)), name).toBe(true);
   });

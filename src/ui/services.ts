@@ -3,7 +3,7 @@ import { LAYER, rngFor } from "../core/rng";
 import { SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
 import {
-  BANK_SLIDER_STEPS, bankSliderAmount, buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf,
+  BANK_SLIDER_STEPS, bankSliderAmount, buyBackItem, buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf, type SoldItem,
   templeCure, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
@@ -156,7 +156,9 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
     };
 
     // -------------------------------------------------------------- smith
-    let smithTab: "buy" | "sell" = "buy";
+    let smithTab: "buy" | "sell" | "back" = "buy";
+    /** What the party sold here since it came in: it can buy it back for the same gold until it leaves (the list lives as long as this window, 53rd playtest point 7). */
+    const soldHere: SoldItem[] = [];
     let smithShelf: SmithShelf = "armor";
     const SHELF_LABEL: Record<SmithShelf, string> = { armor: "Armor", weapons: "Weapons", rings: "Rings" };
     let sellWho = 0;
@@ -164,9 +166,23 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       const day = Math.floor(party.minutes / 1440);
       const stock = smithStock(ctx.rootSeed, ctx.poi?.id ?? "p:none", day, ctx.tier, party);
       const soldKey = (n: number) => `shop:${ctx.poi?.id ?? "p:none"}:${day}:${n}`;
-      const tabs = h("div", { class: "tabs" }, h("div", { class: `tab${smithTab === "buy" ? " on" : ""}`, text: "Buy", onclick: () => ((smithTab = "buy"), render()) }), h("div", { class: `tab${smithTab === "sell" ? " on" : ""}`, text: "Sell", onclick: () => ((smithTab = "sell"), render()) }));
+      const tabs = h("div", { class: "tabs" }, h("div", { class: `tab${smithTab === "buy" ? " on" : ""}`, text: "Buy", onclick: () => ((smithTab = "buy"), render()) }), h("div", { class: `tab${smithTab === "sell" ? " on" : ""}`, text: "Sell", onclick: () => ((smithTab = "sell"), render()) }), h("div", { class: `tab${smithTab === "back" ? " on" : ""}`, text: `Buy back${soldHere.length > 0 ? ` (${soldHere.length})` : ""}`, onclick: () => ((smithTab = "back"), render()) }));
       root.append(...header(), tabs);
-      if (smithTab === "buy") {
+      if (smithTab === "back") {
+        // newest first: what was sold last is what the party most likely wants back
+        [...soldHere].reverse().forEach((sold) => {
+          root.append(row(itemLabel(sold.item, 44), `${thousands(sold.price)} gold`, () => {
+            const r = buyBackItem(party, sold);
+            if (r.ok) {
+              soldHere.splice(soldHere.indexOf(sold), 1);
+              ctx.sound?.(9000);
+            }
+            note(r.ok ? `Bought back ${sold.item.name.trim()}.` : r.reason === "gold" ? "Not enough gold." : "Every backpack is full.", r.ok ? "good" : "bad");
+            refresh();
+          }, party.gold < sold.price));
+        });
+        if (soldHere.length === 0) root.append(h("p", { text: "You have not sold anything here. Whatever you sell can be bought back for the same price until you leave." }));
+      } else if (smithTab === "buy") {
         root.append(h("div", { class: "tabs" }, ...(Object.keys(SHELF_LABEL) as SmithShelf[]).map((k) => h("div", { class: `tab${smithShelf === k ? " on" : ""}`, text: SHELF_LABEL[k], onclick: () => ((smithShelf = k), render()) }))));
         let left = 0;
         stock.forEach((s, n) => {
@@ -193,7 +209,9 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           if (!item || item.quest) continue;
           any = true;
           root.append(row(itemLabel(item, 40), `sell for ${thousands(sellPrice(item, party))}`, () => {
+            const price = sellPrice(item, party);
             if (sellItem(party, sellWho, slot)) {
+              soldHere.push({ item, price });
               ctx.sound?.(9000);
               note(`Sold ${item.name.trim()}.`, "good");
             }
@@ -367,7 +385,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
         h(
           "span",
           {},
-          h("div", { html: `<b>${spell.title}</b> <span class="small" style="opacity:0.75">level ${spell.level}, ${spell.mana} SP</span>` }),
+          h("div", { html: `<b>${spell.title}</b> <span class="small" style="opacity:0.75">level ${spell.level}, ${spell.mana} SP${spell.scales_with_level ? " per level" : ""}</span>` }),
           h("div", { class: "small", style: "opacity:0.75", text: `${spell.text}${isSpellImplemented(spellId) ? "" : " (Has no effect in this game yet.)"}` }),
           why ? h("div", { class: "small", style: "color:#e8745f", text: why }) : null,
         ),

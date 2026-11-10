@@ -4,7 +4,7 @@ import { allowedIn, type Place } from "../data/item-rules";
 import { letterHints } from "../data/letter-hints";
 import { RIDDLES_WORLD, WORD_RIDDLES } from "../data/riddles";
 import { placeOf } from "../interiors/place";
-import { towerFloorAt } from "../interiors/stairs";
+import { stairLinks, towerFloorAt } from "../interiors/stairs";
 import { CELL, type InteriorMap } from "../interiors/types";
 import type { AnchorSet } from "./anchors";
 import { doorCell, fillEndRoom } from "./endRoom";
@@ -84,6 +84,38 @@ function approach(env: QuestEnv): { x: number; y: number } | null {
 }
 
 /**
+ * How far an anchor is from the cell in front of the seal, as the party walks it (53rd playtest, point 13): the number of steps over the floor and the stairs. The straight distance counted
+ * through walls: in the Sanctum of Caelimaa the statue stood in a dead end 4 cells from the seal, behind a wall and a long way round, so the wall opened where the party was not. Without a cell
+ * in front (a pocket in the rock) the deepest anchor is the nearest. An anchor the party cannot reach is the farthest.
+ */
+function distanceTo(env: QuestEnv, front: { x: number; y: number } | null): (a: Anchor) => number {
+  if (!front) return (a) => -a.depth;
+  const { width, height, cells } = env.map;
+  const links = stairLinks(env.map);
+  const steps = new Int32Array(width * height).fill(-1);
+  const start = front.y * width + front.x;
+  const queue = [start];
+  steps[start] = 0;
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head]!;
+    const x = i % width;
+    const y = (i - x) / width;
+    const next = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].flatMap(([nx, ny]) => (nx! >= 0 && ny! >= 0 && nx! < width && ny! < height ? [ny! * width + nx!] : []));
+    const link = links.get(i);
+    if (link !== undefined) next.push(link);
+    for (const j of next) {
+      if (steps[j]! >= 0 || cells[j] !== CELL.FLOOR) continue;
+      steps[j] = steps[i]! + 1;
+      queue.push(j);
+    }
+  }
+  return (a) => {
+    const s = steps[a.y * width + a.x]!;
+    return s >= 0 ? s : 1_000_000;
+  };
+}
+
+/**
  * Puts an object on the free cell nearest to the end room, for the statue that wants the answer: close to the cell in front of the seal, but not on
  * it (that cell stays open, it is the way to the wall). A place whose end room is a pocket has no such cell: the deepest free cell then. Every
  * candidate is tried in turn, so the statue is placed wherever the place has room for it at all.
@@ -91,7 +123,7 @@ function approach(env: QuestEnv): { x: number; y: number } | null {
 function placeNearEnd(env: QuestEnv, make: (x: number, y: number) => ActionInstance, minDistance = 2): Anchor | null {
   const front = approach(env);
   const pool = [...env.anchors.byKind.roomEdge, ...env.anchors.byKind.deadEnd, ...env.anchors.byKind.corridor, ...env.anchors.byKind.roomCenter].filter((a) => env.free(a.x, a.y));
-  const dist = (a: Anchor) => (front ? Math.abs(a.x - front.x) + Math.abs(a.y - front.y) : -a.depth);
+  const dist = distanceTo(env, front);
   const sorted = pool.filter((a) => !front || dist(a) >= minDistance).sort((p, q) => dist(p) - dist(q) || p.y - q.y || p.x - q.x);
   for (const a of sorted) if (env.place(make(a.x, a.y))) return a;
   return null;
@@ -439,7 +471,7 @@ function endBoss(env: QuestEnv, rng: Rng): QuestResult {
   let spot: { x: number; y: number } | null = front && env.free(front.x, front.y) ? front : null;
   if (!spot) {
     const pool = [...env.anchors.byKind.roomEdge, ...env.anchors.byKind.deadEnd, ...env.anchors.byKind.corridor].filter((a) => env.free(a.x, a.y));
-    const dist = (a: Anchor) => (front ? Math.abs(a.x - front.x) + Math.abs(a.y - front.y) : -a.depth);
+    const dist = distanceTo(env, front);
     spot = pool.sort((p, q) => dist(p) - dist(q) || p.y - q.y || p.x - q.x)[0] ?? null;
   }
   if (spot) {

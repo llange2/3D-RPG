@@ -83,7 +83,7 @@ html.ending-on #game-cursor { display: none; }
 .quest { margin: 3px 0; padding-left: 8px; border-left: 2px solid var(--gold-dim); }
 .quest-list .small { opacity: 0.7; }
 /* active resistance and levitation, in the top right corner to the left of the map (right-panel is 176 px wide at 10 px) */
-.status-icons { position: absolute; right: 196px; top: 10px; display: flex; flex-direction: row-reverse; flex-wrap: wrap; gap: 6px; max-width: 440px; pointer-events: none; }
+.status-icons { position: absolute; right: 196px; top: 10px; display: flex; flex-direction: row-reverse; flex-wrap: wrap; gap: 6px; max-width: calc(50vw - 196px - 120px); pointer-events: none; }
 .status-icons img { width: 80px; height: 80px; filter: drop-shadow(0 1px 3px #000c); pointer-events: auto; }
 .hitflash { position: absolute; inset: 0; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity 0.4s; }
 .hitflash.on { opacity: 0.55; transition: none; }

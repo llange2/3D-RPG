@@ -1,8 +1,9 @@
 import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
-import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
+import { averageDamageLines } from "../sim/combat";
+import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, resistance, worstCondition, xpToNextLevel } from "../sim/character";
 import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
-import { SPELL_GRID, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
+import { SPELL_GRID, spellCost, validTarget, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
 import { itemIcon } from "./itemIcons";
 import { BAG_SLOTS, type Attribute, type BonusKey, type BoonKey, type Character, type Inventory, type Item, type Party } from "../sim/types";
@@ -82,12 +83,25 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     h("div", { text: item.quest ? "Quest item" : `Worth: ${thousands(item.value)} gold` }),
     // 40th playtest, point 9: up to 14 lines (a ring against a ring with other stats) run in two columns, so that the window stays a size that fits the screen
     h("div", { class: `bonus-lines${lines.length > 6 ? " many" : ""}` }, ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null))),
+    // 53rd playtest, point 18: what a weapon or a damage ring hits for on average, from the hero's level and attributes
+    ...(c ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage", text: `${l.label}: ${l.value}` })) : []),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
     c && !allowed ? h("div", { class: "small", style: "color:#e8745f", text: `A ${c.classType} cannot use this.` }) : null,
     untrained ? h("div", { class: "small", style: "color:#e8745f", text: "Requires Arms Master talent to equip" }) : null,
     shieldBlocked ? h("div", { class: "small", style: "color:#e8745f", text: "Not with a two-handed weapon in the weapon hand." }) : null,
     c ? scrollNote(c, item) : null,
   );
+}
+
+/** The resistance each sheet field stands for. */
+const RESISTANCE_ELEMENT = { resFire: "fire", resIce: "ice", resAcid: "acid", resMagic: "magic" } as const;
+
+/**
+ * A value of the hero's sheet that something moved off its plain value (Rage halves the armor, a boon adds resistance): green when higher, red when lower, with the plain value in
+ * brackets (53rd playtest, point 17). `shown` and `plain` are the texts, `now` and `base` what decides the colour.
+ */
+function markedText(shown: string, plain: string, now: number, base: number): HTMLElement {
+  return h("div", { class: now > base ? "v up" : now < base ? "v down" : "v", text: now !== base ? `${shown} (${plain})` : shown });
 }
 
 /** A spell scroll names its school and level and says whether this hero could learn it (same rules as the guild). */
@@ -330,6 +344,7 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       const age = ageOf(c, party.minutes);
       const dmin = itemBonus(c, "dam_min");
       const dmax = itemBonus(c, "dam_max");
+      const rage = c.mods?.rage ?? 0;
       const sheet = h(
         "div",
         { class: "sheet" },
@@ -338,9 +353,14 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
           h("div", { text: "Hit points" }), h("div", { class: "v", text: `${c.hp} / ${c.health}` }),
           h("div", { text: "Spell points" }), h("div", { class: "v", text: `${c.sp} / ${c.mana}` }),
           ...attrRows,
-          h("div", { text: "Armor" }), h("div", { class: "v", text: String(armor(c) + adj.bonusArmor) }),
-          h("div", { text: "Melee damage" }), h("div", { class: "v", text: dmax > 0 ? `${dmin}-${dmax}` : "bare hands" }),
-          ...RESISTANCES.flatMap(([key, bonus, label]) => [h("div", { text: label }), h("div", { class: "v", text: `${c[key] + itemBonus(c, bonus) + (c.mods?.boon?.[bonus as BoonKey] ?? 0)}%` })]),
+          // 53rd playtest, point 17: a value that a spell, a condition or a boon moved off what the hero's gear gives shows in green (more) or red (less), the plain value in brackets
+          h("div", { text: "Armor" }), markedText(String(armor(c) + adj.bonusArmor), String(itemBonus(c, "arm") + adj.bonusArmor), armor(c), itemBonus(c, "arm")),
+          h("div", { text: "Melee damage" }), dmax > 0 ? markedText(`${dmin + rage}-${dmax + rage}`, `${dmin}-${dmax}`, rage, 0) : h("div", { class: "v", text: "bare hands" }),
+          ...RESISTANCES.flatMap(([key, bonus, label]) => {
+            const now = resistance(c, RESISTANCE_ELEMENT[key]);
+            const plain = c[key] + itemBonus(c, bonus);
+            return [h("div", { text: label }), markedText(`${now}%`, `${plain}%`, now, plain)];
+          }),
           h("div", { text: "Experience" }), h("div", { class: "v", text: thousands(c.xp) }),
           h("div", { text: "Next level" }), h("div", { class: "v", text: need > 0 ? `${thousands(need)} xp more` : "ready to train" }),
           h("div", { text: "Condition" }), h("div", { class: `v ${conditionClass(c, party.minutes)}`, text: shownCondition(c, party.minutes), title: conditionTitle(c, party.minutes) }),
@@ -503,7 +523,8 @@ export function quickCastOption(party: Party, quick: QuickCast): Option<SpellCho
   const spell = SPELLS[quick.spellId];
   const who = party.characters[quick.caster]?.name ?? party.lastCast?.caster ?? "";
   const label = `${who} - ${spell ? spell.title : `Spell ${quick.spellId}`}`;
-  const cost = spell ? `${spell.mana} SP` : "";
+  const caster = party.characters[quick.caster];
+  const cost = spell ? `${caster ? spellCost(spell, caster) : spell.mana} SP` : "";
   return {
     label,
     // only the spell is repeated: who it works on (and the element of a protection spell) is asked again
@@ -517,11 +538,15 @@ export function quickCastOption(party: Party, quick: QuickCast): Option<SpellCho
 /** The spell every hero's column shows before anybody has cast anything: Light. */
 const LIGHT_SPELL = 6;
 
-/** What a spell's mouse-over says: its name, its kind, level and cost, and what it does. `sp` (the caster's spell points) adds "not enough spell points". */
-function spellLines(s: (typeof SPELLS)[number], sp?: number): HTMLElement[] {
+/**
+ * What a spell's mouse-over says: its name, its kind, level and cost, and what it does. `caster` makes the cost the one this hero pays
+ * (a spell that scales with level costs more the higher the level, 53rd playtest point 16) and adds "not enough spell points".
+ */
+function spellLines(s: (typeof SPELLS)[number], caster?: Character): HTMLElement[] {
+  const cost = caster ? spellCost(s, caster) : s.mana;
   return [
     h("div", { class: "spell-name", text: s.title }),
-    h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${s.mana} spell point${s.mana === 1 ? "" : "s"}${sp !== undefined && sp < s.mana ? " - not enough spell points" : ""}` }),
+    h("div", { class: "small", text: `${s.type.join(" / ")} - level ${s.level} - ${cost} spell point${cost === 1 ? "" : "s"}${caster && caster.sp < cost ? " - not enough spell points" : ""}` }),
     h("div", { text: s.text }),
   ];
 }
@@ -531,11 +556,11 @@ function spellLines(s: (typeof SPELLS)[number], sp?: number): HTMLElement[] {
  * instead of the text): name, cost and description at the plate, in every window that shows one. It hangs in the overlay (`.modal-back`): the scroll has a `filter`, which makes it the frame of
  * fixed boxes, and clips them. `onShow` runs when it appears (the spell window also fills the field under its grid).
  */
-function attachSpellTip(el: HTMLElement, spellId: number, sp?: number, onShow?: () => void): void {
+function attachSpellTip(el: HTMLElement, spellId: number, caster?: Character, onShow?: () => void): void {
   const s = SPELLS[spellId];
   if (!s) return;
-  const tip = h("div", { class: "spell-tip" }, ...spellLines(s, sp));
-  el.setAttribute("aria-label", `${s.title} (${s.mana} SP)`);
+  const tip = h("div", { class: "spell-tip" }, ...spellLines(s, caster));
+  el.setAttribute("aria-label", `${s.title} (${caster ? spellCost(s, caster) : s.mana} SP)`);
   const show = (): void => {
     const back = el.closest(".modal-back");
     if (!back) return;
@@ -591,7 +616,7 @@ export async function pickCaster(ui: UI, party: Party, heroes: number[], aimed: 
               isPlaceholderIcon(last) ? h("span", { class: "spell-caption", text: spell?.title ?? "" }) : null,
             );
             // the same mouse-over from the first cast on, whether or not this hero has cast anything (before it: Light): name, cost and what the spell does
-            attachSpellTip(icon, last, c.sp);
+            attachSpellTip(icon, last, c);
             return h(
               "div",
               { class: "caster-col" },
@@ -669,12 +694,13 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           info.append(h("div", { class: "small", text: "Choose a spell. Point at one to read what it does." }));
           return;
         }
-        info.append(...spellLines(s, c.sp));
+        info.append(...spellLines(s, c));
       };
       // alphabetical by name, whatever order the spells were learnt in
       const slots = [...c.spells].sort((a, b) => (SPELLS[a]?.title ?? "").localeCompare(SPELLS[b]?.title ?? "")).map((id) => {
         const s = SPELLS[id]!;
-        const ok = isSpellImplemented(id) && c.sp >= s.mana;
+        const cost = spellCost(s, c);
+        const ok = isSpellImplemented(id) && c.sp >= cost;
         const slot = h(
           "button",
           {
@@ -686,10 +712,10 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
           },
           spellPlate(id),
           isPlaceholderIcon(id) ? h("span", { class: "spell-caption", text: s.title }) : null,
-          h("span", { class: "spell-cost", text: String(s.mana) }),
+          h("span", { class: "spell-cost", text: String(cost) }),
         );
         // (the mouse-over at the plate, and the field under the grid with the same text)
-        attachSpellTip(slot, id, c.sp, () => describe(id));
+        attachSpellTip(slot, id, c, () => describe(id));
         return slot;
       });
       describe(null);
@@ -728,7 +754,7 @@ export async function askSpellDetails(ui: UI, party: Party, spellId: number): Pr
   }
   if (needsTarget(spellId)) {
     const backpack = ITEM_SPELLS.has(spellId);
-    const target = await pickHeroPortrait(ui, party, backpack ? "Whose backpack?" : "On whom?", () => true, !backpack);
+    const target = await pickHeroPortrait(ui, party, backpack ? "Whose backpack?" : "On whom?", (c) => validTarget(spellId, c), !backpack);
     if (target === null) return null;
     choice.target = target;
   }

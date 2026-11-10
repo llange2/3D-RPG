@@ -4,10 +4,11 @@ import { loreLine } from "../data/lore";
 import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, emptyContainerLine, propLine } from "../data/prop-texts";
 import { RAT_TRAP, SEARCHABLE_DECOR, dodgeChance, trapDamageFor, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
 import { isBookshelf } from "../data/spell-loot";
+import { ITEM_RULES } from "../data/item-rules";
 import { LOCK_FUMBLE_CHANCE, lockDifficulty, lockLevel } from "../data/locks";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
-import { attr, canAct, canBeHealed, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
+import { attr, canAct, canBeHealed, gainAttribute, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
 import { addCondition, removeCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
@@ -716,8 +717,11 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     }
 
     case "head": {
+      // 53rd playtest, point 28 (Depths of Zanana): the statues of the quest were titled "Stone head" whatever object they are; the title and the words follow the object
+      const noun = ITEM_RULES[Number(p.item)]?.name.toLowerCase() ?? "stone statue";
+      const title = noun.charAt(0).toUpperCase() + noun.slice(1);
       if (p.mode === "ring") {
-        effects.push({ type: "text", text: "A giant stone head. It seems to wait for something." });
+        effects.push({ type: "text", text: `${Number(p.item) === 33 ? "A giant stone head" : `A ${noun}`}. It seems to wait for something.` });
         return { effects, consumed: false };
       }
       if (p.mode === "moan") {
@@ -728,9 +732,9 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       const now = headFacing(action, ctx.opened ?? NONE);
       const facing = (now + 1) % 4;
       const hint = typeof p.hint === "string" ? `${p.hint} ` : "";
-      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Stone head", question: `${hint}The head is facing ${FACING_NAMES[now]}. Would you like to turn it ${FACING_NAMES[facing]}?`, yes: "Turn it", no: "Leave" }], consumed: false };
+      if (ctx.answer === undefined) return { effects: [{ type: "confirm", title, question: `${hint}The ${noun} is facing ${FACING_NAMES[now]}. Would you like to turn it ${FACING_NAMES[facing]}?`, yes: "Turn it", no: "Leave" }], consumed: false };
       if (ctx.answer === null) return { effects, consumed: false };
-      effects.push({ type: "text", text: `The stone head turns with a grating sound and looks ${FACING_NAMES[facing]}.` });
+      effects.push({ type: "text", text: `The ${noun} turns with a grating sound and looks ${FACING_NAMES[facing]}.` });
       const next = turnHead(action, ctx.opened ?? NONE, facing);
       // the row is right when every head looks the way it should: the last turn opens the end room
       const after = new Set([...(ctx.opened ?? NONE)].filter((k) => !next.remove.includes(k)));
@@ -760,7 +764,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           drinker[RESISTANCE_FIELD[gift.element]] += gift.amount;
           effects.push({ type: "text", text: vesselOf(p).resDone?.(drinker.name, gift.element, gift.amount) ?? `${drinker.name} drinks and feels protected: ${gift.element} resistance +${gift.amount}%.` }, { type: "resistance", character: ctx.hero, element: gift.element, amount: gift.amount });
         } else if (gift.kind === "attr") {
-          drinker[gift.attribute] += gift.amount;
+          gainAttribute(drinker, gift.attribute, gift.amount, party.talents, party.mascot);
           effects.push({ type: "text", text: vesselOf(p).done(drinker.name, gift.attribute.toUpperCase(), gift.amount) }, { type: "attribute", character: ctx.hero, attribute: gift.attribute, amount: gift.amount });
         } else {
           drinker.xp += gift.amount;
@@ -812,7 +816,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       const hero = party.characters[ctx.hero];
       if (!hero || !takeOne(party, "quest_quatloo_coin")) return { effects, consumed: false };
       const attribute = p.attr as Attribute;
-      hero[attribute] += 3;
+      gainAttribute(hero, attribute, 3, party.talents, party.mascot);
       effects.push({ type: "text", text: `${hero.name} puts the coin into the slot. The statue hums, and ${attribute.toUpperCase()} rises by 3.` }, { type: "attribute", character: ctx.hero, attribute, amount: 3 });
       return { effects, consumed: false };
     }
@@ -950,7 +954,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           const attribute = ATTRS[rng.int(ATTRS.length)]!;
           const who = attributeRecipient(party, attribute, rng)!;
           const c = party.characters[who]!;
-          c[attribute] += amount;
+          gainAttribute(c, attribute, amount, party.talents, party.mascot);
           effects.push({ type: "text", text: `${c.name} is touched by the shrine: ${attribute.toUpperCase()} +${amount}.` }, { type: "attribute", character: who, attribute, amount });
           break;
         }

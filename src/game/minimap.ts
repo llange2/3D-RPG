@@ -2,6 +2,7 @@ import { heapGone, trapElementOf } from "../actions/registry";
 import type { ActionKind, MapContent } from "../actions/types";
 import { CELL, type Facing, type InteriorMap } from "../interiors/types";
 import { ENGINE_CRYSTAL_FLAG, LIFE_FLAG } from "../data/quest-table";
+import { ITEM_RULES } from "../data/item-rules";
 import { MAP_ITEMS, talentInfo } from "../data/tables";
 import { BIOME, DECO, GROUND, poiBounds, wrapDelta, type Poi, type TileInfo } from "../world/types";
 import type { World } from "../world/world";
@@ -737,7 +738,7 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "riddle": return `Statue${used}`;
         case "gong": return `Gong${used}`;
         case "lever": return "Lever";
-        case "head": return "Stone head";
+        case "head": return ITEM_RULES[Number(a.params.item)]?.name ?? "Stone Statue"; // named after the object it is (53rd playtest, point 28)
         case "decor":
           if (a.params.reactor !== undefined) return "Power Crystal";
           break;

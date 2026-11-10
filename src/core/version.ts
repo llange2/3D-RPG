@@ -158,5 +158,8 @@
  * dungeons, caves and towers have twice as many parts (`data/names.ts`); a locked place on a lava island has a lane of dirt cut into the rock for its hint wagon (`RoadSeg.alley`, `World.hintAlleys`).
  * 61 = the 52nd playtest: the king never shuts a way (`generateCastle`): the rock at the corners beside him gives way, so that his chamber of three cells has a step round him and the party reaches the king's
  * chests from the cell in front of him.
+ * 62 = the 53rd playtest (bug_fix_50, third list): the end room of a tower is a pocket in the rock reached by teleport (`finishDungeon`, quests 4 and 5), no name is told twice in the hints of one word
+ * (`letterHints`), the answer statue stands near the wall it opens by the way the party walks (`placeNearEnd`), a bookshelf only takes a cell with a wall beside it (`generateContent`) and a room with stone columns has
+ * no wooden beams (`planBeams`).
  */
-export const GEN_VERSION = 61;
+export const GEN_VERSION = 62;

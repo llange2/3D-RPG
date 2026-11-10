@@ -221,6 +221,8 @@ export function wayToPlayer(
       const nkey = `${nx},${ny}`;
       if (visited.has(nkey) || blocked(nx, ny)) continue;
       if (Math.abs(nx - px) > radius || Math.abs(ny - py) > radius) continue;
+      // 53rd playtest, point 14: a support beam or a wall piece on the edge shuts the step for a monster as it shuts it for the party
+      if (view.wallBetween?.(x, y, nx, ny)) continue;
       heap.push({ priority: dist + 1 + heuristic(nx, ny), dist: dist + 1, x: nx, y: ny });
       if (!cameFrom.has(nkey)) cameFrom.set(nkey, key);
     }
@@ -253,7 +255,7 @@ function insideTile(offset: number, delta: number): [Frac, Frac] | null {
  * Can a shot fly from tile (x0,y0) to tile (x1,y1)? It travels the straight line between the tile centres and is stopped
  * by every blocking tile that line cuts into, corners included (a Bresenham walk let shots slip through the corner of a
  * wall). Passing exactly through the point where two blocking tiles touch diagonally stops it as well, since they leave
- * no gap. The two end tiles never block. The arithmetic is exact (integers only), so the answer does not depend on rounding.
+ * no gap; on a slanted line (not 45 degrees) already one blocking tile at that point stops it (53rd playtest, point 26). The two end tiles never block. The arithmetic is exact (integers only), so the answer does not depend on rounding.
  */
 export function lineOfSight(view: GridView, enc: Encounter | null, x0: number, y0: number, x1: number, y1: number, monstersBlock = false): boolean {
   const dx = x1 - x0;
@@ -290,7 +292,11 @@ export function lineOfSight(view: GridView, enc: Encounter | null, x0: number, y
       if ((2 * (x - x0) + 1) * dy !== (2 * (y - y0) + 1) * dx) continue;
       // going the same way on both axes it passes between (x,y) and (x+1,y+1), otherwise between (x+1,y) and (x,y+1)
       const same = dx * dy > 0;
-      if (blocks(same ? x + 1 : x, y) && blocks(same ? x : x + 1, y + 1)) return false;
+      const first = blocks(same ? x + 1 : x, y);
+      const second = blocks(same ? x : x + 1, y + 1);
+      // 53rd playtest, point 26: on a slanted line (not an exact diagonal) one blocking tile at the corner is enough: the shot would graze the wall and, with a body of its own, did not get through
+      // (Catacombs of Lunzea: an archer on 14/58 hit a party on 17/57 past the wall on 16/58). On an exact diagonal both must block, as before.
+      if (Math.abs(dx) === Math.abs(dy) ? first && second : first || second) return false;
     }
   }
   return true;

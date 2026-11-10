@@ -98,8 +98,11 @@ export function planBeams(map: InteriorMap, rng: Rng, usable: (x: number, y: num
   const beams = new Map<number, Facing>();
   const baseline = reachableWithBeams(map, beams, links);
   const roomList = [...roomsOf(map)].sort((a, b) => a[0] - b[0]);
+  // 53rd playtest, point 15: a room with stone columns has no wooden beams (the two together crowd the room); the draw below is made as before, so the other rooms keep their beams
+  const withPillars = new Set((map.pillars ?? []).map((p) => map.roomOf[p.y * w + p.x]));
   for (const [id, cells] of roomList) {
     if (cells.length < BEAM_ROOM_CELLS || !rng.chance(BEAM_ROOM_CHANCE)) continue;
+    if (withPillars.has(id)) continue;
     const inRoom = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < map.height && map.roomOf[y * w + x] === id && map.cells[y * w + x] === CELL.FLOOR;
     // the cells of the room that a beam may take, with the cell beside it (on the E or the S side) also in the room and usable
     const axis: "x" | "y" = rng.chance(500) ? "x" : "y";

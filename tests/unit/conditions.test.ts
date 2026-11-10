@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { addCondition, removeCondition, worstCondition } from "../../src/sim/character";
-import { CONDITION_TIMERS, conditionEventText, minutesToDeath, restartCondition, seedConditionTimers } from "../../src/sim/conditions";
+import { CONDITION_TIMERS, conditionEventText, minutesToDeath, seedConditionTimers, suppressCondition } from "../../src/sim/conditions";
 import { castSpell, needsTarget } from "../../src/sim/spells";
 import { advanceTime, createDefaultParty, normalizeParty, rest } from "../../src/sim/party";
 import { conditionClass, conditionTitle, deathNote } from "../../src/ui/conditionInfo";
@@ -96,20 +96,29 @@ describe("timed conditions (the old GameTimer events)", () => {
     expect(c.conditions).not.toContain("Lovestruck");
   });
 
-  it("forgets the timer when the condition is cured, and starts it over with the Suppress spells", () => {
+  it("forgets the timer when the condition is cured, and doubles the time that is left with the Suppress spells", () => {
     const party = createDefaultParty();
     const c = party.characters[0]!;
     addCondition(c, "Poisoned", party.minutes);
     removeCondition(c, "Poisoned");
     expect(c.conditionDue!.Poisoned).toBeUndefined();
     expect(c.conditions).toEqual(["Healthy"]);
-    expect(restartCondition(c, "Poisoned", party.minutes)).toBe(false); // nothing to suppress
+    expect(suppressCondition(c, "Poisoned", party.minutes)).toBe(false); // nothing to suppress
 
     addCondition(c, "Poisoned", party.minutes);
     advanceTime(party, DAY);
     expect(minutesToDeath(c, party.minutes)).toBe(DAY);
-    expect(restartCondition(c, "Poisoned", party.minutes)).toBe(true);
+    expect(suppressCondition(c, "Poisoned", party.minutes)).toBe(true);
+    expect(minutesToDeath(c, party.minutes)).toBe(2 * DAY); // one day was left, now two
+    expect(suppressCondition(c, "Poisoned", party.minutes)).toBe(false); // it holds only once
     expect(minutesToDeath(c, party.minutes)).toBe(2 * DAY);
+    addCondition(c, "Poisoned", party.minutes); // a new strike still takes its two hours
+    expect(minutesToDeath(c, party.minutes)).toBe(2 * DAY - 120);
+    removeCondition(c, "Poisoned");
+    addCondition(c, "Poisoned", party.minutes);
+    expect(minutesToDeath(c, party.minutes)).toBe(2 * DAY); // cured: the next poison runs the plain time
+    expect(suppressCondition(c, "Poisoned", party.minutes)).toBe(true);
+    expect(minutesToDeath(c, party.minutes)).toBe(4 * DAY);
   });
 
   it("casts Suppress Poison as a reset, not a cure, and Cure Poison as a cure", () => {

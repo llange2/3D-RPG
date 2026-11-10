@@ -163,16 +163,18 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     if (!ref || ref.quest === "spaceship" || !visited.has(poi.id)) continue;
     const reached = opened.has(reachedFlag(poi.id));
     places.add(poi.name);
+    // what the party has read at the statues of the place (53rd playtest, point 5: the caves of quest 6, Den of Sila and Passage of Nora, kept theirs from the mouse-over)
+    const clues = [...opened].filter((k) => k.startsWith(`clue:${poi.id}|`)).map((k) => k.slice(`clue:${poi.id}|`.length));
     if (poi.kind === "cave") {
-      if (reached) done.push(`Explored the scary ${poi.name}.`);
-      else open.push(`Explore the scary ${poi.name} at ${at(poi)}.`);
+      const line = reached ? `Explored the scary ${poi.name}.` : `Explore the scary ${poi.name} at ${at(poi)}.`;
+      (reached ? done : open).push(line);
+      if (clues.length > 0) notes[line] = clues.join("\n");
       continue;
     }
     const boss = MONSTERS[ref.look.boss]?.name ?? "boss";
     const lines = DUNGEON_LINES[ref.quest as QuestId];
     const line = reached ? lines.done(poi.name, boss) : lines.open(poi.name, at(poi), boss);
     (reached ? done : open).push(line);
-    const clues = [...opened].filter((k) => k.startsWith(`clue:${poi.id}|`)).map((k) => k.slice(`clue:${poi.id}|`.length));
     if (clues.length > 0) notes[line] = clues.join("\n");
   }
   return { open, done, ...(Object.keys(notes).length > 0 ? { notes } : {}), ...(places.size > 0 ? { places: [...places] } : {}) };

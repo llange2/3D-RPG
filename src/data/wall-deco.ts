@@ -43,6 +43,21 @@ export const WALL_DECO_ITEMS: readonly number[] = [MOOSE_KING_ITEM, ...Object.ke
 /** The reliefs are as big as the moose king's carving (scale 1.2 of a file that is 1.3 x 1.9). */
 export const DECO_SCALE = 1.2;
 
+/**
+ * Where the wall may cut a relief (53rd playtest, point 4: the second demon of the Undercroft of Siletha stood 0.78 out of the wall): the z of the file (model units, the back at the
+ * lowest z, the front towards +z) of the lowest part of the relief that is seen from the front, the plane of its backing plate. Below it the wall hides what the relief shows, above it the
+ * relief stands free; the view sinks each relief into the wall exactly up to this plane and no deeper. Measured with `tools/dev/measure-relief.mjs` (the 1st percentile of the front-most
+ * surface over the silhouette: at most one hundredth of the picture lies lower, where the rounded edge falls away).
+ */
+export const DECO_PLATE: Readonly<Record<string, number>> = {
+  obj_deco_evil_wizard: -0.171,
+  obj_deco_evil_witch: -0.12,
+  obj_deco_barbarian: -0.158,
+  obj_deco_demon_1: -0.156,
+  obj_deco_demon_2: -0.132,
+  obj_deco_lion: -0.003,
+};
+
 /** Cells between two decorations on the walls of a dungeon ("every 10 fields"). */
 export const WALL_DECO_SPACING = 10;
 

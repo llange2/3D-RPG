@@ -192,7 +192,7 @@ const BUFF_TEXT: Partial<Record<TimedEffect["kind"], (caster: string, target: st
   stone_skin: (_, t) => `${t}'s skin turns to stone: more armor, but half the speed.`,
   rage: (_, t) => `${t} flies into a rage: more damage, but half the armor.`,
   power_shield: () => "A shield of force surrounds the party and takes a tenth off every blow.",
-  detect_monster: () => "The monsters of the land show themselves on the map.",
+  detect_monster: () => "The monsters of the land show themselves on the minimap.",
 };
 
 const VIEW_NAMES: Record<ViewDistance, string> = { close: "Close", medium: "Medium", far: "Far" };
@@ -1431,7 +1431,7 @@ export class Game {
     cursorStepped();
     this.syncSurroundings();
     // a levitating party does not walk: the wind takes the place of the footsteps
-    if (hasEffect(s.party, "levitate")) this.audio.windStep(0.6);
+    if (hasEffect(s.party, "levitate")) this.audio.levitateWind(0.6);
     else this.audio.play(this.mode === "overworld" ? stepSound(this.world.tile(x, y)) : 9010, 0.6);
     this.passTime(stepMinutes(this.outdoors(), s.party.talents));
     this.campaignView.focus(x, y);
@@ -2439,9 +2439,28 @@ export class Game {
     this.save("auto");
   }
 
+  /** The question "Enter the town of …?" is on the screen (or being prepared): a second one never opens over it. */
+  private enterPromptOpen = false;
+
+  /**
+   * Asks whether the party enters a place. 53rd playtest, point 23: a step onto the tile in front of a place that was already queued (a held key) bumped into the place
+   * (`onBlocked`) while `onArrived` was still waiting for the pirate ship, so the question came up twice; the second one, answered after the party was inside, loaded the place again.
+   * One question at a time, and an answer that comes after the scene changed does nothing.
+   */
   private async promptEnterPoi(poiId: string): Promise<void> {
+    if (this.enterPromptOpen) return;
+    this.enterPromptOpen = true;
+    try {
+      await this.askToEnter(poiId);
+    } finally {
+      this.enterPromptOpen = false;
+    }
+  }
+
+  private async askToEnter(poiId: string): Promise<void> {
     const poi = this.world.poiById(poiId);
     if (!poi) return;
+    const epoch = this.fxEpoch;
     if (this.enc.battleMode) {
       this.audio.play(9014, 0.5);
       this.ui.log(IN_MELEE_STEP, "bad");
@@ -2493,7 +2512,7 @@ export class Game {
     const first = this.state.visited.has(poi.id) ? "" : `\nLevel ${poi.tier} ${kind === "town" ? "settlement" : "danger"}.`;
     const yes = await this.ui.confirm(poi.name, `Enter the ${kind} of ${poi.name}?${first}`, "Enter", "Stay outside");
     this.player.locked = false;
-    if (yes) await this.openInterior(poi);
+    if (yes && epoch === this.fxEpoch && this.mode === "overworld" && !this.over && !this.busy) await this.openInterior(poi);
   }
 
   // ---------------------------------------------------------------- actions
@@ -3043,6 +3062,8 @@ export class Game {
       // the wall goes down into the floor as long as the sound of the stone lasts (it used to stand until the next step)
       this.interiorView.sinkWall(end.seal.x, end.seal.y, this.audio.durationOf(9050, 1.6));
       this.audio.play(9050);
+      // 53rd playtest, point 24: the quest is solved, which sounds like the one that is reached in the end room (`noteEndRoom`); a little after the stone starts, so that both are heard
+      this.later(0.3, () => this.audio.play(9018));
       this.ui.log("A wall slides aside with a grinding of stone.", "good");
     }
     if (end.isolated) {
@@ -4200,7 +4221,7 @@ export class Game {
       case "suppress":
         this.audio.play(9031);
         if (result.condition) for (const fx of cureEffects([result.condition])) this.ui.avatarEffect(result.target, fx);
-        this.ui.log(result.condition ? `${party.characters[result.target]!.name}'s ${result.condition.toLowerCase()} is held back: the time to find a cure starts over.` : "It had no effect.", result.condition ? "good" : "info");
+        this.ui.log(result.condition ? `${party.characters[result.target]!.name}'s ${result.condition.toLowerCase()} is held back: the time left to find a cure is doubled.` : "It had no effect.", result.condition ? "good" : "info");
         break;
       case "revive":
         this.audio.play(9031);
@@ -4447,8 +4468,9 @@ export class Game {
     // opens 25 cells across (the user's wish); zooming out is one wheel step away
     let view: MapViewport = { ...here(), cells: clampCells(MAP_OPEN_CELLS, limits) };
     // 42nd playtest, point 12: Wizard's Eye uncovers the minimap only; the big map is uncovered by walking, as ever (`eye` stays off here)
-    const monsters = this.mappedMonsters();
-    const detect = this.detectOn();
+    // 53rd playtest, point 25: Detect Monster shows the monsters on the minimap only; the big map shows what the party sees
+    const detect = false;
+    const monsters = this.mappedMonsters(detect);
     // the game stands still while the map is open, so what the Crow sees is the same until it is closed
     const traps = this.trapsShown();
     const eye = false;
@@ -5258,9 +5280,9 @@ export class Game {
    * The monsters the maps may show (36th playtest): only the ones inside the viewing cone, where nothing hides them. Detect Monster lifts that (every monster of the level,
    * the maps then skip the ground check). Wizard's Eye does not: it uncovers the map and no monster (the spell sheet, 8. 11. 2026).
    */
-  private mappedMonsters(): { x: number; y: number }[] {
+  private mappedMonsters(detect = this.detectOn()): { x: number; y: number }[] {
     const alive = this.enc.monsters.filter((m) => m.hp > 0).map((m) => ({ x: m.x, y: m.y }));
-    if (this.detectOn() || alive.length === 0) return alive;
+    if (detect || alive.length === 0) return alive;
     const { tx, ty, facing } = this.player;
     const seen = new Set<string>();
     for (const [x, y] of visibleCells(this.gridView().opaque, tx, ty, facing, this.sightRadius())) seen.add(`${x},${y}`);

@@ -265,6 +265,22 @@ export function buyItem(party: Party, stock: Stock): { ok: boolean; reason?: "go
   return { ok: true };
 }
 
+/** What the smith bought from the party during this visit: the item and the gold he paid, which is also the price to buy it back (53rd playtest, point 7). */
+export interface SoldItem {
+  item: Item;
+  price: number;
+}
+
+/** Buys a sold item back for what the smith paid. The list of the visit is the caller's: a returned `ok` means the caller drops the entry. */
+export function buyBackItem(party: Party, sold: SoldItem): { ok: boolean; reason?: "gold" | "space" } {
+  if (party.gold < sold.price) return { ok: false, reason: "gold" };
+  const copy: Item = JSON.parse(JSON.stringify(sold.item)) as Item;
+  copy.id = "";
+  if (!giveItem(party, copy)) return { ok: false, reason: "space" };
+  party.gold -= sold.price;
+  return { ok: true };
+}
+
 export function sellItem(party: Party, character: number, slot: string): boolean {
   const c = party.characters[character]!;
   const item = c.inventory[slot];

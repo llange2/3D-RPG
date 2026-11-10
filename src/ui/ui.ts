@@ -248,6 +248,7 @@ export class UI {
       else if (e.kind === "levitate") icons.set("gui_levitate", "Levitate");
       else if (e.kind === "power_shield") icons.set("gui_power_shield", "Power Shield: a tenth less damage");
       else if (e.kind === "wizard_eye") icons.set("gui_wizard_eye", "Wizard's Eye: the whole map shows");
+      else if (e.kind === "detect_monster") icons.set("gui_detect_monster", "Detect Monster: the monsters show on the minimap");
     }
     this.status.replaceChildren(...[...icons].map(([name, title]) => h("img", { src: assetPath(`ui/tex_${name}.webp`), title, alt: title })));
   }
@@ -445,7 +446,7 @@ export class UI {
                 "div",
                 { class: "id-res" },
                 "Resistances: ",
-                ...names.flatMap(([key, label], i) => [i > 0 ? ", " : "", h("span", { class: `res-${resistanceTone(r.resistances[key])}`, text: `${label} ${Number(r.resistances[key].toFixed(2))}` })]),
+                ...names.flatMap(([key, label], i) => [i > 0 ? ", " : "", h("span", { class: `res-${resistanceTone(r.resistances[key])}`, text: `${label} ${Math.round(r.resistances[key] * 100)}%` })]),
               ),
             ),
           ),

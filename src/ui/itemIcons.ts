@@ -63,4 +63,13 @@ export function itemIcon(item: Pick<Item, "texture">, size?: number): HTMLElemen
   return el;
 }
 
+/**
+ * A picture of the sheet for `keepSpellArtWarm` to keep in the page: a slot that really shows the sheet holds its decoded bitmap, which a reference in a variable does not
+ * (53rd playtest, point 29: in a long game the inventory slots filled in one after the other again). Null while the sheet has not arrived.
+ */
+export function warmItemIcon(size: number): HTMLElement | null {
+  const first = sheet ? Object.keys(sheet.cellOf)[0] : undefined;
+  return first ? itemIcon({ texture: first }, size) : null;
+}
+
 void image;
