@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildMapContent, type ActionInstance } from "../../src/actions";
 import { resolveAction, type ActionContext } from "../../src/actions/handlers";
 import { seedFromString } from "../../src/core/rng";
-import { LOCK_HARDNESS, TIER_ENTRY, TIER_EXIT, hasOrdinaryLock, lockDifficulty, lockEase, lockLevel, refSkill, type LockKind } from "../../src/data/locks";
+import { LOCK_HARDNESS, TIER_ENTRY, TIER_EXIT, hasOrdinaryLock, lockDifficulty, lockEase, lockGear, lockLevel, refSkill, type LockKind } from "../../src/data/locks";
 import { generateInterior } from "../../src/interiors";
 import { createDefaultParty } from "../../src/sim/party";
 import { hasLockpicker } from "../../src/sim/roster";
@@ -10,7 +10,7 @@ import { createCharacter } from "../../src/sim/character";
 import type { Party } from "../../src/sim/types";
 import { BIOME, type Poi } from "../../src/world/types";
 import { World } from "../../src/world/world";
-import { bands, leverChance, profiles, skillsAt } from "../../tools/balance/thievery";
+import { bands, leverChance, profiles, ringNinjaChance, skillsAt } from "../../tools/balance/thievery";
 import { pathLevels } from "../../tools/balance/challenge";
 import { formulasFrom } from "../../tools/balance/cli";
 import { GROWTH_USER } from "../../tools/balance/hero";
@@ -46,14 +46,14 @@ function logNinja(level = 10): Party {
 const hardnessOf = (kind: LockKind): number => LOCK_HARDNESS[kind];
 
 describe("thievery locks", () => {
-  it("hits the targets for the median ninja on every level of every tier: about 70 % at an ordinary chest, 35 % at a king's chest, 90 % at a door", { timeout: 120_000 }, () => {
+  it("hits the targets for the median ninja without a ring up to level 9 (the fit of the hardness, `lockGear` 1): about 70 % at an ordinary chest, 35 % at a king's chest, 90 % at a door", { timeout: 120_000 }, () => {
     const growth = GROWTH_USER;
     const tiers = bands(pathLevels(formulasFrom("v4"), { path: "bands" }));
     const ninja = [profiles(growth, 12).find((p) => p.key === "ninja")!.spec];
     const mean = (kind: LockKind): number => {
       let sum = 0;
       let n = 0;
-      for (const b of tiers) for (const lv of b.levels) if (lv >= 4) (sum += leverChance(ninja, b, hardnessOf(kind), lv, growth, 12)), n++;
+      for (const b of tiers) for (const lv of b.levels) if (lv >= 4) (sum += leverChance(ninja, b, hardnessOf(kind), lv, growth, 12, false)), n++;
       return sum / n;
     };
     expect(mean("chest")).toBeGreaterThan(0.64);
@@ -70,12 +70,45 @@ describe("thievery locks", () => {
     const spec = (key: string) => [profiles(growth, 12).find((p) => p.key === key)!.spec];
     for (const b of tiers.slice(1)) {
       const mid = Math.round((b.entry + b.exit) / 2);
-      const at = (key: string, lv: number) => leverChance(spec(key), b, LOCK_HARDNESS.chest, lv, growth, 12);
+      const at = (key: string, lv: number) => leverChance(spec(key), b, LOCK_HARDNESS.chest, lv, growth, 12, false);
       expect(Math.abs(at("ninja", b.entry) - at("ninja", b.exit)), `tier ${b.tier}`).toBeLessThan(0.12);
       expect(at("ninja", mid), `tier ${b.tier}`).toBeLessThan(0.9); // never "always"
       expect(at("thief", mid)).toBeGreaterThan(at("ninja", mid));
       expect(at("ninja", mid)).toBeGreaterThan(at("nothief", mid));
     }
+  });
+
+  it("lifts the lock from level 10 on for the ring of the thief (1 up to level 10, 1.15 on level 11, 1.3 from level 12) and leaves the levels below alone", () => {
+    expect(lockGear(1)).toBe(1);
+    expect(lockGear(9)).toBe(1);
+    expect(lockGear(10)).toBe(1);
+    expect(lockGear(11)).toBeCloseTo(1.15, 6);
+    expect(lockGear(12)).toBeCloseTo(1.3, 6);
+    expect(lockGear(50)).toBeCloseTo(1.3, 6);
+    // the case of the log of 10 Nov 2026: a tier 3 chest for a party of level 12 was 28, now 36 (1.3 times)
+    expect(lockDifficulty("chest", 3, 12)).toBe(Math.round(LOCK_HARDNESS.chest * refSkill(12) * 1.3));
+    expect(lockDifficulty("chest", 2, 9)).toBe(Math.round(LOCK_HARDNESS.chest * refSkill(9)));
+  });
+
+  it("gives the median ninja with a ring of the thief about 70 to 80 % at a chest from level 12 on, and the one without it about half", { timeout: 120_000 }, () => {
+    const growth = GROWTH_USER;
+    const tiers = bands(pathLevels(formulasFrom("v4"), { path: "bands" }));
+    const ninja = [profiles(growth, 12).find((p) => p.key === "ninja")!.spec];
+    let ring = 0;
+    let bare = 0;
+    let n = 0;
+    for (const b of tiers) {
+      for (const lv of b.levels) {
+        if (lv < 12 || lv > 40) continue;
+        ring += ringNinjaChance(b, LOCK_HARDNESS.chest, lv, growth, 12);
+        bare += leverChance(ninja, b, LOCK_HARDNESS.chest, lv, growth, 12);
+        n++;
+      }
+    }
+    expect(ring / n).toBeGreaterThan(0.68);
+    expect(ring / n).toBeLessThan(0.85);
+    expect(bare / n).toBeGreaterThan(0.38);
+    expect(bare / n).toBeLessThan(0.58);
   });
 
   it("fits the reference skill to the median ninja of the simulator (within 8 % from level 3 on)", () => {

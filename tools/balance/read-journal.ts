@@ -72,7 +72,7 @@ function report(label: string, save: Save): void {
   const byClass = new Map<string, { tries: number; p: number }>();
   for (const l of locks) for (const h of l.heroes) { const c = byClass.get(h.cls) ?? { tries: 0, p: 0 }; c.tries++; c.p += h.p; byClass.set(h.cls, c); }
   if (byClass.size > 0) {
-    console.log("  chance of a single hero by class:");
+    console.log("  chance of the hero who picked, by class (before 10 Nov 2026 every hero rolled, so older entries count all of them):");
     table([...byClass].sort().map(([k, c]) => [k, String(c.tries), pct(c.p, c.tries)]));
   }
 

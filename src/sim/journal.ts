@@ -55,10 +55,10 @@ export interface LockEvent {
   lvl: number;
   lockLvl: number;
   diff: number;
-  /** The best roll of the party. */
+  /** The roll of the hero who picked (the active hero with the highest thievery skill; since 10 Nov 2026 `heroes` holds only him, before it held every hero and the best roll counted). */
   best: number;
   ok: boolean;
-  /** The chance that the best of the party reaches the lock, 0 to 1. */
+  /** The chance that the roll reaches the lock, 0 to 1. */
   p: number;
   /** Set when the failed attempt set off the trap of the chest: the index of the hero it hit. */
   fumble?: number;

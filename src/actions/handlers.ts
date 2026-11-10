@@ -8,7 +8,7 @@ import { ITEM_RULES } from "../data/item-rules";
 import { LOCK_FUMBLE_CHANCE, lockDifficulty, lockLevel } from "../data/locks";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
-import { attr, canAct, canBeHealed, gainAttribute, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
+import { attr, canAct, canBeHealed, gainAttribute, healHp, itemBonus, levelUp, thieveryRoll, thieverySkill } from "../sim/character";
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
 import { addCondition, removeCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
@@ -312,23 +312,27 @@ function lockPartyLevelExact(party: Party): number {
   return active.length === 0 ? 1 : active.reduce((sum, i) => sum + party.characters[i]!.level, 0) / active.length;
 }
 
-/** The best roll of the heroes at a lock and who made it (-1 for nobody). The rolls come from `rng`, a stream of its own, never the one the loot is drawn from. */
+/**
+ * The roll at a lock: only the best thief of the party picks it, the active hero with the highest thievery skill (a thief or a ninja when one is able to act; the first of equals),
+ * not every hero with the best of the rolls counting (balance journal of 10 Nov 2026: the targets of `data/locks.ts` are for one ninja, four rolls gave the party 5 to 15 points more).
+ * -1 for nobody. The roll comes from `rng`, a stream of its own, never the one the loot is drawn from.
+ */
 function pickLock(party: Party, rng: Rng): PickedLock {
-  let best = -1;
   let picker = -1;
-  const rolls: { i: number; roll: number }[] = [];
+  let top = -1;
   for (const i of activeCharacters(party)) {
-    const roll = thieveryRoll(party.characters[i]!, rng);
-    rolls.push({ i, roll });
-    if (roll > best) {
-      best = roll;
+    const skill = thieverySkill(party.characters[i]!);
+    if (skill > top) {
+      top = skill;
       picker = i;
     }
   }
-  return { best, picker, rolls };
+  if (picker < 0) return { best: -1, picker, rolls: [] };
+  const best = thieveryRoll(party.characters[picker]!, rng);
+  return { best, picker, rolls: [{ i: picker, roll: best }] };
 }
 
-/** What `pickLock` found: the best roll, who made it, and every roll (the journal notes them). */
+/** What `pickLock` found: the roll, who made it, and the rolls (one; the journal notes them). */
 interface PickedLock {
   best: number;
   picker: number;

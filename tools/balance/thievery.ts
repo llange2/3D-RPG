@@ -17,13 +17,13 @@
  *   --hardref reference for the hard lock (default thief)
  */
 import { BASE_CLASS, BASE_RACE } from "../../src/data/tables";
-import { LOCK_HARDNESS, lockEase, lockLevel, refSkill, type LockKind } from "../../src/data/locks";
+import { LOCK_HARDNESS, lockEase, lockGear, lockLevel, refSkill, type LockKind } from "../../src/data/locks";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { createCharacter, thieveryRoll } from "../../src/sim/character";
 import type { ClassName, RaceName } from "../../src/sim/types";
 import { pathLevels } from "./challenge";
 import { formulasFrom, growthFrom } from "./cli";
-import { attrsAt, buildGear, CLASSES, gearForTier, RACES, type HeroSpec, type Growth } from "./hero";
+import { attrsAt, buildGear, CLASSES, defaultSpec, gearForTier, RACES, type HeroSpec, type Growth } from "./hero";
 
 // ---------------------------------------------------------------- the formula
 
@@ -109,22 +109,22 @@ export function bands(levels: number[]): Band[] {
   return out;
 }
 
-/** A group of heroes that roll independently; the best roll counts (`handlers.ts`: doors, king's chests). */
+/** A group of heroes; only the one with the highest skill rolls (`pickLock` in `handlers.ts`, since 10 Nov 2026; before, every hero rolled and the best roll counted). */
 type Group = HeroSpec[];
 
-/** Chance that at least one hero of the group reaches `difficulty`, averaged over the gear rolls and over `levels`. */
+/** Chance that the best thief of the group (the highest skill) reaches `difficulty`, averaged over the gear rolls and over `levels`. */
 function groupChance(group: Group, band: Band, difficulty: number, growth: Growth, salts: number, levelsOnly?: number[]): number {
   const levels = levelsOnly ?? band.levels;
   let total = 0;
   for (const level of levels) {
     for (let salt = 0; salt < salts; salt++) {
-      let fail = 1;
+      let top = 0;
       for (const spec of group) {
         const attrs = attrsAt(spec, level, growth);
         const g = buildGear(spec.cls, gearForTier(band.tier), salt);
-        fail *= 1 - successChance(skillOf(attrs.lck + g.bonus.lck!, attrs.acc + g.bonus.acc!, thieveryOf(spec), level), difficulty);
+        top = Math.max(top, skillOf(attrs.lck + g.bonus.lck!, attrs.acc + g.bonus.acc!, thieveryOf(spec), level));
       }
-      total += 1 - fail;
+      total += successChance(top, difficulty);
     }
   }
   return total / (levels.length * salts);
@@ -143,14 +143,26 @@ export function difficultyFor(group: Group, band: Band, target: number, growth: 
 // ---------------------------------------------------------------- the level lever (`data/locks.ts`)
 
 /** The difficulty of a lock of hardness `k` for a party of `level` in a place of `tier` (the formula of `lockDifficulty` with a free hardness). */
-export function leverDifficulty(k: number, tier: number, level: number): number {
+export function leverDifficulty(k: number, tier: number, level: number, gear = true): number {
   const l = lockLevel(tier, level);
-  return Math.max(1, Math.round(k * refSkill(l) * lockEase(l)));
+  return Math.max(1, Math.round(k * refSkill(l) * lockEase(l) * (gear ? lockGear(l) : 1)));
 }
 
 /** Chance of a group at a lock of hardness `k` for heroes of `level` (every hero has that level) in the tier of `band`. */
-export function leverChance(group: Group, band: Band, k: number, level: number, growth: Growth, salts: number): number {
-  return groupChance(group, band, leverDifficulty(k, band.tier, level), growth, salts, [level]);
+export function leverChance(group: Group, band: Band, k: number, level: number, growth: Growth, salts: number, gear = true): number {
+  return groupChance(group, band, leverDifficulty(k, band.tier, level, gear), growth, salts, [level]);
+}
+
+/** Chance of the median ninja who wears a Ring of the Thief (+15 luck, +15 accuracy) at a lock of hardness k with the factor of lockGear: the case the factor is made for. */
+export function ringNinjaChance(band: Band, k: number, level: number, growth: Growth, salts: number): number {
+  const spec = defaultSpec("Ninja");
+  const attrs = attrsAt(spec, level, growth);
+  let total = 0;
+  for (let salt = 0; salt < salts; salt++) {
+    const g = buildGear(spec.cls, gearForTier(band.tier), salt);
+    total += successChance(skillOf(attrs.lck + g.bonus.lck! + 15, attrs.acc + g.bonus.acc! + 15, thieveryOf(spec), level), leverDifficulty(k, band.tier, level));
+  }
+  return total / salts;
 }
 
 /** The hardness (steps of 0.01) whose chance for `group`, averaged over every level of every tier from `fromLevel` on, is closest to `target`. */
@@ -161,7 +173,7 @@ export function hardnessFor(group: Group, tiers: Band[], target: number, growth:
     const k = i / 100;
     let sum = 0;
     let n = 0;
-    for (const band of tiers) for (const level of band.levels) if (level >= fromLevel) (sum += leverChance(group, band, k, level, growth, salts)), n++;
+    for (const band of tiers) for (const level of band.levels) if (level >= fromLevel) (sum += leverChance(group, band, k, level, growth, salts, false)), n++;
     const g = Math.abs(sum / n - target);
     if (g < gap) (gap = g), (best = k);
   }
@@ -199,6 +211,12 @@ function leverReport(tiers: Band[], profs: Profile[], growth: Growth, salts: num
       const cells = tiers.map((b) => [b.entry, Math.round((b.entry + b.exit) / 2), b.exit].map((lv) => pct(leverChance(group, b, k, lv, growth, salts))).join(" ").padEnd(16));
       console.log(label.slice(0, 38).padEnd(40) + cells.join(""));
     }
+  }
+
+  console.log("\nNinja mit Ring of the Thief (+15 Glueck, +15 Genauigkeit), Stufe Eintritt / Mitte / Austritt des Tiers, Schloss mit lockGear (ab Stufe 10 bis Faktor 1,3):");
+  for (const kind of Object.keys(LOCK_HARDNESS) as LockKind[]) {
+    const cells = tiers.map((b) => [b.entry, Math.round((b.entry + b.exit) / 2), b.exit].map((lv) => pct(ringNinjaChance(b, LOCK_HARDNESS[kind], lv, growth, salts))).join(" ").padEnd(16));
+    console.log(kind.padEnd(40) + cells.join(""));
   }
 
   console.log(`\nStufe 1 bis 3 (Tier 1), Schwierigkeit und Chance des Median-Ninjas / Dieb / Gruppe ohne Dieb/Ninja an der gewoehnlichen Kiste (Haerte ${LOCK_HARDNESS.chest}):`);

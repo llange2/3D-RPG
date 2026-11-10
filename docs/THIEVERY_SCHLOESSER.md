@@ -28,7 +28,7 @@ Wurf  = gleichverteilt zwischen floor(Skill / 3) und Skill
 
 Glück und Genauigkeit zählen mit Ausrüstung (`attr`). Thievery ist die Summe aus Klasse und Rasse und wächst nicht mit der Stufe (Dieb 30, Ninja 15, alle anderen 0; Elf und Zwerg +10, Gnom +5, Mensch 0, Ork −10). Die Stufe geht linear ein.
 
-Die Probe zählt den **besten Wurf aller aktiven Helden** (`pickLock` in `handlers.ts`, Fall `treasure` und `door`). Der Wurf der Schlösser hat einen eigenen Zufallsstrom (`<uid>@lock`), die Beute der Kiste ändert sich also nicht. Die Versuchsnummer ist `state.steps * 7 + opened.size`: ein Fehlschlag gilt, bis die Gruppe einen Schritt gemacht hat, danach würfelt sie neu.
+Die Probe macht **ein einziger Held: der aktive Held mit dem höchsten Skill** (`pickLock` in `handlers.ts`, Fall `treasure` und `door`; Dieb oder Ninja, sobald einer handeln kann, sonst der nächstbeste; bei Gleichstand der erste der Gruppe). Bis zum 10. 11. 2026 würfelte jeder aktive Held und der beste Wurf zählte; die Zielchancen gelten aber für den Ninja allein, vier Würfe gaben der Gruppe 5 bis 15 Punkte mehr. Der Wurf der Schlösser hat einen eigenen Zufallsstrom (`<uid>@lock`), die Beute der Kiste ändert sich also nicht. Die Versuchsnummer ist `state.steps * 7 + opened.size`: ein Fehlschlag gilt, bis die Gruppe einen Schritt gemacht hat, danach würfelt sie neu.
 
 Die Chance eines Helden mit dem Skill S gegen die Schwierigkeit D ist `1,5 × (1 − D / S)` (zwischen 0 und 1). Nicht-Diebe haben trotzdem einen Skill: Glück und Genauigkeit stecken in jedem Helden, ein Ranger hat auf gleicher Stufe etwa 55 % des Skills eines Ninjas, ein Dieb etwa 130 %.
 
@@ -42,7 +42,7 @@ Die Chance eines Helden mit dem Skill S gegen die Schwierigkeit D ist `1,5 × (1
 L          = Ø Stufe der aktiven Helden, nach unten auf TIER_ENTRY[tier] geklemmt, nach oben auf TIER_EXIT[tier + 1] (Austritt des nächsten Tiers; Tier 5 unbegrenzt)
 refSkill   = L × (3,8 + 0,055 × L)             // Skill des Median-Ninjas, Anpassung an den Simulator
 ease       = min(1, 0,2 + 0,2 × L)             // Stufe 1 / 2 / 3: 0,4 / 0,6 / 0,8, ab Stufe 4: 1
-Schwierigkeit = max(1, round(Härte × refSkill × ease))
+Schwierigkeit = max(1, round(Härte × refSkill × ease × gear))   // gear = lockGear(L): 1 bis Stufe 10, 1,15 auf Stufe 11, 1,3 ab Stufe 12
 ```
 
 * **Innerhalb eines Tiers bleibt die Chance gleich** (Ninja 67 bis 76 % an der Kiste, vorher 80 % → 100 %).
@@ -115,11 +115,13 @@ Mit „Accept“ geht der Dialog zu, mit „Back“ bleibt er offen. Der Dialog 
 
 Die Kampagne behält ihre eigenen Truhen (`min_thievery`, Wurf des gewählten Helden, Falle unter dem halben Wert); sie ist von den Werten oben nicht betroffen.
 
+**Hinweis zu den Tabellen von Abschnitt 4:** sie stammen aus der Zeit, in der in der Gruppe der beste von mehreren Würfen zählte, und noch ohne `lockGear`. Aktuell zeigt `npx tsx tools/balance/thievery.ts --lever` die Zeilen mit einem Wurf je Gruppe und eine Zeile „Ninja mit Ring of the Thief“.
+
 ## 7. Werte ändern
 
 Ändern sich Ausrüstung, Attribute oder die Formel der Probe, schlägt der erste Test von `thievery.test.ts` (Zielchancen) oder der Test zu `refSkill` fehl. Dann `npx tsx tools/balance/thievery.ts --lever` laufen lassen, den Abschnitt „Härte“ in `LOCK_HARDNESS` übernehmen und gegebenenfalls `refSkill` nachfitten (Tabelle „refSkill gegen den Skill des Median-Ninjas“). Eine geänderte Härte oder `refSkill` ändert nur die Probe zur Spielzeit (kein Generatorwert hängt daran, `GEN_VERSION` bleibt); eine geänderte Falle (`lockTrap`, `LOCK_FUMBLE_CHANCE` ist Spielzeit, die Falle selbst Generator) braucht `GEN_VERSION` und `golden:update`.
 
-## 5. Auswertung des Journals vom 10. 11. 2026 (Ninja, Stufe 1 bis 10)
+## 8. Auswertung des Journals vom 10. 11. 2026 (Ninja, Stufe 1 bis 10)
 
 Quelle: `.ignore/mm3-saves-2026-11-10-06-16-23.json` (Seed `pearl-shore-794`, 84 Versuche, `tools/balance/read-journal.ts`). Die Chance je Versuch ist aus den Skills im Journal nachgerechnet.
 
@@ -135,3 +137,9 @@ Quelle: `.ignore/mm3-saves-2026-11-10-06-16-23.json` (Seed `pearl-shore-794`, 84
 Der einzige Fehlschlag in Tier 2 kam, als Ninja und Wizard „Crazy“ waren: nur Ritter und Paladin würfelten (Skill 4 und 9 gegen 23). Das ist gewollt, ohne Dieb oder Ninja ist eine Kiste schwer.
 
 **Nachtrag, zweites Journal vom 10. 11. 2026** (`.ignore/mm3-saves-2026-11-10-11-39-17.json`): ein Ninja der Stufe 46 mit den Attributen der Stufe 1 (Debug-Stufen ohne Attributswachstum und ohne Ausrüstung, Skill 216 statt etwa 290 des Median-Ninjas) bekam die Tür eines Tier-1-Orts nicht auf: ganz ohne obere Grenze war sie auf Stufe 46 gerechnet (Schwierigkeit 114, 71 % je Versuch, und der Wurf bleibt bis zum nächsten Schritt derselbe, 40 gleiche Fehlversuche). **Entscheidung: die obere Klemme sitzt am Austritt des nächsten Tiers** (`lockLevel`). Das lässt den Bereich des ersten Journals (Tier 1, Stufe 5 bis 10) unverändert, und ein Tier-1-Schloss ist für Stufe 46 jetzt Kiste 23 / Tür 17 (vorher 151 / 114). Ein ungerüsteter Ninja (74 % des Median-Skills) hat in jedem Tier an seinem Band die Chance von etwa 44 % an der Kiste, der Median-Ninja 70 %; darüber hinaus 100 %.
+
+## 9. Auswertung des L13-Stands (Ring of the Thief, ein Wurf)
+
+Quelle: `.ignore/mm3-saves-2026-11-10-15-22-42.json`. Seit der oberen Klemme am nächsten Tier (Abschnitt 8) gelangen alle 31 Versuche ab Gruppenstufe 10,5. Der Skill des Ninjas gegen `refSkill`: 0,93 bis 0,96 auf Stufe 4 bis 9 (keine Ringe, das Gefühl stimmte), 1,04 auf Stufe 10, 1,14 auf Stufe 11, **1,35 auf Stufe 12**: er trägt einen Ring of the Thief (+15 Genauigkeit, +15 Glück), das sind +15 im Term `(Glück + Genauigkeit) / 2 + Thievery`, ein Drittel des Skills. Der Simulator würfelt zwei zufällige Ringe, der Ring ist darin nicht enthalten. Dazu würfelten alle vier Helden, und der beste Wurf zählte (Ninja 82 bis 94 %, Gruppe 88 bis 99 %).
+
+**Entscheidungen des Nutzers (10. 11. 2026):** (1) das Schloss zielt ab Stufe 10 auf den Ninja **mit** Ring (ca. 75 bis 80 %), ein Ninja ohne Ring hat dann etwa 50 %: `lockGear` hebt das Schloss auf 1,15 (Stufe 11) und 1,3 (ab Stufe 12), Stufe 1 bis 10 bleibt; (2) **nur der beste aktive Dieb würfelt**, nicht die Gruppe. Nachgerechnet mit dem Journal: Kiste Tier 3 Stufe 12 von 94 % auf 77 % (Schwierigkeit 28 auf 36), Kiste Tier 2 Stufe 11 etwa 71 %, Tür Tier 2 Stufe 11 etwa 90 %. Grenze der Daten: 31 Versuche, ein Ring; ob 1,3 für Stufe 20 bis 50 passt, zeigt erst ein späteres Journal (die beiden Zahlen stehen in `lockGear`).
