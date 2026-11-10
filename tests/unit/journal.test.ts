@@ -36,7 +36,7 @@ describe("balance journal: the chance of a roll", () => {
 });
 
 describe("balance journal: locks", () => {
-  it("notes level, attributes, skill, roll and chance of every hero who rolled", () => {
+  it("notes level, attributes, skill, roll and chance of the one hero who rolled, the best thief of the party", () => {
     const party = createDefaultParty();
     const { events } = collect();
     resolveAction(chest({ level: 1, gold: 1, items: 0, difficulty: 1 }), ctxFor(party, 3, 2));
@@ -45,14 +45,16 @@ describe("balance journal: locks", () => {
     expect(e!.kind).toBe("chest");
     expect(e!.uid).toBe("m#chest:0");
     expect(e!.tier).toBe(2);
-    expect(e!.heroes).toHaveLength(party.characters.length);
+    // only one hero rolls: the active hero with the highest thievery skill, the first of equals
+    expect(e!.heroes).toHaveLength(1);
+    const best = party.characters.reduce((b, c, i) => (thieverySkill(c) > thieverySkill(party.characters[b]!) ? i : b), 0);
+    expect(e!.heroes[0]!.i).toBe(best);
     const avg = party.characters.reduce((s, c) => s + c.level, 0) / party.characters.length;
     expect(e!.lvl).toBeCloseTo(avg, 6);
     expect(e!.lockLvl).toBe(lockLevel(2, Math.round(avg)));
     expect(e!.diff).toBe(lockDifficulty("chest", 2, Math.round(avg)));
-    e!.heroes.forEach((h, n) => {
+    e!.heroes.forEach((h) => {
       const c = party.characters[h.i]!;
-      expect(h.i).toBe(n);
       expect(h.name).toBe(c.name);
       expect(h.cls).toBe(c.classType);
       expect(h.lvl).toBe(c.level);
@@ -65,8 +67,28 @@ describe("balance journal: locks", () => {
     });
     expect(e!.best).toBe(Math.max(...e!.heroes.map((h) => h.roll)));
     expect(e!.ok).toBe(e!.best >= e!.diff);
-    // the chance of the party is the chance that at least one of the heroes reaches the lock
-    expect(e!.p).toBeCloseTo(1 - e!.heroes.reduce((p, h) => p * (1 - rollChance(h.skill, e!.diff)), 1), 2);
+    // the chance of the attempt is the chance of this one hero
+    expect(e!.p).toBeCloseTo(rollChance(e!.heroes[0]!.skill, e!.diff), 2);
+  });
+
+  it("lets the thief pick the lock, and the next best hero when the thief cannot act", () => {
+    const party = createDefaultParty();
+    const ninja = party.characters.find((c) => c.classType === "Ninja")!;
+    const others = party.characters.filter((c) => c !== ninja);
+    const { events } = collect();
+    resolveAction(chest({ level: 1, gold: 1, items: 0, difficulty: 1 }, "m#chest:7"), ctxFor(party, 1, 1));
+    expect(events).toHaveLength(1);
+    const [first] = events as LockEvent[];
+    expect(first!.heroes.map((h) => h.cls)).toEqual(["Ninja"]);
+    expect(first!.heroes[0]!.i).toBe(party.characters.indexOf(ninja));
+    expect(first!.heroes[0]!.skill).toBeGreaterThan(Math.max(...others.map((c) => thieverySkill(c))));
+    // the ninja is out: the next best hero rolls alone
+    ninja.conditions.push("Unconscious");
+    resolveAction(chest({ level: 1, gold: 1, items: 0, difficulty: 1 }, "m#chest:8"), ctxFor(party, 2, 1));
+    const second = events[1] as LockEvent;
+    expect(second.heroes).toHaveLength(1);
+    expect(second.heroes[0]!.cls).not.toBe("Ninja");
+    expect(second.heroes[0]!.skill).toBe(Math.max(...others.map((c) => thieverySkill(c))));
   });
 
   it("notes doors and sums up expected and actual chance", () => {
