@@ -2439,9 +2439,28 @@ export class Game {
     this.save("auto");
   }
 
+  /** The question "Enter the town of …?" is on the screen (or being prepared): a second one never opens over it. */
+  private enterPromptOpen = false;
+
+  /**
+   * Asks whether the party enters a place. 53rd playtest, point 23: a step onto the tile in front of a place that was already queued (a held key) bumped into the place
+   * (`onBlocked`) while `onArrived` was still waiting for the pirate ship, so the question came up twice; the second one, answered after the party was inside, loaded the place again.
+   * One question at a time, and an answer that comes after the scene changed does nothing.
+   */
   private async promptEnterPoi(poiId: string): Promise<void> {
+    if (this.enterPromptOpen) return;
+    this.enterPromptOpen = true;
+    try {
+      await this.askToEnter(poiId);
+    } finally {
+      this.enterPromptOpen = false;
+    }
+  }
+
+  private async askToEnter(poiId: string): Promise<void> {
     const poi = this.world.poiById(poiId);
     if (!poi) return;
+    const epoch = this.fxEpoch;
     if (this.enc.battleMode) {
       this.audio.play(9014, 0.5);
       this.ui.log(IN_MELEE_STEP, "bad");
@@ -2493,7 +2512,7 @@ export class Game {
     const first = this.state.visited.has(poi.id) ? "" : `\nLevel ${poi.tier} ${kind === "town" ? "settlement" : "danger"}.`;
     const yes = await this.ui.confirm(poi.name, `Enter the ${kind} of ${poi.name}?${first}`, "Enter", "Stay outside");
     this.player.locked = false;
-    if (yes) await this.openInterior(poi);
+    if (yes && epoch === this.fxEpoch && this.mode === "overworld" && !this.over && !this.busy) await this.openInterior(poi);
   }
 
   // ---------------------------------------------------------------- actions
@@ -3043,6 +3062,8 @@ export class Game {
       // the wall goes down into the floor as long as the sound of the stone lasts (it used to stand until the next step)
       this.interiorView.sinkWall(end.seal.x, end.seal.y, this.audio.durationOf(9050, 1.6));
       this.audio.play(9050);
+      // 53rd playtest, point 24: the quest is solved, which sounds like the one that is reached in the end room (`noteEndRoom`); a little after the stone starts, so that both are heard
+      this.later(0.3, () => this.audio.play(9018));
       this.ui.log("A wall slides aside with a grinding of stone.", "good");
     }
     if (end.isolated) {

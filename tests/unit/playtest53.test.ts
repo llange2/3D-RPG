@@ -8,6 +8,7 @@ import { carriedItems, createDefaultParty, normalizeParty } from "../../src/sim/
 import { buyBackItem, sellItem, sellPrice } from "../../src/sim/economy";
 import { averageDamageLines, averageHit, meleeDamage, rangedDamage } from "../../src/sim/combat";
 import { makeItem } from "../../src/sim/items";
+import { createEncounter, createMonster, lineOfSight, monsterTurn, wayToPlayer, type GridView } from "../../src/sim/encounter";
 import { EQUIPMENT_SLOTS } from "../../src/sim/types";
 
 const SCALING = [8, 10, 17, 20, 25, 28, 37, 39, 44, 50, 63];
@@ -132,6 +133,68 @@ describe("health follows the attributes a hero gains (point 27)", () => {
     const again = wizard.health;
     normalizeParty(party);
     expect(wizard.health).toBe(again); // a second run changes nothing
+  });
+});
+
+/** A map from rows of text ('#' wall, '.' floor); `edges` are wall pieces or beams on the border of two cells. */
+function gridOf(rows: string[], edges: [number, number, number, number][] = []): GridView {
+  const at = (x: number, y: number) => rows[y]?.[x] ?? "#";
+  return {
+    walkable: (x, y) => at(x, y) === ".",
+    water: () => false,
+    opaque: (x, y) => at(x, y) === "#",
+    wallBetween: (x0, y0, x1, y1) => edges.some(([a, b, c, d]) => (a === x0 && b === y0 && c === x1 && d === y1) || (a === x1 && b === y1 && c === x0 && d === y0)),
+  };
+}
+
+describe("a shot never grazes a wall corner on a slanted line (point 26)", () => {
+  // Catacombs of Lunzea: party on 17/57, archer on 14/58, wall on 16/58: dx 3, dy -1, the line touches only the corner of the wall
+  const rows = ["....", "..#."];
+  it("is stopped by the corner in every mirrored and turned position", () => {
+    expect(lineOfSight(gridOf(rows), null, 0, 1, 3, 0)).toBe(false);
+    expect(lineOfSight(gridOf(rows), null, 3, 0, 0, 1)).toBe(false);
+    // mirrored left to right: wall on (1,1), line from (3,1) to (0,0)
+    expect(lineOfSight(gridOf(["....", ".#.."]), null, 3, 1, 0, 0)).toBe(false);
+    // turned: the same slope along the other axis
+    expect(lineOfSight(gridOf(["..", "..", ".#", ".."]), null, 1, 0, 0, 3)).toBe(false);
+    expect(lineOfSight(gridOf(["..", ".#", "..", ".."]), null, 0, 3, 1, 0)).toBe(false);
+  });
+
+  it("still passes when the wall is not at that corner, and on an exact diagonal along one wall", () => {
+    expect(lineOfSight(gridOf(["....", "...."]), null, 0, 1, 3, 0)).toBe(true);
+    expect(lineOfSight(gridOf(["....", "#..."]), null, 0, 1, 3, 0)).toBe(true);
+    expect(lineOfSight(gridOf([".#.", "...", "..."]), null, 0, 0, 1, 1)).toBe(true);
+  });
+
+  it("keeps an archer from shooting past that corner", () => {
+    const archer = Object.values(MONSTERS).find((m) => m.terrain === "land" && m.special_abilties?.includes("Ranged Attack"))!;
+    const party = createDefaultParty();
+    const enc = createEncounter();
+    enc.monsters.push(createMonster("shooter", archer.id, 0, 1));
+    enc.monsters[0]!.alerted = true;
+    enc.monsters[0]!.immobile = true; // it stays where it is: the shot from there is the question
+    const events = monsterTurn(party, gridOf(rows), enc, 3, 0, new Rng(seedFromString("corner")));
+    expect(events.some((e) => e.type === "monster_attack")).toBe(false);
+  });
+});
+
+describe("a support beam shuts the way for monsters too (point 14)", () => {
+  const land = Object.values(MONSTERS).find((m) => m.terrain === "land" && !m.special_abilties?.includes("Ranged Attack"))!;
+  it("finds no way across the edge of a beam in a corridor, and a way where there is none", () => {
+    const corridor = ["........"];
+    expect(wayToPlayer(gridOf(corridor), land, 0, 0, 7, 0, 8)).not.toBeNull();
+    expect(wayToPlayer(gridOf(corridor, [[3, 0, 4, 0]]), land, 0, 0, 7, 0, 8)).toBeNull();
+  });
+
+  it("walks round a beam in a room instead of across it", () => {
+    const room = ["........", "........", "........"];
+    const way = wayToPlayer(gridOf(room, [[3, 1, 4, 1]]), land, 0, 1, 7, 1, 8)!;
+    expect(way).not.toBeNull();
+    let at: [number, number] = [0, 1];
+    for (const [x, y] of way) {
+      expect((at[0] === 3 && at[1] === 1 && x === 4 && y === 1) || (at[0] === 4 && at[1] === 1 && x === 3 && y === 1)).toBe(false);
+      at = [x, y];
+    }
   });
 });
 
