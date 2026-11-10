@@ -5,6 +5,9 @@ import { MONSTERS, SPELLS } from "../../src/data/tables";
 import { addCondition, gainAttribute, recalcValues } from "../../src/sim/character";
 import { castSpell, spellCost, validTarget } from "../../src/sim/spells";
 import { questInterior } from "../helpers/quests";
+import { SUPPORT_BEAM } from "../../src/actions/registry";
+import { isBookshelf } from "../../src/data/spell-loot";
+import { CELL, FACING_DELTA } from "../../src/interiors/types";
 import { clueFlag, reachedFlag, worldQuestLog } from "../../src/game/questLog";
 import { World } from "../../src/world/world";
 import { letterHints } from "../../src/data/letter-hints";
@@ -239,6 +242,45 @@ describe("no name is told twice in the hints of one word (point 12)", () => {
         for (const [name, n] of seen) expect(n, `${word} ${seed}: ${name} told ${n} times\n${hints.join("\n")}`).toBe(1);
       }
     }
+  });
+});
+
+describe("bookshelves stand at a wall and rooms with stone columns have no beams (points 10 and 15)", () => {
+  const places = () => {
+    const out: ReturnType<typeof questInterior>[] = [];
+    for (const quest of ["quest_2", "quest_6", "quest_5"] as const) {
+      for (const layout of ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4"] as const) {
+        for (let variant = 0; variant < 4; variant++) out.push(questInterior(quest, layout, 1 + (variant % 5), variant));
+      }
+    }
+    return out;
+  };
+
+  it("never puts a bookshelf on a cell without a wall beside it", () => {
+    let shelves = 0;
+    for (const { map, content } of places()) {
+      for (const a of content.actions) {
+        if (a.kind !== "treasure" || !isBookshelf(a.params.chest)) continue;
+        shelves++;
+        const walls = (Object.keys(FACING_DELTA) as (keyof typeof FACING_DELTA)[]).filter((f) => map.cells[(a.y + FACING_DELTA[f].dy) * map.width + a.x + FACING_DELTA[f].dx] !== CELL.FLOOR);
+        expect(walls.length, `${map.key} ${a.x}/${a.y}`).toBeGreaterThan(0);
+      }
+    }
+    expect(shelves).toBeGreaterThan(0);
+  });
+
+  it("hangs no wooden beam in a room that has stone columns", () => {
+    let withColumns = 0;
+    for (const { map, content } of places()) {
+      const roomsWithColumns = new Set((map.pillars ?? []).map((p) => map.roomOf[p.y * map.width + p.x]));
+      if (roomsWithColumns.size === 0) continue;
+      withColumns++;
+      for (const a of content.actions) {
+        if (a.kind !== "decor" || Number(a.params.item) !== SUPPORT_BEAM) continue;
+        expect(roomsWithColumns.has(map.roomOf[a.y * map.width + a.x]), `${map.key}: beam ${a.x}/${a.y} in a room with columns`).toBe(false);
+      }
+    }
+    expect(withColumns).toBeGreaterThan(0);
   });
 });
 

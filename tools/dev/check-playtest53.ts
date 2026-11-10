@@ -10,6 +10,8 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
+import { SIDE_DELTA, poiEntrances } from "../../src/world/types";
+import { World } from "../../src/world/world";
 
 const base = process.env.GAME_URL ?? "http://localhost:5191/";
 const outDir = process.argv[2] ?? "playtest53-shots";
@@ -59,6 +61,54 @@ try {
         await shot(`${label}-${side}`);
       }
     }
+  }
+
+  if (part === "enter") {
+    // point 23: the tile in front of a place with a key held down: the step onto it asks "Enter?", and the step that is queued behind it bumps into the place and asks again.
+    // There must be one question, and "Enter" must load the place once.
+    const world = new World(SEED, "default", "default");
+    const poi = world.allPois().find((p) => p.kind === "dungeon" && p.size === 1)!;
+    const e = poiEntrances(poi)[0]!;
+    const { dx, dy } = SIDE_DELTA[poi.side];
+    const facing = dy > 0 ? "N" : dy < 0 ? "S" : dx > 0 ? "W" : "E";
+    console.log(`place ${poi.name} (${poi.id}) entrance ${e.x}/${e.y}, side ${poi.side}, standing at ${e.x + dx}/${e.y + dy} facing ${facing}`);
+    await open();
+    await evalJs(`__game.teleport(${e.x + dx}, ${e.y + dy}, ${JSON.stringify(facing)})`);
+    await sleep(1500);
+    await page.keyboard.down("w");
+    await sleep(1100);
+    await page.keyboard.up("w");
+    await sleep(1800);
+    console.log("questions on the screen:", await evalJs<number>(`document.querySelectorAll(".modal-back").length`));
+    await shot("question");
+    // answer it: one "Enter", and the place loads once (the loading screen, then the interior)
+    await evalJs(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === "Enter"); if (b) b.click(); return !!b; })()`);
+    await sleep(9000);
+    console.log("after Enter: questions", await evalJs<number>(`document.querySelectorAll(".modal-back").length`), "place:", await evalJs<string>(`__game.state.at.mode + " " + (__game.state.at.poiId ?? "")`));
+    await shot("inside");
+  }
+  if (part === "status") {
+    // points 19 and 30: eight symbols (Detect Monster among them) beside the compass; none of them may cover the compass or the focus bar
+    await open();
+    // the compass shows only with the talent Orientation
+    await evalJs(`(() => { const p = __game.state.party; p.talents.push("talent_orientation"); })()`);
+    await evalJs(`(() => { const p = __game.state.party; const until = p.minutes + 600; for (const e of [{ kind: "levitate" }, { kind: "power_shield" }, { kind: "wizard_eye" }, { kind: "detect_monster" }, { kind: "protection", element: "fire" }, { kind: "protection", element: "ice" }, { kind: "protection", element: "acid" }, { kind: "protection", element: "magic" }]) p.effects.push({ ...e, until }); __game.game.refresh(); })()`);
+    for (const [w, h] of [[1280, 720], [1920, 1080], [1000, 700]] as [number, number][]) {
+      await page.setViewport({ width: w, height: h });
+      await sleep(1200);
+      console.log(`${w}x${h}:`, await evalJs<string>(`(() => { const r = (e) => { const b = e.getBoundingClientRect(); return { l: Math.round(b.left), t: Math.round(b.top), r: Math.round(b.right), b: Math.round(b.bottom) }; }; const icons = [...document.querySelectorAll(".status-icons img")].map(r); const compass = r(document.querySelector(".compass")); const hit = icons.filter((i) => i.l < compass.r && i.r > compass.l && i.t < compass.b && i.b > compass.t).length; const rows = new Set(icons.map((i) => i.t)).size; return JSON.stringify({ icons: icons.length, rows, coverCompass: hit, compass, firstIcon: icons[0], last: icons[icons.length - 1], detect: !!document.querySelector('.status-icons img[src*="detect_monster"]') }); })()`));
+      await shot(`${w}x${h}`);
+    }
+  }
+  if (part === "fonts") {
+    // point 29: what is kept in the page, and the faces of the fonts (the dev server of a worktree answers 403 for the font files, so there only the kept pictures show)
+    await open();
+    console.log(await evalJs<string>(`(() => { const holder = document.querySelector(".art-warm"); return JSON.stringify({ kept: !!holder, itemIcon: !!holder?.querySelector(".item-icon"), frames: holder?.querySelectorAll(".parchment").length, statusIcons: holder?.querySelectorAll("img").length, spans: holder?.querySelectorAll("span").length, faces: [...document.fonts].map((f) => f.family + " " + f.weight + " " + f.status).slice(0, 12), almendra700: document.fonts.check('700 16px Almendra') }); })()`));
+    // the inventory opens with its pictures at once: the slot icons must be showing the sheet in the first frame
+    await page.keyboard.press("i");
+    await sleep(400);
+    console.log(await evalJs<string>(`(() => { const icons = [...document.querySelectorAll(".item-icon")]; return JSON.stringify({ icons: icons.length, withSheet: icons.filter((e) => (e.style.backgroundImage ?? "").includes("items.webp")).length }); })()`));
+    await shot("inventory");
   }
 
   console.log(`problems (${problems.length}):`);
