@@ -7,7 +7,7 @@ import { isBookshelf } from "../data/spell-loot";
 import { LOCK_FUMBLE_CHANCE, lockDifficulty, lockLevel } from "../data/locks";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
-import { attr, canAct, canBeHealed, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
+import { attr, canAct, canBeHealed, gainAttribute, healHp, itemBonus, levelUp, thieveryRoll } from "../sim/character";
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
 import { addCondition, removeCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
@@ -760,7 +760,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           drinker[RESISTANCE_FIELD[gift.element]] += gift.amount;
           effects.push({ type: "text", text: vesselOf(p).resDone?.(drinker.name, gift.element, gift.amount) ?? `${drinker.name} drinks and feels protected: ${gift.element} resistance +${gift.amount}%.` }, { type: "resistance", character: ctx.hero, element: gift.element, amount: gift.amount });
         } else if (gift.kind === "attr") {
-          drinker[gift.attribute] += gift.amount;
+          gainAttribute(drinker, gift.attribute, gift.amount, party.talents, party.mascot);
           effects.push({ type: "text", text: vesselOf(p).done(drinker.name, gift.attribute.toUpperCase(), gift.amount) }, { type: "attribute", character: ctx.hero, attribute: gift.attribute, amount: gift.amount });
         } else {
           drinker.xp += gift.amount;
@@ -812,7 +812,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       const hero = party.characters[ctx.hero];
       if (!hero || !takeOne(party, "quest_quatloo_coin")) return { effects, consumed: false };
       const attribute = p.attr as Attribute;
-      hero[attribute] += 3;
+      gainAttribute(hero, attribute, 3, party.talents, party.mascot);
       effects.push({ type: "text", text: `${hero.name} puts the coin into the slot. The statue hums, and ${attribute.toUpperCase()} rises by 3.` }, { type: "attribute", character: ctx.hero, attribute, amount: 3 });
       return { effects, consumed: false };
     }
@@ -950,7 +950,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           const attribute = ATTRS[rng.int(ATTRS.length)]!;
           const who = attributeRecipient(party, attribute, rng)!;
           const c = party.characters[who]!;
-          c[attribute] += amount;
+          gainAttribute(c, attribute, amount, party.talents, party.mascot);
           effects.push({ type: "text", text: `${c.name} is touched by the shrine: ${attribute.toUpperCase()} +${amount}.` }, { type: "attribute", character: who, attribute, amount });
           break;
         }

@@ -5,10 +5,8 @@ import { MUSIC_TRACKS, SOUNDS, filesOf } from "./sound-table";
  * Music and sound effects as Opus/WebM files. Browsers only start audio after a user gesture, so playback requests
  * before the first click are remembered and started when the page is unlocked.
  */
-const WIND_STEP = "wind_ambience";
-const WIND_SLICE = 0.5;
-/** A step takes 0.22 s (`STEP_SECONDS` in game/player.ts): the next slice starts that far on in the loop. */
-const WIND_ADVANCE = 0.22;
+/** The sound of a levitating party's steps (53rd playtest, point 20): `old_code/resources/sounds/short_wind.mp3`, sound 9043 in the table. */
+const LEVITATE_SOUND = 9043;
 /** Background loops that start at a moment the player causes (9, the hum of the spaceship's engines): decoded in advance so that they sound at once. */
 const BUFFERED_AMBIENT: ReadonlySet<number> = new Set([9]);
 
@@ -38,8 +36,8 @@ export class AudioManager {
   private readonly ambientBuffers = new Map<number, { source: AudioBufferSourceNode; gain: GainNode }>();
   /** What the surroundings ask for, kept for the moment the page is unlocked by the first click or key. */
   private wanted: ReadonlyMap<number, number> = new Map();
-  /** Where in the wind loop the next step of a levitating party cuts its slice from, in seconds. */
-  private windCursor = 0;
+  /** The moment (audio clock) at which the wind of a levitating party has played out; a step before it starts nothing. */
+  private windUntil = 0;
   /** How many sounds were asked for so far (`play`), to tell whether a click already made a noise of its own. */
   private requests = 0;
 
@@ -184,7 +182,6 @@ export class AudioManager {
       if (Number(id) < 9000) continue;
       for (const name of filesOf(entry)) void this.buffer(name);
     }
-    void this.buffer(WIND_STEP);
     for (const id of BUFFERED_AMBIENT) {
       const entry = SOUNDS[id];
       if (typeof entry === "string") void this.buffer(entry);
@@ -293,33 +290,23 @@ export class AudioManager {
   }
 
   /**
-   * The sound of one step while the party levitates: the wind loop (`wind_ambience`, 33 s, made as a background sound) replaces the
-   * footsteps. A step cuts the next half second out of it and fades it in and out, so the slices of steps 0.22 s apart overlap
-   * on the same stretch of the loop and join up to one steady wind.
+   * The sound of a step while the party levitates: the wind of `short_wind`, played once in full and never laid over itself. The next step starts it again only
+   * when it has played out (the user's wish of 10. 11. 2026); the footsteps stay silent meanwhile.
    */
-  windStep(volume = 1): void {
+  levitateWind(volume = 1): void {
     const ctx = this.context;
     if (!ctx || !this.supported || !this.unlocked) return;
-    const buffer = this.buffers.get(WIND_STEP);
+    if (ctx.currentTime < this.windUntil) return;
+    const entry = SOUNDS[LEVITATE_SOUND];
+    const name = typeof entry === "string" ? entry : null;
+    if (!name) return;
+    const buffer = this.buffers.get(name);
     if (!buffer) {
-      void this.buffer(WIND_STEP);
+      void this.buffer(name);
       return;
     }
-    const length = WIND_SLICE;
-    const offset = this.windCursor % Math.max(0.1, buffer.duration - length);
-    this.windCursor = offset + WIND_ADVANCE;
-    const level = Math.max(0, Math.min(1, this.sfxVolume * volume));
-    const fade = 0.12;
-    const now = ctx.currentTime;
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(level, now + fade);
-    gain.gain.setValueAtTime(level, now + length - fade);
-    gain.gain.linearRampToValueAtTime(0, now + length);
-    source.connect(gain).connect(ctx.destination);
-    source.start(now, offset, length);
+    this.windUntil = ctx.currentTime + buffer.duration;
+    this.start(ctx, buffer, Math.max(0, Math.min(1, this.sfxVolume * volume)));
   }
 
   private start(ctx: AudioContext, buffer: AudioBuffer, level: number): void {

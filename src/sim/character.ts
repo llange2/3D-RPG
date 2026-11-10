@@ -264,6 +264,20 @@ export function recalcValues(c: Character, talents: readonly string[], refill: b
   }
 }
 
+/**
+ * Raises an attribute for good (a chalice, a Quatloo statue, a shrine) and brings health and mana in line with it, as `levelUp` does: Endurance counts in the health,
+ * Intelligence and Personality in the mana. What the hero gains in health and mana is gained in hit points and spell points too (bug_fix_50, point 27: a Wizard of level 10 who had drunk
+ * +10 Endurance still had the 45 hit points of Endurance 15).
+ */
+export function gainAttribute(c: Character, attribute: Attribute, amount: number, talents: readonly string[], mascot = ""): void {
+  const health = c.health;
+  const mana = c.mana;
+  c[attribute] += amount;
+  recalcValues(c, talents, false, mascot);
+  if (c.hp > 0) c.hp = Math.min(c.health, c.hp + Math.max(0, c.health - health));
+  c.sp = Math.min(c.mana, c.sp + Math.max(0, c.mana - mana));
+}
+
 /** Total XP needed to reach `level + 1` minus the current XP (never negative). Port of xp_to_next_level. */
 export function xpToNextLevel(c: Character, level = c.level): number {
   const base = CONSTANTS.CHARACTER_XP[c.classType] ?? 2000;

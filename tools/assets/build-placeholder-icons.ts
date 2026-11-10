@@ -9,7 +9,9 @@ import sharp from "sharp";
 import { OUT, ensureDir, upToDate } from "./lib";
 
 const SOURCES = join(dirname(import.meta.filename), "sources", "status-icons");
-export const STATUS_ICONS = ["power_shield", "wizard_eye"] as const;
+export const STATUS_ICONS = ["power_shield", "wizard_eye", "detect_monster"] as const;
+/** Sources that are not square and carry empty margins (the goblin in the bush of Detect Monster, 1127 x 1396): cut to what is drawn before they are fitted into 200 x 200. */
+const TRIMMED: ReadonlySet<string> = new Set(["detect_monster"]);
 
 /** Writes `ui/tex_gui_<name>.webp` for each status icon whose source is newer than the file. */
 export async function buildPlaceholderIcons(): Promise<number> {
@@ -20,7 +22,8 @@ export async function buildPlaceholderIcons(): Promise<number> {
     const out = join(OUT, "ui", `tex_gui_${name}.webp`);
     if (upToDate(out, source, import.meta.filename)) continue;
     ensureDir(out);
-    await sharp(source).resize(200, 200, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp({ quality: 90, alphaQuality: 95 }).toFile(out);
+    const picture = TRIMMED.has(name) ? sharp(await sharp(source).trim({ threshold: 8 }).toBuffer()) : sharp(source);
+    await picture.resize(200, 200, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp({ quality: 90, alphaQuality: 95 }).toFile(out);
     written++;
   }
   return written;

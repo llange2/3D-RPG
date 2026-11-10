@@ -192,7 +192,7 @@ const BUFF_TEXT: Partial<Record<TimedEffect["kind"], (caster: string, target: st
   stone_skin: (_, t) => `${t}'s skin turns to stone: more armor, but half the speed.`,
   rage: (_, t) => `${t} flies into a rage: more damage, but half the armor.`,
   power_shield: () => "A shield of force surrounds the party and takes a tenth off every blow.",
-  detect_monster: () => "The monsters of the land show themselves on the map.",
+  detect_monster: () => "The monsters of the land show themselves on the minimap.",
 };
 
 const VIEW_NAMES: Record<ViewDistance, string> = { close: "Close", medium: "Medium", far: "Far" };
@@ -1431,7 +1431,7 @@ export class Game {
     cursorStepped();
     this.syncSurroundings();
     // a levitating party does not walk: the wind takes the place of the footsteps
-    if (hasEffect(s.party, "levitate")) this.audio.windStep(0.6);
+    if (hasEffect(s.party, "levitate")) this.audio.levitateWind(0.6);
     else this.audio.play(this.mode === "overworld" ? stepSound(this.world.tile(x, y)) : 9010, 0.6);
     this.passTime(stepMinutes(this.outdoors(), s.party.talents));
     this.campaignView.focus(x, y);
@@ -4447,8 +4447,9 @@ export class Game {
     // opens 25 cells across (the user's wish); zooming out is one wheel step away
     let view: MapViewport = { ...here(), cells: clampCells(MAP_OPEN_CELLS, limits) };
     // 42nd playtest, point 12: Wizard's Eye uncovers the minimap only; the big map is uncovered by walking, as ever (`eye` stays off here)
-    const monsters = this.mappedMonsters();
-    const detect = this.detectOn();
+    // 53rd playtest, point 25: Detect Monster shows the monsters on the minimap only; the big map shows what the party sees
+    const detect = false;
+    const monsters = this.mappedMonsters(detect);
     // the game stands still while the map is open, so what the Crow sees is the same until it is closed
     const traps = this.trapsShown();
     const eye = false;
@@ -5258,9 +5259,9 @@ export class Game {
    * The monsters the maps may show (36th playtest): only the ones inside the viewing cone, where nothing hides them. Detect Monster lifts that (every monster of the level,
    * the maps then skip the ground check). Wizard's Eye does not: it uncovers the map and no monster (the spell sheet, 8. 11. 2026).
    */
-  private mappedMonsters(): { x: number; y: number }[] {
+  private mappedMonsters(detect = this.detectOn()): { x: number; y: number }[] {
     const alive = this.enc.monsters.filter((m) => m.hp > 0).map((m) => ({ x: m.x, y: m.y }));
-    if (this.detectOn() || alive.length === 0) return alive;
+    if (detect || alive.length === 0) return alive;
     const { tx, ty, facing } = this.player;
     const seen = new Set<string>();
     for (const [x, y] of visibleCells(this.gridView().opaque, tx, ty, facing, this.sightRadius())) seen.add(`${x},${y}`);

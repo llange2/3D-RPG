@@ -2,9 +2,9 @@
 import { describe, expect, it } from "vitest";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { MONSTERS, SPELLS } from "../../src/data/tables";
-import { addCondition } from "../../src/sim/character";
+import { addCondition, gainAttribute, recalcValues } from "../../src/sim/character";
 import { castSpell, spellCost, validTarget } from "../../src/sim/spells";
-import { createDefaultParty } from "../../src/sim/party";
+import { createDefaultParty, normalizeParty } from "../../src/sim/party";
 
 const SCALING = [8, 10, 17, 20, 25, 28, 37, 39, 44, 50, 63];
 
@@ -95,5 +95,38 @@ describe("texts and numbers of the sheets (points 2 and 3)", () => {
     const terminator = Object.values(MONSTERS).find((m) => m.name === "Terminator");
     expect(terminator).toBeDefined();
     expect(terminator!.res_physical).toBe(0.8);
+  });
+});
+
+describe("health follows the attributes a hero gains (point 27)", () => {
+  it("gives a Wizard of level 10 the health of Endurance 25", () => {
+    const party = createDefaultParty();
+    const wizard = party.characters[0]!;
+    wizard.classType = "Wizard";
+    wizard.level = 10;
+    wizard.end = 15;
+    recalcValues(wizard, party.talents, true, party.mascot);
+    const before = wizard.health;
+    gainAttribute(wizard, "end", 10, party.talents, party.mascot);
+    // END / 2 per level: five more points of health on each of the ten levels
+    expect(wizard.health).toBe(before + 50);
+    expect(wizard.hp).toBe(wizard.health);
+  });
+
+  it("repairs a save in which the attribute was raised but the health was not", () => {
+    const party = createDefaultParty();
+    const wizard = party.characters[0]!;
+    wizard.classType = "Wizard";
+    wizard.level = 10;
+    wizard.end = 15;
+    recalcValues(wizard, party.talents, true, party.mascot);
+    const old = wizard.health;
+    wizard.end = 25; // what the chalice did before the fix
+    normalizeParty(party);
+    expect(wizard.health).toBe(old + 50);
+    expect(wizard.hp).toBe(old + 50);
+    const again = wizard.health;
+    normalizeParty(party);
+    expect(wizard.health).toBe(again); // a second run changes nothing
   });
 });

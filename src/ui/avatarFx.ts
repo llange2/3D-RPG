@@ -25,6 +25,7 @@ export type AvatarEffect =
   | "gui_levitate"
   | "gui_power_shield"
   | "gui_wizard_eye"
+  | "gui_detect_monster"
   | "gui_protect_acid"
   | "gui_protect_fire"
   | "gui_protect_ice"

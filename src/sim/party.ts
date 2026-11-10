@@ -62,6 +62,15 @@ export function normalizeParty(party: Party): Party {
   party.mascotBag ??= emptyInventory();
   party.mascots ??= [party.mascot];
   seedConditionTimers(party);
+  // bug_fix_50, point 27: saves from before `gainAttribute` kept the health and mana of the old attributes after a chalice, a statue or a shrine; they get what they gained
+  for (const c of [...party.characters, ...party.reserve]) {
+    const health = c.health;
+    const mana = c.mana;
+    if (!Number.isFinite(health) || !Number.isFinite(mana)) continue;
+    recalcValues(c, party.talents ?? [], false, party.mascot);
+    if (c.health > health && c.hp > 0) c.hp = Math.min(c.health, c.hp + c.health - health);
+    if (c.mana > mana) c.sp = Math.min(c.mana, c.sp + c.mana - mana);
+  }
   return party;
 }
 
