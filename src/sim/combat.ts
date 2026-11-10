@@ -6,7 +6,7 @@ import { cheats } from "./cheats";
 import { journalEmit } from "./journal";
 import { sumBonus } from "./items";
 import { hasEffect, protectionLevel } from "./party";
-import type { Character, Condition, Party } from "./types";
+import type { BonusKey, Character, Condition, Item, Party } from "./types";
 
 export type DamageType = "physical" | "fire" | "ice" | "acid" | "magic" | "poison";
 
@@ -70,6 +70,54 @@ export function rangedDamage(c: Character, monster: MonsterDef | null, distance:
   // BALANCE v4 (ranged): the physical resistance holds the arrow back as it holds the sword back (after the armor, like in `meleeDamage`)
   if (rules.rangedResPhysical && monster) total *= 1 - monster.res_physical;
   return Math.max(0, Math.trunc(total));
+}
+
+/**
+ * The average hit of a hero with a weapon that rolls `min` to `max` (the item tooltips, 53rd playtest point 18): the same formula as `meleeDamage` and `rangedDamage`, with the
+ * middle of the weapon's range instead of the roll, and without a monster (no armor, no resistance) and without the chance to hit. The level term is the whole number the hit rounds it up to.
+ */
+export function averageHit(c: Character, kind: "melee" | "ranged", min: number, max: number): number {
+  const lo = Math.min(min, max);
+  const hi = Math.max(min, max);
+  let weapon = (lo + hi) / 2;
+  let levelTerm: number;
+  if (kind === "melee") {
+    if (weapon === 0) weapon = 1; // `meleeDamage` turns a roll of 0 into 1
+    const base = attr(c, "str") / 10 + getBaseValue(c.raceType, c.classType, "base_melee");
+    levelTerm = isV4() ? (base * c.level) / RULES.v4.meleeLevelDivisor : base * c.level;
+  } else {
+    const rules = isV4() ? RULES.v4 : RULES.legacy;
+    const base = attr(c, "acc") / 10 + getBaseValue(c.raceType, c.classType, "base_ranged") * rules.rangedClassShare;
+    levelTerm = (base * c.level) / rules.rangedLevelDivisor;
+  }
+  let total = weapon + Math.ceil(levelTerm) + (c.mods?.rage ?? 0);
+  if (c.defensiveStance) total *= STANCE();
+  return Math.max(0, total);
+}
+
+/**
+ * The "Average damage per hit" lines of an item's tooltip: for a weapon or a ring that adds damage, what the hero hits for on average with the item on (instead of `replaced`,
+ * or as it is when `worn`), from the hero's level and attributes. Rings add to blows and shots alike, so a ring shows both when the hero shoots. Empty for everything else.
+ */
+export function averageDamageLines(c: Character, item: Item, replaced: Item | null, worn: boolean): { label: string; value: number }[] {
+  const own = (key: BonusKey) => item.bonus[key] ?? 0;
+  const delta = (key: BonusKey) => (worn ? 0 : own(key) - (replaced?.bonus[key] ?? 0));
+  const ringDelta = (key: "dam_min" | "dam_max") => (worn ? 0 : (item.type === "ring" ? own(key) : 0) - (replaced?.type === "ring" ? replaced.bonus[key] ?? 0 : 0));
+  const hitsMelee = own("dam_min") !== 0 || own("dam_max") !== 0;
+  const shoots = own("ranged_dam_min") !== 0 || own("ranged_dam_max") !== 0;
+  const hasBow = itemBonus(c, "ranged_dam_max") + delta("ranged_dam_max") > 0;
+  const lines: { label: string; value: number }[] = [];
+  const round = (x: number) => Number(x.toFixed(1));
+  const wantsMelee = hitsMelee;
+  const wantsRanged = shoots || (hitsMelee && item.type === "ring" && hasBow);
+  const both = wantsMelee && wantsRanged;
+  if (wantsMelee) lines.push({ label: both ? "Average damage per hit (melee)" : "Average damage per hit", value: round(averageHit(c, "melee", itemBonus(c, "dam_min") + delta("dam_min"), itemBonus(c, "dam_max") + delta("dam_max"))) });
+  if (wantsRanged) {
+    const min = itemBonus(c, "ranged_dam_min") + ringDamage(c, "dam_min") + delta("ranged_dam_min") + ringDelta("dam_min");
+    const max = itemBonus(c, "ranged_dam_max") + ringDamage(c, "dam_max") + delta("ranged_dam_max") + ringDelta("dam_max");
+    lines.push({ label: both ? "Average damage per hit (ranged)" : "Average damage per hit", value: round(averageHit(c, "ranged", min, max)) });
+  }
+  return lines;
 }
 
 /** Power Shield takes this share off every hit the party suffers. */

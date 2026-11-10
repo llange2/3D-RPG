@@ -1,6 +1,7 @@
 import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
-import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, worstCondition, xpToNextLevel } from "../sim/character";
+import { averageDamageLines } from "../sim/combat";
+import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, resistance, worstCondition, xpToNextLevel } from "../sim/character";
 import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
 import { SPELL_GRID, spellCost, validTarget, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
@@ -82,12 +83,25 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     h("div", { text: item.quest ? "Quest item" : `Worth: ${thousands(item.value)} gold` }),
     // 40th playtest, point 9: up to 14 lines (a ring against a ring with other stats) run in two columns, so that the window stays a size that fits the screen
     h("div", { class: `bonus-lines${lines.length > 6 ? " many" : ""}` }, ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null))),
+    // 53rd playtest, point 18: what a weapon or a damage ring hits for on average, from the hero's level and attributes
+    ...(c ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage", text: `${l.label}: ${l.value}` })) : []),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
     c && !allowed ? h("div", { class: "small", style: "color:#e8745f", text: `A ${c.classType} cannot use this.` }) : null,
     untrained ? h("div", { class: "small", style: "color:#e8745f", text: "Requires Arms Master talent to equip" }) : null,
     shieldBlocked ? h("div", { class: "small", style: "color:#e8745f", text: "Not with a two-handed weapon in the weapon hand." }) : null,
     c ? scrollNote(c, item) : null,
   );
+}
+
+/** The resistance each sheet field stands for. */
+const RESISTANCE_ELEMENT = { resFire: "fire", resIce: "ice", resAcid: "acid", resMagic: "magic" } as const;
+
+/**
+ * A value of the hero's sheet that something moved off its plain value (Rage halves the armor, a boon adds resistance): green when higher, red when lower, with the plain value in
+ * brackets (53rd playtest, point 17). `shown` and `plain` are the texts, `now` and `base` what decides the colour.
+ */
+function markedText(shown: string, plain: string, now: number, base: number): HTMLElement {
+  return h("div", { class: now > base ? "v up" : now < base ? "v down" : "v", text: now !== base ? `${shown} (${plain})` : shown });
 }
 
 /** A spell scroll names its school and level and says whether this hero could learn it (same rules as the guild). */
@@ -330,6 +344,7 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       const age = ageOf(c, party.minutes);
       const dmin = itemBonus(c, "dam_min");
       const dmax = itemBonus(c, "dam_max");
+      const rage = c.mods?.rage ?? 0;
       const sheet = h(
         "div",
         { class: "sheet" },
@@ -338,9 +353,14 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
           h("div", { text: "Hit points" }), h("div", { class: "v", text: `${c.hp} / ${c.health}` }),
           h("div", { text: "Spell points" }), h("div", { class: "v", text: `${c.sp} / ${c.mana}` }),
           ...attrRows,
-          h("div", { text: "Armor" }), h("div", { class: "v", text: String(armor(c) + adj.bonusArmor) }),
-          h("div", { text: "Melee damage" }), h("div", { class: "v", text: dmax > 0 ? `${dmin}-${dmax}` : "bare hands" }),
-          ...RESISTANCES.flatMap(([key, bonus, label]) => [h("div", { text: label }), h("div", { class: "v", text: `${c[key] + itemBonus(c, bonus) + (c.mods?.boon?.[bonus as BoonKey] ?? 0)}%` })]),
+          // 53rd playtest, point 17: a value that a spell, a condition or a boon moved off what the hero's gear gives shows in green (more) or red (less), the plain value in brackets
+          h("div", { text: "Armor" }), markedText(String(armor(c) + adj.bonusArmor), String(itemBonus(c, "arm") + adj.bonusArmor), armor(c), itemBonus(c, "arm")),
+          h("div", { text: "Melee damage" }), dmax > 0 ? markedText(`${dmin + rage}-${dmax + rage}`, `${dmin}-${dmax}`, rage, 0) : h("div", { class: "v", text: "bare hands" }),
+          ...RESISTANCES.flatMap(([key, bonus, label]) => {
+            const now = resistance(c, RESISTANCE_ELEMENT[key]);
+            const plain = c[key] + itemBonus(c, bonus);
+            return [h("div", { text: label }), markedText(`${now}%`, `${plain}%`, now, plain)];
+          }),
           h("div", { text: "Experience" }), h("div", { class: "v", text: thousands(c.xp) }),
           h("div", { text: "Next level" }), h("div", { class: "v", text: need > 0 ? `${thousands(need)} xp more` : "ready to train" }),
           h("div", { text: "Condition" }), h("div", { class: `v ${conditionClass(c, party.minutes)}`, text: shownCondition(c, party.minutes), title: conditionTitle(c, party.minutes) }),
