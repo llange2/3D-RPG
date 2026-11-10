@@ -55,7 +55,7 @@ import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport
 import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
-  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters,
+  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters, weakestInCone,
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS, STAR_BURST_RADIUS,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
@@ -84,7 +84,7 @@ import { PIRATE_SHIP_MODEL, PirateShip } from "../render/pirateShip";
 import { hutScene } from "../data/hut-texts";
 import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
-import { readSettings, writeSettings, type Settings } from "./settings";
+import { RANGE_TARGETS, readSettings, writeSettings, type Settings } from "./settings";
 import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, deleteNamedSave, findNamedSave, listNamedSaves, readNamedSave, writeNamedSave, takeJournalDropped, LISTED_KINDS, SAVE_SLOTS, MAX_SAVE_NAME, cleanSaveName, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
 import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
@@ -148,8 +148,11 @@ const CAMPAIGN_OUTSIDE = "outside";
  * 60 %; the rest is the wait until the scene can draw all of it.
  */
 const LOAD_DATA = 0.1;
+const LOAD_MONSTERS = 0.2;
 const LOAD_MODELS = 0.5;
 const LOAD_BUILT = 0.6;
+/** The monsters of the new map are in the scene (the wait for their models is 60 to 70 %); the rest is the wait for the scene to draw. */
+const LOAD_MONSTERS_IN = 0.7;
 
 type PartyAttackEvent = Extract<CombatEvent, { type: "party_attack" }>;
 
@@ -985,8 +988,9 @@ export class Game {
   private async endLoading(): Promise<void> {
     const loading = this.ui.loading;
     loading.set(LOAD_BUILT);
-    await this.monsters.whenIdle();
-    await whenDrawable(this.r.scene, (share) => loading.set(LOAD_BUILT + (1 - LOAD_BUILT) * share));
+    await this.monsters.whenIdle((share) => loading.set(LOAD_BUILT + (LOAD_MONSTERS_IN - LOAD_BUILT) * share));
+    await loading.step(LOAD_MONSTERS_IN);
+    await whenDrawable(this.r.scene, (share) => loading.set(LOAD_MONSTERS_IN + (1 - LOAD_MONSTERS_IN) * share), () => loading.paint());
     // two frames with everything in place, so that textures and buffers are on the graphics card before the screen goes
     await afterFrames(this.r.scene, 2);
     await loading.hide();
@@ -1005,6 +1009,7 @@ export class Game {
   private async enterOverworld(x: number, y: number, facing: Facing): Promise<void> {
     await this.beginLoading();
     try {
+      await this.ui.loading.step(LOAD_DATA);
       this.mode = "overworld";
       this.interior = null;
       this.interiorView.dispose();
@@ -1020,9 +1025,13 @@ export class Game {
       this.state.at = { mode: "overworld", x, y, facing };
       const p = this.worldPos(x, y);
       this.player.place(x, y, facing, p.x, p.z);
+      await this.ui.loading.step(LOAD_MONSTERS);
       this.chunks.update(x, y);
+      await this.ui.loading.step(0.35);
       this.chunks.loadAll();
+      await this.ui.loading.step(LOAD_MODELS);
       this.syncOverworldMonsters();
+      await this.ui.loading.step(0.55);
       this.renderLoot();
       this.markExplored();
       this.updateAmbient();
@@ -1043,18 +1052,22 @@ export class Game {
     await this.beginLoading();
     let map: InteriorMap;
     try {
+      await this.ui.loading.step(0.02);
       map = generateInterior(this.world, poi, 0);
+      await this.ui.loading.step(0.05);
       const content = buildMapContent(this.world, poi, map);
       if (import.meta.env.DEV && !map.showcase) {
         const issues = validateContent(map, content);
         if (issues.length) console.warn(`interior ${poi.id} has content issues`, issues);
       }
-      this.ui.loading.set(LOAD_DATA);
+      await this.ui.loading.step(LOAD_DATA);
       await this.monsters.preload([
         ...content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])),
         ...(map.showcase ? [...map.showcase.monsters.map((m) => m.defId), ...map.showcase.personas.map((p) => personaModelId(p.persona))] : []),
       ]);
-      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...(map.showcase ? map.showcase.extras.map((e) => e.model) : []), ...caveModelKeys(map), ...castleGateModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...environmentModels(map, this.settings.environment), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
+      await this.ui.loading.step(LOAD_MONSTERS);
+      await this.props.ensure(this.staticInfo, [...INTERIOR_MODELS, ...(map.showcase ? map.showcase.extras.map((e) => e.model) : []), ...caveModelKeys(map), ...castleGateModelKeys(map), ...roundModelKeys(map), ...pillarModelKeys(map), ...environmentModels(map, this.settings.environment), ...doorModelKeys(map, content), ...brokenWallModelKeys(map, content), ...trapModelKeys(content), ...themeModelKeys(content)], (share) => this.ui.loading.set(LOAD_MONSTERS + (LOAD_MODELS - LOAD_MONSTERS) * share));
+      await this.ui.loading.step(LOAD_MODELS);
       // walls broken earlier are open
       for (const a of content.actions) if (a.kind === "breakable_wall" && this.state.broken.has(a.uid)) map.cells[a.y * map.width + a.x] = CELL.FLOOR;
       // the end room of a quest solved earlier is open
@@ -1066,6 +1079,8 @@ export class Game {
         actionAt.set(a.y * map.width + a.x, a);
         if (blocksCell(a) && !heapGone(a, this.state.opened)) blocked.add(a.y * map.width + a.x);
       }
+      // the next steps (tearing down the old scene, building the walls) run without a pause: this is the last number the screen shows before them
+      await this.ui.loading.step(0.52);
       this.chunks?.dispose();
       this.chunks = null;
       this.monsters.clear();
@@ -1539,6 +1554,7 @@ export class Game {
   private passTime(minutes: number): void {
     this.syncSurroundings();
     const passed = advanceTime(this.state.party, minutes);
+    if (passed.interest > 0) this.ui.log(`The bank pays ${thousands(passed.interest)} gold interest.`, "good");
     this.logEnded(passed.expired);
     this.logConditions(passed.conditions);
   }
@@ -1768,10 +1784,12 @@ export class Game {
       const from = this.interior?.campaign?.slug ?? "";
       if (stash) this.stashCampaign();
       model = await loadCampaignMap(slug, camp.maps[slug] ?? {});
-      this.ui.loading.set(LOAD_DATA);
+      await this.ui.loading.step(LOAD_DATA);
       await this.props.ensure(this.staticInfo, [...CampaignView.modelKeys(model), ...environmentModels(model.toInteriorMap(), this.settings.environment), "obj_loot"], (share) => this.ui.loading.set(LOAD_DATA + (LOAD_MODELS - LOAD_DATA) * share));
+      await this.ui.loading.step(LOAD_MODELS);
       const start = model.safeStart();
       const arrive = at ? arrival(model, at.x, at.y, at.rotation, from) : { x: start.x, y: start.y, rotation: { N: 0, E: 90, S: 180, W: 270 }[start.facing] };
+      await this.ui.loading.step(0.52);
       this.chunks?.dispose();
       this.chunks = null;
       this.monsters.clear();
@@ -3342,6 +3360,15 @@ export class Game {
    * where none stands on that line the nearest one within 45 degrees to either side that it can see, as the monsters can shoot along diagonals too.
    */
   private focusMonster(): MonsterInstance | null {
+    const closest = this.closestMonster();
+    // "Range attack targets: weakest" (54th playtest, point 2): among everything the party can shoot at, the monster with the fewest hit points; one next to the party is fought first
+    if (!closest || this.settings.rangeTarget !== "weakest" || isAdjacent(closest.x, closest.y, this.player.tx, this.player.ty, this.gridView())) return closest;
+    const { tx, ty, facing } = this.player;
+    const [dx, dy] = FACING_VEC[facing];
+    return weakestInCone(this.gridView(), this.enc, tx, ty, dx, dy) ?? closest;
+  }
+
+  private closestMonster(): MonsterInstance | null {
     const { tx, ty, facing } = this.player;
     const [dx, dy] = FACING_VEC[facing];
     const view = this.gridView();
@@ -4807,7 +4834,7 @@ export class Game {
       actions = buildMapContent(this.world, poi, map).actions;
     }
     const secrets = actions.filter((a) => a.kind === "breakable_wall").map((a) => ({ x: a.x, y: a.y, broken: this.state.broken.has(a.uid) }));
-    const [title = "", ...rest] = identifyLines(poi, planDungeon(this.world, poi), this.world.castleSpellsOf(poi.id), secrets);
+    const [title = "", ...rest] = identifyLines(poi, planDungeon(this.world, poi), this.world.castleSpellsOf(poi.id), secrets, actions);
     await this.ui.message(rest.join("\n"), title);
   }
 
@@ -4874,6 +4901,7 @@ export class Game {
       },
       { type: "toggle", label: () => `Fade out cursor, if unused: ${onOff(draft.fadeCursor)}`, flip: () => (draft.fadeCursor = !draft.fadeCursor) },
       { type: "toggle", label: () => `Show action keys in GUI: ${onOff(draft.showKeys)}`, flip: () => (draft.showKeys = !draft.showKeys) },
+      { type: "toggle", label: () => `Range attack targets: ${draft.rangeTarget}`, flip: () => (draft.rangeTarget = RANGE_TARGETS[(RANGE_TARGETS.indexOf(draft.rangeTarget) + 1) % RANGE_TARGETS.length]!) },
     ]);
     return picked === "apply" ? this.applyOptions(draft) : false;
   }

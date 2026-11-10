@@ -11,13 +11,15 @@ Out:  src/data/spell-sheet.json, src/data/monster-groups.json
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
 import openpyxl
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCS = ROOT.parent / "old_code" / "documentation"
+# in a worktree (.claude/worktrees/<name>) old_code is not next to the game folder: MM3_DOCS names the folder of the workbook
+DOCS = Path(os.environ["MM3_DOCS"]) if "MM3_DOCS" in os.environ else ROOT.parent / "old_code" / "documentation"
 OUT = ROOT / "src" / "data"
 
 
@@ -80,7 +82,10 @@ def export_spells() -> int:
         # SPELLS.json also flags Dimensional Rift and Power Shield, the sheet does not: the sheet decides.
         scales = bool(d.get("Scales with level"))
         if scales:
-            description = f"{description} Costs {int(d['Mana'])} mana per caster level."
+            # the cost per caster level is half the sheet's number since the 54th playtest (`SCALING_COST_SHARE` in sim/spells.ts), rounded up per cast
+            per_level = int(d["Mana"]) / 2
+            shown = str(int(per_level)) if per_level == int(per_level) else str(per_level)
+            description = f"{description} Costs {shown} mana per caster level (rounded up)."
         out[str(spell_id)] = {
             "name": NAME_REPLACEMENTS.get(spell_id, clean(d["Name"])),
             "description": description,

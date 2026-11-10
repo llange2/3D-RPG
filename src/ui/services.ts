@@ -7,7 +7,7 @@ import {
   templeCure, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
-import { isSpellImplemented, learnBlock } from "../sim/spells";
+import { isSpellImplemented, learnBlock, SCALING_COST_SHARE } from "../sim/spells";
 import { BAG_SLOTS, type Condition, type Item, type Party } from "../sim/types";
 import type { SeedState } from "../core/rng";
 import type { Poi } from "../world/types";
@@ -266,7 +266,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       };
       root.append(
         ...header(`in the vault: <b style="color:var(--gold)">${thousands(party.bankGold)}</b>`),
-        h("p", { text: "Gold in the vault is safe from thieves, traps and your own bad judgement." }),
+        h("p", { text: "Gold in the vault is safe from thieves, traps and your own bad judgement. The bank pays 0.5% interest per week." }),
         mover("Deposit", party.gold, (n) => deposit(party, n)),
         mover("Withdraw", party.bankGold, (n) => withdraw(party, n)),
       );
@@ -385,7 +385,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
         h(
           "span",
           {},
-          h("div", { html: `<b>${spell.title}</b> <span class="small" style="opacity:0.75">level ${spell.level}, ${spell.mana} SP${spell.scales_with_level ? " per level" : ""}</span>` }),
+          h("div", { html: `<b>${spell.title}</b> <span class="small" style="opacity:0.75">level ${spell.level}, ${spell.scales_with_level ? `${spell.mana * SCALING_COST_SHARE} SP per level` : `${spell.mana} SP`}</span>` }),
           h("div", { class: "small", style: "opacity:0.75", text: `${spell.text}${isSpellImplemented(spellId) ? "" : " (Has no effect in this game yet.)"}` }),
           why ? h("div", { class: "small", style: "color:#e8745f", text: why }) : null,
         ),

@@ -76,18 +76,19 @@ export function rangedDamage(c: Character, monster: MonsterDef | null, distance:
  * The average hit of a hero with a weapon that rolls `min` to `max` (the item tooltips, 53rd playtest point 18): the same formula as `meleeDamage` and `rangedDamage`, with the
  * middle of the weapon's range instead of the roll, and without a monster (no armor, no resistance) and without the chance to hit. The level term is the whole number the hit rounds it up to.
  */
-export function averageHit(c: Character, kind: "melee" | "ranged", min: number, max: number): number {
+export function averageHit(c: Character, kind: "melee" | "ranged", min: number, max: number, attrChange: { str?: number; acc?: number } = {}): number {
   const lo = Math.min(min, max);
   const hi = Math.max(min, max);
   let weapon = (lo + hi) / 2;
   let levelTerm: number;
   if (kind === "melee") {
     if (weapon === 0) weapon = 1; // `meleeDamage` turns a roll of 0 into 1
-    const base = attr(c, "str") / 10 + getBaseValue(c.raceType, c.classType, "base_melee");
+    // `attrChange`: what an item that is not worn yet would add to Strength or Accuracy (a ring of Strength raises the level term of the blow)
+    const base = (attr(c, "str") + (attrChange.str ?? 0)) / 10 + getBaseValue(c.raceType, c.classType, "base_melee");
     levelTerm = isV4() ? (base * c.level) / RULES.v4.meleeLevelDivisor : base * c.level;
   } else {
     const rules = isV4() ? RULES.v4 : RULES.legacy;
-    const base = attr(c, "acc") / 10 + getBaseValue(c.raceType, c.classType, "base_ranged") * rules.rangedClassShare;
+    const base = (attr(c, "acc") + (attrChange.acc ?? 0)) / 10 + getBaseValue(c.raceType, c.classType, "base_ranged") * rules.rangedClassShare;
     levelTerm = (base * c.level) / rules.rangedLevelDivisor;
   }
   let total = weapon + Math.ceil(levelTerm) + (c.mods?.rage ?? 0);
@@ -108,14 +109,18 @@ export function averageDamageLines(c: Character, item: Item, replaced: Item | nu
   const hasBow = itemBonus(c, "ranged_dam_max") + delta("ranged_dam_max") > 0;
   const lines: { label: string; value: number }[] = [];
   const round = (x: number) => Number(x.toFixed(1));
-  const wantsMelee = hitsMelee;
-  const wantsRanged = shoots || (hitsMelee && item.type === "ring" && hasBow);
-  const both = wantsMelee && wantsRanged;
-  if (wantsMelee) lines.push({ label: both ? "Average damage per hit (melee)" : "Average damage per hit", value: round(averageHit(c, "melee", itemBonus(c, "dam_min") + delta("dam_min"), itemBonus(c, "dam_max") + delta("dam_max"))) });
+  // 54th playtest, point 1: Strength moves the blow and Accuracy the shot as damage does, so a ring (or any piece) of Strength or Accuracy shows its line, too; a shot only counts for a hero with a bow
+  const strength = own("str") !== 0;
+  const accuracy = own("acc") !== 0;
+  const wantsMelee = hitsMelee || strength;
+  const wantsRanged = shoots || ((accuracy || (hitsMelee && item.type === "ring")) && hasBow);
+  // what the item changes in the attributes against what it replaces (nothing when it is worn already: the hero's values hold it)
+  const attrChange = { str: delta("str"), acc: delta("acc") };
+  if (wantsMelee) lines.push({ label: "Average melee damage per hit", value: round(averageHit(c, "melee", itemBonus(c, "dam_min") + delta("dam_min"), itemBonus(c, "dam_max") + delta("dam_max"), attrChange)) });
   if (wantsRanged) {
     const min = itemBonus(c, "ranged_dam_min") + ringDamage(c, "dam_min") + delta("ranged_dam_min") + ringDelta("dam_min");
     const max = itemBonus(c, "ranged_dam_max") + ringDamage(c, "dam_max") + delta("ranged_dam_max") + ringDelta("dam_max");
-    lines.push({ label: both ? "Average damage per hit (ranged)" : "Average damage per hit", value: round(averageHit(c, "ranged", min, max)) });
+    lines.push({ label: "Average ranged damage per hit", value: round(averageHit(c, "ranged", min, max, attrChange)) });
   }
   return lines;
 }
