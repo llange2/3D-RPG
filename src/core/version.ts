@@ -165,5 +165,7 @@
  * three kingdoms lie in locked chests (`DungeonRef.artifacts`) and the king's henchman waits in each castle (`CastleLayout.keeper`), the towns of level 2 tell where Seth Squirm lives, one town of level 3 has the
  * quartermaster (`InteriorMap.townHints`), and the health of a hero counts Endurance a quarter, not a half (this one is no generator change, it moves the golden numbers of the heroes).
  * 64 = five artifacts of each kingdom instead of four (`ARTIFACTS_PER_KIND`), two to a place where a small world with few dungeons has too few places.
+ * 65 = the 56th playtest: two cobblestone tiles in front of every castle (both entrance tiles, `composeTile` 2b), no pit in a tower on any floor (`towerTrap`), the gate of a castle's side room is wired to the alarm
+ * like the chests in the niches (`warn: "alarm"`), and a place has the tier of the place everywhere: the deeper half is no longer one tier harder (formulas 1.1, point 4: `tierAt`).
  */
-export const GEN_VERSION = 64;
+export const GEN_VERSION = 65;

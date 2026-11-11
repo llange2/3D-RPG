@@ -29,6 +29,11 @@ const DECO_BURY = 0.03;
 const DECO_FLUSH = 0.01;
 /** The share of its depth (backing plate to the front-most point) that a relief is sunk into the wall (54th playtest, point 3). */
 export const DECO_SINK_SHARE = 1 / 3;
+/**
+ * Reliefs that are not sunk into the wall at all (56th playtest, point 5, Tower of Ithia 10/17): the lion is a head that rises only 0.15 from its plate, a third of that depth buried it in the wall
+ * up to its snout; its plate stands flush like those of the other reliefs.
+ */
+const DECO_SINK_SHARE_OF: Readonly<Record<string, number>> = { obj_deco_lion: 0 };
 /** Half the width of a cell (`CELL_SIZE` 3): where the wall stands. */
 const WALL_AT = 1.5;
 
@@ -69,14 +74,17 @@ const FRONT_TURN: Readonly<Record<number, number>> = { 119: 180 };
 const SARCOPHAGI: ReadonlySet<number> = new Set([127, 128]);
 const SARCOPHAGUS_TURNS: readonly number[] = [90, 135, -90, -135];
 
-/** The kinds of action whose `item` param is an old item they stand on their cell as (a statue, a gong, a lever, a head, a rune on the floor). */
-const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal", "rune", "qportal", "chalice", "tube", "stairs"]);
+/** The kinds of action whose `item` param is an old item they stand on their cell as (a statue, a gong, a lever, a head, a rune on the floor, a machine statue of Seth Squirm: it showed nothing before the 56th playtest). */
+const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal", "rune", "qportal", "chalice", "tube", "stairs", "machine"]);
 
 /** The old item an action shows on its cell, or null (plain chests and shrines of a place without a theme, and every other kind of action). */
 export function shownItem(a: Pick<ActionInstance, "kind" | "params">): number | null {
   const id = a.kind === "treasure" ? a.params.chest : SHOWS_ITEM.has(a.kind) ? a.params.item : undefined;
   return typeof id === "number" ? id : null;
 }
+
+/** Where the middle of a lever's base plate lies in the model (x, model units, measured from `ci_39.glb`: the plate runs from -0.38 to 1.0, the handle points to -x). */
+const LEVER_BASE_X: Readonly<Record<number, number>> = { 39: 0.31 };
 
 /** Has this lever been pulled? An airlock lever stays pulled for good (`<airlock>@<side>`), every other one flips with each pull (its uid). */
 export function leverPulled(a: Pick<ActionInstance, "uid" | "params">, opened: ReadonlySet<string>): boolean {
@@ -137,7 +145,8 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   // a sarcophagus does not stand squared to the wall: it is turned a quarter or three eighths of a circle, one way or the other (36th playtest, point 14; the cell decides, so it stays put)
   if (SARCOPHAGI.has(item)) bearing += SARCOPHAGUS_TURNS[(a.x * 7 + a.y * 13) % SARCOPHAGUS_TURNS.length]!;
   // a pulled lever has turned half a circle, so that its handle lies on the other side (the campaign turns its levers the same way)
-  if (a.kind === "lever" && leverPulled(a, opened)) bearing += 180;
+  const pulledLever = a.kind === "lever" && leverPulled(a, opened);
+  if (pulledLever) bearing += 180;
   const own = OWN_MODELS[item];
   if (own && item === STAIRCASE_ITEM) {
     // the stairs fill their cell from the front edge to the back edge and rise a storey, whatever the file's size (the bounds are in the register)
@@ -151,11 +160,20 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
     const plate = DECO_PLATE[own.model];
     // 54th playtest, point 3 (Undercroft of Siletha 31/60): the figure still looked too far out of the wall, so the relief sinks by a third of its depth (plate to the front-most point) into it
     const front = (staticInfo[own.model]?.bounds?.[5] ?? 0.2) * own.scale;
-    const sink = (front - (plate !== undefined ? plate * own.scale : back)) * DECO_SINK_SHARE;
+    const sink = (front - (plate !== undefined ? plate * own.scale : back)) * (DECO_SINK_SHARE_OF[own.model] ?? DECO_SINK_SHARE);
     const push = (plate !== undefined ? WALL_AT - DECO_FLUSH + plate * own.scale : WALL_AT + DECO_BURY + back) + Math.max(0, sink);
     const rotY = (bearing * Math.PI) / 180;
     return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
   }
   if (own) return { model: own.model, x, y: own.lift ?? 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale, ...(own.scale3 ? { scaleXYZ: own.scale3 } : {}) };
-  return itemProp(item, bearing, x, z, staticInfo);
+  const prop = itemProp(item, bearing, x, z, staticInfo);
+  // 56th playtest, point 3: the base plate of the lever lies off the model's origin (its middle is 0.31 towards the side the handle points away from), so the half circle moved it by twice that.
+  // The turned lever moves back by the rotated offset, and the plate stays where it was while the handle swings over
+  if (prop && pulledLever && LEVER_BASE_X[item] !== undefined) {
+    const turn = prop.rotY - Math.PI; // the angle of the unpulled lever
+    const offset = 2 * LEVER_BASE_X[item]! * (prop.scaleXYZ?.[0] ?? prop.scale);
+    prop.x += offset * Math.cos(turn);
+    prop.z -= offset * Math.sin(turn);
+  }
+  return prop;
 }

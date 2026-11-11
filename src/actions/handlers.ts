@@ -861,7 +861,9 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       }
       // the door of a castle's vault says that it is locked first and asks whether to try it
       if (p.ask === true) {
-        if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Locked door", question: "The door is locked. Do you want to try to break it open?", yes: "Break it", no: "Leave" }], consumed: false };
+        // (56th playtest, point 8: the gate of a side room of a castle is wired to the alarm like the chests of its niches, and says so)
+        const question = p.warn === "alarm" ? "A thin wire runs along the gate into the wall. This gate is guarded by an alarm. Do you really want to break it open?" : "The door is locked. Do you want to try to break it open?";
+        if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "Locked door", question, yes: "Break it", no: "Leave" }], consumed: false };
         if (ctx.answer === null) return { effects, consumed: false };
       }
       // the lock of a door grows with the level of the party like the lock of a chest, an easier one (`data/locks.ts`)
@@ -872,6 +874,13 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       logLock(party, action.uid, "door", ctx.tier, difficulty, picked);
       if (best >= difficulty) {
         effects.push({ type: "door", state: "unlocked" });
+        // the gate of a side room in a castle: the first one broken open (or the first alarm chest tried) calls the light guards, the flag is shared with the chests
+        if (p.warn === "alarm") {
+          const flag = `${action.uid.slice(0, action.uid.indexOf("#"))}@light`;
+          const first = !(ctx.opened ?? NONE).has(flag);
+          if (first) effects.push({ type: "text", text: "An alarm bell rings out through the halls of the keep. The guards of the castle come!" }, { type: "guards", kind: "light" });
+          return { effects, consumed: true, ...(first ? { state: { add: [flag], remove: [] } } : {}) };
+        }
         return { effects, consumed: true };
       }
       effects.push({ type: "door", state: "locked" }, { type: "text", text: "The door is locked. Your thief cannot pick it yet." });

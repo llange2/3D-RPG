@@ -112,8 +112,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   const idx = (x: number, y: number) => y * map.width + x;
   const counters = new Map<string, number>();
 
-  // deeper parts are one tier harder, except at tier 1 where the whole place stays within reach of a new party
-  const tierAt = (depth: number): number => clamp(baseTier + (baseTier >= 2 && Math.floor((depth * 1000) / anchors.maxDepth) >= 600 ? 1 : 0), 1, 5);
+  // formulas 1.1 (4): the deeper half is no longer one tier harder; a place has the tier of the place (chests of bosses, cupboards and king's rooms still add one by their own rule)
+  const tierAt = (_depth: number): number => clamp(baseTier, 1, 5);
 
   // Chests, shrines, fountains and statues block their cell. Before placing one, make sure the rest of the map stays connected.
   const blockedCells = new Set<number>();
@@ -651,12 +651,13 @@ export function towerDecor(choices: readonly number[], rng: Rng): number[] {
 const TOWER_TRAP_ELEMENTS = ["fire", "ice", "acid", "magic"] as const;
 
 /**
- * The traps of a tower (48th playtest, tower optimisation): no guillotine, and pits and spear traps only on the ground floor (the floors above it have a magical trap, a puddle of fire,
+ * The traps of a tower (48th playtest, tower optimisation; 56th playtest: no pits at all): no guillotine, no pit, and spear traps only on the ground floor (the floors above it have a magical trap, a puddle of fire,
  * acid or magic flames, in their place). The element is the one of the theme if it has a magical trap, else it is chosen by chance.
  */
 export function towerTrap(params: Record<string, ParamValue>, floor: number, t: DungeonTheme, vars: ExprVars, rng: Rng): void {
   const trap = params.trap;
-  if (trap !== "guillotine" && !(floor > 0 && (trap === "pit" || trap === "spring"))) return;
+  // 56th playtest, point 6: no pit on any floor (the ground floor kept them before), spear traps only on the ground floor
+  if (trap !== "guillotine" && trap !== "pit" && !(floor > 0 && trap === "spring")) return;
   params.trap = "generic";
   params.element = t.trapElement ?? TOWER_TRAP_ELEMENTS[rng.int(TOWER_TRAP_ELEMENTS.length)]!;
   params.damage = resolveParam(TRAP_DAMAGE.generic ?? 0, vars, rng);

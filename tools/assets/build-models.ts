@@ -880,6 +880,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   { ...S("blk_city_wall", "new:City wall (tex_city_wall).glb", 2400, 1024), capped: true, keepNormalMap: true },
   { ...S("blk_dungeon_wall", "new:Dungeon wall (tex_dungeon_wall).glb", 3000, 1024), capped: true },
   { ...S("blk_dungeon_wall_broken", "new:Dungeon wall broken.glb", 3200, 1024), capped: true },
+  // the castle's and the tower's broken wall (56th playtest, point 11): a hole in the fortress wall with its rubble, 1.4 x 1.9 and 0.9 deep at the foot, upright like the others
+  { ...S("blk_fort_wall_broken", "new:Broken_Fort_wall.glb", 3200, 1024), capped: true },
   // the cave's walls and the way out (blocks 44 and 45): one rock model per wall cell, 10 000 triangles each in the original; a view holds
   // a few hundred of them, so the budget is low
   S("blk_cave_wall", "Cave wall.glb", 700, 512),

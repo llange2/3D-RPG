@@ -15,7 +15,7 @@ import type { StaticModelInfo, TextureCache } from "./assets";
 import { faceOpenYaw } from "./facing";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
-import { BROKEN_PIECES, CEILING_RELIEF, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
+import { BROKEN_PIECES, CEILING_RELIEF, floorModelOfTexture, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
 import { CELL_SIZE, ceilingDropOf, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type DoorFrame, type WallPanel } from "./interiorMesher";
 import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
@@ -62,6 +62,17 @@ const TILE_OVERLAP = 1.004;
  * Cut to the cell plus twice the bend (1.03), the flat tops of neighbours meet and nothing of the groove is left.
  */
 const TILE_OVERLAP_BY_MODEL: Readonly<Record<string, number>> = { gndx_dirt: 1.05 };
+/**
+ * Floor models whose relief the flat quad below would cut through (56th playtest, point 7): the level of the bottom of their body in model units. Set by the face alone, half of
+ * the castle floor's stones lay under the quad, and the flat floor showed through them. These tiles lie with their body bottom `TILE_BASE_LIFT` above the quad, and everything that stands on
+ * the floor rises with them (`PropRenderer.setRise`: chests, doors, traps, loot). The other floors stay as they were.
+ */
+const TILE_BOTTOM_BY_MODEL: Readonly<Record<string, number>> = { blk_fortress_floor: -0.006 };
+const TILE_BASE_LIFT = 0.004;
+/** The prop owner of the loot on the floor (`Game.lootOwner`): it stands on the same floor. */
+const LOOT_OWNER = "loot";
+/** The props of the interior view that are not carried by the floor: the floor, ceiling and walls themselves. */
+const RISE_SKIP: readonly string[] = ["floor", "ceiling", "panels", "walls", "round", "sink"];
 /** Neighbours that overlap share their flat top: every other cell sits this much higher, so the two never fight for the same depth. */
 const TILE_PARITY_LIFT = 0.004;
 /** How far a wall piece stands out of its wall, in world units (the old piece was 0.175 thick: the banners and the gate were set for that). */
@@ -147,10 +158,21 @@ const BROKEN_SLAB_DEPTH = 0.08;
 
 const brokenWallLook =(map: InteriorMap) => (map.theme.id === "cyber" ? undefined : BROKEN_WALL[map.kind]);
 
+/**
+ * The broken wall of the castles and the towers (56th playtest, point 11: the user's `Broken_Fort_wall.glb`): every map whose walls are the fortress wall shows it where a wall gave way,
+ * in every environment (the castle used to show an open cell, the tower the old dungeon's cracked wall). 1.4 x 1.9 x 0.9 in the file, stretched over the cell's width and the wall's height.
+ */
+const FORT_WALL = "tex_fortress_wall";
+const FORT_BROKEN = "blk_fort_wall_broken";
+/** How deep the stretched piece stands across the edge of its cell: the hole's wall and the rubble at its foot (the file is 0.9 deep with the rubble, the wall itself a third of that). */
+const FORT_BROKEN_DEPTH = 0.5;
+
 /** The model a map needs for its broken walls (loaded with the others, before the first frame). */
 export function brokenWallModelKeys(map: InteriorMap, content: MapContent): string[] {
+  if (!content.actions.some((a) => a.kind === "breakable_wall")) return [];
+  if (map.theme.wall === FORT_WALL) return [FORT_BROKEN];
   const look = brokenWallLook(map);
-  return look && content.actions.some((a) => a.kind === "breakable_wall") ? [look.model] : [];
+  return look ? [look.model] : [];
 }
 
 /** Chest models by hash, so a map has a mix. */
@@ -276,6 +298,7 @@ export class InteriorView {
     this.roundShown = null;
     this.ceilingShown = null;
     this.panelShown = null;
+    this.updateRise();
     // the traps come first: an open pit has no floor, so the mesh needs to know about it
     this.traps.show(map, content, opened, this.owner);
     this.buildMesh();
@@ -342,7 +365,15 @@ export class InteriorView {
   setEnvironment(environment: Environment): void {
     if (this.environment === environment) return;
     this.environment = environment;
-    if (this.map) this.buildMesh();
+    if (this.map) {
+      this.buildMesh();
+      // a floor that lies higher carries its objects: they are built again where the lift changes
+      if (this.updateRise() && this.content) {
+        const at = this.floorFocus;
+        this.show(this.map, this.content, new Set(this.opened), this.brokenWalls);
+        if (at) this.focus(at.x, at.y);
+      }
+    }
   }
 
   /** The models the environment wants on the map that is shown (empty when it is flat), for `Game` to load before it switches. */
@@ -444,11 +475,38 @@ export class InteriorView {
       }
       const fit = this.tileFit(model);
       // the face of the tile (not the tip of its highest engraving) lies a hair above the flat quad: set by the tips, the face lay under the quad and only the engravings showed
-      if (fit) list.push({ model, x: cellCenterX(x), y: TILE_LIFT + ((x + y) & 1) * TILE_PARITY_LIFT - fit.face * fit.scale[1], z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
+      if (fit) list.push({ model, x: cellCenterX(x), y: this.tileOrigin(model, fit, (x + y) & 1), z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
     }
     this.props.setInstances(owner, list);
     this.props.flush();
   }
+
+  /** The height of a floor tile's origin: its face a hair over the flat quad, or, for a tile whose relief the quad would cut (`TILE_BOTTOM_BY_MODEL`), its body bottom. */
+  private tileOrigin(model: string, fit: { scale: [number, number, number]; face: number }, parity: number): number {
+    const bottom = TILE_BOTTOM_BY_MODEL[model];
+    const lift = bottom !== undefined ? TILE_BASE_LIFT - bottom * fit.scale[1] : TILE_LIFT - fit.face * fit.scale[1];
+    return lift + parity * TILE_PARITY_LIFT;
+  }
+
+  /** How high the floor of the shown map stands over the flat quad (the face of its tiles), 0 where the floor is flat or its tiles keep their face at the quad. */
+  private floorRise(): number {
+    const map = this.map;
+    if (!map || !hasGroundModels(this.environment)) return 0;
+    const model = floorModelOfTexture(map.theme.floor)?.model;
+    if (!model || TILE_BOTTOM_BY_MODEL[model] === undefined || !this.props.has(model)) return 0;
+    const fit = this.tileFit(model);
+    return fit ? this.tileOrigin(model, fit, 0) + fit.face * fit.scale[1] : 0;
+  }
+
+  /** Tells the prop renderer what the floor carries. True when the lift changed (the objects built before have to be set again). */
+  private updateRise(): boolean {
+    const before = this.rise;
+    this.rise = this.floorRise();
+    this.props.setRise(this.owner ? { owner: this.owner, dy: this.rise, skip: RISE_SKIP, also: [LOOT_OWNER] } : null);
+    return Math.abs(before - this.rise) > 1e-6;
+  }
+
+  private rise = 0;
 
   /**
    * How a slab model of the user's is scaled to fill one cell (the files are normalised to about 1.9 units), and the heights of its top and bottom above its
@@ -675,13 +733,15 @@ export class InteriorView {
   }
 
   private pushBrokenPiece(instances: PropInstance[], map: InteriorMap, alongX: boolean, x: number, z: number, cx: number, cy: number): boolean {
-    const piece = hasWallModels(this.environment) ? BROKEN_PIECES[wallModelOfTexture(map.theme.wall) ?? ""] : undefined;
+    const fort = map.theme.wall === FORT_WALL;
+    const piece = fort ? FORT_BROKEN : hasWallModels(this.environment) ? BROKEN_PIECES[wallModelOfTexture(map.theme.wall) ?? ""] : undefined;
     const b = piece ? this.staticInfo[piece]?.bounds : undefined;
     if (!piece || !b || !this.props.has(piece)) return false;
+    const thick = fort ? FORT_BROKEN_DEPTH : PANEL_DEPTH * 2;
     const sx = CELL_SIZE / (b[3] - b[0]);
     const sy = wallHeightOf(map) / (b[4] - b[1]);
-    const sz = (PANEL_DEPTH * 2) / (b[5] - b[2]);
-    const shift = this.brokenWallShift(map, cx, cy, alongX, PANEL_DEPTH * 2);
+    const sz = thick / (b[5] - b[2]);
+    const shift = this.brokenWallShift(map, cx, cy, alongX, thick);
     // the broken side faces the side the slab stands on (the party's): turned by the side, not by the axis alone, which put the hole's slopes towards the pocket when the street lay on the other side
     instances.push({ model: piece, x: x + shift.dx, y: -b[1] * sy, z: z + shift.dz, rotY: Math.atan2(shift.sx, shift.sz), scale: sx, scaleXYZ: [sx, sy, sz], atOrigin: true });
     return true;
@@ -1094,6 +1154,8 @@ export class InteriorView {
   dispose(): void {
     for (const stop of [...this.sinking]) stop();
     this.props.setReference(null);
+    this.props.setRise(null);
+    this.rise = 0;
     if (this.owner) {
       this.props.removeOwner(this.owner);
       this.props.removeOwner(`${this.owner}:floor`);

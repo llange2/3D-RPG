@@ -271,7 +271,10 @@ export function advanceTime(party: Party, minutes: number): TimePassed {
   party.effects = party.effects.filter((e) => !over(e));
   for (const e of expired) {
     const hero = e.character !== undefined ? party.characters[e.character] : undefined;
-    if (e.kind === "blessed" && hero) removeCondition(hero, "Blessed");
+    if (e.kind === "blessed" && hero) {
+      removeCondition(hero, "Blessed");
+      if (hero.mods) delete hero.mods.blessing;
+    }
     if (e.kind === "stone_skin" && hero?.mods) delete hero.mods.stoneSkin;
     if (e.kind === "rage" && hero?.mods) delete hero.mods.rage;
     if (e.kind === "boon" && e.character !== undefined) endBoon(party, e.character, e.stat);

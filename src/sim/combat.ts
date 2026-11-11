@@ -66,7 +66,8 @@ export function rangedDamage(c: Character, monster: MonsterDef | null, distance:
   // BALANCE v4 (ranged): the level term counts 1 / 1.5 (the sword's counts a third); LEGACY (balance v4): divisor 1
   let total = Math.ceil((base * c.level) / rules.rangedLevelDivisor + weapon) + (c.mods?.rage ?? 0);
   if (c.defensiveStance) total = Math.trunc(total * STANCE());
-  if (monster && monster.armor > 0) total -= Math.trunc(monster.armor / 2);
+  // formulas 1.1 (2.3): two thirds of the armor count against the arrow (`rangedArmorShare`; LEGACY (balance v4): one half)
+  if (monster && monster.armor > 0) total -= Math.trunc(monster.armor * rules.rangedArmorShare);
   // BALANCE v4 (ranged): the physical resistance holds the arrow back as it holds the sword back (after the armor, like in `meleeDamage`)
   if (rules.rangedResPhysical && monster) total *= 1 - monster.res_physical;
   return Math.max(0, Math.trunc(total));

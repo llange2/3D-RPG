@@ -214,6 +214,10 @@ html.ending-on #game-cursor { display: none; }
   .service .svc-art img, .service .svc-art video { max-height: 34vh; margin-bottom: 8px; }
   .service .svc-main { overflow: visible; padding-right: 0; }
 }
+/* quartermaster (56th playtest, point 1): both lists scroll on their own under the fixed head, however much the party carries or has stored */
+.service .qm-cols { flex: 1 1 auto; min-height: 0; }
+.service .qm-col { min-height: 0; max-height: calc(92vh - 210px); overflow-y: auto; padding-right: 6px; scrollbar-color: var(--gold-dim) transparent; }
+.service .qm-col > h3 { margin-top: 0; position: sticky; top: 0; background: #2a1e14; z-index: 1; }
 .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
 .tab { padding: 4px 12px; border: 2px solid var(--gold-dim); border-radius: 6px 6px 0 0; background: #2a1e14; cursor: pointer; font-family: var(--font-head); font-size: 14px; }
 .tab.on { background: #5a3f12; border-color: var(--gold); }

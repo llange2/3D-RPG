@@ -5,7 +5,8 @@ import type { World } from "../world/world";
 import { isV4, RULES } from "./balance";
 import { isAlive, levelUp, recalcValues, removeCondition, xpToNextLevel } from "./character";
 import { generateItem, spellScroll } from "./items";
-import { MINUTES_PER_DAY, giveItem } from "./party";
+import { advanceTime, MINUTES_PER_DAY, giveItem } from "./party";
+import { addCondition, type ConditionEvent } from "./conditions";
 import { isSpellImplemented, learnBlock } from "./spells";
 import { BAG_SLOTS, type Character, type Condition, type Item, type Party } from "./types";
 
@@ -100,21 +101,26 @@ export function innCost(party: Party, tier: number): number {
   return Math.max(10, Math.round(20 * tier * party.characters.length * bargainFactor(party)));
 }
 
-/** Rest at an inn: heals everybody, ends bad conditions and moves the clock to 8:00 next morning. */
-export function innRest(party: Party, tier: number): { ok: boolean; cost: number; reason?: "gold" } {
+/**
+ * Rest at an inn: heals everybody, ends sleep and unconsciousness and moves the clock to 8:00 next morning. Formulas 1.1 (5.1): weakness, drink, poison, disease and madness are
+ * the temple's business now (they ran their time on the clock before as well, and the clock moves on here).
+ */
+export function innRest(party: Party, tier: number): { ok: boolean; cost: number; reason?: "gold"; conditions?: ConditionEvent[] } {
   const cost = innCost(party, tier);
   if (party.gold < cost) return { ok: false, cost, reason: "gold" };
   party.gold -= cost;
   const minuteOfDay = party.minutes % MINUTES_PER_DAY;
   const wait = minuteOfDay < 480 ? 480 - minuteOfDay : MINUTES_PER_DAY - minuteOfDay + 480;
-  party.minutes += wait;
+  // the clock really moves (spells end, poison can still kill during the night); the landlord's table is part of the price, so the larder stays as it was
+  const food = party.food;
+  const { conditions } = advanceTime(party, wait);
+  party.food = food;
   for (const c of party.characters) {
     if (!isAlive(c)) continue;
-    for (const cond of ["Sleeping", "Unconscious", "Weak", "Drunk", "Poisoned", "Diseased", "Crazy"] as const) removeCondition(c, cond);
+    for (const cond of ["Sleeping", "Unconscious"] as const) removeCondition(c, cond);
     recalcValues(c, party.talents, true, party.mascot);
   }
-  party.effects = party.effects.filter((e) => e.until > party.minutes);
-  return { ok: true, cost };
+  return { ok: true, cost, conditions };
 }
 
 /** What a tavern tells about a word (quest document 1.2, "Rätselmaster": the answers that exist in the world can turn up as rumours, with some silly ones among them). */
@@ -169,19 +175,60 @@ export function tavernRumour(world: World, tavernTier: number, rng: Rng): string
 
 // ------------------------------------------------------------------ temple
 
-export function healCost(c: Character, tier: number, party: Party): number {
-  // 55th playtest, point 6: times the hero's level (revival does the same), so that the temple stays a price for a high-level hero, too
-  return Math.round(Math.max(0, c.health - c.hp) * 2 * tier * c.level * bargainFactor(party));
+// Formulas 1.1 (5.3): healing and curing cost by the hero's level only (the temple's tier and the bargain no longer count), revival by the temple's tier only.
+// `tier` and `party` stay in the signatures of the first two so that callers keep one shape.
+
+export function healCost(c: Character, _tier: number, _party: Party): number {
+  return Math.round(Math.max(0, c.health - c.hp) * 2 * c.level);
 }
 
-const CURE_PRICE: Partial<Record<Condition, number>> = { Poisoned: 40, Diseased: 80, Cursed: 120, Crazy: 100, Weak: 30, Drunk: 10, Sleeping: 5, Paralyzed: 150, Petrified: 400, Unconscious: 60 };
+/** Unconscious has no price: the normal heal wakes the hero. */
+const CURE_PRICE: Partial<Record<Condition, number>> = { Poisoned: 40, Diseased: 80, Cursed: 120, Crazy: 100, Weak: 30, Drunk: 10, Sleeping: 5, Paralyzed: 150, Petrified: 400 };
 
-export function cureCost(cond: Condition, tier: number, party: Party): number {
-  return Math.round((CURE_PRICE[cond] ?? 100) * tier * bargainFactor(party));
+export function cureCost(cond: Condition, c: Character): number {
+  return Math.round((CURE_PRICE[cond] ?? 100) * c.level);
 }
 
-export function reviveCost(c: Character, tier: number, party: Party): number {
-  return Math.round(300 * c.level * tier * bargainFactor(party));
+/** Dead: 300 per tier; Rotten: 1000 per tier (a hero who is both costs the rotten price). */
+export function reviveCost(c: Character, tier: number): number {
+  return Math.round((c.conditions.includes("Rotten") ? 1000 : 300) * tier);
+}
+
+/** Donation at the temple: 10 gold per tier, 20 % for a day's blessing (formulas 1.1, 5.3). */
+export const DONATION_BLESSING_CHANCE = 0.2;
+export const BLESSING_MINUTES = 24 * 60;
+
+export function donationCost(tier: number): number {
+  return Math.round(10 * tier);
+}
+
+/** The button shows only for a hero who can use it: alive and not blessed yet. */
+export function canDonate(c: Character): boolean {
+  return isAlive(c) && !c.conditions.includes("Blessed");
+}
+
+/**
+ * Gives a hero the blessing for 24 hours; its strength is the tier of the temple (`mods.blessing`, read by `conditionAdjusted`). A running blessing is replaced, not stacked.
+ * `index` is the hero's seat: the `TimedEffect` ends the condition again (`advanceTime`).
+ */
+export function blessHero(party: Party, index: number, tier: number): void {
+  const c = party.characters[index]!;
+  party.effects = party.effects.filter((e) => !(e.kind === "blessed" && e.character === index));
+  (c.mods ??= {}).blessing = Math.max(1, Math.min(5, Math.floor(tier)));
+  addCondition(c, "Blessed", party.minutes);
+  party.effects.push({ kind: "blessed", until: party.minutes + BLESSING_MINUTES, character: index });
+  recalcValues(c, party.talents, false, party.mascot);
+}
+
+/** The gold is gone in any case; with a chance of 20 % the hero is blessed. Returns null if the hero cannot donate or the party cannot pay. */
+export function templeDonate(party: Party, index: number, tier: number, rng: Rng): { blessed: boolean; cost: number } | null {
+  const c = party.characters[index]!;
+  const cost = donationCost(tier);
+  if (!canDonate(c) || party.gold < cost) return null;
+  party.gold -= cost;
+  const blessed = rng.float() < DONATION_BLESSING_CHANCE;
+  if (blessed) blessHero(party, index, tier);
+  return { blessed, cost };
 }
 
 export function templeHeal(party: Party, index: number, tier: number): boolean {
@@ -194,9 +241,9 @@ export function templeHeal(party: Party, index: number, tier: number): boolean {
   return true;
 }
 
-export function templeCure(party: Party, index: number, cond: Condition, tier: number): boolean {
+export function templeCure(party: Party, index: number, cond: Condition): boolean {
   const c = party.characters[index]!;
-  const cost = cureCost(cond, tier, party);
+  const cost = cureCost(cond, c);
   if (!c.conditions.includes(cond) || party.gold < cost) return false;
   party.gold -= cost;
   removeCondition(c, cond);
@@ -204,10 +251,11 @@ export function templeCure(party: Party, index: number, cond: Condition, tier: n
   return true;
 }
 
+/** Brings back the dead (300 per tier) or the rotten (1000 per tier) with half their hit points. */
 export function templeRevive(party: Party, index: number, tier: number): boolean {
   const c = party.characters[index]!;
-  const cost = reviveCost(c, tier, party);
-  if (!c.conditions.includes("Dead") || party.gold < cost) return false;
+  const cost = reviveCost(c, tier);
+  if (!(c.conditions.includes("Dead") || c.conditions.includes("Rotten")) || party.gold < cost) return false;
   party.gold -= cost;
   removeCondition(c, "Dead");
   removeCondition(c, "Rotten");
