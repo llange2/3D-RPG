@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { BASE_CLASS, BASE_RACE, CONSTANTS } from "../data/tables";
-import { healthFlat, isV4, orbManaBonus, xpStepV4 } from "./balance";
+import { healthEndDivisor, healthFlat, isV4, orbManaBonus, xpStepV4 } from "./balance";
 import { isTwoHanded, sumBonus } from "./items";
 import { removeCondition } from "./conditions";
 import { journalEmit } from "./journal";
@@ -219,7 +219,8 @@ export const ORB_MANA_BONUS = 0.2;
 export function recalcValues(c: Character, talents: readonly string[], refill: boolean, mascot = ""): void {
   const use = (a: Attribute) => Math.max(1, attr(c, a, true));
   const base = (key: string) => getBaseValue(c.raceType, c.classType, key);
-  let calc = use("end") / 2 + base("health");
+  // BALANCE v4 (55th playtest, point 17): Endurance counts a quarter (`healthEndDivisor()`); LEGACY (balance v4): a half
+  let calc = use("end") / healthEndDivisor() + base("health");
   if (calc <= 0) calc = 1;
   // BALANCE v4: +10 health on top (a level 1 Wizard had 2 points); `healthFlat()` is 0 in the legacy mode
   c.health = pyRound(c.level * calc) + healthFlat();

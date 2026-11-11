@@ -1,8 +1,10 @@
 import { Rng, derive, type SeedState } from "../core/rng";
 import { allowedIn } from "../data/item-rules";
+import { hasOrdinaryLock } from "../data/locks";
 import { PEARL } from "../data/quest-table";
 import { placeOf } from "../interiors/place";
 import type { InteriorMap } from "../interiors/types";
+import { lockTrapParams } from "./lockTrap";
 import type { QuestEnv } from "./questGen";
 import type { ActionInstance, ParamValue } from "./types";
 
@@ -95,6 +97,40 @@ export function eligibleChests(map: InteriorMap, actions: readonly ActionInstanc
   const inRoom = (a: ActionInstance, r?: { x: number; y: number; w: number; h: number }) => !!r && a.x >= r.x && a.y >= r.y && a.x < r.x + r.w && a.y < r.y + r.h;
   const vaults = map.dungeon?.vaults ?? [];
   return actions.filter((a) => a.kind === "treasure" && typeof a.params.quest !== "string" && a.params.lock === undefined && !inRoom(a, end) && !inRoom(a, machines) && !vaults.some((v) => inRoom(a, v)) && (!onlyAlarm || a.params.warn === "alarm"));
+}
+
+/** The chests that can have a lock (the user's object list: the wooden, the iron, the noble and the sapphire chest), the plainest first. */
+const LOCKABLE_CHESTS: readonly number[] = [1, 74, 72, 96];
+
+/**
+ * Hides the artifacts of a place (55th playtest, point 12) in its LOCKED ordinary chests, one to a chest as far as they reach. A place whose ordinary chests are all open locks one of them
+ * first (a lock like those of the rules: the mark `difficulty` and the trap for a failed attempt); a place with no chest that can have a lock holds none (the plan only gives artifacts to places
+ * with chests, and every cave and dungeon has some).
+ */
+export function hideArtifacts(map: InteriorMap, actions: ActionInstance[], artifacts: readonly string[], seed: SeedState, tier: number): void {
+  if (artifacts.length === 0) return;
+  const chests = eligibleChests(map, actions);
+  const rng = new Rng(derive(seed, "hide-artifacts"));
+  let locked = chests.filter((c) => c.params.difficulty !== undefined);
+  if (locked.length === 0) {
+    const shuffled = rng.shuffle(chests);
+    let pick = shuffled.find((c) => hasOrdinaryLock(c.params));
+    if (!pick) {
+      // a place whose theme keeps its loot in heaps of treasure (no lock on them): one heap becomes a chest that suits the place, so that the artifact has a locked vessel
+      const vessel = LOCKABLE_CHESTS.find((i) => allowedIn(i, placeOf(map)));
+      pick = shuffled[0];
+      if (!pick || vessel === undefined) return;
+      pick.params.chest = vessel;
+    }
+    Object.assign(pick.params, { difficulty: 1 }, lockTrapParams(rng, { tier, depth: 0, depthRatio: 0, mapTier: tier }, map.kind === "cave"));
+    locked = [pick];
+  }
+  const order = rng.shuffle(locked);
+  artifacts.forEach((type, i) => {
+    const chest = order[i % order.length]!;
+    const have = typeof chest.params.extra === "string" && chest.params.extra !== "" ? `${String(chest.params.extra)},` : "";
+    (chest.params as Record<string, ParamValue>).extra = `${have}${type}`;
+  });
 }
 
 /**

@@ -210,6 +210,24 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     minimap: "tex_mm_info",
     params: loose({ persona: z.number().int() }),
   },
+  quartermaster: {
+    kind: "quartermaster",
+    legacyIds: [],
+    // the quartermaster of the town of level 3 keeps the party's things for a fee (55th playtest, point 14)
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_info",
+    params: loose({ persona: z.number().int() }),
+  },
+  keeper: {
+    kind: "keeper",
+    legacyIds: [],
+    // the king's henchman takes the artifacts of the castle's kind back and rewards the party (55th playtest, point 12)
+    trigger: "interact",
+    persistence: "repeat",
+    minimap: "tex_mm_info",
+    params: loose({ persona: z.number().int(), alignment: z.enum(["good", "neutral", "evil"]) }),
+  },
   machine: {
     kind: "machine",
     legacyIds: [],
@@ -362,7 +380,7 @@ export const SUPPORT_BEAM = 99;
 export function blocksCell(a: { kind: ActionKind; params: Record<string, unknown> }): boolean {
   // a ring head blocks only while it stands on its cell (a lever sets and removes it): the game decides that (`ringBlocked` in quests.ts)
   if (a.kind === "head") return a.params.mode === "rotate";
-  return a.kind === "qportal" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "machine" || a.kind === "tube" || a.kind === "chalice" || a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && Number(a.params.item) !== SUPPORT_BEAM && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
+  return a.kind === "qportal" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "quartermaster" || a.kind === "keeper" || a.kind === "machine" || a.kind === "tube" || a.kind === "chalice" || a.kind === "treasure" || a.kind === "talent" || a.kind === "portal" || a.kind === "work" || a.kind === "shrine" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || hasObject(a) || (a.kind === "decor" && Number(a.params.item) !== SUPPORT_BEAM && MAP_ITEMS[Number(a.params.item)]?.obstacle === true);
 }
 
 export function kindForLegacyId(id: number): ActionKind | null {

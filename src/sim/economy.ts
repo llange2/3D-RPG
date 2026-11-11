@@ -170,7 +170,8 @@ export function tavernRumour(world: World, tavernTier: number, rng: Rng): string
 // ------------------------------------------------------------------ temple
 
 export function healCost(c: Character, tier: number, party: Party): number {
-  return Math.round(Math.max(0, c.health - c.hp) * 2 * tier * bargainFactor(party));
+  // 55th playtest, point 6: times the hero's level (revival does the same), so that the temple stays a price for a high-level hero, too
+  return Math.round(Math.max(0, c.health - c.hp) * 2 * tier * c.level * bargainFactor(party));
 }
 
 const CURE_PRICE: Partial<Record<Condition, number>> = { Poisoned: 40, Diseased: 80, Cursed: 120, Crazy: 100, Weak: 30, Drunk: 10, Sleeping: 5, Paralyzed: 150, Petrified: 400, Unconscious: 60 };
@@ -310,15 +311,13 @@ export function withdraw(party: Party, amount: number): number {
 export const BANK_SLIDER_STEPS = 1000;
 
 /**
- * The amount a bank slider stands for (45th playtest, point 10). The sums run from a few hundred to millions, so the slider is not linear: the position is cubed, which gives fine steps
- * at the bottom and coarse ones at the top. The result is rounded to three significant digits (never to more than `max`), the end of the slider is exactly `max` and the start 0.
+ * The amount a bank slider stands for. Linear since the 55th playtest, point 4 (the cubed slider of the 45th jumped from a few hundred to thousands within a few pixels): the position is
+ * the share of `max`, rounded to whole gold (at least 1 once the slider has left its start), the end of the slider is exactly `max` and the start 0.
  */
 export function bankSliderAmount(max: number, position: number): number {
   if (max <= 0 || position <= 0) return 0;
   if (position >= BANK_SLIDER_STEPS) return max;
-  const raw = Math.max(1, max * (position / BANK_SLIDER_STEPS) ** 3);
-  const unit = 10 ** Math.max(0, Math.floor(Math.log10(raw)) - 2);
-  return Math.min(max, Math.max(1, Math.round(raw / unit) * unit));
+  return Math.min(max, Math.max(1, Math.round((max * position) / BANK_SLIDER_STEPS)));
 }
 
 // ------------------------------------------------------------------ training, guild

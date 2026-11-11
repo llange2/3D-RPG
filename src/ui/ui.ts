@@ -22,6 +22,10 @@ export interface IdentifyRow {
   maxHp: number;
   armor: number;
   attacks: number;
+  /** Damage of one hit before armor and resistance, and its kind (optional: older callers and tools leave it out). */
+  damageMin?: number;
+  damageMax?: number;
+  damageType?: string;
   abilities: string;
   resistances: { physical: number; fire: number; ice: number; acid: number; magic: number };
 }
@@ -441,7 +445,7 @@ export class UI {
               "div",
               { class: "id-monster" },
               h("div", { class: "id-name", text: r.name }),
-              h("div", { class: "id-stats", text: `${r.maxHp} hit points, armor ${r.armor}, ${r.attacks} attack${r.attacks === 1 ? "" : "s"} a round${r.abilities ? `, ${r.abilities}` : ""}` }),
+              h("div", { class: "id-stats", text: `${r.maxHp} hit points, armor ${r.armor}, ${r.attacks} attack${r.attacks === 1 ? "" : "s"} a round${r.damageMax !== undefined ? `, ${r.damageMin === r.damageMax ? r.damageMax : `${r.damageMin} to ${r.damageMax}`} ${r.damageType ?? "physical"} damage a hit` : ""}${r.abilities ? `, ${r.abilities}` : ""}` }),
               h(
                 "div",
                 { class: "id-res" },

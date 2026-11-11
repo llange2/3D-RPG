@@ -107,7 +107,7 @@ export type SpellResult =
 export interface CastOptions {
   /** Character index for heals, cures and the item spells. */
   target?: number;
-  /** Element for Protection from Elements. */
+  /** Element for Protection from Elements, and for the breath of Dragon Breath. */
   element?: "acid" | "fire" | "ice" | "magic";
   /** Lloyd's Beacon: light the fire here, or go back to it. */
   beacon?: "set" | "return";
@@ -256,7 +256,8 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
       kind: "attack",
       spellId,
       damage: attackDamage(spell, caster, rng, party.mascot),
-      type: types[rng.int(types.length)]!,
+      // 55th playtest, point 16: Dragon Breath carries the element the player chose (the draw is made anyway, so that the stream does not depend on the choice)
+      type: ((drawn) => (spellId === 50 && options.element && types.includes(options.element) ? options.element : drawn))(types[rng.int(types.length)]!),
       penetrate: !SINGLE_TARGET.has(spellId) && !special,
       // Pain hits the living and the dead alike since the spell sheet dropped "Doesn't affect undead"; Turn Undead (`turn_undead`) checks the undead itself
       undead: null,

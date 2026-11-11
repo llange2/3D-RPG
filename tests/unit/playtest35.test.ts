@@ -361,19 +361,28 @@ describe("35th playtest, point 2 and 11: the quest log of the generated world", 
     expect(use.open[0]).toMatch(/^Use the .* key to open/);
     const done = worldQuestLog(input([lockSeenFlag(keyed.id)], [keyed.id], { [need]: 1 }));
     expect(done.open.filter((q) => q.includes("to open"))).toEqual([]);
-    expect(done.done.some((q) => q.startsWith("Opened") && q.includes(keyed.name))).toBe(true);
+    // 55th playtest, point 18: that the key opened the way is no entry of the log
+    expect(done.done.some((q) => q.startsWith("Opened"))).toBe(false);
   });
 
   it("follows a cave or dungeon from the first visit to its end room: open, then done with the words of the quest", () => {
     const cave = free.find((p) => p.kind === "cave")!;
-    expect(worldQuestLog(input([], [cave.id])).open).toEqual([`Explore the scary ${cave.name} at ${cave.x}/${cave.y}.`]);
-    expect(worldQuestLog(input([reachedFlag(cave.id)], [cave.id]))).toEqual({ open: [], done: [`Explored the scary ${cave.name}.`], places: [cave.name] });
+    // (55th playtest, point 19: a place keeps one of several wordings; the open line names the place and where it lies, the done line only the place)
+    const caveOpen = worldQuestLog(input([], [cave.id])).open;
+    expect(caveOpen).toHaveLength(1);
+    expect(caveOpen[0]).toContain(cave.name);
+    expect(caveOpen[0]).toContain(`${cave.x}/${cave.y}`);
+    const caveDone = worldQuestLog(input([reachedFlag(cave.id)], [cave.id]));
+    expect(caveDone.open).toEqual([]);
+    expect(caveDone.done).toHaveLength(1);
+    expect(caveDone.done[0]).toContain(cave.name);
+    expect(caveDone.places).toEqual([cave.name]);
     const boss = w.allPois().find((p) => p.kind === "dungeon" && w.dungeonRef(p.id)?.quest === "quest_5");
     if (boss) {
       const open = worldQuestLog(input([], [boss.id])).open.find((q) => q.includes(boss.name))!;
-      expect(open).toMatch(/^Defeat the mighty .* in the /);
+      expect(open).toMatch(/^(Defeat the mighty|Hunt down the vile|Put an end to the evil|Face the dangerous|Slay the dreaded) .* in /);
       const done = worldQuestLog(input([reachedFlag(boss.id)], [boss.id])).done.find((q) => q.includes(boss.name))!;
-      expect(done).toMatch(/^Defeated the mighty .* in the /);
+      expect(done).toMatch(/^(Defeated the (mighty|vile|evil|dangerous)|Slew the dreaded) .* in /);
     }
   });
 
@@ -387,7 +396,8 @@ describe("35th playtest, point 2 and 11: the quest log of the generated world", 
     expect(log.open[0]).toContain(`${kind} king in ${castle.name}`);
     expect(log.open[0]).toContain("4/11 delivered, you carry 3.");
     const won = worldQuestLog(input([`king:${kind}=11`, `king:winner=${kind}`], [castle.id]));
-    expect(won.open).toEqual([]);
+    // (what is left open is the henchman, who takes the artifacts again and again)
+    expect(won.open.filter((q) => !q.includes("artifacts"))).toEqual([]);
     expect(won.done[0]).toContain("got 11 Orbs of Ultimate Power");
   });
 });

@@ -45,7 +45,7 @@ export const GAME_ACTIONS: readonly { id: GameAction; label: string }[] = [
   { id: "rest", label: "Rest" },
   { id: "map", label: "Map" },
   { id: "quests", label: "Quest log" },
-  { id: "talents", label: "Talents" },
+  { id: "talents", label: "Party Info" },
   { id: "hero1", label: "Hero 1" },
   { id: "hero2", label: "Hero 2" },
   { id: "hero3", label: "Hero 3" },
@@ -68,11 +68,11 @@ export const DEFAULT_KEYS: Readonly<KeyBindings> = {
   turnRight: ["e", "ArrowRight"],
   attack: ["Space"],
   cast: ["f"],
-  inventory: ["i", "c"],
+  inventory: ["c"],
   rest: ["r"],
   quests: ["j"],
   map: ["m"],
-  talents: ["t"],
+  talents: ["t", "i"],
   quicksave: ["F5"],
   quickload: ["F9"],
   hero1: ["1"],
@@ -124,6 +124,12 @@ export function parseKeys(raw: unknown): KeyBindings {
   const out = defaultKeys();
   if (typeof raw !== "object" || raw === null) return out;
   const stored = raw as Record<string, unknown>;
+  // 55th playtest, point 9: "i" opens the Party Info tab. Settings saved before that still hold "i" for the inventory; the untouched old pair of defaults moves over
+  const same = (v: unknown, keys: string[]): boolean => Array.isArray(v) && v.length === keys.length && keys.every((k, i) => v[i] === k);
+  if (same(stored["inventory"], ["i", "c"]) && same(stored["talents"], ["t"])) {
+    stored["inventory"] = [...DEFAULT_KEYS.inventory];
+    stored["talents"] = [...DEFAULT_KEYS.talents];
+  }
   const taken = new Set<string>();
   const cleaned: Partial<KeyBindings> = {};
   for (const { id } of GAME_ACTIONS) {

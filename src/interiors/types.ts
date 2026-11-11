@@ -152,6 +152,8 @@ export interface DungeonRef {
   skulls: number;
   /** Pearls of Youth and Beauty (ue_quest_4) hidden in the ordinary chests of the place (levels 3 and 4 only). */
   pearls: number;
+  /** The artifacts (quest item types `quest_<good|neutral|evil>_artifact`) hidden in the locked chests of the place (55th playtest, point 12; levels 2 to 5, caves and dungeons). */
+  artifacts?: string[];
   /** The spells whose scrolls lie in the containers of this place (`planSpellLoot`, 34th playtest): every spell twice in the world, in places of its own level. */
   spells: number[];
   /** Seth Squirm and the machines of the Quatloo coins stand in this place (one dungeon of level 2 in the world). */
@@ -224,6 +226,8 @@ export interface CastleLayout {
   kingChests: { x: number; y: number }[];
   alarmChests: { x: number; y: number }[];
   door: { x: number; y: number };
+  /** The king's henchman who takes the artifacts of the castle's kind back (55th playtest, point 12). Absent in a hand-made castle of a test. */
+  keeper?: { x: number; y: number };
   /** The cells inside the keep (the gate itself is the way out and not one of them). */
   keep: number[];
 }
@@ -300,6 +304,11 @@ export interface InteriorMap {
   castle?: CastleLayout;
   /** The spaceship under the pyramids: where its sections, tubes and airlocks are. */
   spaceship?: SpaceshipLayout;
+  /**
+   * What the plan of the world tells a town to say or to hold (55th playtest, points 13 and 14): the dungeon where Seth Squirm lives (told by a person in the towns of level 2) and whether this
+   * is the town with the quartermaster (one town of level 3 in the world).
+   */
+  townHints?: { seth?: { name: string; x: number; y: number }; quartermaster?: boolean };
   /** The debug showcase (`interiors/showcase.ts`): every monster, person and object of the game, each on a cell of its own and without a function. */
   showcase?: ShowcaseLayout;
   /** Optional per-cell look. `cell` holds, per cell, an index into `list`; generated maps do not use it. */

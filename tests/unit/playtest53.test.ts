@@ -123,8 +123,9 @@ describe("health follows the attributes a hero gains (point 27)", () => {
     recalcValues(wizard, party.talents, true, party.mascot);
     const before = wizard.health;
     gainAttribute(wizard, "end", 10, party.talents, party.mascot);
-    // END / 2 per level: five more points of health on each of the ten levels
-    expect(wizard.health).toBe(before + 50);
+    // END / 4 per level (55th playtest, point 17): 2.5 more points of health on each of the ten levels (25 in all, a point less where the rounding to even falls)
+    expect(wizard.health - before).toBeGreaterThanOrEqual(24);
+    expect(wizard.health - before).toBeLessThanOrEqual(25);
     expect(wizard.hp).toBe(wizard.health);
   });
 
@@ -138,8 +139,9 @@ describe("health follows the attributes a hero gains (point 27)", () => {
     const old = wizard.health;
     wizard.end = 25; // what the chalice did before the fix
     normalizeParty(party);
-    expect(wizard.health).toBe(old + 50);
-    expect(wizard.hp).toBe(old + 50);
+    expect(wizard.health - old).toBeGreaterThanOrEqual(24);
+    expect(wizard.health - old).toBeLessThanOrEqual(25);
+    expect(wizard.hp).toBe(wizard.health);
     const again = wizard.health;
     normalizeParty(party);
     expect(wizard.health).toBe(again); // a second run changes nothing

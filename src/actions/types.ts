@@ -1,6 +1,6 @@
 /** Action vocabulary. Pure data, no DOM, no Babylon. */
 
-export type ActionKind = "treasure" | "door" | "trap" | "lore" | "transfer" | "service" | "ambush" | "shrine" | "fountain" | "breakable_wall" | "decor" | "riddle" | "gong" | "lever" | "head" | "teleporter" | "talent" | "portal" | "work" | "king" | "skullmiser" | "machine" | "tube" | "qportal" | "rune" | "chalice" | "stairs" | "legacy";
+export type ActionKind = "treasure" | "door" | "trap" | "lore" | "transfer" | "service" | "ambush" | "shrine" | "fountain" | "breakable_wall" | "decor" | "riddle" | "gong" | "lever" | "head" | "teleporter" | "talent" | "portal" | "work" | "king" | "skullmiser" | "quartermaster" | "keeper" | "machine" | "tube" | "qportal" | "rune" | "chalice" | "stairs" | "legacy";
 
 export type ParamValue = number | string | boolean;
 

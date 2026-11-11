@@ -100,14 +100,14 @@ export function averageHit(c: Character, kind: "melee" | "ranged", min: number, 
  * The "Average damage per hit" lines of an item's tooltip: for a weapon or a ring that adds damage, what the hero hits for on average with the item on (instead of `replaced`,
  * or as it is when `worn`), from the hero's level and attributes. Rings add to blows and shots alike, so a ring shows both when the hero shoots. Empty for everything else.
  */
-export function averageDamageLines(c: Character, item: Item, replaced: Item | null, worn: boolean): { label: string; value: number }[] {
+export function averageDamageLines(c: Character, item: Item, replaced: Item | null, worn: boolean): { label: string; value: number; change: number }[] {
   const own = (key: BonusKey) => item.bonus[key] ?? 0;
   const delta = (key: BonusKey) => (worn ? 0 : own(key) - (replaced?.bonus[key] ?? 0));
   const ringDelta = (key: "dam_min" | "dam_max") => (worn ? 0 : (item.type === "ring" ? own(key) : 0) - (replaced?.type === "ring" ? replaced.bonus[key] ?? 0 : 0));
   const hitsMelee = own("dam_min") !== 0 || own("dam_max") !== 0;
   const shoots = own("ranged_dam_min") !== 0 || own("ranged_dam_max") !== 0;
   const hasBow = itemBonus(c, "ranged_dam_max") + delta("ranged_dam_max") > 0;
-  const lines: { label: string; value: number }[] = [];
+  const lines: { label: string; value: number; change: number }[] = [];
   const round = (x: number) => Number(x.toFixed(1));
   // 54th playtest, point 1: Strength moves the blow and Accuracy the shot as damage does, so a ring (or any piece) of Strength or Accuracy shows its line, too; a shot only counts for a hero with a bow
   const strength = own("str") !== 0;
@@ -116,11 +116,18 @@ export function averageDamageLines(c: Character, item: Item, replaced: Item | nu
   const wantsRanged = shoots || ((accuracy || (hitsMelee && item.type === "ring")) && hasBow);
   // what the item changes in the attributes against what it replaces (nothing when it is worn already: the hero's values hold it)
   const attrChange = { str: delta("str"), acc: delta("acc") };
-  if (wantsMelee) lines.push({ label: "Average melee damage per hit", value: round(averageHit(c, "melee", itemBonus(c, "dam_min") + delta("dam_min"), itemBonus(c, "dam_max") + delta("dam_max"), attrChange)) });
+  // 55th playtest, point 1: `change` is the difference to what the hero hits for now (green or red in brackets, like the other values); 0 for an item that is worn already
+  if (wantsMelee) {
+    const value = round(averageHit(c, "melee", itemBonus(c, "dam_min") + delta("dam_min"), itemBonus(c, "dam_max") + delta("dam_max"), attrChange));
+    const now = round(averageHit(c, "melee", itemBonus(c, "dam_min"), itemBonus(c, "dam_max")));
+    lines.push({ label: "Average melee damage per hit", value, change: worn ? 0 : round(value - now) });
+  }
   if (wantsRanged) {
     const min = itemBonus(c, "ranged_dam_min") + ringDamage(c, "dam_min") + delta("ranged_dam_min") + ringDelta("dam_min");
     const max = itemBonus(c, "ranged_dam_max") + ringDamage(c, "dam_max") + delta("ranged_dam_max") + ringDelta("dam_max");
-    lines.push({ label: "Average ranged damage per hit", value: round(averageHit(c, "ranged", min, max, attrChange)) });
+    const value = round(averageHit(c, "ranged", min, max, attrChange));
+    const now = round(averageHit(c, "ranged", itemBonus(c, "ranged_dam_min") + ringDamage(c, "dam_min"), itemBonus(c, "ranged_dam_max") + ringDamage(c, "dam_max")));
+    lines.push({ label: "Average ranged damage per hit", value, change: worn ? 0 : round(value - now) });
   }
   return lines;
 }
