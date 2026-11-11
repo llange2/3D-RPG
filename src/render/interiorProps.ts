@@ -83,8 +83,8 @@ export function shownItem(a: Pick<ActionInstance, "kind" | "params">): number | 
   return typeof id === "number" ? id : null;
 }
 
-/** Where the middle of a lever's base plate lies in the model (x, model units, measured from `ci_39.glb`: the plate runs from -0.38 to 1.0, the handle points to -x). */
-const LEVER_BASE_X: Readonly<Record<number, number>> = { 39: 0.31 };
+/** Where the middle of a lever's base plate lies in the model (x, model units in the engine: `ci_39.glb` has the plate from -0.38 to 1.0 with the handle towards -x, and Babylon mirrors a glTF in x, so the middle lies at -0.31 here; the first fix had the sign of the file and the base jumped further, 56th playtest follow-up). */
+const LEVER_BASE_X: Readonly<Record<number, number>> = { 39: -0.31 };
 
 /** Has this lever been pulled? An airlock lever stays pulled for good (`<airlock>@<side>`), every other one flips with each pull (its uid). */
 export function leverPulled(a: Pick<ActionInstance, "uid" | "params">, opened: ReadonlySet<string>): boolean {

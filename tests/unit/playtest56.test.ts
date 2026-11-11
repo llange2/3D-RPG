@@ -51,9 +51,9 @@ describe("point 2: two cobblestone tiles in front of every castle", () => {
 describe("point 3: a pulled lever keeps its base where it stood", () => {
   const info = { ci_39: { file: "x", tris: 0, bytes: 0, bounds: [-0.998, -0.71, -0.69, 1.0016, 0.7, 0.69], animations: [], groundTop: -0.6 } } as never;
   const lever = (): ActionInstance => ({ uid: "t#lever:0", kind: "lever", x: 3, y: 4, params: { item: 39, target: "h" } });
-  // the middle of the base plate in the world: the model's (0.31, 0) turned and scaled with the prop
+  // the middle of the base plate in the world: the model's (-0.31, 0) (Babylon mirrors the file in x) turned and scaled with the prop
   const base = (p: { x: number; z: number; rotY: number; scale: number }): [number, number] => {
-    const bx = 0.31 * p.scale;
+    const bx = -0.31 * p.scale;
     return [p.x + bx * Math.cos(p.rotY), p.z - bx * Math.sin(p.rotY)];
   };
 
