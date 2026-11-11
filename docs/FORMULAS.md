@@ -253,7 +253,7 @@ Es würfelt nur der beste aktive Dieb (höchster Skill). Gelingt `Wurf ≥ Schwi
 ### 7.5 Beutegegenstände der Quests
 - **Schädel** 1 000 Gold und 1 000 XP je Stück (Skull Miser), ab 5 ein Ring der Stufe 2.
 - **Perlen** 50 000 Gold und 100 000 XP je Stück (Piratenkönigin), 20 in der Welt.
-- **Artefakte** (neu im 55. Playtest): 200 000 XP je Stück an jeden Helden, der handeln kann (`ARTIFACT_XP`); je Art (gut, neutral, böse) bis zu 4 in der Welt (`ARTIFACTS_PER_KIND`), höchstens eines je Ort, in verschlossenen Kisten von Höhlen und Dungeons ab Stufe 2.
+- **Artefakte** (neu im 55. Playtest): 200 000 XP je Stück an jeden Helden, der handeln kann (`ARTIFACT_XP`); je Art (gut, neutral, böse) 5 in der Welt (`ARTIFACTS_PER_KIND`), eines je Ort (auf einer kleinen Welt mit wenigen Dungeons auch zwei, damit die Zahl bleibt), in verschlossenen Kisten von Höhlen und Dungeons ab Stufe 2.
 - **Orbs**: 11 für den König; **Quatloo-Münzen**: 25 in der Welt, eine kauft 3 Punkte eines Attributs.
 
 ---

@@ -164,5 +164,6 @@
  * 63 = the 55th playtest: the side rooms of a castle's keep hold something (a banner and a chest or provisions; below level 5 half of them behind a gate to pick, with a chest of the next level), the artifacts of the
  * three kingdoms lie in locked chests (`DungeonRef.artifacts`) and the king's henchman waits in each castle (`CastleLayout.keeper`), the towns of level 2 tell where Seth Squirm lives, one town of level 3 has the
  * quartermaster (`InteriorMap.townHints`), and the health of a hero counts Endurance a quarter, not a half (this one is no generator change, it moves the golden numbers of the heroes).
+ * 64 = five artifacts of each kingdom instead of four (`ARTIFACTS_PER_KIND`), two to a place where a small world with few dungeons has too few places.
  */
-export const GEN_VERSION = 63;
+export const GEN_VERSION = 64;
