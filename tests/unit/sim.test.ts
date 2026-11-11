@@ -264,7 +264,8 @@ describe("combat formulas", () => {
   it("ranged hit chance drops with distance", () => {
     const archer = createDefaultParty().characters[2]!;
     archer.inventory.ranged_weapon = makeItem({ name: "Bow", type: "short bow", bonus: { ranged_dam_min: 3, ranged_dam_max: 6 } });
-    const fast = Object.values(MONSTERS).find((m) => m.speed >= 30)!;
+    // (no armor: two thirds of it would swallow the little damage of this bow, formulas 1.1)
+    const fast = { ...Object.values(MONSTERS).find((m) => m.speed >= 30)!, armor: 0 };
     const hits = (d: number) => {
       const r = rng(`ranged-${d}`);
       let n = 0;

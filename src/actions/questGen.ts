@@ -199,11 +199,11 @@ function placeMinis(env: QuestEnv, rng: Rng): void {
     else if (fail === 2) {
       // the trap of the place if it has one; else a pit, in a cave a puddle of fire
       const cave = env.map.kind === "cave";
-      // (a tower has no guillotine, and pits and spears only on its ground floor: 48th playtest)
+      // (a tower has no guillotine and no pit, and spears only on its ground floor: 48th playtest, no pits since the 56th)
       const tower = env.map.dungeon?.tower;
       const chosen = env.theme.trap !== "none" ? env.theme.trap : cave ? "generic" : "pit";
-      const theme = tower && chosen === "guillotine" ? "generic" : chosen;
-      const groundOnly = !!tower && (theme === "pit" || theme === "spring");
+      const theme = tower && (chosen === "guillotine" || chosen === "pit") ? "generic" : chosen;
+      const groundOnly = !!tower && theme === "spring";
       const damage = env.trapDamage(theme, env.tier, rng);
       const params: Record<string, ParamValue> = theme === "generic" ? { trap: "generic", damage, element: env.theme.trapElement ?? "fire" } : { trap: theme, damage };
       const field = far.find((a) => (!groundOnly || towerFloorAt(tower, a.x) === 0) && env.place({ uid: env.uid("trapfield"), kind: "trap", x: a.x, y: a.y, params }));

@@ -111,6 +111,7 @@ export function carriesQuestItem(c: Character): boolean {
 function leave(party: Party, slot: number): Character {
   const c = party.characters[slot]!;
   removeCondition(c, "Blessed");
+  if (c.mods) delete c.mods.blessing;
   dropBoons(party, slot);
   party.effects = party.effects.filter((e) => !(e.kind === "blessed" && e.character === slot));
   return c;

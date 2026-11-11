@@ -1672,6 +1672,20 @@ Der Exporter hat jetzt eine Liste von Ersetzungen je Zauber (`DESCRIPTION_REPLAC
 14. **Quartiermeister:** eine Stadt der Stufe 3 (per Welt-Seed gewählt) hat ihn in einer Sackgasse mit zwei Lagern (Item 13, Text „This belongs to the quartermaster …“). Persona 311 (`new:Quartermaster`, Modell `monster_1311`, mit einem Hilfsskript in beide Register gemischt; die Pipeline kennt `new:` jetzt auch bei Personas), Aktion `quartermaster`, Fenster `ui/quartermaster.ts`, Zustand `Party.storage`, 1 000 Gold je Stück (`sim/quartermaster.ts`).
 15. **„closest“ nach Schritten:** `closestInCone` (`sim/encounter.ts`) nimmt unter allen sichtbaren Monstern im Kegel das mit der kürzesten Wegstrecke zur Gruppe (`stepsToParty`, weckt niemanden). Die alte Regel „erst die Gerade“ ist weg.
 16. **Dragon Breath:** `askSpellDetails` fragt die Art (Säure, Feuer, Eis, Magie); `castSpell` nimmt `options.element` (ohne Wahl wird gezogen).
-17. **LP:** AUS wird durch 4 geteilt (`healthEndDivisor`, `RULES.v4`). `docs/FORMULAS.md` führt alle Formeln des Spiels.
+17. **LP:** AUS wird durch 4 geteilt (`healthEndDivisor`, `RULES.v4`). `docs/FORMULAS_1.1.md` (früher `FORMULAS.md`) führt alle Formeln des Spiels.
 18. und 19. **Questbuch:** der Eintrag „Opened … with the … key“ entfällt; Höhlen und Dungeons haben mehrere Formulierungen je Quest (`QUEST_WORDS`, `CAVE_WORDS`, Auswahl nach der Orts-ID), Boss-Quests „Defeat the mighty / Hunt down the vile / Put an end to the evil / Face the dangerous / Slay the dreaded …“.
 20. **Cellar of Mora (nur beantwortet):** Obsidian ist Material 8 und braucht Treasure-Level ≥ 5 (`rng.range(1, Level + 3)`). Der Dungeon ist Stufe 3, aber die Regel `closet_chest` (`min(8, tier+1)`) auf der tieferen Hälfte (`tierAt`: ab 60 % Tiefe +1) gibt Level 5: die Truhe bei 26/39 hat `level: 5`, die einzige mit Obsidian-Chance (Endraum 3, übrige 4).
+
+## Der 56. Playtest (11. 11. 2026, `GEN_VERSION` 65, `tests/unit/playtest56.test.ts`)
+
+1. **Quartiermeister:** die Person steht auf der Minikarte und in der Legende („Person, quest or talent“, `actionSymbol` in `game/minimap.ts`: auch `quartermaster`, `keeper`, `king`, `skullmiser`); beide Listen des Fensters scrollen (`.service .qm-col`, `ui/style.css`).
+2. **Burgen:** beide Eingangskacheln jeder Burg sind Kopfstein (`World.composeTile`, Schritt 2b; nicht auf Lavainseln, dort gibt es keine Kachel dafür).
+3. **Hebel:** die Grundplatte liegt 0,31 Modelleinheiten neben dem Ursprung, die halbe Drehung versetzte sie; `themedProp` schiebt den umgelegten Hebel um das gedrehte Doppelte zurück (`LEVER_BASE_X`).
+4. **Seth Squirm:** die Statuen sind Aktionen `machine` und fehlten in `SHOWS_ITEM`.
+5. **Löwenrelief:** Teller bei −0,003, ein Drittel der Tiefe versenkte den Kopf in die Wand; `DECO_SINK_SHARE_OF` setzt den Anteil für `obj_deco_lion` auf 0.
+6. **Türme:** gar keine Fallgrube mehr (Regeln, `towerTrap`, Fallenfeld der Rätselstatue `questGen.ts`, Prüfung `validate.ts`).
+7. **Burgboden:** das flache Quad schnitt etwa die Hälfte der Steine von `blk_fortress_floor` ab (Fläche knapp über dem Quad, Relief darunter). Jetzt liegt der Körper 4 mm über dem Quad (`TILE_BOTTOM_BY_MODEL` −0,006, `TILE_BASE_LIFT`), die Fläche etwa 4,5 cm hoch; `PropRenderer.setRise` hebt alle Props des Ortes (außer Boden, Decke, Wandstücke) und die Beute um diese Höhe. Monster nicht (3 cm). Prüfung: `shot-place.ts … Halcrest floor 8,16,E` (pearl-shore-794).
+8. **Burg-Nebenräume:** das Gitter trägt `warn: "alarm"`; die Frage nennt den Alarm, das erste Aufbrechen ruft die leichten Wachen (Merker `<Karte>@light`).
+9. **Handlanger der Burg** auf der Minikarte (siehe 1).
+10. **Formeln 1.1** (`docs/FORMULAS_1.1.md`, Diff gegen die alte Datei): Blessed (Annahme: die Attribute `+ Tier`, der Rüstungsbonus bleibt; die Zelle der Tabelle führte beide Zeilen), neue Spende im Tempel (Blessed hatte bisher keine Quelle im Spiel), Tempelpreise, Herberge (die Zeit läuft jetzt wirklich über `advanceTime`, der Vorrat bleibt), Pfeile 2/3, `tierAt` ohne Zuschlag, 5.8 war in den erzeugten Städten schon so (`ctx.tier`).
+11. **Brüchige Wand von Burg und Turm:** `Broken_Fort_wall.glb` (13,7 MB, `tools/assets/sources/models`, Modell `blk_fort_wall_broken` in beiden Sätzen, ohne Manifest-Eintrag), gestreckt über Zellbreite und Wandhöhe, 0,5 tief über der Zellkante (`pushBrokenPiece`, `FORT_BROKEN_DEPTH`).

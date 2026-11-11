@@ -1193,6 +1193,18 @@ export class World {
       elevation = base.elevation;
     }
 
+    // 2b. in front of a castle lie two cobblestone tiles, whatever roads there are (56th playtest, point 2): its two entrance tiles side by side
+    // (the road of the place ends at one of them, the other one used to stay bare grass; a castle on lava has a stream there, no cobblestone: there is no tile for the two)
+    if (ground === GROUND.LAND) {
+      for (const p of places) {
+        if (p.kind === "castle" && poiEntrances(p).some((e) => e.x === tx && e.y === ty)) {
+          ground = GROUND.ROAD;
+          deco = DECO.NONE;
+          break;
+        }
+      }
+    }
+
     // 3. POI footprints override roads: the model stands on plain ground and blocks it
     for (const p of places) {
       const b = poiBounds(p);

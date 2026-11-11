@@ -38,6 +38,8 @@ export const RULES = {
     rangedLevelDivisor: 1.5,
     /** The bow's hit chance is multiplied by this when the monster stands next to the party (distance 1). */
     rangedPointBlank: 0.5,
+    /** Share of the monster's armor that counts against an arrow (formulas 1.1, 2.3: two thirds; the first rule was one half). */
+    rangedArmorShare: 2 / 3,
     /** The monster's physical resistance also holds back the bow (it always held back the sword). */
     rangedResPhysical: true,
     /** Share of the hero's armor that counts against a physical shot of a monster (the old rule took the armor and half of it again: 1.5). */
@@ -81,6 +83,7 @@ export const RULES = {
     rangedHitFactor: 0.5,
     rangedLevelDivisor: 1,
     rangedPointBlank: 1,
+    rangedArmorShare: 1 / 2,
     rangedResPhysical: false,
     monsterShotArmor: 1.5,
     monsterShotFloor: 0,

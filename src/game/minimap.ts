@@ -417,7 +417,7 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "door": return opened.has(a.uid) ? "door_open" : "door";
     case "transfer": return "exit";
     case "service": return typeof a.params.service === "string" ? (SERVICE_SYMBOL[a.params.service] ?? "inn") : "inn";
-    case "talent": case "work": case "king": case "skullmiser": return "persona";
+    case "talent": case "work": case "king": case "skullmiser": case "quartermaster": case "keeper": return "persona";
     case "portal": return "teleporter_city";
     // a person is a person; a statue or computer that tells a part of a riddle (quest 4, 6, the castles, the spaceship) is something to find (35th playtest)
     case "lore": return typeof a.params.persona === "number" ? "persona" : (typeof a.params.item === "number" && typeof a.params.text === "string") || a.params.terminal === "crystal" ? "event" : null;
@@ -630,7 +630,7 @@ const INTERIOR_LEGEND: (LegendEntry & { when: (map: InteriorMap, content: MapCon
     icon: { symbol: service } as LegendIcon,
     when: (_m: InteriorMap, c: MapContent) => c.actions.some((a) => (a.kind === "service" && a.params.service === service) || (a.legacy?.id === i + 1)),
   })),
-  { color: "#9be28a", label: "Person, quest or talent", icon: { symbol: "persona" }, when: (_, c) => c.actions.some((a) => a.kind === "talent" || a.kind === "work" || (a.kind === "lore" && typeof a.params.persona === "number") || LEGACY_COLOR[a.legacy?.id ?? -1] === "#9be28a") },
+  { color: "#9be28a", label: "Person, quest or talent", icon: { symbol: "persona" }, when: (_, c) => c.actions.some((a) => a.kind === "talent" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "quartermaster" || a.kind === "keeper" || (a.kind === "lore" && typeof a.params.persona === "number") || LEGACY_COLOR[a.legacy?.id ?? -1] === "#9be28a") },
   { color: "#b98aff", label: "Shrine or blessing", icon: { symbol: "event" }, when: (_, c) => c.actions.some((a) => a.kind === "shrine" || LEGACY_COLOR[a.legacy?.id ?? -1] === "#b98aff") },
   { color: "#555", label: "Used up (dimmed)", when: () => true },
   { color: TRAP_COLOR, label: "Trap (seen, gone off or found by the Crow)", icon: { symbol: "trap" }, when: (_m, _c, traps) => traps },
@@ -754,6 +754,8 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "machine": return "Machine of the Quatloo coins";
         case "king": return "The king";
         case "skullmiser": return "The Skull Miser";
+        case "quartermaster": return "The Quartermaster";
+        case "keeper": return "The Keeper of the artifacts";
         case "qportal": return "Portal back to the entrance";
         case "stairs": return a.params.up === true ? "Stairs up" : "Stairs down";
         case "portal": return "Portal";

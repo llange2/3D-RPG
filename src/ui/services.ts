@@ -2,9 +2,10 @@ import type { ServiceKind } from "../actions/registry";
 import { LAYER, rngFor } from "../core/rng";
 import { SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
+import { conditionEventText } from "../sim/conditions";
 import {
   BANK_SLIDER_STEPS, bankSliderAmount, buyBackItem, buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf, type SoldItem,
-  templeCure, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
+  canDonate, donationCost, templeCure, templeDonate, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
 import { isSpellImplemented, learnBlock, SCALING_COST_SHARE } from "../sim/spells";
@@ -103,11 +104,12 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       const cost = innCost(party, ctx.tier);
       root.append(
         ...header(),
-        h("p", { text: "Soft beds, a warm fire and a landlord who does not ask questions. A night's rest heals the whole party, cures ailments and ends the night at eight in the morning." }),
+        h("p", { text: "Soft beds, a warm fire and a landlord who does not ask questions. A night's rest heals the whole party, wakes the sleeping and ends the night at eight in the morning. Ailments are a matter for the temple." }),
         h("div", { class: "row-btns" },
           h("button", { class: "btn primary", text: `Rest until morning (${thousands(cost)} gold)`, disabled: party.gold < cost, onclick: () => {
             const r = innRest(party, ctx.tier);
             note(r.ok ? "The party sleeps soundly and wakes refreshed." : "You cannot afford a room.", r.ok ? "good" : "bad");
+            for (const e of r.conditions ?? []) note(conditionEventText(party.characters[e.character]!.name, e), e.outcome === "died" ? "bad" : "info");
             refresh();
           } }),
         ),
@@ -232,10 +234,19 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           h("div", { class: "row-btns" },
             isAlive(c) && c.hp < c.health ? h("button", { class: "btn", text: `Heal (${thousands(heal)})`, disabled: party.gold < heal, onclick: () => { if (templeHeal(party, i, ctx.tier)) note(`${c.name} is healed.`, "good"); refresh(); } }) : null,
             ...c.conditions.filter((x) => x !== "Healthy" && x !== "Dead" && x !== "Rotten" && x !== "Blessed" && x !== "Unconscious").map((cond) => {
-              const cost = cureCost(cond as Condition, ctx.tier, party);
-              return h("button", { class: "btn", text: `Cure ${cond} (${thousands(cost)})`, disabled: party.gold < cost, onclick: () => { if (templeCure(party, i, cond as Condition, ctx.tier)) note(`${c.name} is cured of ${cond}.`, "good"); refresh(); } });
+              const cost = cureCost(cond as Condition, c);
+              return h("button", { class: "btn", text: `Cure ${cond} (${thousands(cost)})`, disabled: party.gold < cost, onclick: () => { if (templeCure(party, i, cond as Condition)) note(`${c.name} is cured of ${cond}.`, "good"); refresh(); } });
             }),
-            c.conditions.includes("Dead") ? h("button", { class: "btn primary", text: `Resurrect (${thousands(reviveCost(c, ctx.tier, party))})`, disabled: party.gold < reviveCost(c, ctx.tier, party), onclick: () => { if (templeRevive(party, i, ctx.tier)) note(`${c.name} returns to life.`, "good"); refresh(); } }) : null,
+            c.conditions.includes("Dead") || c.conditions.includes("Rotten") ? h("button", { class: "btn primary", text: `Resurrect (${thousands(reviveCost(c, ctx.tier))})`, disabled: party.gold < reviveCost(c, ctx.tier), onclick: () => { if (templeRevive(party, i, ctx.tier)) note(`${c.name} returns to life.`, "good"); refresh(); } }) : null,
+            // formulas 1.1 (5.3): a donation, 20 % for a day's blessing; the button is only there while the hero is not blessed
+            canDonate(c) ? h("button", { class: "btn", text: `Donate (${thousands(donationCost(ctx.tier))})`, title: "A donation may win the blessing of the temple for a day.", disabled: party.gold < donationCost(ctx.tier), onclick: () => {
+              const r = templeDonate(party, i, ctx.tier, rngFor(ctx.rootSeed, LAYER.LOOT, "donation", party.minutes, party.gold, i));
+              if (r) {
+                if (r.blessed) ctx.sound?.(9032);
+                note(r.blessed ? `${c.name} is blessed for a day.` : "The priests thank you for the donation, but nothing happens.", r.blessed ? "good" : "info");
+              }
+              refresh();
+            } }) : null,
           )));
       });
     };

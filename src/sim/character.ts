@@ -112,7 +112,8 @@ export function conditionAdjusted(c: Character): Record<Attribute, number> & { b
     switch (condition) {
       case "Blessed": {
         cur.bonusArmor = Math.max(1, c.level * 2);
-        const bonus = Math.max(1, pyRound(c.level / 2));
+        // formulas 1.1 (1.1): +1 per tier of the temple that gave the blessing (1 to 5); a blessing without a mark (the debug menu) counts as tier 1
+        const bonus = Math.max(1, Math.min(5, c.mods?.blessing ?? 1));
         all((v) => v + bonus);
         break;
       }

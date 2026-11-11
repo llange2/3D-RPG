@@ -172,8 +172,26 @@ export class PropRenderer {
    * texture is only lifted to what the walls show.
    */
   private reference: number | null = null;
+  /** The floor of the shown interior stands this high (56th playtest, point 7): what stands on it rises with it (`setRise`). */
+  private rise: { owner: string; dy: number; skip: readonly string[]; also: readonly string[] } | null = null;
 
   constructor(private readonly scene: Scene) {}
+
+  /**
+   * Lifts every prop of the owner `owner` (the interior view: its own owner and the ones that start with `owner:`, except the parts named in `skip`, which are the floor, ceiling
+   * and walls themselves) and of the owners in `also` by `dy`, for a floor model that lies higher than the flat floor. Takes effect for the instances set afterwards. Null: no lift.
+   */
+  setRise(rise: { owner: string; dy: number; skip?: readonly string[]; also?: readonly string[] } | null): void {
+    this.rise = rise && rise.dy !== 0 ? { owner: rise.owner, dy: rise.dy, skip: rise.skip ?? [], also: rise.also ?? [] } : null;
+  }
+
+  private riseOf(owner: string): number {
+    const r = this.rise;
+    if (!r) return 0;
+    if (r.also.includes(owner)) return r.dy;
+    if (owner !== r.owner && !owner.startsWith(`${r.owner}:`)) return 0;
+    return r.skip.some((s) => owner === `${r.owner}:${s}`) ? 0 : r.dy;
+  }
 
   /** `day` from 0 (only the party's light) to 1 (daylight): the level of each texture between `DARK_LEVEL` and its daylight boost. */
   setDaylight(day: number): void {
@@ -345,6 +363,7 @@ export class PropRenderer {
       list.push(p);
     }
     const m = new Matrix();
+    const rise = this.riseOf(owner);
     for (const [key, model] of this.models) {
       const list = byModel.get(key);
       if (!list) {
@@ -375,7 +394,7 @@ export class PropRenderer {
           turn.toRotationMatrix(turned);
           rotation = Quaternion.FromRotationMatrix(Matrix.RotationY(p.spin).multiply(turned));
         }
-        Matrix.ComposeToRef(new Vector3(sx, sy, sz), rotation, new Vector3(x, p.y - lift, z), m);
+        Matrix.ComposeToRef(new Vector3(sx, sy, sz), rotation, new Vector3(x, p.y - lift + rise, z), m);
         m.copyToArray(buf, i * 16);
       });
       model.buffers.set(owner, buf);

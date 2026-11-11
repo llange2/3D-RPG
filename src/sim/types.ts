@@ -118,6 +118,8 @@ export interface CharacterMods {
   stoneSkin?: number;
   /** Rage: damage added to every blow and shot, and the hero's armor is halved. */
   rage?: number;
+  /** The tier (1 to 5) of the temple whose blessing the hero carries: the attribute bonus of Blessed. Goes with the `TimedEffect` of kind `blessed`. */
+  blessing?: number;
   /** Dimensional Rift: monster turns left. The hero cannot act and nothing can hit them. */
   rift?: number;
   /** Temporary points on an attribute or a resistance (a well, fountain or stone head of the open land, `sim/boons.ts`); each key goes with its `TimedEffect` of kind `boon`. */

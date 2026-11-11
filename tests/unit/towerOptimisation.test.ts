@@ -29,7 +29,9 @@ describe("the tower optimisation (48th playtest, second list)", () => {
       for (const a of content.actions) {
         if (a.kind !== "trap" || a.uid.includes("trapfield")) continue;
         expect(a.params.trap, a.uid).not.toBe("guillotine");
-        if (a.params.trap === "pit" || a.params.trap === "spring") expect(towerFloorAt(ref.tower, a.x), a.uid).toBe(0);
+        // (no pit at all since the 56th playtest)
+        expect(a.params.trap, a.uid).not.toBe("pit");
+        if (a.params.trap === "spring") expect(towerFloorAt(ref.tower, a.x), a.uid).toBe(0);
         if (a.params.trap === "generic") magical++;
       }
     }

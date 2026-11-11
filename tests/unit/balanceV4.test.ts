@@ -100,12 +100,12 @@ describe("BALANCE v4: bow", () => {
     expect(old / 3000).toBeLessThan(0.55);
   });
 
-  it("counts 0.8 of the class value (the level term divided by 1.5), and half of the monster's armor", () => {
+  it("counts 0.8 of the class value (the level term divided by 1.5), and two thirds of the monster's armor (formulas 1.1)", () => {
     const c = archer(10);
-    const m = plain({ speed: 0, armor: 10 }); // speed 0: always hits (distance 2: not point blank)
+    const m = plain({ speed: 0, armor: 12 }); // speed 0: always hits (distance 2: not point blank)
     const cls = getBaseValue("Human", "Archer", "base_ranged");
     expect(rangedDamage(c, plain({ speed: 0 }), 2, rng("c"))).toBe(Math.ceil(((30 / 10 + cls * 0.8) * 10) / 1.5 + 10));
-    expect(rangedDamage(c, m, 2, rng("c"))).toBe(rangedDamage(c, plain({ speed: 0 }), 2, rng("c")) - 5);
+    expect(rangedDamage(c, m, 2, rng("c"))).toBe(rangedDamage(c, plain({ speed: 0 }), 2, rng("c")) - 8);
     expect(inMode("legacy", () => rangedDamage(c, plain({ speed: 0 }), 2, rng("c")))).toBe(Math.ceil((30 / 10 + cls) * 10 + 10));
   });
 

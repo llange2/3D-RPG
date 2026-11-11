@@ -217,7 +217,7 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
   hideInChests(map, actions, castle.coins, 0, seed, true, castle.pearls);
   hideSpells(map, actions, castle.spells, seed, true);
 
-  // 55th playtest, point 11: every side room that holds nothing gets a banner and one more thing, a chest or provisions. Below level 5 the way in may also be shut by a gate to pick, with a chest
+  // 55th playtest, point 11: every side room that holds nothing gets a banner and one more thing, a chest or provisions. Below level 5 the way in may also be shut by a gate to pick (56th playtest, point 8: wired to the alarm like the chests in the niches), with a chest
   // of the next level behind it. These chests come after the hiding of the quest items, so that no coin, pearl or scroll can end up behind a lock the party cannot pick yet.
   const roomRng = new Rng(derive(seed, "side-rooms"));
   const isBanner = (a: ActionInstance): boolean => a.kind === "decor" && [103, 104, 105].includes(Number(a.params.item));
@@ -241,7 +241,7 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
     if (wallSide?.f && !hung) banner(wallSide.c.x, wallSide.c.y, OPPOSITE[wallSide.f]);
     if (shut && gate) {
       const id = uid("roomgate");
-      actions.push({ uid: id, kind: "door", x: gate.x, y: gate.y, params: { locked: true, ask: true, difficulty: 1, harder: 1, axis: alongX ? "x" : "y" } });
+      actions.push({ uid: id, kind: "door", x: gate.x, y: gate.y, params: { locked: true, ask: true, difficulty: 1, harder: 1, warn: "alarm", axis: alongX ? "x" : "y" } });
       taken.add(gate.y * map.width + gate.x);
       if (spot) {
         const chest = uid("roomchest");
