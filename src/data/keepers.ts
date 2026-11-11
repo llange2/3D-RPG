@@ -12,7 +12,7 @@ export const ARTIFACT_TYPE: Readonly<Record<Alignment, string>> = {
 };
 
 /** How many artifacts of each kind lie in the world, and what the henchman pays for one (to every hero who can act, like all experience). */
-export const ARTIFACTS_PER_KIND = 4;
+export const ARTIFACTS_PER_KIND = 5;
 export const ARTIFACT_XP = 200_000;
 
 export const KEEPER_PERSONA: Readonly<Record<Alignment, number>> = { good: 108, neutral: 107, evil: 106 };

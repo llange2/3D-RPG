@@ -164,14 +164,17 @@ describe("point 12: the artifacts and the king's henchmen", () => {
   const places = world.allPois().filter((p) => p.kind === "dungeon" || p.kind === "cave");
   const holders = places.filter((p) => (world.dungeonRef(p.id)?.artifacts?.length ?? 0) > 0);
 
-  it("lie in the places of level 2 and up, one in a place, ARTIFACTS_PER_KIND of each kind at most", () => {
+  it("lie in the places of level 2 and up, ARTIFACTS_PER_KIND of each kind, in every size and density of the world", () => {
     const all = holders.flatMap((p) => world.dungeonRef(p.id)!.artifacts!);
     expect(all.length).toBeGreaterThan(0);
     for (const p of holders) {
       expect(p.tier).toBeGreaterThanOrEqual(2);
-      expect(world.dungeonRef(p.id)!.artifacts).toHaveLength(1);
     }
-    for (const kind of Object.values(ARTIFACT_TYPE)) expect(all.filter((t) => t === kind).length).toBeLessThanOrEqual(ARTIFACTS_PER_KIND);
+    for (const kind of Object.values(ARTIFACT_TYPE)) expect(all.filter((t) => t === kind).length).toBe(ARTIFACTS_PER_KIND);
+    // the same number on the small world with few dungeons, where some places hold two
+    const small = new World("playtest-55", "small", "few");
+    const smallAll = small.allPois().flatMap((p) => small.dungeonRef(p.id)?.artifacts ?? []);
+    for (const kind of Object.values(ARTIFACT_TYPE)) expect(smallAll.filter((t) => t === kind).length).toBe(ARTIFACTS_PER_KIND);
   });
 
   it("are hidden in a locked chest of their place", () => {
@@ -179,8 +182,8 @@ describe("point 12: the artifacts and the king's henchmen", () => {
       const ref = world.dungeonRef(p.id)!;
       const content = buildMapContent(world, p, generateInterior(world, p));
       const chests = content.actions.filter((a) => a.kind === "treasure" && String(a.params.extra ?? "").includes(ref.artifacts![0]!));
-      expect(chests.length, p.name).toBe(1);
-      expect(chests[0]!.params.difficulty, p.name).toBeDefined();
+      expect(chests.length, p.name).toBeGreaterThanOrEqual(1);
+      for (const c of chests) expect(c.params.difficulty, p.name).toBeDefined();
     }
   });
 
