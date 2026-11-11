@@ -1689,3 +1689,10 @@ Der Exporter hat jetzt eine Liste von Ersetzungen je Zauber (`DESCRIPTION_REPLAC
 9. **Handlanger der Burg** auf der Minikarte (siehe 1).
 10. **Formeln 1.1** (`docs/FORMULAS_1.1.md`, Diff gegen die alte Datei): Blessed (Annahme: die Attribute `+ Tier`, der Rüstungsbonus bleibt; die Zelle der Tabelle führte beide Zeilen), neue Spende im Tempel (Blessed hatte bisher keine Quelle im Spiel), Tempelpreise, Herberge (die Zeit läuft jetzt wirklich über `advanceTime`, der Vorrat bleibt), Pfeile 2/3, `tierAt` ohne Zuschlag, 5.8 war in den erzeugten Städten schon so (`ctx.tier`).
 11. **Brüchige Wand von Burg und Turm:** `Broken_Fort_wall.glb` (13,7 MB, `tools/assets/sources/models`, Modell `blk_fort_wall_broken` in beiden Sätzen, ohne Manifest-Eintrag), gestreckt über Zellbreite und Wandhöhe, 0,5 tief über der Zellkante (`pushBrokenPiece`, `FORT_BROKEN_DEPTH`).
+
+
+### Nachbesserung zum 56. Playtest (bug_fix_53)
+
+1. **Quartiermeister:** die Listen hatten `max-height: calc(92vh − 210px)`, die Fensterkante (`overflow: hidden`) schnitt bei kleinen Fenstern die letzte Zeile ab. Jetzt ist `.qm-cols` ein Gitter mit einer Zeile `minmax(0, 1fr)` im Flex-Fenster, die Spalten füllen sie und scrollen selbst (geprüft bei 1280 × 720, 1920 × 1080, 1024 × 600, 800 × 900: die letzte Zeile liegt ganz in Spalte und Fenster).
+3. **Hebel:** das Vorzeichen von `LEVER_BASE_X` war falsch (Babylon spiegelt glTF in x): −0,31. Vorher/nachher-Bilder vom selben Standort zeigen die Platte auf denselben Pixeln, nur der Griff schwingt.
+11. **Brüchige Wand im Turm:** offen, siehe Rückfrage an den Nutzer (die Turmwände sind `tex_fortress_wall` wie die der Burg, `panels` 0, geprüft; die Frage ist, was der Nutzer als „Dungeonwände“ sieht).

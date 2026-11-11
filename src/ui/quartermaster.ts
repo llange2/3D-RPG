@@ -43,7 +43,7 @@ export function openQuartermaster(ui: UI, ctx: QuartermasterContext): Promise<vo
       h("div", { class: "svc-head" }, h("h2", { text: `The Quartermaster of ${ctx.place}` }), h("button", { class: "btn", text: "Leave (Esc)", onclick: close })),
       h("p", { text: QUARTERMASTER_TEXTS.greeting }),
       gold,
-      h("div", { class: "qm-cols", style: "display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start" }, left, right),
+      h("div", { class: "qm-cols", style: "display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr);gap:16px" }, left, right),
     );
     const row = (content: Node, button: HTMLElement) =>
       h("div", { style: "color:var(--text);background:#00000033;border:1px solid var(--gold-dim);padding:5px 10px;border-radius:5px;margin-top:4px;display:flex;justify-content:space-between;gap:12px;align-items:center" }, content, button);
