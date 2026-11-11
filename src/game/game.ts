@@ -16,6 +16,7 @@ import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
+import { ARTIFACT_TYPE, ARTIFACT_XP, KEEPERS } from "../data/keepers";
 import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
 import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
@@ -55,7 +56,7 @@ import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport
 import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
-  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, nearestInCone, partyAttack, phaseMonsters, pullMonsters, weakestInCone,
+  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, pullMonsters, weakestInCone,
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS, STAR_BURST_RADIUS,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
@@ -65,7 +66,7 @@ import { canCombine, combine, combineGroups, duplicate, duplicableSlots, ringSlo
 import { pickGateSpot, safeCells, type Spot } from "./spellSites";
 import { pickFromBackpack } from "../ui/itemSpells";
 import { visibleCells } from "../sim/vision";
-import type { Character, Place, TimedEffect } from "../sim/types";
+import type { Character, Party, Place, TimedEffect } from "../sim/types";
 import { BIOME, CHUNK_SIZE, DECO, DEFAULT_WORLD_SIZE, FULL_DUNGEON_DENSITY, GROUND, TITLE_DUNGEON_DENSITY, WORLD_SIZES, isTileWalkable, isTower, parseDungeonDensity, parseWorldSize, poiEntrances, wrap, wrapDelta, type DungeonDensity, type Poi, type PoiKind, type TileInfo, type WorldSize } from "../world/types";
 import { chunkSpawns, type OverworldSpawn } from "../world/spawns";
 import { World } from "../world/world";
@@ -86,6 +87,7 @@ import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { RANGE_TARGETS, readSettings, writeSettings, type Settings } from "./settings";
 import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, deleteNamedSave, findNamedSave, listNamedSaves, readNamedSave, writeNamedSave, takeJournalDropped, LISTED_KINDS, SAVE_SLOTS, MAX_SAVE_NAME, cleanSaveName, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
+import { openQuartermaster } from "../ui/quartermaster";
 import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
 import { setAnimatedTown } from "../ui/townScenes";
@@ -350,6 +352,8 @@ export class Game {
   private projectiles!: Projectiles;
   /** Bumped when the scene changes, so effects scheduled for the old scene do nothing. */
   private fxEpoch = 0;
+  /** The level at which a hero was told "can advance a level" (55th playtest, point 2): the toast comes once per level, not after every kill. */
+  private readonly levelToasted = new WeakMap<Character, number>();
   /** `performance.now()` until which a volley is in the air; the party does not shoot or cast in the meantime. */
   private volleyUntil = 0;
   private monsters!: MonsterRenderer;
@@ -777,6 +781,7 @@ export class Game {
     cheats.god = false; // the debug cheats are for one game
     // TEMPORARY (balance journal): a fight of the game before is not this game's, and the time line goes on from the steps of this one
     this.fight = null;
+    this.askedPoi = null;
     this.lastSnap = this.state.steps;
     // every way into a game comes through here (title, load, `?autostart=1`, the resume after a reload), so the sink is set here and not in `start`
     this.watchJournal();
@@ -1062,7 +1067,7 @@ export class Game {
       }
       await this.ui.loading.step(LOAD_DATA);
       await this.monsters.preload([
-        ...content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser") ? [personaModelId(a.params.persona)] : [])),
+        ...content.actions.flatMap((a) => (typeof a.params.persona === "number" && (a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "quartermaster" || a.kind === "keeper") ? [personaModelId(a.params.persona)] : [])),
         ...(map.showcase ? [...map.showcase.monsters.map((m) => m.defId), ...map.showcase.personas.map((p) => personaModelId(p.persona))] : []),
       ]);
       await this.ui.loading.step(LOAD_MONSTERS);
@@ -1197,7 +1202,7 @@ export class Game {
     const rt = this.interior;
     if (!rt) return;
     for (const a of rt.content.actions) {
-      const persona = a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser" ? a.params.persona : undefined;
+      const persona = a.kind === "talent" || a.kind === "lore" || a.kind === "work" || a.kind === "king" || a.kind === "skullmiser" || a.kind === "quartermaster" || a.kind === "keeper" ? a.params.persona : undefined;
       if (typeof persona !== "number" || !PERSONAS[persona] || !this.monsters.knows(personaModelId(persona))) continue;
       // they face the longest stretch of open ground next to them, the way a person in a street looks along it
       let bearing = 0;
@@ -1506,7 +1511,13 @@ export class Game {
     // like the old outside map: the "enter" question comes on the tile in front of a place, the party never walks into it
     if (this.mode === "overworld" && !this.enc.battleMode && !this.over) {
       const place = this.world.poiAtEntrance(x, y);
-      if (place) await this.promptEnterPoi(place.id);
+      // 55th playtest, point 10: the question comes when the party steps up to the place; a step to another tile in front of the same place (a town has several) does not ask again.
+      // The place is forgotten when the party has left its surroundings; bumping into it asks again, as before.
+      if (this.askedPoi && !this.nextToPoi(x, y, this.askedPoi)) this.askedPoi = null;
+      if (place && this.askedPoi !== place.id) {
+        this.askedPoi = place.id;
+        await this.promptEnterPoi(place.id);
+      }
     }
     // (entering a place has changed the scene: the overworld's x, y are no cell of its map)
     if (epoch === this.fxEpoch && this.mode === "interior" && !this.enc.battleMode) {
@@ -2159,7 +2170,7 @@ export class Game {
     this.dropLoot(hut.x, hut.y, hutGold(hut.monster), items);
     this.audio.play(9001);
     this.ui.log(`The hut burns down. +${thousands(def.hut_xp)} xp`, "good");
-    for (const c of party.characters) if (c.xp > 0 && xpReady(c)) this.ui.toast(`${c.name} can advance a level!`);
+    this.announceLevelUps(party);
     this.hutShown = "";
     this.syncHuts();
     this.refresh();
@@ -2334,7 +2345,7 @@ export class Game {
       opened.add(`pearls=${handed + pearls}`);
       this.audio.play(9001);
       this.ui.log(`You give the pirate queen ${pearls} Pearl${pearls === 1 ? "" : "s"} of Youth and Beauty: ${thousands(gold)} gold and ${thousands(xp)} experience for everyone.`, "loot");
-      for (const c of party.characters) if (c.xp > 0 && xpReady(c)) this.ui.toast(`${c.name} can advance a level!`);
+      this.announceLevelUps(party);
     }
     opened.add("pirate:met");
     this.refresh();
@@ -2459,6 +2470,16 @@ export class Game {
 
   /** The question "Enter the town of …?" is on the screen (or being prepared): a second one never opens over it. */
   private enterPromptOpen = false;
+  /** The place the party was last asked about on arriving beside it, until it has moved away from it (`onArrived`). */
+  private askedPoi: string | null = null;
+
+  /** Whether the tile (x, y) touches a tile of the place `poiId`, diagonals included. */
+  private nextToPoi(x: number, y: number, poiId: string): boolean {
+    const cx = this.world.wrapX(x);
+    const cy = this.world.wrapY(y);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (this.world.tile(cx + dx, cy + dy).poiId === poiId) return true;
+    return false;
+  }
 
   /**
    * Asks whether the party enters a place. 53rd playtest, point 23: a step onto the tile in front of a place that was already queued (a held key) bumped into the place
@@ -2819,6 +2840,12 @@ export class Game {
         case "skulls":
           await this.meetSkullMiser();
           break;
+        case "quartermaster":
+          await this.meetQuartermaster();
+          break;
+        case "keeper":
+          await this.meetKeeper(e.alignment);
+          break;
         case "terminal": {
           // the console of the bridge writes its question; a no leaves the party free to walk away, a yes starts the ending
           this.player.locked = true;
@@ -3062,6 +3089,61 @@ export class Game {
       this.player.locked = false;
     }
     this.minimapDirty = true;
+  }
+
+  /**
+   * The quartermaster of the town of level 3 (55th playtest, point 14): the party leaves things with him (a thousand gold a piece) and takes them back for nothing.
+   * The window lists the backpacks and the store; what lies there is in `Party.storage`.
+   */
+  private async meetQuartermaster(): Promise<void> {
+    this.player.locked = true;
+    this.audio.play(9006);
+    await openQuartermaster(this.ui, {
+      party: this.state.party,
+      place: this.interior?.poi.name ?? "",
+      changed: () => this.refresh(),
+      log: (text, kind) => this.ui.log(text, kind),
+      sound: (id) => this.audio.play(id),
+    });
+    this.player.locked = false;
+  }
+
+  /**
+   * The king's henchman of a castle (55th playtest, point 12): the party hands over the artifacts of the castle's kind it carries and gets `ARTIFACT_XP` experience for each, as often
+   * as it finds one. `artifacts:<kind>=<n>` in the saved set counts what was handed in (for the quest log), `keeper:<kind>` that the party has met him.
+   */
+  private async meetKeeper(alignment: Alignment): Promise<void> {
+    const party = this.state.party;
+    const opened = this.state.opened;
+    const words = KEEPERS[alignment];
+    const type = ARTIFACT_TYPE[alignment];
+    const prefix = `artifacts:${alignment}=`;
+    const handed = Number([...opened].find((k) => k.startsWith(prefix))?.slice(prefix.length) ?? 0);
+    const carried = carriedItems(party).filter((i) => i.type === type).length;
+    opened.add(`keeper:${alignment}`);
+    const title = `${words.name}, the king's henchman`;
+    this.player.locked = true;
+    if (carried === 0) {
+      await this.ui.message(handed > 0 ? words.waiting : words.intro, title);
+      this.player.locked = false;
+      return;
+    }
+    const xp = carried * ARTIFACT_XP;
+    const yes = await this.ui.confirm(title, `Hand over ${carried} ${alignment} artifact${carried === 1 ? "" : "s"}? Every hero gets ${thousands(xp)} experience.`, "Hand over", "Keep");
+    this.player.locked = false;
+    if (!yes) return;
+    takeItems(party, type);
+    addXp(party, xp);
+    for (const k of [...opened]) if (k.startsWith(prefix)) opened.delete(k);
+    opened.add(`${prefix}${handed + carried}`);
+    this.audio.play(9000);
+    this.ui.log(`You hand over ${carried} ${alignment} artifact${carried === 1 ? "" : "s"} to ${words.name}: ${thousands(xp)} experience for everyone.`, "loot");
+    this.announceLevelUps(party);
+    this.player.locked = true;
+    await this.ui.message(words.thanks, title);
+    this.player.locked = false;
+    this.minimapDirty = true;
+    this.refresh();
   }
 
   /**
@@ -3374,14 +3456,9 @@ export class Game {
     const view = this.gridView();
     // the wall piece of a brittle wall hides what is behind it from the party standing right in front of it
     if (view.wallBetween?.(tx, ty, tx + dx, ty + dy)) return null;
-    for (let i = 1; i <= MONSTER_ACTION_RADIUS; i++) {
-      const x = tx + dx * i;
-      const y = ty + dy * i;
-      const m = this.monsterAt(x, y);
-      if (m && !isPhased(m)) return m;
-      if (view.opaque(x, y) || view.obstacle?.(x, y)) break;
-    }
-    return this.enc.monsters.length === 0 ? null : nearestInCone(view, this.enc, tx, ty, dx, dy);
+    // 55th playtest, point 15: "closest" is the monster that needs the fewest steps to reach the party, among all it can see in front of it (the monster straight ahead no longer wins
+    // over a diagonal one that is nearer by walking)
+    return this.enc.monsters.length === 0 ? null : closestInCone(view, this.enc, tx, ty, dx, dy);
   }
 
   /** True while the arrows or spells of the last action are still flying. */
@@ -3602,7 +3679,9 @@ export class Game {
           const attackerId = this.enc.monsters.find((x) => x.uid === e.uid)?.defId ?? 1;
           const name = monsterById(attackerId).name;
           const start = answer + (walkers.has(e.uid) ? this.monsterStepSeconds(attackerId) : 0);
-          const flight = e.ranged ? this.launchMonsterShot(e.uid, e.damageType, start) : 0;
+          // 55th playtest, point 3: the archer's arrow waits for the end of the bow animation (0 for every other attacker)
+          const draw = e.ranged ? this.monsters.bowSeconds(e.uid) : 0;
+          const flight = e.ranged ? draw + this.launchMonsterShot(e.uid, e.damageType, start + draw) : 0;
           at(start, () => this.monsters.attack(e.uid));
           // a robot fires its laser or launches its missile as the shot leaves
           const shot = robotAttackSound(attackerId);
@@ -3675,7 +3754,7 @@ export class Game {
             this.audio.play(isRobot(e.defId) ? ROBOT_SOUND.powerOff : 9045);
             // the pile appears when the body is gone: at once for a model without a death clip, after the clip for one with
             this.monsters.die(e.uid, () => this.releaseLoot(e.x, e.y, epoch));
-            for (const c of party.characters) if (c.xp > 0 && xpReady(c)) this.ui.toast(`${c.name} can advance a level!`);
+            this.announceLevelUps(party);
           });
           break;
         }
@@ -5817,6 +5896,15 @@ export class Game {
       monsters: this.monsters.count(),
       frameTimes: this.frameTimes.slice(),
     };
+  }
+
+  /** Tells a hero that the next level is within reach, but only the first time it is (not after every kill that adds experience). */
+  private announceLevelUps(party: Party): void {
+    for (const c of party.characters) {
+      if (!xpReady(c) || this.levelToasted.get(c) === c.level) continue;
+      this.levelToasted.set(c, c.level);
+      this.ui.toast(`${c.name} can advance a level!`);
+    }
   }
 
   get internals() {

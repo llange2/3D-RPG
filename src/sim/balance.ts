@@ -25,8 +25,9 @@ export const isV4 = (): boolean => BALANCE.mode === "v4";
 /** The numbers of both rule sets side by side; the functions below pick by mode. */
 export const RULES = {
   v4: {
-    /** Health: `(END / 2 + class + race) × level + 10`. */
+    /** Health: `(END / 4 + class + race) × level + 10` (55th playtest, point 17: Endurance counted half, now a quarter). */
     healthFlat: 10,
+    healthEndDivisor: 4,
     /** Melee: `weapon + (STR × 0.1 + class) / 3 × level`, then armor, then `× (1 − res_physical)`. */
     meleeLevelDivisor: 3,
     /** Ranged damage: `weapon + (ACC × 0.1 + 0.8 × class) × level`. */
@@ -74,6 +75,7 @@ export const RULES = {
   },
   legacy: {
     healthFlat: 0,
+    healthEndDivisor: 2,
     meleeLevelDivisor: 1,
     rangedClassShare: 1,
     rangedHitFactor: 0.5,
@@ -107,6 +109,8 @@ export const monsterShots = (attacks: number): number => {
 export const earlyMissChance = (level: number): number => (isV4() ? (RULES.v4.earlyMiss[level - 1] ?? 0) : 0);
 
 export const healthFlat = (): number => (isV4() ? RULES.v4.healthFlat : RULES.legacy.healthFlat);
+/** BALANCE v4 (55th playtest): the divisor of Endurance in the health formula, 4; LEGACY (balance v4): 2. */
+export const healthEndDivisor = (): number => (isV4() ? RULES.v4.healthEndDivisor : RULES.legacy.healthEndDivisor);
 export const wolfBelow = (): number => (isV4() ? RULES.v4.wolfBelow : RULES.legacy.wolfBelow);
 export const fairyReduction = (legacyValue: number): number => (isV4() ? RULES.v4.fairyReduction : legacyValue);
 export const orbSpellBonus = (): number => (isV4() ? RULES.v4.orbSpellBonus : RULES.legacy.orbSpellBonus);

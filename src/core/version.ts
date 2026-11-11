@@ -161,5 +161,8 @@
  * 62 = the 53rd playtest (bug_fix_50, third list): the end room of a tower is a pocket in the rock reached by teleport (`finishDungeon`, quests 4 and 5), no name is told twice in the hints of one word
  * (`letterHints`), the answer statue stands near the wall it opens by the way the party walks (`placeNearEnd`), a bookshelf only takes a cell with a wall beside it (`generateContent`) and a room with stone columns has
  * no wooden beams (`planBeams`).
+ * 63 = the 55th playtest: the side rooms of a castle's keep hold something (a banner and a chest or provisions; below level 5 half of them behind a gate to pick, with a chest of the next level), the artifacts of the
+ * three kingdoms lie in locked chests (`DungeonRef.artifacts`) and the king's henchman waits in each castle (`CastleLayout.keeper`), the towns of level 2 tell where Seth Squirm lives, one town of level 3 has the
+ * quartermaster (`InteriorMap.townHints`), and the health of a hero counts Endurance a quarter, not a half (this one is no generator change, it moves the golden numbers of the heroes).
  */
-export const GEN_VERSION = 62;
+export const GEN_VERSION = 63;

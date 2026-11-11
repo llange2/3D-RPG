@@ -3,7 +3,7 @@ import { QUEST_PROP, SHRINE_EFFECT, type DungeonTheme } from "../data/dungeon-th
 import { buildCastleContent } from "./castle";
 import { buildShowcaseContent } from "./showcase";
 import { buildSpaceshipContent } from "./spaceship";
-import { eligibleChests, hideInChests, placeMachines } from "./machines";
+import { eligibleChests, hideArtifacts, hideInChests, placeMachines } from "./machines";
 import { placeVaults } from "./vaults";
 import { hideSpells } from "./spellScrolls";
 import { hasLandMonster, pickMonster, pickMonsterWeighted } from "../data/monsters";
@@ -12,6 +12,7 @@ import { lockTrapParams } from "./lockTrap";
 import { BONES_FIND_CHANCE, CHEST_TRAP_CHANCE, CHEST_TRAP_ELEMENTS, RAT_TRAP, SEARCHABLE_DECOR } from "../data/chest-traps";
 import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
+import { QUARTERMASTER_GOODS, QUARTERMASTER_PERSONA, STORAGE_EQUIPMENT, sethHintText } from "../data/town-people";
 import { WALL_DECO_ITEMS, WALL_DECO_SPACING, pickWallDeco } from "../data/wall-deco";
 import { FORT_DOOR_ITEM, STAIRCASE_ITEM, type MonsterGroup } from "../data/quest-table";
 import { monsterGroup } from "../data/tables";
@@ -387,6 +388,48 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     }
   }
 
+  // 55th playtest, points 13 and 14: the people the plan of the world puts in a town. They stand in the streets like the Skull Miser, before the rules fill the rest
+  if (map.kind === "town" && map.townHints) {
+    const doors = new Set(map.lots.map((l) => idx(l.door.x, l.door.y)));
+    const sited = new Set((map.sites ?? []).map((s) => idx(s.x, s.y)));
+    const fits = (a: { x: number; y: number }): boolean => isFree(a as Anchor, false) && !doors.has(idx(a.x, a.y)) && !sited.has(idx(a.x, a.y)) && !wouldDisconnect(idx(a.x, a.y)) && !splitsPassage(a.x, a.y);
+    const streets = [...anchors.byKind.deadEnd, ...Object.entries(anchors.byKind).filter(([k]) => k !== "deadEnd").flatMap(([, v]) => v)];
+    const put = (action: ActionInstance): void => {
+      actions.push(action);
+      occupied.add(idx(action.x, action.y));
+      blockedCells.add(idx(action.x, action.y));
+    };
+    // the towns of level 2: somebody who knows where the strange creature that collects Quatloo coins lives
+    const seth = map.townHints.seth;
+    if (seth) {
+      const spot = streets.find(fits);
+      if (spot) {
+        const persona = 106 + new Rng(derive(mapSeed, "seth-hint")).int(3);
+        put({ uid: `${map.key}#sethhint:0`, kind: "lore", x: spot.x, y: spot.y, params: { pool: "town", line: 0, persona, text: sethHintText(seth.name, seth.x, seth.y) } });
+      }
+    }
+    // the quartermaster (level 3): his two stacks of equipment beside him, which belong to him
+    if (map.townHints.quartermaster) {
+      const around = (a: { x: number; y: number }): { x: number; y: number }[] => (Object.values(FACING_DELTA) as { dx: number; dy: number }[]).map((d) => ({ x: a.x + d.dx, y: a.y + d.dy })).filter((c) => map.cells[idx(c.x, c.y)] === CELL.FLOOR);
+      for (const spot of streets) {
+        if (!fits(spot)) continue;
+        blockedCells.add(idx(spot.x, spot.y));
+        const stacks: { x: number; y: number }[] = [];
+        for (const c of around(spot)) {
+          if (stacks.length < 2 && fits(c)) {
+            stacks.push(c);
+            blockedCells.add(idx(c.x, c.y));
+          }
+        }
+        for (const c of [spot, ...stacks]) blockedCells.delete(idx(c.x, c.y));
+        if (stacks.length < 2) continue;
+        put({ uid: `${map.key}#quartermaster:0`, kind: "quartermaster", x: spot.x, y: spot.y, params: { persona: QUARTERMASTER_PERSONA } });
+        stacks.forEach((c, n) => put({ uid: `${map.key}#quartermaster-goods:${n}`, kind: "decor", x: c.x, y: c.y, params: { item: STORAGE_EQUIPMENT, text: QUARTERMASTER_GOODS } }));
+        break;
+      }
+    }
+  }
+
   // the layouts bring their own say about doors: dungeon_2 shuts every way at its beginning and its end, dungeon_3 (the maze) has no doors at all
   const layout = map.dungeon?.layout;
   const ruleList = rules.rules.flatMap((r): Rule[] => (r.id !== "door" ? [r] : layout === "dungeon_3" ? [] : layout === "dungeon_2" ? [{ ...r, count: { chance: 1000 }, when: undefined }] : [r]));
@@ -565,6 +608,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   if (map.dungeon) hideInChests(map, actions, map.dungeon.coins, map.dungeon.skulls, mapSeed, false, map.dungeon.pearls);
   // and the spell scrolls the plan of the world assigned to this place (34th playtest)
   if (map.dungeon) hideSpells(map, actions, map.dungeon.spells, mapSeed);
+  // the artifacts of the three kingdoms lie in locked chests (55th playtest, point 12)
+  if (map.dungeon?.artifacts?.length) hideArtifacts(map, actions, map.dungeon.artifacts, mapSeed, baseTier);
 
   quest.finish?.();
 

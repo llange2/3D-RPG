@@ -1,4 +1,6 @@
 import { ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ORBS_FOR_KING, PEARL, PEARLS_IN_WORLD, POWER_CRYSTAL, SKULLS_FOR_RING, type QuestId } from "../data/quest-table";
+import { ALIGNMENTS } from "../data/castles";
+import { ARTIFACT_TYPE, KEEPERS } from "../data/keepers";
 import { MONSTERS, QUEST_ITEMS } from "../data/tables";
 import { wagonTale, caravansOf } from "../world/caravans";
 import type { Poi } from "../world/types";
@@ -47,33 +49,58 @@ const at = (poi: Poi): string => `${poi.x}/${poi.y}`;
 const itemName = (type: string): string => (QUEST_ITEMS.find((q) => q.type === type)?.name ?? type).toLowerCase();
 const number = (opened: ReadonlySet<string>, prefix: string): number => Number([...opened].find((k) => k.startsWith(prefix))?.slice(prefix.length) ?? 0);
 
-/** The words of each quest of a dungeon: what the party wants, and what it did. A cave of any quest is only explored. */
-const DUNGEON_LINES: Record<QuestId, { open: (name: string, where: string, boss: string) => string; done: (name: string, boss: string) => string }> = {
-  quest_1: {
-    open: (n, w) => `Find out what the moaning statues of ${n} (${w}) want, and reach its hidden chamber.`,
-    done: (n) => `Silenced the moaning statues of ${n} and reached its hidden chamber.`,
-  },
-  quest_2: {
-    open: (n, w) => `Solve the mystery of the stone heads in ${n} (${w}).`,
-    done: (n) => `Solved the mystery of the stone heads in ${n} and reached the chamber behind the wall.`,
-  },
-  quest_3: {
-    open: (n, w) => `Strike all the gongs of ${n} (${w}) and step through the runes.`,
-    done: (n) => `Struck the gongs of ${n} and stepped through the runes.`,
-  },
-  quest_4: {
-    open: (n, w) => `Add up the fate of the fallen warriors in ${n} (${w}) and tell the last statue.`,
-    done: (n) => `Told the last statue of ${n} how many warriors had fallen.`,
-  },
-  quest_5: {
-    open: (n, w, boss) => `Defeat the mighty ${boss} in the ${n} (${w}).`,
-    done: (n, boss) => `Defeated the mighty ${boss} in the ${n}.`,
-  },
-  quest_6: {
-    open: (n, w) => `Find the word that the statues of ${n} (${w}) spell, and tell it to the last one.`,
-    done: (n) => `Spelled the word of the statues of ${n}.`,
-  },
+type QuestWords = { open: (name: string, where: string, boss: string) => string; done: (name: string, boss: string) => string };
+
+/**
+ * The words of each quest of a dungeon or cave: what the party wants, and what it did (55th playtest, point 19: the log said "Explored the scary ..." for every cave, so each quest has
+ * several wordings, one of which a place keeps for good: `wordsOf` chooses by the id of the place). The open and the done line of one variation belong together.
+ */
+const QUEST_WORDS: Record<QuestId, readonly QuestWords[]> = {
+  quest_1: [
+    { open: (n, w) => `Find out what the moaning statues of ${n} (${w}) want, and reach its hidden chamber.`, done: (n) => `Silenced the moaning statues of ${n} and reached its hidden chamber.` },
+    { open: (n, w) => `Listen to the wailing statues of ${n} (${w}) and find the chamber they guard.`, done: (n) => `Quieted the wailing statues of ${n} and found the chamber they guarded.` },
+  ],
+  quest_2: [
+    { open: (n, w) => `Solve the mystery of the stone heads in ${n} (${w}).`, done: (n) => `Solved the mystery of the stone heads in ${n} and reached the chamber behind the wall.` },
+    { open: (n, w) => `Find out which way the stone faces of ${n} (${w}) want to be turned.`, done: (n) => `Turned the stone faces of ${n} the right way and opened the wall behind them.` },
+  ],
+  quest_3: [
+    { open: (n, w) => `Strike all the gongs of ${n} (${w}) and step through the runes.`, done: (n) => `Struck the gongs of ${n} and stepped through the runes.` },
+    { open: (n, w) => `Wake the gongs of ${n} (${w}) in the right order and follow the glowing runes.`, done: (n) => `Woke the gongs of ${n} and followed the glowing runes.` },
+  ],
+  quest_4: [
+    { open: (n, w) => `Add up the fate of the fallen warriors in ${n} (${w}) and tell the last statue.`, done: (n) => `Told the last statue of ${n} how many warriors had fallen.` },
+    { open: (n, w) => `Count the fallen warriors of ${n} (${w}) and tell the number to the last statue.`, done: (n) => `Counted the fallen warriors of ${n} and told the last statue.` },
+  ],
+  quest_5: [
+    { open: (n, w, boss) => `Defeat the mighty ${boss} in the ${n} (${w}).`, done: (n, boss) => `Defeated the mighty ${boss} in the ${n}.` },
+    { open: (n, w, boss) => `Hunt down the vile ${boss} in ${n} (${w}).`, done: (n, boss) => `Defeated the vile ${boss} in ${n}.` },
+    { open: (n, w, boss) => `Put an end to the evil ${boss} in ${n} (${w}).`, done: (n, boss) => `Defeated the evil ${boss} in ${n}.` },
+    { open: (n, w, boss) => `Face the dangerous ${boss} in ${n} (${w}).`, done: (n, boss) => `Defeated the dangerous ${boss} in ${n}.` },
+    { open: (n, w, boss) => `Slay the dreaded ${boss}, who rules ${n} (${w}).`, done: (n, boss) => `Slew the dreaded ${boss}, who ruled ${n}.` },
+  ],
+  quest_6: [
+    { open: (n, w) => `Find the word that the statues of ${n} (${w}) spell, and tell it to the last one.`, done: (n) => `Spelled the word of the statues of ${n}.` },
+    { open: (n, w) => `Piece together the word that the statues of ${n} (${w}) hide.`, done: (n) => `Pieced together the word of the statues of ${n}.` },
+  ],
 };
+
+/** A cave whose quest is no puzzle of the statues has its own words for the walk through it (the old line said "scary" for every one of them). */
+const CAVE_WORDS: readonly { open: (n: string, w: string) => string; done: (n: string) => string }[] = [
+  { open: (n, w) => `Explore the scary ${n} at ${w}.`, done: (n) => `Explored the scary ${n}.` },
+  { open: (n, w) => `Find your way through the dark ${n} at ${w}.`, done: (n) => `Found a way through the dark ${n}.` },
+  { open: (n, w) => `Venture into the damp ${n} at ${w}.`, done: (n) => `Ventured deep into the damp ${n}.` },
+  { open: (n, w) => `Follow the echoes into ${n} at ${w}.`, done: (n) => `Followed the echoes through ${n}.` },
+  { open: (n, w) => `Scout the winding tunnels of ${n} at ${w}.`, done: (n) => `Scouted the winding tunnels of ${n}.` },
+  { open: (n, w) => `Chart the shadows of ${n} at ${w}.`, done: (n) => `Charted the shadows of ${n}.` },
+];
+
+/** A small number from the id of a place, so that a place keeps its wording for good. */
+function pick(id: string, count: number): number {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % count;
+}
 
 /** A line cut into pieces, the names of `places` marked bold (the longest name wins where one contains another). */
 export function placeSegments(line: string, places: readonly string[]): { text: string; bold: boolean }[] {
@@ -136,6 +163,19 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
   }
   if (!winner && seen.length === 0 && orbs > 0) open.push(`Bring ${ORBS_FOR_KING} Orbs of Ultimate Power to a king: you carry ${orbs}. A castle lies on the islands of level 2, 3 and 4.`);
 
+  // the artifacts of the three kingdoms (55th playtest, point 12): known once the party has been in the castle of their kind or carries one; the henchman takes them again and again, so the line stays open
+  for (const kind of ALIGNMENTS) {
+    const castle = castles.find((c) => world.castleAlignment(c.id) === kind);
+    const carriedArtifacts = input.carried(ARTIFACT_TYPE[kind]);
+    const given = number(opened, `artifacts:${kind}=`);
+    // (the castles of the other two kings are rubble once one king has won: their henchmen are gone)
+    if (winner && winner !== kind) continue;
+    if (!(castle && visited.has(castle.id)) && carriedArtifacts === 0 && given === 0) continue;
+    const keeper = KEEPERS[kind];
+    const where = castle ? `${castle.name} (${at(castle)})` : `the ${kind} castle`;
+    open.push(`Bring the ${kind} artifacts you find in locked chests to ${keeper.name}, the king's henchman in ${where}: ${given} handed in${carriedArtifacts > 0 ? `, you carry ${carriedArtifacts}` : ""}.`);
+  }
+
   // places that are locked: a key (level 3 to 5 dungeons) or a key card (the pyramids)
   for (const poi of pois) {
     if (poi.kind !== "dungeon") continue;
@@ -144,7 +184,7 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     const kind = need.endsWith("_keycard") ? "the pyramid" : poi.name;
     if (visited.has(poi.id) || opened.has(unlockedFlag(poi.id))) {
       if (!need.endsWith("_keycard")) places.add(poi.name);
-      done.push(`Opened ${kind} (${at(poi)}) with the ${itemName(need)}.`);
+      // 55th playtest, point 18: that a key opened the way is no entry of the log (the open line goes when the place is entered)
     } else if (opened.has(lockSeenFlag(poi.id)) || opened.has(hintHeardFlag(poi.id)) || input.carried(need) > 0) {
       if (!need.endsWith("_keycard")) places.add(poi.name);
       const line = input.carried(need) > 0 ? `Use the ${itemName(need)} to open ${kind} at ${at(poi)}.` : `Find the ${itemName(need)} to open ${kind} at ${at(poi)}.`;
@@ -165,15 +205,18 @@ export function worldQuestLog(input: QuestLogInput): QuestLogView {
     places.add(poi.name);
     // what the party has read at the statues of the place (53rd playtest, point 5: the caves of quest 6, Den of Sila and Passage of Nora, kept theirs from the mouse-over)
     const clues = [...opened].filter((k) => k.startsWith(`clue:${poi.id}|`)).map((k) => k.slice(`clue:${poi.id}|`.length));
-    if (poi.kind === "cave") {
-      const line = reached ? `Explored the scary ${poi.name}.` : `Explore the scary ${poi.name} at ${at(poi)}.`;
-      (reached ? done : open).push(line);
-      if (clues.length > 0) notes[line] = clues.join("\n");
-      continue;
-    }
     const boss = MONSTERS[ref.look.boss]?.name ?? "boss";
-    const lines = DUNGEON_LINES[ref.quest as QuestId];
-    const line = reached ? lines.done(poi.name, boss) : lines.open(poi.name, at(poi), boss);
+    // a cave is explored (the puzzle of its statues or gongs is not told in the log), with one of several wordings; only a boss is hunted, in a cave as in a dungeon
+    const plain = poi.kind === "cave" && ref.quest !== "quest_5";
+    let line: string;
+    if (plain) {
+      const words = CAVE_WORDS[pick(poi.id, CAVE_WORDS.length)]!;
+      line = reached ? words.done(poi.name) : words.open(poi.name, at(poi));
+    } else {
+      const list = QUEST_WORDS[ref.quest as QuestId];
+      const words = list[pick(poi.id, list.length)]!;
+      line = reached ? words.done(poi.name, boss) : words.open(poi.name, at(poi), boss);
+    }
     (reached ? done : open).push(line);
     if (clues.length > 0) notes[line] = clues.join("\n");
   }

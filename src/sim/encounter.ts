@@ -621,6 +621,34 @@ export function nearestInCone(view: GridView, enc: Encounter, px: number, py: nu
 }
 
 /**
+ * How many steps a monster needs to stand next to the party (the length of its way, 0 beside the party, 9999 without a way). Unlike `scan` it wakes nobody: it is only asked, for aiming.
+ */
+export function stepsToParty(view: GridView, m: MonsterInstance, px: number, py: number, radius = MONSTER_ACTION_RADIUS): number {
+  const def = monsterById(m.defId);
+  const path = wayToPlayer(view, def, m.x, m.y, px, py, radius, undefined, MOVE_STEP_LIMIT) ?? (m.alerted ? wayToPlayer(viewOf(view, m), def, m.x, m.y, px, py, radius, undefined, MOVE_STEP_LIMIT) : null);
+  return path ? path.length : 9999;
+}
+
+/**
+ * Options > Controls > "Range attack targets: closest" (55th playtest, point 15): among all the party can see in the cone (the facing line is its middle), the monster that needs the fewest
+ * STEPS to reach the party, not the one with the shortest line: a monster ahead behind a wall of rock is farther away than a diagonal one with a free way. Equal steps go to the nearer one on the
+ * map, then to the one more in front.
+ */
+export function closestInCone(view: GridView, enc: Encounter, px: number, py: number, fx: number, fy: number): MonsterInstance | null {
+  let best: MonsterInstance | null = null;
+  let bestSteps = Infinity;
+  // `seenInCone` is in the order near to far (a tie goes to the one in front), and only a smaller number of steps replaces the first
+  for (const m of seenInCone(view, enc, px, py, fx, fy)) {
+    const steps = stepsToParty(view, m, px, py);
+    if (steps < bestSteps) {
+      best = m;
+      bestSteps = steps;
+    }
+  }
+  return best;
+}
+
+/**
  * The monster with the fewest hit points among all the party can see in that cone (the facing line is its middle): Options > Controls > "Range attack targets: weakest".
  * Equal hit points go to the nearer one, then to the one more in front.
  */
@@ -933,6 +961,10 @@ export interface MonsterReport {
   maxHp: number;
   armor: number;
   attacks: number;
+  /** What one hit of the monster rolls before armor and resistance, and the kind of damage it deals (55th playtest, point 7). */
+  damageMin: number;
+  damageMax: number;
+  damageType: string;
   abilities: string;
   /** How much of each kind of damage the monster shrugs off (0 = all of it hurts, 1 = nothing does). */
   resistances: { physical: number; fire: number; ice: number; acid: number; magic: number };
@@ -951,6 +983,6 @@ export function identifyMonsters(enc: Encounter, px: number, py: number): Monste
     .map((m) => {
       const def = monsterById(m.defId);
       const resistances = { physical: def.res_physical, fire: def.res_fire, ice: def.res_ice, acid: def.res_acid, magic: def.res_magic };
-      return { uid: m.uid, defId: m.defId, name: def.name, hp: m.hp, maxHp: def.health, armor: def.armor, attacks: def.no_of_attacks, abilities: def.special_abilties ?? "", resistances };
+      return { uid: m.uid, defId: m.defId, name: def.name, hp: m.hp, maxHp: def.health, armor: def.armor, attacks: def.no_of_attacks, damageMin: Math.min(def.damage_min, def.damage_max), damageMax: Math.max(def.damage_min, def.damage_max), damageType: def.attack_type.toLowerCase(), abilities: def.special_abilties ?? "", resistances };
     });
 }

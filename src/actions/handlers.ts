@@ -58,6 +58,8 @@ export type Effect =
   | { type: "guards"; kind: "light" | "heavy" }
   /** The party stands before a king: the game takes the orbs, if there are any, and pays. */
   | { type: "king"; alignment: "good" | "neutral" | "evil" }
+  | { type: "quartermaster" }
+  | { type: "keeper"; alignment: "good" | "neutral" | "evil" }
   /** The party stands before the Skull Miser: the game takes the silver skulls, if there are any, and pays. */
   | { type: "skulls" }
   /**
@@ -810,6 +812,12 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     case "skullmiser":
       return { effects: [{ type: "skulls" }], consumed: false };
 
+    case "quartermaster":
+      return { effects: [{ type: "quartermaster" }], consumed: false };
+
+    case "keeper":
+      return { effects: [{ type: "keeper", alignment: p.alignment as "good" | "neutral" | "evil" }], consumed: false };
+
     case "machine": {
       // ue_quest_1: a statue is a machine; one Quatloo coin buys three points of its attribute for the hero who puts it in
       const text = String(p.text);
@@ -857,7 +865,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         if (ctx.answer === null) return { effects, consumed: false };
       }
       // the lock of a door grows with the level of the party like the lock of a chest, an easier one (`data/locks.ts`)
-      const difficulty = lockDifficulty("door", ctx.tier, lockPartyLevel(party));
+      // (a gate with `harder` is worked out for a place that many levels higher: the gates of a castle's side rooms, 55th playtest, point 11)
+      const difficulty = lockDifficulty("door", Math.min(5, ctx.tier + Number(p.harder ?? 0)), lockPartyLevel(party));
       const picked = pickLock(party, rng);
       const { best } = picked;
       logLock(party, action.uid, "door", ctx.tier, difficulty, picked);
@@ -1043,7 +1052,8 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
     case "decor": {
       // the support beam is a plain decoration: it says nothing
       if (Number(p.item) === SUPPORT_BEAM) return { effects, consumed: false };
-      effects.push({ type: "text", text: propLine(Number(p.item), action.uid) });
+      // (a decoration may carry words of its own: the stacks beside the quartermaster belong to him)
+      effects.push({ type: "text", text: typeof p.text === "string" && p.text !== "" ? p.text : propLine(Number(p.item), action.uid) });
       // a pile of bones that hides something (one in five, fixed by the generator): the party finds it the first time it steps on the pile (the game asks a decoration once)
       if (SEARCHABLE_DECOR.includes(Number(p.item)) && p.find === 1) {
         const struck = p.trapped === RAT_TRAP && springRatTrap(action, ctx, effects);

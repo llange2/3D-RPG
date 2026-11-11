@@ -962,8 +962,9 @@ export async function buildMonsters(profile: ModelProfile = "reduced"): Promise<
   });
   // the people of the campaign maps: the same rig, so the same renderer. Ids from PERSONA_BASE up, size and clip as in the old game
   await pool(Object.entries(PERSONAS), 3, async ([item, persona]) => {
-    const source = `personas/animated/${persona.file}.glb`;
-    if (!existsSync(join(OBJ_DIR, source))) {
+    // (`new:<file>` names a model of the user's own folder, like the static models)
+    const source = persona.file.startsWith(NEW_PREFIX) ? `${persona.file}.glb` : `personas/animated/${persona.file}.glb`;
+    if (!existsSync(sourcePath(source))) {
       console.warn(`  persona ${item} (${persona.file}) has no animated model`);
       return;
     }

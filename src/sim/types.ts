@@ -181,6 +181,8 @@ export interface Party {
   mascots: string[];
   /** The Donkey carries a bag of its own (20 slots, like a hero's backpack); only filled while the Donkey is the mascot. */
   mascotBag: Inventory;
+  /** What the quartermaster of the town of level 3 keeps for the party (55th playtest, point 14). Absent until the first piece is left with him. */
+  storage?: Item[];
 }
 
 export const ELEMENTS = ["acid", "fire", "ice", "magic"] as const;

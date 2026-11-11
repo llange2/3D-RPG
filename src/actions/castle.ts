@@ -1,9 +1,11 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { BANNER, CASTLE_STATUES, KING, THRONE } from "../data/castles";
 import { letterHints } from "../data/letter-hints";
+import { KEEPER_PERSONA } from "../data/keepers";
 import { lockTrapParams } from "./lockTrap";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { hideInChests } from "./machines";
+import { blocksPassage } from "../interiors/passage";
 import { hideSpells } from "./spellScrolls";
 import { pickWord, wordById } from "./questGen";
 import type { ActionInstance, Anchor, MapContent } from "./types";
@@ -16,6 +18,62 @@ import type { ActionInstance, Anchor, MapContent } from "./types";
 
 const CHEST_NOBLE = 72;
 const CHEST_PLAIN = 1;
+/** What fills a side room of the keep that holds nothing else (55th playtest, point 11): the table with food, the stored goods and the rustic table (all allowed in a castle, none of use). */
+const ROOM_PROPS: readonly number[] = [14, 13, 94];
+/** The smallest and the largest room of the keep that counts as a side room, in cells. */
+const SIDE_ROOM_MIN = 4;
+const SIDE_ROOM_MAX = 12;
+/** Chance (permille) that the way into a side room is shut by a gate, when the room has a single way in and the castle is below level 5. */
+const GATED_ROOM_CHANCE = 500;
+
+/**
+ * The side rooms of the keep that hold nothing (55th playtest, point 11, Corguard of pearl-shore-794: the two rooms of 2 x 3 cells stood empty). A side room is a group of cells that
+ * touch each other and lie in a block of 2 x 2 floor cells (the corridors are one cell wide), not the room with the gate, the throne or the statues, with no object on any of its cells.
+ * `mouths` are the cells outside the room that lead into it.
+ */
+export function emptyRooms(map: InteriorMap, actions: readonly ActionInstance[]): { cells: { x: number; y: number }[]; mouths: { x: number; y: number }[] }[] {
+  const castle = map.castle!;
+  const W = map.width;
+  const keep = new Set<number>(castle.keep);
+  const used = new Set<number>(actions.map((a) => a.y * W + a.x));
+  const flat = (x: number, y: number): boolean => keep.has(y * W + x);
+  const roomy = new Set<number>();
+  for (const i of keep) {
+    const x = i % W;
+    const y = Math.floor(i / W);
+    if ([[0, 0], [-1, 0], [0, -1], [-1, -1]].some(([ox, oy]) => flat(x + ox!, y + oy!) && flat(x + ox! + 1, y + oy!) && flat(x + ox!, y + oy! + 1) && flat(x + ox! + 1, y + oy! + 1))) roomy.add(i);
+  }
+  const rooms: { cells: { x: number; y: number }[]; mouths: { x: number; y: number }[] }[] = [];
+  const done = new Set<number>();
+  for (const start of [...roomy].sort((a, b) => a - b)) {
+    if (done.has(start)) continue;
+    const group = [start];
+    done.add(start);
+    for (let head = 0; head < group.length; head++) {
+      const i = group[head]!;
+      for (const f of FACINGS) {
+        const n = (Math.floor(i / W) + FACING_DELTA[f].dy) * W + (i % W) + FACING_DELTA[f].dx;
+        if (roomy.has(n) && !done.has(n)) {
+          done.add(n);
+          group.push(n);
+        }
+      }
+    }
+    if (group.length < SIDE_ROOM_MIN || group.length > SIDE_ROOM_MAX) continue;
+    if (group.some((i) => used.has(i) || i === castle.door.y * W + castle.door.x)) continue;
+    const inside = new Set(group);
+    const mouths = new Map<number, { x: number; y: number }>();
+    for (const i of group) {
+      for (const f of FACINGS) {
+        const x = (i % W) + FACING_DELTA[f].dx;
+        const y = Math.floor(i / W) + FACING_DELTA[f].dy;
+        if (flat(x, y) && !inside.has(y * W + x)) mouths.set(y * W + x, { x, y });
+      }
+    }
+    rooms.push({ cells: group.sort((a, b) => a - b).map((i) => ({ x: i % W, y: Math.floor(i / W) })), mouths: [...mouths.values()] });
+  }
+  return rooms;
+}
 /** Cells between two banners on a wall (the document: 2 to 4). */
 const BANNER_SPACING = 3;
 /** The gold of each of the king's chests. */
@@ -90,6 +148,7 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
     const letterIndex = order[i % 4]!;
     actions.push({ uid: uid("statue"), kind: "lore", x: s.x, y: s.y, params: { pool: "castle", line: 0, item: statue, bearing: s.bearing, text: hints[letterIndex]!, letter: pick.word[letterIndex]!.toUpperCase(), order: letterIndex + 1 } });
   });
+  if (castle.keeper) actions.push({ uid: uid("keeper"), kind: "keeper", x: castle.keeper.x, y: castle.keeper.y, params: { persona: KEEPER_PERSONA[castle.alignment], alignment: castle.alignment } });
   const answerUid = uid("riddle");
   actions.push({ uid: answerUid, kind: "riddle", x: castle.answer.x, y: castle.answer.y, params: { item: statue, question: ask, answer: pick.word, aliases: pick.aliases.join(","), opens: "castle", riddle: pick.id } });
 
@@ -157,5 +216,46 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
   for (const c of bannerCells(map, taken, BANNER_SPACING)) banner(c.x, c.y, c.facing);
   hideInChests(map, actions, castle.coins, 0, seed, true, castle.pearls);
   hideSpells(map, actions, castle.spells, seed, true);
+
+  // 55th playtest, point 11: every side room that holds nothing gets a banner and one more thing, a chest or provisions. Below level 5 the way in may also be shut by a gate to pick, with a chest
+  // of the next level behind it. These chests come after the hiding of the quest items, so that no coin, pearl or scroll can end up behind a lock the party cannot pick yet.
+  const roomRng = new Rng(derive(seed, "side-rooms"));
+  const isBanner = (a: ActionInstance): boolean => a.kind === "decor" && [103, 104, 105].includes(Number(a.params.item));
+  const objects = new Set<number>(actions.filter((a) => !isBanner(a)).map((a) => a.y * map.width + a.x));
+  // (a banner that hangs there already does not make a room less bare: the banners along the walls reach into the side rooms, too)
+  for (const room of emptyRooms(map, actions.filter((a) => !isBanner(a)))) {
+    const gate = tier < 5 && room.mouths.length === 1 && roomRng.chance(GATED_ROOM_CHANCE) ? room.mouths[0]! : null;
+    // the gate stands in a passage between two walls (a door in a wall that goes on on both sides)
+    const walled = (c: { x: number; y: number }, dx: number, dy: number): boolean => !floorAt(c.x + dx, c.y + dy);
+    const alongX = gate !== null && walled(gate, 0, -1) && walled(gate, 0, 1);
+    const alongY = gate !== null && walled(gate, -1, 0) && walled(gate, 1, 0);
+    const shut = gate !== null && (alongX || alongY);
+    // the free cells of the room, the far ones from the way in first
+    const mouth = room.mouths[0]!;
+    const far = [...room.cells].sort((p, q) => Math.abs(q.x - mouth.x) + Math.abs(q.y - mouth.y) - (Math.abs(p.x - mouth.x) + Math.abs(p.y - mouth.y)) || p.y - q.y || p.x - q.x);
+    const openCell = (x: number, y: number): boolean => floorAt(x, y) && !objects.has(y * map.width + x);
+    const holds = (x: number, y: number): boolean => objects.has(y * map.width + x);
+    const spot = far.find((c) => !taken.has(c.y * map.width + c.x) && !blocksPassage(openCell, holds, c.x, c.y));
+    const wallSide = far.map((c) => ({ c, f: FACINGS.find((f) => !floorAt(c.x + FACING_DELTA[f].dx, c.y + FACING_DELTA[f].dy)) })).find((e) => e.f && !taken.has(e.c.y * map.width + e.c.x) && !objects.has(e.c.y * map.width + e.c.x) && !(spot && e.c.x === spot.x && e.c.y === spot.y));
+    const hung = actions.some((a) => isBanner(a) && room.cells.some((c) => c.x === a.x && c.y === a.y));
+    if (wallSide?.f && !hung) banner(wallSide.c.x, wallSide.c.y, OPPOSITE[wallSide.f]);
+    if (shut && gate) {
+      const id = uid("roomgate");
+      actions.push({ uid: id, kind: "door", x: gate.x, y: gate.y, params: { locked: true, ask: true, difficulty: 1, harder: 1, axis: alongX ? "x" : "y" } });
+      taken.add(gate.y * map.width + gate.x);
+      if (spot) {
+        const chest = uid("roomchest");
+        actions.push({ uid: chest, kind: "treasure", x: spot.x, y: spot.y, params: { chest: roomRng.chance(500) ? CHEST_PLAIN : CHEST_NOBLE, level: Math.min(8, tier + 1), gold: (tier + 1) * 140 * 3 + roomRng.range(0, 300), items: 3 } });
+        objects.add(spot.y * map.width + spot.x);
+        taken.add(spot.y * map.width + spot.x);
+      }
+    } else if (spot) {
+      const id = uid("roomprop");
+      if (roomRng.chance(400)) actions.push({ uid: id, kind: "treasure", x: spot.x, y: spot.y, params: { chest: CHEST_PLAIN, level: tier, gold: tier * 140 + roomRng.range(0, 200), items: 1 } });
+      else actions.push({ uid: id, kind: "decor", x: spot.x, y: spot.y, params: { item: ROOM_PROPS[roomRng.int(ROOM_PROPS.length)]! } });
+      objects.add(spot.y * map.width + spot.x);
+      taken.add(spot.y * map.width + spot.x);
+    }
+  }
   return { mapKey: map.key, tier, actions, spawns: [] };
 }

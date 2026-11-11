@@ -197,7 +197,7 @@ describe("quick cast (the last spell, with the one who cast it)", () => {
 
 describe("the people of the campaign maps", () => {
   it("have an animated model each, at the size and clip of the old game", () => {
-    expect(Object.keys(PERSONAS).map(Number)).toEqual([48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 82, 90, 106, 107, 108]);
+    expect(Object.keys(PERSONAS).map(Number)).toEqual([48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 82, 90, 106, 107, 108, 311]);
     expect(PERSONAS[48]).toEqual({ file: "Cartographer", idle: "Stand_and_Chat", scale: 1.3 });
     expect(PERSONAS[90]).toEqual({ file: "Seth Squirm", idle: "Idle_13", scale: 1.5 });
     expect(personaModelId(48)).toBe(PERSONA_BASE + 48);

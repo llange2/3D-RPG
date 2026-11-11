@@ -40,8 +40,8 @@ describe("31st playtest", () => {
         const into = FACING_DELTA[map.spawn.facing];
         expect(map.spawn).toMatchObject({ x: map.exit.x + into.dx, y: map.exit.y + into.dy });
         expect(castle.keep).toContain(map.spawn.y * map.width + map.spawn.x);
-        // no iron gate to open and no yard: the one door of the keep is the exit
-        expect(content.actions.some((a) => a.kind === "door")).toBe(false);
+        // no iron gate to open and no yard: the one door of the keep is the exit (the gates of the side rooms, 55th playtest, point 11, are no gate of the keep)
+        expect(content.actions.some((a) => a.kind === "door" && !a.uid.includes("#roomgate:"))).toBe(false);
       }
     });
 

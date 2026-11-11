@@ -84,7 +84,7 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     // 40th playtest, point 9: up to 14 lines (a ring against a ring with other stats) run in two columns, so that the window stays a size that fits the screen
     h("div", { class: `bonus-lines${lines.length > 6 ? " many" : ""}` }, ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null))),
     // 53rd playtest, point 18: what a weapon or a damage ring hits for on average, from the hero's level and attributes
-    ...(c ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage", text: `${l.label}: ${l.value}` })) : []),
+    ...(c ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage" }, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null)) : []),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
     c && !allowed ? h("div", { class: "small", style: "color:#e8745f", text: `A ${c.classType} cannot use this.` }) : null,
     untrained ? h("div", { class: "small", style: "color:#e8745f", text: "Requires Arms Master talent to equip" }) : null,
@@ -478,14 +478,14 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       render();
     };
 
-    // the keys that open the screen also switch inside it (35th playtest): 1 to 4 the heroes, 5 the mascot, T the party's talents
+    // the keys that open the screen also switch inside it (35th playtest): 1 to 4 the heroes, 5 the mascot, T or I the party info
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.altKey || e.metaKey || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const n = Number(e.key);
       let next: CharacterView | null = null;
       if (e.key.length === 1 && n >= 1 && n <= party.characters.length) next = n - 1;
       else if (e.key === "5") next = "mascot";
-      else if (e.key === "t" || e.key === "T") next = "perks";
+      else if (e.key === "t" || e.key === "T" || e.key === "i" || e.key === "I") next = "perks";
       if (next === null) return;
       e.preventDefault();
       e.stopPropagation();
@@ -686,15 +686,23 @@ export async function pickSpell(ui: UI, party: Party, caster: number, quick: Qui
   await preloadSpellIcons();
   const picked = await ui.modal<SpellChoice | number | null>(
     (close) => {
+      // 55th playtest, point 5: the field under the grid holds every text on top of each other (one grid cell, the others invisible), so that the scroll keeps its size
+      // whatever spell the pointer is on; it was as high as the text just shown
       const info = h("div", { class: "spell-info" });
+      const entries = new Map<number | null, HTMLElement>();
+      const entry = (key: number | null, ...lines: HTMLElement[]): void => {
+        const box = h("div", { class: "ghost" }, ...lines);
+        entries.set(key, box);
+        info.append(box);
+      };
+      entry(null, h("div", { class: "small", text: "Choose a spell. Point at one to read what it does." }));
+      for (const id of c.spells) {
+        const s = SPELLS[id];
+        if (s) entry(id, ...spellLines(s, c));
+      }
       const describe = (id: number | null): void => {
-        clear(info);
-        const s = id === null ? undefined : SPELLS[id];
-        if (!s || id === null) {
-          info.append(h("div", { class: "small", text: "Choose a spell. Point at one to read what it does." }));
-          return;
-        }
-        info.append(...spellLines(s, c));
+        const shown = entries.has(id) ? id : null;
+        for (const [key, box] of entries) box.classList.toggle("ghost", key !== shown);
       };
       // alphabetical by name, whatever order the spells were learnt in
       const slots = [...c.spells].sort((a, b) => (SPELLS[a]?.title ?? "").localeCompare(SPELLS[b]?.title ?? "")).map((id) => {
@@ -763,8 +771,9 @@ export async function askSpellDetails(ui: UI, party: Party, spellId: number): Pr
     if (distance === null) return null;
     choice.distance = distance;
   }
-  if (spellId === 17) {
-    const element = await ui.choose("Protect against", "", [
+  if (spellId === 17 || spellId === 50) {
+    // (55th playtest, point 16: the breath of the dragon is of the element the caster picks, never physical)
+    const element = await ui.choose(spellId === 50 ? "Dragon Breath" : "Protect against", spellId === 50 ? "Which element does the breath carry?" : "", [
       { label: "Acid", value: "acid" as const },
       { label: "Fire", value: "fire" as const },
       { label: "Ice", value: "ice" as const },

@@ -189,6 +189,8 @@ export function generateCastle(rng: Rng, ctx: BuildContext, alignment: Alignment
   // passage if the keep has room for it near the king, and farther away before it stands in one
   const kingChests = [0, 1].map(() => take(nearKing, 7) ?? take(nearKing, 7, false)).filter((c): c is { x: number; y: number } => c !== null);
   const answer = take(nearKing, 7) ?? take(nearKing, 12) ?? take(nearKing, 7, false);
+  // 55th playtest, point 12: the king's henchman, who takes the artifacts back, stands in the throne room, too, out of the passages if the room allows it
+  const keeper = take(nearKing, 9) ?? take(nearKing, 14) ?? take(nearKing, 9, false);
 
   // the chests that raise the alarm stand in the niches of the corridors (a floor cell with a single open side), away from the gate and the throne room
   const sides = (x: number, y: number): number => neighbours4(x, y).filter(([nx, ny]) => b.isFloor(nx, ny)).length;
@@ -217,6 +219,7 @@ export function generateCastle(rng: Rng, ctx: BuildContext, alignment: Alignment
     king,
     statues,
     answer: answer ?? king,
+    ...(keeper ? { keeper } : {}),
     kingChests,
     alarmChests,
     door: spawn,

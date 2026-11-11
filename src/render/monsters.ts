@@ -29,6 +29,8 @@ const IDLE_NAMES = ["Alert", "Idle_11", "Idle_9", "Idle_3"];
  */
 const ATTACK_TURN: Readonly<Record<string, number>> = { Archery_Shot_1: (120 * Math.PI) / 180 };
 const ATTACK_TURN_SPEED = 9;
+/** The longest wait for the archer's bow clip before the arrow flies (seconds). */
+const BOW_CLIP_CAP = 1.6;
 /** How long a monster takes to walk one tile; the game times a monster's attack after its step by it. */
 export const MONSTER_STEP_SECONDS = 0.28;
 const MOVE_SECONDS = MONSTER_STEP_SECONDS;
@@ -418,6 +420,19 @@ export class MonsterRenderer {
       out.push({ uid: v.uid, defId: v.defId, x: v.holder.position.x, y: v.holder.position.y + (v.hovers ? mid : Math.min(2.2, Math.max(0.5, mid))), z: v.holder.position.z });
     }
     return out;
+  }
+
+  /**
+   * How long the archer's shot clip runs, 0 for every other attacker (55th playtest, point 3): its arrow leaves when the bow animation is over, not when it starts.
+   * Capped, so that a clip with a long tail never holds up the monsters' turn.
+   */
+  bowSeconds(uid: string): number {
+    const v = this.views.get(uid);
+    if (!v || !v.animated || v.bow.length === 0) return 0;
+    const g = this.group(v, ATTACK_NAMES);
+    if (!g || !g.name.includes("Archery_Shot_1")) return 0;
+    const fps = g.targetedAnimations[0]?.animation.framePerSecond || 30;
+    return Math.min(BOW_CLIP_CAP, Math.max(0, (g.to - g.from) / fps / (g.speedRatio || 1)));
   }
 
   attack(uid: string): void {

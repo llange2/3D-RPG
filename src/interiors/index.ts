@@ -47,9 +47,30 @@ export function generateInterior(world: World, poi: Poi, floor = 0): InteriorMap
       const alignment = world.castleAlignment(poi.id) ?? pickAlignment(rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "alignment"), poi.biome === BIOME.LAVA);
       return generateCastle(rng, ctx, alignment, SIZE_SCALE[world.size] ?? 1, poi.tier === 2 || poi.tier === 3 ? COINS_PER_CASTLE : 0, world.castleWord(poi.id) ?? 0, world.castleSpellsOf(poi.id), poi.tier === 3 || poi.tier === 4 ? PEARLS_PER_CASTLE : 0);
     }
-    case "town":
-      return generateTown(rng, ctx);
+    case "town": {
+      const map = generateTown(rng, ctx);
+      const hints = townHintsOf(world, poi);
+      return hints ? { ...map, townHints: hints } : map;
+    }
   }
+}
+
+/**
+ * What the plan of the world gives a town to say or to hold (55th playtest, points 13 and 14): the towns of level 2 tell where Seth Squirm lives (the dungeon with his machines), and one town of
+ * level 3, chosen by the seed of the world, has the quartermaster. Null where the town has neither.
+ */
+function townHintsOf(world: World, poi: Poi): InteriorMap["townHints"] | null {
+  const hints: NonNullable<InteriorMap["townHints"]> = {};
+  if (poi.tier === 2) {
+    const home = world.allPois().find((p) => world.dungeonRef(p.id)?.seth === true);
+    if (home) hints.seth = { name: home.name, x: home.x, y: home.y };
+  }
+  if (poi.tier === 3) {
+    const towns = world.allPois().filter((p) => p.kind === "town" && p.tier === 3).sort((a, b) => (a.id < b.id ? -1 : 1));
+    const chosen = towns.length > 0 ? towns[rngFor(world.rootSeed, LAYER.INTERIOR, "quartermaster").int(towns.length)] : undefined;
+    if (chosen?.id === poi.id) hints.quartermaster = true;
+  }
+  return hints.seth || hints.quartermaster ? hints : null;
 }
 
 /** FNV-1a over cells, room map, spawn, exit, lots and theme id. */

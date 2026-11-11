@@ -70,7 +70,7 @@ describe("45th playtest, point 4: the wall decorations of the dungeons", () => {
 });
 
 describe("45th playtest, point 10: the sliders of the bank", () => {
-  it("run from nothing to everything, in fine steps at the bottom, and never above the sum", () => {
+  it("run from nothing to everything, linearly, and never above the sum", () => {
     for (const max of [1, 7, 350, 12_345, 5_000_000, 987_654_321]) {
       expect(bankSliderAmount(max, 0)).toBe(0);
       expect(bankSliderAmount(max, BANK_SLIDER_STEPS)).toBe(max);
@@ -83,9 +83,10 @@ describe("45th playtest, point 10: the sliders of the bank", () => {
       }
     }
     expect(bankSliderAmount(0, 500)).toBe(0);
-    // with millions in the vault the hundreds are still within reach of the first steps
-    expect(bankSliderAmount(5_000_000, 50)).toBeLessThan(1_000);
-    expect(bankSliderAmount(5_000_000, 500)).toBeGreaterThan(100_000);
+    // 55th playtest, point 4: linear, the middle of the slider is half of the sum and every step is the same size
+    expect(bankSliderAmount(5_000_000, 50)).toBe(250_000);
+    expect(bankSliderAmount(5_000_000, 500)).toBe(2_500_000);
+    expect(bankSliderAmount(12_000, 250)).toBe(3_000);
   });
 });
 

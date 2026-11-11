@@ -1,5 +1,7 @@
 import { LAYER, Rng, rngFor, type SeedState } from "../core/rng";
+import { ALIGNMENTS } from "../data/castles";
 import { buildLook, type DungeonClass } from "../data/dungeon-themes";
+import { ARTIFACTS_PER_KIND, ARTIFACT_TYPE } from "../data/keepers";
 import {
   BOSS_PAIRS,
   CARD_COLORS,
@@ -300,6 +302,14 @@ function distributeItems(rng: Rng, refs: Map<string, DungeonRef>, places: readon
   const deep = ordinary.filter((p) => p.tier === 3 || p.tier === 4);
   const pearlsLeft = PEARLS_IN_WORLD - PEARLS_PER_CASTLE * pearlCastles;
   spread(deep.length > 0 ? deep : ordinary, pearlsLeft, Math.max(2, Math.ceil(pearlsLeft / Math.max(1, deep.length))), (p) => void (refs.get(p.id)!.pearls += 1));
+  // the artifacts of the three kingdoms (55th playtest, point 12): `ARTIFACTS_PER_KIND` of each, at most one in a place, in the caves and dungeons of level 2 and up; the kinds take turns, so
+  // that a small world with few places loses the last of the third kind and not a whole kind (after the draws above, so that nothing else moves)
+  const kinds = ALIGNMENTS.map((a) => ARTIFACT_TYPE[a]);
+  let turn = 0;
+  spread(ordinary.filter((p) => p.tier >= 2), ARTIFACTS_PER_KIND * kinds.length, 1, (p) => {
+    const ref = refs.get(p.id)!;
+    ref.artifacts = [...(ref.artifacts ?? []), kinds[turn++ % kinds.length]!];
+  });
 }
 
 function rngPick<T>(rng: Rng, list: readonly T[]): T {

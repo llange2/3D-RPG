@@ -2569,5 +2569,30 @@
   "animated": true,
   "scale": 1.2,
   "y": 0
+ },
+ "1311": {
+  "file": "models/monster_1311.glb",
+  "tris": 3500,
+  "bytes": 436824,
+  "bounds": [
+   -0.8650842905044556,
+   0.0005798417259939015,
+   -0.19534777104854584,
+   0.8667355179786682,
+   1.6998831033706665,
+   0.19365499913692474
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Idle_9",
+   "Stand_and_Chat"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.391,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
  }
 }

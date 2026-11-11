@@ -31,6 +31,8 @@ export const PERSONAS: Record<number, Persona> = {
   106: { file: "Generic 1", idle: "Idle_11", scale: 1.2 },
   107: { file: "Generic 2", idle: "Idle_11", scale: 1.2 },
   108: { file: "Generic 3", idle: "Idle_11", scale: 1.2 },
+  // the quartermaster of the town of level 3 (55th playtest, point 14): the user's own model, `tools/assets/sources/models/Quartermaster.glb` (`new:` = that folder)
+  311: { file: "new:Quartermaster", idle: "Stand_and_Chat", scale: 1.3 },
 };
 
 /** Personas share the monster registry (same rig, same renderer); their ids start here so they cannot clash with the 91 monsters. */

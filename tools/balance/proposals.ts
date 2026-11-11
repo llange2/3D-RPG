@@ -75,7 +75,7 @@ PROPOSALS.v3u = { ...PROPOSALS.v3!, id: "v3u", title: "Kampf v3 mit XP-Vorschlag
 
 /**
  * The revised proposal of the user (docs/KAMPF_BALANCE.md, summary table, state of 24.10.2026), called v4:
- *  health `(END/2 + class + race) * level + 10`; melee `(weapon * (STR*0.1 + class) / 3 * level - armor) * (1 - res_physical)`;
+ *  health `(END/4 + class + race) * level + 10` (55th playtest: END/2 before); melee `(weapon * (STR*0.1 + class) / 3 * level - armor) * (1 - res_physical)`;
  *  bow hit chance `ACC / (speed * distance)`, bow damage as v3; monsters hit as today; Wolf kills below 10 %, Fairy -30, Orb +20 % spell damage
  *  (no extra mana any more); XP and training as v3x.
  * The melee line is ambiguous ("Waffe x (...) /3 x Stufe"): `melee` picks the reading (see `V4_MELEE`).

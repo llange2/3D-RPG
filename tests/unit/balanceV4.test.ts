@@ -43,9 +43,9 @@ describe("BALANCE v4: the switch", () => {
 });
 
 describe("BALANCE v4: health", () => {
-  it("adds 10 to (END / 2 + class + race) × level", () => {
+  it("adds 10 to (END / 4 + class + race) × level (55th playtest, point 17: Endurance counted half before)", () => {
     const heroes = createDefaultParty().characters;
-    expect(heroes.map((c) => c.health)).toEqual([26, 20, 18, 18]);
+    expect(heroes.map((c) => c.health)).toEqual([21, 16, 14, 14]);
     expect(inMode("legacy", () => createDefaultParty().characters.map((c) => c.health))).toEqual([16, 10, 8, 8]);
   });
 });
