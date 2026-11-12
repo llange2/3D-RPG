@@ -256,9 +256,8 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
 
   if (c.hp <= 0 && !c.conditions.includes("Dead") && !c.conditions.includes("Rotten")) {
     const killed = damage > Math.floor(c.health / 2) || c.hp <= -Math.floor(c.health / 3);
-    // a monster whose special attack is Eradication (the Terminator, "causes_status_eradication" of the sheet) leaves a rotten hero behind, not a dead one
-    const rots = !!monster && specialConditions(monster).includes("Rotten");
-    const cond: Condition = killed ? (rots ? "Rotten" : "Dead") : "Unconscious";
+    // a deadly hit is "Dead" whoever struck it (the Terminator too); a hero is "Rotten" only when the special attack (Eradication) took effect above, and then not dead as well
+    const cond: Condition = killed ? "Dead" : "Unconscious";
     addCondition(c, cond, party.minutes);
     added.push(cond);
     // TEMPORARY (balance journal, `sim/journal.ts`): a hero went down; the monster is the cause, no monster means a trap, a spell, lava and the like
