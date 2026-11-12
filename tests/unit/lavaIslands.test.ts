@@ -151,10 +151,12 @@ describe("28th playtest, point 1: the lava islands", () => {
     const weak = bareParty();
     weak.effects.push({ kind: "protection", until: weak.minutes + 480, element: "fire", amount: 10 });
     expect(walkOnLava(weak, rng("lava")).hits.map((h) => h.damage)).toEqual(wanted.map((w) => w - 10));
-    // the Fairy takes 30 off every elemental hit
+    // the Fairy adds 15 percent to every fire resistance (12. 11. 2026): the heroes take less than without her, but still a hit
     const fairy = bareParty();
     fairy.mascot = "Fairy";
-    expect(walkOnLava(fairy, rng("lava")).hits).toEqual([]);
+    const fairyHits = walkOnLava(fairy, rng("lava")).hits.map((h) => h.damage);
+    expect(fairyHits).toEqual(fairy.characters.map((c) => elementalDamage(fairy, c, "fire", LAVA_DAMAGE)));
+    fairyHits.forEach((d, i) => expect(d).toBeLessThan(wanted[i]!));
     // Levitate only keeps the party out of pit traps (8. 11. 2026): a hovering party is burnt like any other
     const hover = bareParty();
     hover.effects.push({ kind: "levitate", until: hover.minutes + 480 });

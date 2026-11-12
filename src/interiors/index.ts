@@ -65,12 +65,16 @@ function townHintsOf(world: World, poi: Poi): InteriorMap["townHints"] | null {
     const home = world.allPois().find((p) => world.dungeonRef(p.id)?.seth === true);
     if (home) hints.seth = { name: home.name, x: home.x, y: home.y };
   }
-  if (poi.tier === 3) {
-    const towns = world.allPois().filter((p) => p.kind === "town" && p.tier === 3).sort((a, b) => (a.id < b.id ? -1 : 1));
-    const chosen = towns.length > 0 ? towns[rngFor(world.rootSeed, LAYER.INTERIOR, "quartermaster").int(towns.length)] : undefined;
-    if (chosen?.id === poi.id) hints.quartermaster = true;
-  }
+  if (hasQuartermaster(world, poi)) hints.quartermaster = true;
   return hints.seth || hints.quartermaster ? hints : null;
+}
+
+/** True for the one town of level 3 (chosen by the seed of the world) that has the quartermaster; the town portal's list names it. */
+export function hasQuartermaster(world: World, poi: Poi): boolean {
+  if (poi.kind !== "town" || poi.tier !== 3) return false;
+  const towns = world.allPois().filter((p) => p.kind === "town" && p.tier === 3).sort((a, b) => (a.id < b.id ? -1 : 1));
+  const chosen = towns.length > 0 ? towns[rngFor(world.rootSeed, LAYER.INTERIOR, "quartermaster").int(towns.length)] : undefined;
+  return chosen?.id === poi.id;
 }
 
 /** FNV-1a over cells, room map, spawn, exit, lots and theme id. */

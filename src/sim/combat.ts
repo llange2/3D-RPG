@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, type MonsterDef } from "../data/tables";
-import { earlyMissChance, fairyReduction, isV4, RULES } from "./balance";
+import { earlyMissChance, fairyReduction, isV4, RULES, specialWithoutDamage } from "./balance";
 import { addCondition, anyoneLeft, armor, attr, canAct, equippedItems, fightSpeed, getBaseValue, isRifted, itemBonus, pyRound, removeCondition, resistanceShare } from "./character";
 import { cheats } from "./cheats";
 import { journalEmit } from "./journal";
@@ -146,13 +146,13 @@ export function spellDamageToMonster(monster: MonsterDef, damage: number, type: 
 const ELEMENTS = new Set(["fire", "ice", "acid", "magic"]);
 
 /**
- * What is left of an elemental hit on `target`: reduced by the resistance in percent (worn items count, at most `RESISTANCE_CAP` = 80 %), then by flat spell
- * protection (Protection from Elements: the caster's level in points) and the Fairy mascot (30 points), never below 0 (the old apply_trap_damage and calculate_monster_damage do the same).
+ * What is left of an elemental hit on `target`: reduced by the resistance in percent (worn items and the Fairy's +15 count, at most `RESISTANCE_CAP` = 80 %), then by flat spell
+ * protection (Protection from Elements: the caster's level in points), never below 0 (the old apply_trap_damage and calculate_monster_damage do the same).
  */
 export function elementalDamage(party: Party, target: Character, element: "acid" | "fire" | "ice" | "magic", damage: number): number {
-  let total = pyRound(damage * (1 - resistanceShare(target, element) / 100));
+  let total = pyRound(damage * (1 - resistanceShare(target, element, party.mascot) / 100));
   total -= protectionLevel(party, element);
-  // BALANCE v4: the Fairy takes 30 off (the old game's constant is 20; the generated constants.json stays untouched)
+  // BALANCE v4 (12.11.2026): the Fairy raises the resistances (`resistance`) and takes nothing off; LEGACY (balance v4): 20 points off (the old game's constant, the generated constants.json stays untouched)
   if (party.mascot === "Fairy") total -= fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION);
   return Math.max(0, total);
 }
@@ -231,11 +231,15 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
   let drained = 0;
   let aged = 0;
   if (monster) {
-    for (const special of specialConditions(monster)) {
+    const specials = specialConditions(monster);
+    // FORMULAS 1.2, 2.5: a hit without damage still counts for the special attack with a chance of 10 % (one roll for the hit, only when the monster has a special at all)
+    const noDamageChance = damage > 0 || force || specials.length === 0 ? 0 : specialWithoutDamage();
+    const reaches = damage > 0 || (noDamageChance > 0 && rng.float() < noDamageChance);
+    for (const special of specials) {
       const luck = attr(c, "lck");
       // being killed or rotted outright is half as likely as the other conditions
       const chance = (special === "Dead" || special === "Rotten" ? 5 : 10) / (luck * luck * 0.05);
-      if ((damage > 0 && rng.float() < chance) || force) {
+      if ((reaches && rng.float() < chance) || force) {
         addCondition(c, special, party.minutes);
         added.push(special);
       }
@@ -250,9 +254,11 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
     }
   }
 
-  if (c.hp <= 0 && !c.conditions.includes("Dead")) {
+  if (c.hp <= 0 && !c.conditions.includes("Dead") && !c.conditions.includes("Rotten")) {
     const killed = damage > Math.floor(c.health / 2) || c.hp <= -Math.floor(c.health / 3);
-    const cond: Condition = killed ? "Dead" : "Unconscious";
+    // a monster whose special attack is Eradication (the Terminator, "causes_status_eradication" of the sheet) leaves a rotten hero behind, not a dead one
+    const rots = !!monster && specialConditions(monster).includes("Rotten");
+    const cond: Condition = killed ? (rots ? "Rotten" : "Dead") : "Unconscious";
     addCondition(c, cond, party.minutes);
     added.push(cond);
     // TEMPORARY (balance journal, `sim/journal.ts`): a hero went down; the monster is the cause, no monster means a trap, a spell, lava and the like

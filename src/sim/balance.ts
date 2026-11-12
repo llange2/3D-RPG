@@ -57,8 +57,12 @@ export const RULES = {
     earlyMiss: [0.5, 0.3, 0.15],
     /** The Wolf kills a monster that is below this share of its health. */
     wolfBelow: 0.1,
-    /** The Fairy takes this many points off every elemental hit. */
-    fairyReduction: 30,
+    /** The Fairy no longer takes points off an elemental hit (it was 30 until 12.11.2026) ... */
+    fairyReduction: 0,
+    /** ... it adds this many percentage points to every resistance of every hero (fire, ice, acid and magic; the cap `RESISTANCE_CAP` still holds). */
+    fairyResistance: 15,
+    /** A monster that does no damage (a miss, armor, evasion) still makes its special attack count with this chance, which is then rolled like any special (FORMULAS 1.2, 2.5). */
+    specialWithoutDamage: 0.1,
     /** The Orb raises the damage of attack spells by this share ... */
     orbSpellBonus: 0.2,
     /** ... and no longer the spell points. */
@@ -93,6 +97,8 @@ export const RULES = {
     wolfBelow: 0.9,
     /** The old game's value lives in the generated constants (`MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION`, 20). */
     fairyReduction: 20,
+    fairyResistance: 0,
+    specialWithoutDamage: 0,
     orbSpellBonus: 0,
     orbManaBonus: 0.2,
     trainingPerLevel: 250,
@@ -116,6 +122,10 @@ export const healthFlat = (): number => (isV4() ? RULES.v4.healthFlat : RULES.le
 export const healthEndDivisor = (): number => (isV4() ? RULES.v4.healthEndDivisor : RULES.legacy.healthEndDivisor);
 export const wolfBelow = (): number => (isV4() ? RULES.v4.wolfBelow : RULES.legacy.wolfBelow);
 export const fairyReduction = (legacyValue: number): number => (isV4() ? RULES.v4.fairyReduction : legacyValue);
+/** Percentage points the Fairy adds to every resistance of every hero (12.11.2026); LEGACY (balance v4): none, the old flat deduction `fairyReduction` is used. */
+export const fairyResistance = (): number => (isV4() ? RULES.v4.fairyResistance : RULES.legacy.fairyResistance);
+/** BALANCE v4 (FORMULAS 1.2, 2.5): the chance (0 to 1) that a hit without damage still lets the monster's special attack count; LEGACY (balance v4): 0. */
+export const specialWithoutDamage = (): number => (isV4() ? RULES.v4.specialWithoutDamage : RULES.legacy.specialWithoutDamage);
 export const orbSpellBonus = (): number => (isV4() ? RULES.v4.orbSpellBonus : RULES.legacy.orbSpellBonus);
 export const orbManaBonus = (): number => (isV4() ? RULES.v4.orbManaBonus : RULES.legacy.orbManaBonus);
 

@@ -1,6 +1,6 @@
 # Formeln des Spiels
 
-Stand: 11. 11. 2026 (Version 1.1, umgesetzt im 56. Playtest). Diese Datei sammelt **alle Rechenregeln** des Spiels an einer Stelle: wie Werte entstehen, wie Schaden, Preise, Zeiten und Chancen berechnet werden. Sie beschreibt den Code, sie ersetzt ihn nicht: Bei jeder Änderung an einer Formel gehört die Zeile hier mit hinein (Quelle jeweils in Klammern).
+Stand: 12. 11. 2026 (Version 1.2, umgesetzt in `bug_fix_56`). Diese Datei sammelt **alle Rechenregeln** des Spiels an einer Stelle: wie Werte entstehen, wie Schaden, Preise, Zeiten und Chancen berechnet werden. Sie beschreibt den Code, sie ersetzt ihn nicht: Bei jeder Änderung an einer Formel gehört die Zeile hier mit hinein (Quelle jeweils in Klammern).
 
 **Schreibweise:** `⌈x⌉` aufrunden, `⌊x⌋` abrunden, `trunc` Nachkommastellen abschneiden, `round` Rundung auf die nächste ganze Zahl (Pythons `round`: .5 geht zur geraden Nachbarzahl, `pyRound` in `sim/character.ts`), `Stufe` die Stufe des Helden, `Tier` die Stufe (1 bis 5) des Ortes. Alle Kampfzahlen stehen in `RULES.v4` (`sim/balance.ts`); der Zweig `legacy` ist die alte Rechnung und nur noch Rückweg (Abschnitt „Alte Formeln“ am Ende). Zufall kommt immer aus `core/rng.ts`, nie aus `Math.random`.
 
@@ -133,7 +133,8 @@ Wurf = gleichverteilt zwischen damage_min und damage_max
 Fernangriff: Trefferchance = min(1, max(0, Tempo_Monster / (fightSpeed(Ziel) × Abstand × 0,5)))     (Ninja: × 0,75 statt 0,5)
 Frühe Fehlchance gegen Helden der Stufe 1 / 2 / 3: 50 % / 30 % / 15 % (earlyMiss), die Zahl wird für jeden Angriff gezogen
 Physisch:  trunc(Wurf × 30 / (30 + Rüstung))        (monsterArmorK = 30; legacy: Wurf − Rüstung, Schüsse zusätzlich − ⌊Rüstung/2⌋)
-Element:   round(Wurf × (1 − Widerstand%/100)) − Schutz (Protection from Elements: Stufe des Zaubernden) − Fee (30); nie unter 0
+Element:   round(Wurf × (1 − Widerstand%/100)) − Schutz (Protection from Elements: Stufe des Zaubernden); nie unter 0
+           (Widerstand% = Wert des Helden + Gegenstände + Boon + Fee 15, höchstens 80; legacy: zusätzlich − 20 mit der Fee)
 Gift:      wird nicht verringert
 Ninja:     weicht einem Nahangriff mit 10 % aus (Schaden 0)
 Abwehrstellung: Fernangriffe × 0,5
@@ -141,18 +142,20 @@ Abwehrstellung: Fernangriffe × 0,5
 
 Ein Monster mit Fernangriff schießt aus der Ferne `min(2, ⌈Angriffe / 2⌉)` Schüsse je Zug (`monsterShots`), im Nahkampf macht es alle Angriffe (`no_of_attacks`).
 
+Erzielt ein Monster keinen Schaden, hat es trotzdem eine 10% Chance die Sonderwirkung auszulösen. Diese wird wie in 2.6 beschrieben abgehandelt (`specialWithoutDamage`; ein Wurf je Angriff, nur bei Monstern mit Sonderwirkung; legacy: 0). Die Sonderwirkung gilt auch für Fernangriffe (der Terminator schießt nur).
+
 ### 2.6 Treffer auf einen Helden (`applyHit`)
 
 - Power Shield: Schaden × (1 − 0,1). Schlafende erwachen bei Schaden.
 - **Sonderwirkung** (Zustand der Monstertabelle) wirkt mit Wahrscheinlichkeit `10 / (GLÜ² × 0,05)`; **Dead** und **Rotten** nur halb so oft (`5 / …`).
 - Mana-Raub: `min(ZP, ⌈Mana × steal_mana⌉)`; Altern: `+aging_years` magisches Alter.
-- Bei LP ≤ 0: **tot**, wenn der Treffer mehr als `⌊Maximum-LP / 2⌋` war oder LP ≤ −`⌊Maximum-LP / 3⌋`, sonst **bewusstlos**.
+- Bei LP ≤ 0: **tot**, wenn der Treffer mehr als `⌊Maximum-LP / 2⌋` war oder LP ≤ −`⌊Maximum-LP / 3⌋`, sonst **bewusstlos**. Ist die Sonderwirkung des Monsters Eradication (Terminator, „causes_status_eradication“ der Monstertabelle), wird aus „tot“ **verrottet** (Rotten); ein bereits verrotteter Held wird nicht zusätzlich tot.
 - Ein Held im Dimensional Rift ist unverwundbar.
 
 ### 2.7 Maskottchen
 
 - **Wolf**: tötet jedes Monster unter 10 % LP (`wolfBelow`; legacy 90 %).
-- **Fee**: nimmt 30 Punkte von jedem Elementartreffer (legacy 20).
+- **Fee**: erhöht die Resistenzen (Feuer, Eis, Säure, Magie) **aller** Helden um **+15 %** (`fairyResistance`, wirkt wie ein Gegenstandsbonus; die Obergrenze von 80 % gilt weiter; auf dem Charakterbogen zählt sie zum aktuellen Wert, nicht zum Basiswert). Vorher (bis 11. 11. 2026): −30 Punkte je Elementartreffer. Legacy: −20 Punkte je Treffer.
 - **Orb**: Angriffszauber +20 % Schaden (`orbSpellBonus`), keine ZP mehr.
 
 ### 2.8 Monster-XP
@@ -206,7 +209,6 @@ Ein Monster mit Fernangriff schießt aus der Ferne `min(2, ⌈Angriffe / 2⌉)` 
 - **Zustand heilen** `round(Preis × Stufe des Helden)` mit Preisen Poisoned 40, Diseased 80, Cursed 120, Crazy 100, Weak 30, Drunk 10, Sleeping 5, Paralyzed 150, Petrified 400, (Unconscious wird über die normale Heilung abgehandelt)
 - **Wiederbelebung (tot)** `round(300 × Tier)`; der Held kommt mit der Hälfte der LP (mindestens 1) zurück.
 - **Wiederbelebung (verrottet)**  `round(1000 × Tier)`; der Held kommt mit der Hälfte der LP (mindestens 1) zurück.
-
 - **Spenden** (`templeDonate`): kostet `round(10 × Tier)`, das Gold ist in jedem Fall weg; mit 20 % Chance (`DONATION_BLESSING_CHANCE`) erhält der Held den Zustand „Blessed“ für 24 Stunden (`BLESSING_MINUTES`), dessen Stärke der Tier des Tempels ist (1.1). Der Button ist nur sichtbar, wenn der Held lebt und nicht gesegnet ist; eine laufende Segnung wird nie gestapelt.
 
 ### 5.4 Bank
@@ -308,4 +310,5 @@ Es würfelt nur der beste aktive Dieb (höchster Skill). Gelingt `Wurf ≥ Schwi
 - | Version | Änderung |
   | --- | --- |
   | 1.0 | Initiales Dokument |
-  | 1.1 | - 1.1:"Blessed" aktualisiert<br>2.3: Monsterrüstung bei Fernkampf zählt jetzt 2/3 (vorher 1/2)<br>- 4: Den Bonus der "tieferen Ort" entfernt (Materiallevel jetzt max Dungeon Tier+1)<br>5.1: aktualisiert<br>- 5.3: aktualisiert<br>- 5.8: ergänzt (Ladenstufe = Stufe der Stadt) |
+  | 1.1 | \- 1.1:"Blessed" aktualisiert<br>2.3: Monsterrüstung bei Fernkampf zählt jetzt 2/3 (vorher 1/2)<br>\- 4: Den Bonus der "tieferen Ort" entfernt (Materiallevel jetzt max Dungeon Tier+1)<br>5.1: aktualisiert<br>\- 5.3: aktualisiert<br>\- 5.8: ergänzt (Ladenstufe = Stufe der Stadt) |
+  | 1.2 | 2.5 Ergänzt: Sonderwirkung Monster auch wenn kein Schaden erzielt wird<br>2.5/2.7: Fee erhöht die Resistenzen aller Helden um 15 % statt 30 Punkte abzuziehen<br>2.6: Eradication (Terminator) macht verrottet statt tot, Sonderwirkung auch bei Fernangriffen |

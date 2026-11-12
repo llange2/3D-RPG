@@ -1,5 +1,5 @@
 import type { Rng } from "../core/rng";
-import { isUndead, type MonsterDef } from "../data/tables";
+import { isUndead, monsterGroup, type MonsterDef } from "../data/tables";
 import { monsterShots, RULES, wolfBelow } from "./balance";
 import { applyHit, meleeDamage, monsterById, monsterDamage, rangedDamage, spellDamageToMonster, type DamageType } from "./combat";
 import { anyoneLeft, canAct, isRifted, itemBonus } from "./character";
@@ -562,7 +562,8 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
       const victims = def.hits_all ? candidates : [candidates[rng.int(candidates.length)]!];
       for (const target of victims) {
         const damage = monsterDamage(party, def, party.characters[target]!, ranged, distance, rng);
-        const hit = applyHit(party, target, damage, ranged ? null : def, rng);
+        // (a shot carries the special attack too: the Terminator only ever shoots, and "causes_status_eradication" never came to pass)
+        const hit = applyHit(party, target, damage, def, rng);
         events.push({
           type: "monster_attack",
           uid: s.monster.uid,
@@ -1001,9 +1002,20 @@ export const PHASE_TURNS = 5;
 export const IMMOBILIZE_TURNS = 3;
 export const GRAVITY_RADIUS = 4;
 
-/** Dimensional Phasing: every monster within the radius leaves the fight for `PHASE_TURNS` monster turns. Returns who was caught. */
+/** Told to the player when Dimensional Phasing meets a robot (the spell's own text stays as it is). */
+export const PHASE_ROBOT_TEXT = "It seems impossible to shift these metal creatures into another dimension.";
+
+/** Robots cannot be shifted into another dimension. */
+export const isPhaseProof = (m: MonsterInstance): boolean => monsterGroup(m.defId) === "robot";
+
+/** The monsters Dimensional Phasing reaches: alive, within the radius and not already gone. Robots are among them (the spell passes over them, `isPhaseProof`). */
+export function phaseReach(enc: Encounter, px: number, py: number): MonsterInstance[] {
+  return enc.monsters.filter((m) => m.hp > 0 && !isPhased(m) && (m.x - px) ** 2 + (m.y - py) ** 2 <= PHASE_RADIUS ** 2);
+}
+
+/** Dimensional Phasing: every monster within the radius leaves the fight for `PHASE_TURNS` monster turns, except the robots. Returns who was caught. */
 export function phaseMonsters(enc: Encounter, px: number, py: number): MonsterInstance[] {
-  const caught = enc.monsters.filter((m) => m.hp > 0 && (m.x - px) ** 2 + (m.y - py) ** 2 <= PHASE_RADIUS ** 2);
+  const caught = enc.monsters.filter((m) => m.hp > 0 && !isPhaseProof(m) && (m.x - px) ** 2 + (m.y - py) ** 2 <= PHASE_RADIUS ** 2);
   for (const m of caught) m.phased = PHASE_TURNS;
   return caught;
 }
