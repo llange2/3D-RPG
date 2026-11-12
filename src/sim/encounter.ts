@@ -406,6 +406,91 @@ export function cancelRifts(party: Party): number[] {
   return back;
 }
 
+/** How far beyond the action radius a monster that backs off from a party in the water may get (user, 12. 11. 2026). */
+export const FLEE_EXTRA = 3;
+/** Tiles the search for a way out may expand: enough to get round a crowd in a narrow place. */
+const FLEE_STEP_LIMIT = 120;
+
+/**
+ * User, 12. 11. 2026: a party that attacks from the water (a raft, a swim) cannot be reached by a land monster, and a monster without a ranged attack stood there and took it.
+ * Now it backs off instead: it walks away from the party, one step a turn, up to `radius + FLEE_EXTRA` tiles from it (`FLEE_EXTRA`). Only a monster the party has hurt does (the
+ * party "attacks" it: health below the maximum, which covers arrows, spells and the Wolf alike), only a pure land monster (`terrain` land) with no ranged attack (a shooter stays and
+ * shoots), and only while it has no way to the party (at a shore the monsters come for the party as before).
+ *
+ * The monsters must not block each other (a shooter standing in a bottleneck): the farthest monster moves first and clears the way for those behind it, and a monster that would
+ * step onto a tile held by a monster that stays (a shooter, a healthy monster without a way) trades places with it instead of waiting behind it. Whoever cannot get any farther stays.
+ */
+function fleeFromWater(view: GridView, enc: Encounter, px: number, py: number, radius: number): CombatEvent[] {
+  const events: CombatEvent[] = [];
+  if (!view.water(px, py)) return events;
+  const limit = radius + FLEE_EXTRA;
+  const away = (x: number, y: number) => Math.max(Math.abs(x - px), Math.abs(y - py));
+  const wounded = (m: MonsterInstance) => {
+    const def = monsterById(m.defId);
+    return m.hp > 0 && m.hp < def.health && def.terrain !== "water" && def.terrain !== "both" && !def.ranged && !m.immobile && !isPhased(m) && away(m.x, m.y) <= limit;
+  };
+  const fleeing = enc.monsters
+    .filter(wounded)
+    .filter((m) => wayToPlayer(viewOf(view, m), monsterById(m.defId), m.x, m.y, px, py, radius, undefined, MOVE_STEP_LIMIT) === null)
+    // the farthest first (equal distance by uid, so the order does not depend on the list)
+    .sort((a, b) => away(b.x, b.y) - away(a.x, a.y) || (a.uid < b.uid ? -1 : 1));
+  const fleeingUids = new Set(fleeing.map((m) => m.uid));
+  // the score of a tile: the distance to the party along the longer axis (the radius is measured so), then the straight distance
+  const score = (x: number, y: number) => away(x, y) * 10000 + (x - px) ** 2 + (y - py) ** 2;
+
+  for (const m of fleeing) {
+    const at = (x: number, y: number) => enc.monsters.find((o) => o !== m && o.hp > 0 && o.x === x && o.y === y);
+    // a monster that stays and can be moved: it makes room by trading places
+    const swappable = (o: MonsterInstance) => !fleeingUids.has(o.uid) && !o.immobile && !isPhased(o);
+    const open = (x: number, y: number) => (x !== px || y !== py) && view.walkable(x, y);
+
+    // breadth-first over the walkable tiles within the limit; remembers the first step of the way to each tile
+    const start = `${m.x},${m.y}`;
+    const firstStep = new Map<string, [number, number]>();
+    const seen = new Set<string>([start]);
+    const queue: [number, number][] = [[m.x, m.y]];
+    let best: { key: string; score: number } | null = null;
+    const here = score(m.x, m.y);
+    for (let head = 0, expanded = 0; head < queue.length && expanded < FLEE_STEP_LIMIT; head++, expanded++) {
+      const [x, y] = queue[head]!;
+      const key = `${x},${y}`;
+      if (key !== start) {
+        // a goal is a free tile (a tile held by a monster that stays is only passed, by trading places on the first step)
+        if (!at(x, y)) {
+          const s = score(x, y);
+          if (s > here && (!best || s > best.score)) best = { key, score: s };
+        }
+      }
+      for (const [dx, dy] of DIRS) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const nkey = `${nx},${ny}`;
+        if (seen.has(nkey) || away(nx, ny) > limit || !open(nx, ny)) continue;
+        if (view.wallBetween?.(x, y, nx, ny)) continue;
+        const holder = at(nx, ny);
+        if (holder && !swappable(holder)) continue;
+        seen.add(nkey);
+        firstStep.set(nkey, key === start ? [nx, ny] : firstStep.get(key)!);
+        queue.push([nx, ny]);
+      }
+    }
+    if (!best) continue;
+    const step = firstStep.get(best.key);
+    if (!step) continue;
+    const [sx, sy] = step;
+    const holder = at(sx, sy);
+    if (holder) {
+      events.push({ type: "monster_move", uid: holder.uid, from: [sx, sy], to: [m.x, m.y] });
+      holder.x = m.x;
+      holder.y = m.y;
+    }
+    events.push({ type: "monster_move", uid: m.uid, from: [m.x, m.y], to: [sx, sy] });
+    m.x = sx;
+    m.y = sy;
+  }
+  return events;
+}
+
 /**
  * All monsters near the player act: first everybody moves one step along its path, then everybody attacks
  * (melee when adjacent, ranged when it has a ranged attack and a clear line). Port of monster_action.
@@ -440,6 +525,9 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
     m.x = nx;
     m.y = ny;
   }
+
+  // 1b. a party that attacks from the water: the wounded land monsters without a way to it back off
+  events.push(...fleeFromWater(view, enc, px, py, radius));
 
   // 2. attacks
   for (const s of scan(view, enc, px, py, radius)) {

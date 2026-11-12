@@ -13,6 +13,14 @@ let idleSteps = 0;
 export const CURSOR_FADE_STEPS = 5;
 export const CURSOR_FADE_SECONDS = 1;
 
+/**
+ * The side of the pointer's picture in pixels (`--size` of `#game-cursor` in style.css: 6 % of the window height, 36 to 72 px). A tooltip beside the pointer keeps this far
+ * to its right, or the picture covers the text's first letters (user, 12. 11. 2026).
+ */
+export function cursorSize(): number {
+  return Math.min(72, Math.max(36, window.innerHeight * 0.06));
+}
+
 /** Shows the pointer at once (the mouse moved), cancelling a fade in progress. */
 function reveal(): void {
   idleSteps = 0;
