@@ -32,8 +32,10 @@ try {
   await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
   await sleep(12000);
   // the Cartographer talent and a map that is known everywhere (Reveal map)
-  await evalJs(`(() => { const g = __game.game; g.state.party.talents.push("talent_cartographer"); const { w, h } = { w: g.world.width, h: g.world.height }; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) g.state.explored.markOverworld(x, y); })()`);
-  const names = await evalJs<string[]>(`__game.game.world.allPois().map((p) => p.name)`);
+  // mode "pyramid": nothing is revealed but one corner tile of the first pyramid, the search must still find it (its middle tile is dark)
+  const pyramidMode = process.argv[4] === "pyramid";
+  await evalJs(`(() => { const g = __game.game; g.state.party.talents.push("talent_cartographer"); if (${pyramidMode}) { const p = g.world.allPois().find((q) => q.size === 3); g.state.explored.markOverworld(p.x - 1, p.y - 1); return; } const { w, h } = { w: g.world.width, h: g.world.height }; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) g.state.explored.markOverworld(x, y); })()`);
+  const names = pyramidMode ? await evalJs<string[]>(`[__game.game.world.allPois().find((q) => q.size === 3).name]`) : await evalJs<string[]>(`__game.game.world.allPois().map((p) => p.name)`);
   console.log("places:", names.length, names.slice(0, 8).join(", "));
   await evalJs(`(() => { void __game.game.openMap(); })()`);
   await sleep(1500);
@@ -48,7 +50,8 @@ try {
   console.log("tip:", await evalJs<string>(`JSON.stringify({ text: document.querySelector(".map-tip")?.textContent, rect: document.querySelector(".map-tip")?.getBoundingClientRect(), cursor: document.querySelector("#game-cursor")?.getBoundingClientRect() })`));
   await shot("2-tooltip");
   // point 4: two letters do nothing, three mark
-  const term = names.find((n) => n.length >= 5)!.slice(1, 4);
+  const term = pyramidMode ? names[0]!.slice(-4, -1) : names.find((n) => n.length >= 5)!.slice(1, 4);
+  console.log("search term:", term, pyramidMode ? `(pyramid ${names[0]})` : "");
   const marks = () => evalJs<number>(`(() => { const c = document.querySelector(".map-marks"); const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; })()`);
   await page.click(".map-search");
   await page.keyboard.type(term.slice(0, 2), { delay: 60 });

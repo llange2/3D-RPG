@@ -53,7 +53,7 @@ import { addCondition, canAct, recalcValues, worstCondition, xpToNextLevel } fro
 import { journalEmit, pushJournal, setJournalSink, type FightEvent, type JournalEntry, type JournalEvent, type Stamp } from "../sim/journal";
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
-import { drawSearchMarks, searchPlaces, searchTerm, SEARCH_MIN_LETTERS } from "./mapSearch";
+import { drawSearchMarks, placeSeen, searchPlaces, searchTerm, SEARCH_MIN_LETTERS } from "./mapSearch";
 import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
@@ -103,7 +103,7 @@ import { capybaraSpot, overworldMascotSpots, townMascotSpot, type MascotSpot } f
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
 import { preloadPortraits } from "../ui/portraitSheets";
-import { cursorSize, cursorStepped, setCursorFade } from "../ui/cursor";
+import { cursorStepped, setCursorFade, tooltipBesidePointer } from "../ui/cursor";
 import { h } from "../ui/dom";
 import { thousands } from "../core/format";
 import { UI, randomSeed, type HudInfo, type Option } from "../ui/ui";
@@ -4657,9 +4657,10 @@ export class Game {
         const placeId = interior ? null : this.world.tile(cx, cy).poiId;
         if (placeId && this.state.opened.has(reachedFlag(placeId))) tip.append(h("span", { class: "map-tick", text: " ✔", style: "color:#6fdc6f;font-weight:bold" }));
         const box = root.getBoundingClientRect();
-        // to the right of the game's pointer, whose picture would cover the text just under it
-        tip.style.left = `${e.clientX - box.left + Math.round(cursorSize() * 0.85)}px`;
-        tip.style.top = `${e.clientY - box.top + 14}px`;
+        // flush with the game's pointer: left edge at the right edge of the arrow, top edge at its highest point
+        const beside = tooltipBesidePointer();
+        tip.style.left = `${e.clientX - box.left + beside.dx}px`;
+        tip.style.top = `${e.clientY - box.top + beside.dy}px`;
       });
       canvas.addEventListener("mousedown", (e) => {
         if (e.button !== 0) return;
@@ -4717,7 +4718,7 @@ export class Game {
       searchBox.autocomplete = "off";
       const found = h("span", { class: "map-found" });
       const refreshMarks = () => {
-        const places = searchPlaces(this.world, searchBox.value, (p) => this.state.explored.hasOverworld(p.x, p.y));
+        const places = searchPlaces(this.world, searchBox.value, (p) => placeSeen(p, (x, y) => this.state.explored.hasOverworld(x, y)));
         drawSearchMarks(marks.getContext("2d")!, marks.width, view, places);
         found.textContent = searchTerm(searchBox.value) === null ? "" : places.length === 0 ? "none found" : `${places.length} found`;
       };

@@ -3,8 +3,9 @@ import { Rng, seedFromString } from "../../src/core/rng";
 import { MONSTERS } from "../../src/data/tables";
 import { FLEE_EXTRA, MONSTER_ACTION_RADIUS, monsterTurn, type Encounter, type GridView } from "../../src/sim/encounter";
 import { createDefaultParty } from "../../src/sim/party";
-import { searchPlaces, searchTerm, SEARCH_MIN_LETTERS } from "../../src/game/mapSearch";
-import type { Poi } from "../../src/world/types";
+import { placeSeen, searchPlaces, searchTerm, SEARCH_MIN_LETTERS } from "../../src/game/mapSearch";
+import { poiBounds, type Poi } from "../../src/world/types";
+import { World } from "../../src/world/world";
 
 const rng = (s: string) => new Rng(seedFromString(s));
 const entries = Object.entries(MONSTERS).map(([id, m]) => ({ id: Number(id), m }));
@@ -106,5 +107,20 @@ describe("bug_fix_54, point 4: the search field of the big map", () => {
 
   it("gives away no place the party has not seen", () => {
     expect(searchPlaces(world, "haven", (p) => p.id === "c").map((p) => p.id)).toEqual(["c"]);
+  });
+
+  it("a pyramid (3 x 3) counts as seen when any tile of its footprint is, not only its middle", () => {
+    const real = new World("cedar-peak-198", "default");
+    const pyramid = real.allPois().find((p) => p.size === 3)!;
+    expect(pyramid).toBeDefined();
+    const b = poiBounds(pyramid);
+    // only the corner of the footprint has been seen: the map draws the pyramid, so the search finds it
+    const corner = (x: number, y: number) => x === b.x0 && y === b.y0;
+    expect(placeSeen(pyramid, corner)).toBe(true);
+    expect(placeSeen(pyramid, (x, y) => x === pyramid.x && y === pyramid.y)).toBe(true);
+    expect(placeSeen(pyramid, (x, y) => x === b.x1 + 1 && y === b.y1 + 1)).toBe(false);
+    // and its name is found by a part of it, from three letters
+    const part = pyramid.name.toLowerCase().slice(-4);
+    expect(searchPlaces(real, part, (p) => placeSeen(p, corner)).map((p) => p.id)).toContain(pyramid.id);
   });
 });
