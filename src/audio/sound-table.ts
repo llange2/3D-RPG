@@ -99,6 +99,8 @@ export const SOUNDS: Record<number, SoundEntry> = {
   9061: "robot_powering_off",
   9062: "robot_step",
   9063: "robot_hit",
+  // the key card put into the slot of a pyramid (the user's own file, 12. 11. 2026)
+  9064: "pyramid_unlock",
 };
 
 /** Every file name a sound entry can play. */

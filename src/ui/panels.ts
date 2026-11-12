@@ -1,5 +1,5 @@
 import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
-import { fairyReduction, orbSpellBonus, wolfBelow } from "../sim/balance";
+import { fairyReduction, fairyResistance, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { averageDamageLines } from "../sim/combat";
 import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, resistance, worstCondition, xpToNextLevel } from "../sim/character";
 import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
@@ -134,12 +134,15 @@ function perkColumn(title: string, ids: readonly string[], empty: string): HTMLE
 /** The five mascots of the old game: their portrait files (`npc0n`, `_full` for the two with a big picture) and what they do. */
 export const MASCOTS: Record<string, { portrait: string; full?: string; text: string }> = {
   Crow: { portrait: "npc01", text: "Keeps watch. It comes alive when monsters or a trap are near." },
-  // BALANCE v4: the texts of Wolf, Fairy and Orb follow the numbers in sim/balance.ts (v4: 10%, 30 points, 20% spell damage)
+  // BALANCE v4: the texts of Wolf, Fairy and Orb follow the numbers in sim/balance.ts (v4: 10%, +15% resistances, 20% spell damage)
   Wolf: { portrait: "npc02", text: `Fights alongside the party: a monster that drops below ${Math.round(wolfBelow() * 100)}% of its health is killed by the wolf.` },
   Donkey: { portrait: "npc03", full: "npc03_full", text: "Carries a backpack of 20 slots. Whatever the heroes cannot hold goes to the Donkey." },
   // the Easter egg (7. 11. 2026): no ability at all, on purpose. Its picture turns round now and then (`ui/capybaraClip.ts`)
   Capybara: { portrait: "npc06", text: "The capybara does not seem to have any capabilities except from being the cutest thing ever \u{1F60D}" },
-  Fairy: { portrait: "npc04", text: `Takes ${fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION)} points off every elemental hit (fire, ice, acid and magic) that reaches a hero.` },
+  Fairy:
+    fairyResistance() > 0
+      ? { portrait: "npc04", text: `Raises the fire, ice, acid and magic resistances of every hero by ${fairyResistance()}%.` }
+      : { portrait: "npc04", text: `Takes ${fairyReduction(CONSTANTS.MASCOT_FAIRY_ELEMENTAL_DAMAGE_REDUCTION)} points off every elemental hit (fire, ice, acid and magic) that reaches a hero.` }, // LEGACY (balance v4)
   Orb: {
     portrait: "npc05",
     text: orbSpellBonus() > 0
@@ -356,10 +359,10 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
           // 53rd playtest, point 17: a value that a spell, a condition or a boon moved off what the hero's gear gives shows in green (more) or red (less), the plain value in brackets
           h("div", { text: "Armor" }), markedText(String(armor(c) + adj.bonusArmor), String(itemBonus(c, "arm") + adj.bonusArmor), armor(c), itemBonus(c, "arm")),
           h("div", { text: "Melee damage" }), dmax > 0 ? markedText(`${dmin + rage}-${dmax + rage}`, `${dmin}-${dmax}`, rage, 0) : h("div", { class: "v", text: "bare hands" }),
-          ...RESISTANCES.flatMap(([key, bonus, label]) => {
-            const now = resistance(c, RESISTANCE_ELEMENT[key]);
-            const plain = c[key] + itemBonus(c, bonus);
-            return [h("div", { text: label }), markedText(`${now}%`, `${plain}%`, now, plain)];
+          // like the attributes: the current value (gear, a boon and the Fairy count) in green when it is above the hero's own, in red below, the own value in brackets
+          ...RESISTANCES.flatMap(([key, , label]) => {
+            const now = resistance(c, RESISTANCE_ELEMENT[key], party.mascot);
+            return [h("div", { text: label }), markedText(`${now}%`, `${c[key]}%`, now, c[key])];
           }),
           h("div", { text: "Experience" }), h("div", { class: "v", text: thousands(c.xp) }),
           h("div", { text: "Next level" }), h("div", { class: "v", text: need > 0 ? `${thousands(need)} xp more` : "ready to train" }),

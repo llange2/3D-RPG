@@ -21,7 +21,7 @@ import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
 import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, talentInfo } from "../data/tables";
-import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, planDungeon, type Facing, type InteriorMap } from "../interiors";
+import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, hasQuartermaster, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { towerFloorAt } from "../interiors/stairs";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
@@ -57,8 +57,8 @@ import { drawSearchMarks, placeSeen, searchPlaces, searchTerm, SEARCH_MIN_LETTER
 import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
-  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, pullMonsters, weakestInCone,
-  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_TURNS, STAR_BURST_RADIUS,
+  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, phaseReach, pullMonsters, weakestInCone,
+  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, STAR_BURST_RADIUS, isPhaseProof,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
@@ -2546,7 +2546,8 @@ export class Game {
       }
       removeItems(this.state.party, need, 1);
       this.state.opened.add(unlockedFlag(poi.id));
-      this.audio.play(9034);
+      // a key opens the lock with the sound of a chest (open_chest, 9008), the card in the pyramid's slot has its own (pyramid_unlock, 9064)
+      this.audio.play(card ? 9064 : 9008);
       this.ui.log(card ? `The ${name} disappears into the wall: the pyramid opens.` : `The ${name} turns in the lock and crumbles: the way is open.`, "good");
       this.refresh();
     } else if (need && !unlocked) {
@@ -3951,7 +3952,9 @@ export class Game {
     }
     switch (spellId) {
       case 13:
-        return near(PHASE_RADIUS).length === 0 ? "No monster is near enough." : null;
+        // robots cannot be shifted: when only they are near, the cast is refused and costs nothing
+        if (near(PHASE_RADIUS).length === 0) return "No monster is near enough.";
+        return near(PHASE_RADIUS).every((m) => isPhaseProof(m)) ? PHASE_ROBOT_TEXT : null;
       case 22:
         return near(GRAVITY_RADIUS).some((m) => !isAdjacent(m.x, m.y, tx, ty, view)) ? null : "No monster is near enough to be pulled.";
       case 26:
@@ -4042,7 +4045,8 @@ export class Game {
     return [...this.state.opened]
       .filter((k) => k.startsWith(PORTAL_KEY) && k !== exclude)
       .map((k) => this.world.poiById(k.slice(PORTAL_KEY.length)))
-      .flatMap((p) => (p ? [{ label: p.name, value: p.id }] : []))
+      // the level of the town and, in the one town that has him, the quartermaster: "Loomhaven (L3, Quartermaster)", "Roomhaven (L3)"
+      .flatMap((p) => (p ? [{ label: `${p.name} (L${p.tier}${hasQuartermaster(this.world, p) ? ", Quartermaster" : ""})`, value: p.id }] : []))
       .sort((a, b) => a.label.localeCompare(b.label));
   }
 
@@ -4078,9 +4082,12 @@ export class Game {
     const events: CombatEvent[] = [];
     switch (spellId) {
       case 13: {
+        const metal = phaseReach(this.enc, tx, ty).some((m) => isPhaseProof(m));
         const caught = phaseMonsters(this.enc, tx, ty);
         this.audio.play(9041);
         this.ui.log(`${caught.length} monster${caught.length === 1 ? "" : "s"} slip out of this world for ${PHASE_TURNS} turns.`, "good");
+        // the robots stay where they are
+        if (metal) this.ui.log(PHASE_ROBOT_TEXT, "info");
         return true;
       }
       case 22: {

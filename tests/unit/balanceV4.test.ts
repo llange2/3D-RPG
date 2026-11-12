@@ -168,13 +168,15 @@ describe("BALANCE v4: mascots", () => {
     expect(RULES.legacy.wolfBelow).toBe(0.9);
   });
 
-  it("Fairy: takes 30 off an elemental hit (20 in the legacy mode)", () => {
+  it("Fairy: adds 15 percent to every resistance (the legacy mode takes 20 points off an elemental hit instead)", () => {
     const party = createDefaultParty();
     const target = party.characters[0]!;
+    target.resMagic = 0;
     setMascot(party, "Crow");
     const plainHit = elementalDamage(party, target, "magic", 100);
     setMascot(party, "Fairy");
-    expect(plainHit - elementalDamage(party, target, "magic", 100)).toBe(30);
+    expect(plainHit - elementalDamage(party, target, "magic", 100)).toBe(15);
+    expect(RULES.v4.fairyReduction).toBe(0);
     expect(inMode("legacy", () => plainHit - elementalDamage(party, target, "magic", 100))).toBe(20);
   });
 

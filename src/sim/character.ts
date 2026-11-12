@@ -1,6 +1,6 @@
 import type { Rng } from "../core/rng";
 import { BASE_CLASS, BASE_RACE, CONSTANTS } from "../data/tables";
-import { healthEndDivisor, healthFlat, isV4, orbManaBonus, xpStepV4 } from "./balance";
+import { fairyResistance, healthEndDivisor, healthFlat, isV4, orbManaBonus, xpStepV4 } from "./balance";
 import { isTwoHanded, sumBonus } from "./items";
 import { removeCondition } from "./conditions";
 import { journalEmit } from "./journal";
@@ -160,17 +160,20 @@ export function attr(c: Character, a: Attribute, base = true): number {
 const RESISTANCE_FIELD = { fire: "resFire", ice: "resIce", acid: "resAcid", magic: "resMagic" } as const;
 const RESISTANCE_BONUS = { fire: "res_fire", ice: "res_ice", acid: "res_acid", magic: "res_magic" } as const;
 
-/** Resistance in percent against an element: the hero's own value plus what the worn items add. The sheet shows this sum; the damage formulas use `resistanceShare`. */
-export function resistance(c: Character, element: keyof typeof RESISTANCE_FIELD): number {
-  return c[RESISTANCE_FIELD[element]] + itemBonus(c, RESISTANCE_BONUS[element]) + (c.mods?.boon?.[RESISTANCE_BONUS[element]] ?? 0);
+/**
+ * Resistance in percent against an element: the hero's own value plus what the worn items, a boon and the Fairy add (`mascot` is the party's; the Fairy adds
+ * `fairyResistance()` points to every resistance of every hero). The sheet shows this sum; the damage formulas use `resistanceShare`.
+ */
+export function resistance(c: Character, element: keyof typeof RESISTANCE_FIELD, mascot?: string | null): number {
+  return c[RESISTANCE_FIELD[element]] + itemBonus(c, RESISTANCE_BONUS[element]) + (c.mods?.boon?.[RESISTANCE_BONUS[element]] ?? 0) + (mascot === "Fairy" ? fairyResistance() : 0);
 }
 
 /** What a resistance can take off an elemental hit at the most, in percent (51st playtest, point 13): more points on the sheet do not count. */
 export const RESISTANCE_CAP = 80;
 
 /** The share of an elemental hit that the hero's resistance takes off, in percent: the resistance, never above `RESISTANCE_CAP`. */
-export function resistanceShare(c: Character, element: keyof typeof RESISTANCE_FIELD): number {
-  return Math.min(RESISTANCE_CAP, resistance(c, element));
+export function resistanceShare(c: Character, element: keyof typeof RESISTANCE_FIELD, mascot?: string | null): number {
+  return Math.min(RESISTANCE_CAP, resistance(c, element, mascot));
 }
 
 /** Armor of the worn items; Rage halves it, Stone Skin adds to what is left. */

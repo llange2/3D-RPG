@@ -31,7 +31,7 @@ describe("51st playtest, point 13: resistance, protection and the Fairy", () => 
     expect(elementalDamage(party, c, "fire", 100)).toBe(20);
   });
 
-  it("Protection from Elements takes the caster's level in points off what is left, the Fairy 30", () => {
+  it("Protection from Elements takes the caster's level in points off what is left, the Fairy adds 15 percent of resistance", () => {
     const party = createDefaultParty();
     const c = hero();
     c.resIce = 50;
@@ -42,9 +42,10 @@ describe("51st playtest, point 13: resistance, protection and the Fairy", () => 
     // it guards against its own element only
     expect(elementalDamage(party, c, "fire", 100)).toBe(100);
     party.mascot = "Fairy";
-    expect(elementalDamage(party, c, "ice", 100)).toBe(8);
+    // 50 + 15 = 65 percent resisted: 35 are left, less the 12 of the spell
+    expect(elementalDamage(party, c, "ice", 100)).toBe(23);
     // never below nothing
-    expect(elementalDamage(party, c, "ice", 20)).toBe(0);
+    expect(elementalDamage(party, c, "ice", 5)).toBe(0);
   });
 });
 

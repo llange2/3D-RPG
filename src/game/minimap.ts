@@ -684,6 +684,12 @@ function legacyLabel(id: number): string | null {
 }
 
 /** What is on a tile of the overworld map (only for tiles the party has seen). */
+/** The kind of a place with its level for the map's mouse-over: "L5 Dungeon", "L3 Town" (the kind is capitalised, the level is the tier of its island). */
+export function placeTag(poi: Pick<Poi, "kind" | "tier">): string {
+  const kind = poi.kind === "castle" ? "Castle" : poi.kind === "town" ? "Town" : poi.kind === "cave" ? "Cave" : "Dungeon";
+  return `L${poi.tier} ${kind}`;
+}
+
 export function describeOverworldTile(world: World, explored: Explored, x: number, y: number, monsters: MiniMonster[], events: readonly MapEvent[] = []): string | null {
   if (!explored.hasOverworld(x, y)) return null;
   const t = world.tile(x, y);
@@ -694,7 +700,7 @@ export function describeOverworldTile(world: World, explored: Explored, x: numbe
   if (event) return event.label;
   if (t.poiId) {
     const poi = world.poiById(t.poiId);
-    if (poi) return `${poi.name} (${poi.kind === "castle" ? "castle" : poi.kind === "town" ? "town" : poi.kind === "cave" ? "cave" : "dungeon"})`;
+    if (poi) return `${poi.name} (${placeTag(poi)})`;
   }
   switch (t.ground) {
     case GROUND.WATER: return "Deep water";
