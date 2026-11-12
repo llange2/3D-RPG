@@ -679,7 +679,7 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
         if (p.tries === undefined) return { effects, consumed: false };
         return { effects, consumed: false, state: { add: [`${action.uid}@try${countedTries(ctx.opened ?? NONE, action.uid)}`], remove: [] } };
       }
-      effects.push({ type: "text", text: p.opens === "end" ? "The statue's eyes light up. \"Right!\" Stone grinds on stone somewhere in the walls." : "The statue's eyes light up. \"Right!\" A hidden compartment opens at its feet." });
+      effects.push({ type: "text", text: p.opens === "end" ? "The statue's eyes light up. \"Right!\" Stone grinds on stone somewhere in the walls." : p.opens === "castle" ? "The statue's eyes light up. \"Right!\" Somewhere in the keep, the seal on the king's chests breaks." : "The statue's eyes light up. \"Right!\" A hidden compartment opens at its feet." });
       if (Number(p.gold ?? 0) > 0 || Number(p.items ?? 0) > 0) payOut(p, rng, party, effects);
       if (p.opens === "end") effects.push({ type: "endroom" });
       return { effects, consumed: true };

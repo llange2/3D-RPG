@@ -379,11 +379,19 @@ export function trainingCost(c: Character, party: Party): number {
   return Math.round(base * bargainFactor(party));
 }
 
-export type TrainResult = { ok: true; cost: number } | { ok: false; reason: "xp" | "gold" | "dead"; needXp?: number; cost?: number };
+/** Training grounds of a town of tier T train up to level T × 10; only the trainers of tier 5 have no limit (bug_fix_55, point 4). */
+export const TRAINING_LEVELS_PER_TIER = 10;
+export function trainingCap(tier: number): number {
+  return tier >= 5 ? Infinity : Math.max(1, tier) * TRAINING_LEVELS_PER_TIER;
+}
 
-export function train(party: Party, index: number): TrainResult {
+export type TrainResult = { ok: true; cost: number } | { ok: false; reason: "xp" | "gold" | "dead" | "cap"; needXp?: number; cost?: number; cap?: number };
+
+/** `tier` is the tier of the training grounds; without it nothing limits the level (the old campaign callers and tools). */
+export function train(party: Party, index: number, tier?: number): TrainResult {
   const c = party.characters[index]!;
   if (!isAlive(c)) return { ok: false, reason: "dead" };
+  if (tier !== undefined && c.level >= trainingCap(tier)) return { ok: false, reason: "cap", cap: trainingCap(tier) };
   const need = xpToNextLevel(c);
   if (need > 0) return { ok: false, reason: "xp", needXp: need };
   const cost = trainingCost(c, party);
@@ -399,10 +407,10 @@ export function train(party: Party, index: number): TrainResult {
 }
 
 /** The heroes who could train now (alive, enough experience), lowest level first; ties keep the party's order. */
-export function trainingOrder(party: Party): number[] {
+export function trainingOrder(party: Party, tier?: number): number[] {
   return party.characters
     .map((c, i) => ({ c, i }))
-    .filter(({ c }) => isAlive(c) && xpToNextLevel(c) <= 0)
+    .filter(({ c }) => isAlive(c) && xpToNextLevel(c) <= 0 && (tier === undefined || c.level < trainingCap(tier)))
     .sort((a, b) => a.c.level - b.c.level || a.i - b.i)
     .map(({ i }) => i);
 }
@@ -412,8 +420,8 @@ export function trainingOrder(party: Party): number[] {
  * higher the level, so once one hero cannot be paid for nobody after them can either, and the rest wait. Nothing is changed here:
  * `who` is who would be trained, `cost` what that takes, `waiting` who could rise but cannot be paid for.
  */
-export function trainAllPlan(party: Party): { who: number[]; cost: number; waiting: number[] } {
-  const order = trainingOrder(party);
+export function trainAllPlan(party: Party, tier?: number): { who: number[]; cost: number; waiting: number[] } {
+  const order = trainingOrder(party, tier);
   const who: number[] = [];
   let cost = 0;
   for (const index of order) {
@@ -426,9 +434,9 @@ export function trainAllPlan(party: Party): { who: number[]; cost: number; waiti
 }
 
 /** Carries out `trainAllPlan`: every hero in it rises one level, the lowest first. */
-export function trainAll(party: Party): ReturnType<typeof trainAllPlan> {
-  const plan = trainAllPlan(party);
-  for (const index of plan.who) train(party, index);
+export function trainAll(party: Party, tier?: number): ReturnType<typeof trainAllPlan> {
+  const plan = trainAllPlan(party, tier);
+  for (const index of plan.who) train(party, index, tier);
   return plan;
 }
 

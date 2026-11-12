@@ -128,8 +128,13 @@ export const BARREL_COINS: readonly string[] = [
   "Between the staves a few coins have been wedged. A thrifty barrel!",
 ];
 
+/** The old object number of the gravestone (`item-rules.ts`). */
+const GRAVESTONE_ITEM = 32;
+
 /** What the log says of a container with nothing left in it (42nd playtest, point 10): a barrel is a barrel, not a chest. `chest` is the item of the container. */
 export function emptyContainerLine(chest: unknown): string {
+  // bug_fix_55, point 1: a gravestone is searched, not opened
+  if (Number(chest) === GRAVESTONE_ITEM) return "There is nothing more to find in the grave.";
   const name = Number(chest) === 5 ? "barrel" : isBookshelf(chest) ? "bookshelf" : "chest";
   return `The ${name} is empty.`;
 }

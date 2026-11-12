@@ -603,9 +603,10 @@ describe("Combine, Duplication, Transform Ring", () => {
   });
 
   it("Duplication copies half of the time, destroys a quarter and does nothing for a quarter", () => {
-    const tally = { duplicated: 0, destroyed: 0, nothing: 0, no_room: 0 };
+    const tally = { duplicated: 0, destroyed: 0, nothing: 0, no_room: 0, no_gold: 0 };
     for (let i = 0; i < 2000; i++) {
       const p = bag(1, 2);
+      p.gold = 20_000;
       tally[duplicate(p, p.characters[0]!, "slot1", rng(`d${i}`))]++;
     }
     expect(tally.duplicated / 2000).toBeCloseTo(0.5, 1);

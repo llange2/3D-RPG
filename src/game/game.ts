@@ -63,7 +63,7 @@ import {
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
 import { RIFT_TURNS, SPELL_AGING, castSpell, isAreaSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, lastCastOf, noteCast, quickCastOf, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
-import { canCombine, combine, combineGroups, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
+import { canCombine, combine, combineGroups, DUPLICATION_GOLD, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
 import { pickGateSpot, safeCells, type Spot } from "./spellSites";
 import { pickFromBackpack } from "../ui/itemSpells";
 import { visibleCells } from "../sim/vision";
@@ -1679,6 +1679,18 @@ export class Game {
       if (a?.kind === "stairs") {
         await this.climbStairs(a);
         return;
+      }
+      // bug_fix_55, point 5: the party stands on the cell of a shop it has just left and walks on into the door wall (it forgot something): the shop opens again.
+      // Stepping onto the cell enters a shop, so the cell itself can only be entered again from the wall behind it.
+      const here = this.interior.actionAt.get(this.cellIndex(this.player.tx, this.player.ty));
+      if (here?.kind === "service") {
+        const lot = this.interior.map.lots.find((l) => l.door.x === here.x && l.door.y === here.y);
+        const back = lot ? FACING_DELTA[lot.door.facing] : null;
+        if (back && x === here.x - back.dx && y === here.y - back.dy) {
+          this.passTime(ACTION_MINUTES);
+          await this.useAction(here);
+          return;
+        }
       }
       // a wall that can be broken is just a wall to a party that cannot tell
       // a door that is on its way open is neither a wall to bump against nor to be opened again: the party waits
@@ -3911,6 +3923,7 @@ export class Game {
     if (this.enc.battleMode && movesParty(spellId, beacon)) return IN_MELEE_SPELL;
     // the castles and the spaceship are magically closed to every spell that carries the party away (quest document 1.2)
     const here = this.interior?.map;
+    if (spellId === 58 && this.state.party.gold < DUPLICATION_GOLD) return `Duplication sacrifices ${thousands(DUPLICATION_GOLD)} gold, and the party has less.`;
     if (movesParty(spellId, beacon) && here?.castle) return "The castle seems to be magically protected against movement spells.";
     if (movesParty(spellId, beacon) && here?.dungeon?.quest === "spaceship") return `Something in this strange construct is preventing you from casting ${SPELLS[spellId]?.title ?? "that spell"}.`;
     const { tx, ty } = this.player;
@@ -4208,12 +4221,12 @@ export class Game {
     } else if (spellId === 58) {
       const slots = duplicableSlots(c);
       if (slots.length === 0) return cancelled(`${c.name} carries nothing to copy.`);
-      const picked = await pickFromBackpack(ui, c, { title: "Duplication", text: "pick the item to copy. It may fail, and it may be lost.", allowed: slots, count: 1, valid: () => true, verb: "Duplicate" });
+      const picked = await pickFromBackpack(ui, c, { title: "Duplication", text: `pick the item to copy. ${thousands(DUPLICATION_GOLD)} gold are sacrificed whatever happens, and the item may be lost.`, allowed: slots, count: 1, valid: () => true, verb: "Duplicate" });
       if (!picked) return cancelled("Nothing was copied.");
       const name = c.inventory[picked[0]!]!.name.trim();
       const r = duplicate(this.state.party, c, picked[0]!, this.combatRng());
-      this.audio.play(r === "destroyed" ? 9040 : 9024);
-      ui.log(r === "duplicated" ? `${name} is copied.` : r === "destroyed" ? `${name} crumbles to dust.` : r === "no_room" ? `${name} would have been copied, but there is no room in the backpacks.` : "Nothing happens.", r === "duplicated" ? "good" : r === "nothing" ? "info" : "bad");
+      this.audio.play(r === "destroyed" || r === "no_gold" ? 9040 : 9024);
+      ui.log(r === "no_gold" ? `Duplication needs ${thousands(DUPLICATION_GOLD)} gold.` : r === "duplicated" ? `${name} is copied.` : r === "destroyed" ? `${name} crumbles to dust.` : r === "no_room" ? `${name} would have been copied, but there is no room in the backpacks.` : "Nothing happens.", r === "duplicated" ? "good" : r === "nothing" ? "info" : "bad");
     } else {
       const slots = ringSlots(c);
       if (slots.length === 0) return cancelled(`${c.name} carries no ring.`);

@@ -74,12 +74,17 @@ export function ringSlots(c: Character): string[] {
   return BAG_SLOTS.filter((s) => c.inventory[s]?.type === "ring" && !c.inventory[s]!.quest);
 }
 
-export type DuplicationResult = "duplicated" | "destroyed" | "nothing" | "no_room";
+export type DuplicationResult = "duplicated" | "destroyed" | "nothing" | "no_room" | "no_gold";
 
-/** Duplication: one in two copies the item, one in four destroys it, in one case in four nothing happens. */
+/** The gold Duplication sacrifices (bug_fix_55, point 6): it is gone whatever happens to the item. */
+export const DUPLICATION_GOLD = 10_000;
+
+/** Duplication: sacrifices 10'000 gold in every case; then one in two copies the item, one in four destroys it, in one case in four nothing happens to it. */
 export function duplicate(party: Party, c: Character, slot: string, rng: Rng): DuplicationResult {
   const item = c.inventory[slot] ?? null;
   if (!plain(item)) return "nothing";
+  if (party.gold < DUPLICATION_GOLD) return "no_gold";
+  party.gold -= DUPLICATION_GOLD;
   const roll = rng.int(4);
   if (roll >= 2) return roll === 2 ? "destroyed" : "nothing";
   const copy: Item = { ...item, id: "", bonus: { ...item.bonus } };
