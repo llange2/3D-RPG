@@ -53,6 +53,7 @@ import { addCondition, canAct, recalcValues, worstCondition, xpToNextLevel } fro
 import { journalEmit, pushJournal, setJournalSink, type FightEvent, type JournalEntry, type JournalEvent, type Stamp } from "../sim/journal";
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
+import { drawSearchMarks, searchPlaces, searchTerm, SEARCH_MIN_LETTERS } from "./mapSearch";
 import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
@@ -102,7 +103,7 @@ import { capybaraSpot, overworldMascotSpots, townMascotSpot, type MascotSpot } f
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
 import { preloadPortraits } from "../ui/portraitSheets";
-import { cursorStepped, setCursorFade } from "../ui/cursor";
+import { cursorSize, cursorStepped, setCursorFade } from "../ui/cursor";
 import { h } from "../ui/dom";
 import { thousands } from "../core/format";
 import { UI, randomSeed, type HudInfo, type Option } from "../ui/ui";
@@ -4604,10 +4605,13 @@ export class Game {
         drawOverworldMap(canvas, this.world, this.state.explored, this.player.tx, this.player.ty, this.player.facing, monsters, view.cells, eye, view, this.minimapIcons, detect, events, overview);
       }
     };
+    // the red rings of the search field lie on a canvas of their own over the map, so that moving and zooming only redraw the rings
+    let drawMarks = (): void => undefined;
     const show = (next: MapViewport) => {
       if (next.x === view.x && next.y === view.y && next.cells === view.cells) return;
       view = next;
       draw();
+      drawMarks();
     };
     draw();
     const legend = blank ? [] : interior ? interiorLegend(interior.map, interior.content, traps.size > 0, this.state.opened, eye) : OVERWORLD_LEGEND;
@@ -4653,7 +4657,8 @@ export class Game {
         const placeId = interior ? null : this.world.tile(cx, cy).poiId;
         if (placeId && this.state.opened.has(reachedFlag(placeId))) tip.append(h("span", { class: "map-tick", text: " ✔", style: "color:#6fdc6f;font-weight:bold" }));
         const box = root.getBoundingClientRect();
-        tip.style.left = `${e.clientX - box.left + 14}px`;
+        // to the right of the game's pointer, whose picture would cover the text just under it
+        tip.style.left = `${e.clientX - box.left + Math.round(cursorSize() * 0.85)}px`;
         tip.style.top = `${e.clientY - box.top + 14}px`;
       });
       canvas.addEventListener("mousedown", (e) => {
@@ -4680,6 +4685,8 @@ export class Game {
       );
       const step = () => Math.max(1, Math.round(view.cells / 10));
       const onKey = (e: KeyboardEvent) => {
+        // typing in the search field is not a command for the map (c, f, + and - are letters there)
+        if (e.target instanceof HTMLInputElement) return;
         const k = e.key;
         const pan: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
         if (pan[k]) show(panBy(view, pan[k]![0] * step(), pan[k]![1] * step(), bounds));
@@ -4699,6 +4706,34 @@ export class Game {
       canvas.style.cssText = "display:block;border:2px solid var(--gold-dim);border-radius:6px;image-rendering:pixelated;cursor:grab";
       root.classList.add("map-panel");
       const tool = (text: string, title: string, onclick: () => void) => h("button", { class: "btn", text, title, onclick });
+
+      // the outside map has a search field: from the third letter on every place the party knows whose name contains the text gets a red ring (not on an inside map, which has no names)
+      const marks = h("canvas", { class: "map-marks" }) as HTMLCanvasElement;
+      marks.width = canvas.width;
+      marks.height = canvas.height;
+      const searchBox = h("input", { type: "text", class: "map-search", placeholder: "Search places", title: `Marks every place you know whose name contains the text (from ${SEARCH_MIN_LETTERS} letters)` }) as HTMLInputElement;
+      searchBox.maxLength = 40;
+      searchBox.spellcheck = false;
+      searchBox.autocomplete = "off";
+      const found = h("span", { class: "map-found" });
+      const refreshMarks = () => {
+        const places = searchPlaces(this.world, searchBox.value, (p) => this.state.explored.hasOverworld(p.x, p.y));
+        drawSearchMarks(marks.getContext("2d")!, marks.width, view, places);
+        found.textContent = searchTerm(searchBox.value) === null ? "" : places.length === 0 ? "none found" : `${places.length} found`;
+      };
+      if (!interior && !blank) {
+        drawMarks = refreshMarks;
+        // every key changes the rings; the keys of the game (I, J, M ...) must not fire while typing, Escape still closes the map
+        searchBox.addEventListener("input", refreshMarks);
+        searchBox.addEventListener("keydown", (e) => {
+          if (e.key !== "Escape") e.stopPropagation();
+        });
+      }
+      const clearSearch = () => {
+        searchBox.value = "";
+        refreshMarks();
+        searchBox.focus();
+      };
       root.append(
         h("button", { class: "btn close", text: "Close (Esc)", onclick: close }),
         h("h2", { text: interior ? interior.poi.name : "The wide world" }),
@@ -4709,11 +4744,12 @@ export class Game {
           tool("−", "Zoom out (- or the wheel)", () => show(zoomStep(view, -1, limits))),
           tool("Whole map", "Show the whole map (F)", () => show(fitMap(bounds.width, bounds.height, limits))),
           tool("My position", "Centre the map on the party (C)", () => show(centreOn(view, here().x, here().y))),
+          ...(interior || blank ? [] : [h("div", { class: "map-search-box" }, found, searchBox, tool("Clear", "Delete the text and with it all the rings", clearSearch))]),
         ),
         h(
           "div",
           { class: "map-body" },
-          canvas,
+          h("div", { class: "map-stage" }, canvas, marks),
           h(
             "div",
             { class: "legend" },

@@ -22,6 +22,15 @@
 
 html, body { margin: 0; height: 100%; background: #0b0b10; overflow: hidden; font-family: var(--font-body); color: var(--text); }
 button { font-family: inherit; }
+/* every text field in the game's own look (body font, dark field, gold edge); the title and the book of heroes override size and width below. The parchment prompt (riddles, names of saves) gets a field on the paper instead. */
+input[type=text] { font: inherit; font-size: 17px; padding: 6px 10px; border-radius: 5px; border: 2px solid var(--gold-dim); background: #0c0805; color: var(--text); outline: none; box-sizing: border-box; }
+input[type=text]:focus { border-color: var(--gold); box-shadow: 0 0 6px #d9a44166; }
+input[type=text]::placeholder { color: var(--text); opacity: 0.45; font-style: italic; }
+.parchment input[type=text] { border-color: #7a4b00; background: #fbf0d0cc; color: #3a2108; }
+.parchment input[type=text]:focus { border-color: #4a2a08; box-shadow: 0 0 6px #7a4b0088; }
+.parchment input[type=text]::placeholder { color: #3a2108; }
+.parchment .seedrow { display: flex; gap: 8px; align-items: center; }
+.parchment .seedrow input { flex: 1; min-width: 0; }
 
 /* the game's own pointer (src/ui/cursor.ts); the system pointer stays until its picture has loaded */
 html.custom-cursor, html.custom-cursor * { cursor: none !important; }
@@ -240,6 +249,13 @@ html.ending-on #game-cursor { display: none; }
 .panel.map-panel { width: min(1000px, 96vw); }
 .map-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .map-tools .btn { min-width: 40px; }
+/* the search field at the right end of the row of buttons: the count, the field, "Clear" */
+.map-search-box { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.map-search { width: 200px; font-size: 15px; padding: 5px 9px; }
+.map-found { font-size: 13px; color: var(--gold); opacity: 0.85; white-space: nowrap; }
+/* the rings of the search lie on the map, inside its border, and let the pointer through */
+.map-stage { position: relative; flex: none; line-height: 0; }
+.map-body .map-stage .map-marks { position: absolute; left: 2px; top: 2px; width: calc(100% - 4px); height: calc(100% - 4px); pointer-events: none; }
 .map-body { display: flex; gap: 16px; align-items: flex-start; }
 /* square, as big as the window leaves room for (the heading takes about 110 px) */
 .map-body canvas { flex: none; --side: min(640px, calc(88vh - 110px), 62vw); width: var(--side); height: var(--side); }
