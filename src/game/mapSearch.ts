@@ -27,6 +27,16 @@ export function searchPlaces(world: SearchableWorld, text: string, known: (poi: 
   return world.allPois().filter((p) => p.name.toLowerCase().includes(term) && known(p));
 }
 
+/**
+ * Has the party seen the place? The map draws a place as soon as one tile of its footprint is explored, so the search asks the same: the middle tile of a pyramid (3 x 3)
+ * is often still dark when its front has been seen (user, 12. 11. 2026: "wil" did not find a pyramid of Wila).
+ */
+export function placeSeen(poi: Poi, explored: (x: number, y: number) => boolean): boolean {
+  const b = poiBounds(poi);
+  for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) if (explored(x, y)) return true;
+  return false;
+}
+
 /** The smallest ring in pixels (the radius), so that a place can be found on the map of the whole world. */
 const RING_MIN = 12;
 
