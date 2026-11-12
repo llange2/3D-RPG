@@ -118,22 +118,34 @@ describe("bug_fix_56, point 5 and 8: resistances and the Fairy", () => {
   });
 });
 
-describe("bug_fix_56, point 6: the Terminator rots, it does not kill", () => {
+describe("bug_fix_56, point 6: the Terminator's Eradication is Rotten, a deadly hit is Dead", () => {
   const terminator = Object.values(MONSTERS).find((m) => m.name === "Terminator")!;
 
   it("causes Eradication, which is Rotten", () => {
     expect(terminator.causes).toEqual(["Rotten"]);
   });
 
-  it("a hero it strikes down is rotten, not dead", () => {
+  it("a deadly hit is dead, rotten only when the special attack takes effect (and then not dead as well)", () => {
+    // luck 1: the special attack is certain
     for (let i = 0; i < 20; i++) {
       const party = createDefaultParty();
-      party.characters = [hero(10), hero(10)];
+      party.characters = [hero(1), hero(1)];
       applyHit(party, 0, 5000, terminator, rng(`t${i}`));
       const c = party.characters[0]!;
       expect(c.conditions, `try ${i}`).toContain("Rotten");
       expect(c.conditions, `try ${i}`).not.toContain("Dead");
     }
+    // luck 1000: the special attack almost never works (5 / (1000 x 1000 x 0.05) per hit), the deadly blow kills
+    let dead = 0;
+    for (let i = 0; i < 20; i++) {
+      const party = createDefaultParty();
+      party.characters = [hero(1000), hero(1000)];
+      applyHit(party, 0, 5000, terminator, rng(`u${i}`));
+      const c = party.characters[0]!;
+      if (c.conditions.includes("Dead")) dead++;
+      expect(c.conditions).not.toContain("Rotten");
+    }
+    expect(dead).toBe(20);
   });
 
   it("another monster still kills outright", () => {

@@ -149,7 +149,7 @@ Erzielt ein Monster keinen Schaden, hat es trotzdem eine 10% Chance die Sonderwi
 - Power Shield: Schaden × (1 − 0,1). Schlafende erwachen bei Schaden.
 - **Sonderwirkung** (Zustand der Monstertabelle) wirkt mit Wahrscheinlichkeit `10 / (GLÜ² × 0,05)`; **Dead** und **Rotten** nur halb so oft (`5 / …`).
 - Mana-Raub: `min(ZP, ⌈Mana × steal_mana⌉)`; Altern: `+aging_years` magisches Alter.
-- Bei LP ≤ 0: **tot**, wenn der Treffer mehr als `⌊Maximum-LP / 2⌋` war oder LP ≤ −`⌊Maximum-LP / 3⌋`, sonst **bewusstlos**. Ist die Sonderwirkung des Monsters Eradication (Terminator, „causes_status_eradication“ der Monstertabelle), wird aus „tot“ **verrottet** (Rotten); ein bereits verrotteter Held wird nicht zusätzlich tot.
+- Bei LP ≤ 0: **tot**, wenn der Treffer mehr als `⌊Maximum-LP / 2⌋` war oder LP ≤ −`⌊Maximum-LP / 3⌋`, sonst **bewusstlos**. Das gilt für jedes Monster, auch den Terminator. **Verrottet** (Rotten, Eradication, „causes_status_eradication“ der Monstertabelle) ist ein Held nur, wenn die Sonderwirkung oben gelingt; ein verrotteter Held wird nicht zusätzlich tot.
 - Ein Held im Dimensional Rift ist unverwundbar.
 
 ### 2.7 Maskottchen
@@ -311,4 +311,4 @@ Es würfelt nur der beste aktive Dieb (höchster Skill). Gelingt `Wurf ≥ Schwi
   | --- | --- |
   | 1.0 | Initiales Dokument |
   | 1.1 | \- 1.1:"Blessed" aktualisiert<br>2.3: Monsterrüstung bei Fernkampf zählt jetzt 2/3 (vorher 1/2)<br>\- 4: Den Bonus der "tieferen Ort" entfernt (Materiallevel jetzt max Dungeon Tier+1)<br>5.1: aktualisiert<br>\- 5.3: aktualisiert<br>\- 5.8: ergänzt (Ladenstufe = Stufe der Stadt) |
-  | 1.2 | 2.5 Ergänzt: Sonderwirkung Monster auch wenn kein Schaden erzielt wird<br>2.5/2.7: Fee erhöht die Resistenzen aller Helden um 15 % statt 30 Punkte abzuziehen<br>2.6: Eradication (Terminator) macht verrottet statt tot, Sonderwirkung auch bei Fernangriffen |
+  | 1.2 | 2.5 Ergänzt: Sonderwirkung Monster auch wenn kein Schaden erzielt wird<br>2.5/2.7: Fee erhöht die Resistenzen aller Helden um 15 % statt 30 Punkte abzuziehen<br>2.6: Sonderwirkung (auch Eradication des Terminators) gilt auch bei Fernangriffen; ein tödlicher Treffer bleibt „tot“ |
