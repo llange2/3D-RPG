@@ -406,7 +406,7 @@ export function cancelRifts(party: Party): number[] {
   return back;
 }
 
-/** How far beyond the action radius a monster that backs off from a party in the water may get (user, 12. 11. 2026). */
+/** How far beyond the action radius a monster that backs off from a party it cannot reach may get (user, 12. 11. 2026). */
 export const FLEE_EXTRA = 3;
 /** Tiles the search for a way out may expand: enough to get round a crowd in a narrow place. */
 const FLEE_STEP_LIMIT = 120;
@@ -417,17 +417,22 @@ const FLEE_STEP_LIMIT = 120;
  * party "attacks" it: health below the maximum, which covers arrows, spells and the Wolf alike), only a pure land monster (`terrain` land) with no ranged attack (a shooter stays and
  * shoots), and only while it has no way to the party (at a shore the monsters come for the party as before).
  *
+ * bug_fix_55, point 2: the same the other way round. A party on land that attacks a pure water monster (`terrain` water) cannot be reached by it either, and the monster backs off
+ * through the water, away from the shore, by the same rules.
+ *
  * The monsters must not block each other (a shooter standing in a bottleneck): the farthest monster moves first and clears the way for those behind it, and a monster that would
  * step onto a tile held by a monster that stays (a shooter, a healthy monster without a way) trades places with it instead of waiting behind it. Whoever cannot get any farther stays.
  */
 function fleeFromWater(view: GridView, enc: Encounter, px: number, py: number, radius: number): CombatEvent[] {
   const events: CombatEvent[] = [];
-  if (!view.water(px, py)) return events;
+  const partyInWater = view.water(px, py);
   const limit = radius + FLEE_EXTRA;
   const away = (x: number, y: number) => Math.max(Math.abs(x - px), Math.abs(y - py));
   const wounded = (m: MonsterInstance) => {
     const def = monsterById(m.defId);
-    return m.hp > 0 && m.hp < def.health && def.terrain !== "water" && def.terrain !== "both" && !def.ranged && !m.immobile && !isPhased(m) && away(m.x, m.y) <= limit;
+    // the monster the party cannot be reached by: a land monster when the party is in the water, a water monster when it is not
+    const stranded = partyInWater ? def.terrain !== "water" && def.terrain !== "both" : def.terrain === "water";
+    return m.hp > 0 && m.hp < def.health && stranded && !def.ranged && !m.immobile && !isPhased(m) && away(m.x, m.y) <= limit;
   };
   const fleeing = enc.monsters
     .filter(wounded)
@@ -442,7 +447,8 @@ function fleeFromWater(view: GridView, enc: Encounter, px: number, py: number, r
     const at = (x: number, y: number) => enc.monsters.find((o) => o !== m && o.hp > 0 && o.x === x && o.y === y);
     // a monster that stays and can be moved: it makes room by trading places
     const swappable = (o: MonsterInstance) => !fleeingUids.has(o.uid) && !o.immobile && !isPhased(o);
-    const open = (x: number, y: number) => (x !== px || y !== py) && view.walkable(x, y);
+    const inWater = monsterById(m.defId).terrain === "water";
+    const open = (x: number, y: number) => (x !== px || y !== py) && (inWater ? view.water(x, y) : view.walkable(x, y));
 
     // breadth-first over the walkable tiles within the limit; remembers the first step of the way to each tile
     const start = `${m.x},${m.y}`;
@@ -526,7 +532,7 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
     m.y = ny;
   }
 
-  // 1b. a party that attacks from the water: the wounded land monsters without a way to it back off
+  // 1b. a party that attacks from the water (or a water monster attacked from land): the wounded monsters without a way to it back off
   events.push(...fleeFromWater(view, enc, px, py, radius));
 
   // 2. attacks

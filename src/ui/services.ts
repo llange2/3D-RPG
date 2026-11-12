@@ -5,7 +5,7 @@ import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
 import { conditionEventText } from "../sim/conditions";
 import {
   BANK_SLIDER_STEPS, bankSliderAmount, buyBackItem, buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf, type SoldItem,
-  canDonate, donationCost, templeCure, templeDonate, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
+  canDonate, donationCost, templeCure, templeDonate, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCap, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
 import { isSpellImplemented, learnBlock, SCALING_COST_SHARE } from "../sim/spells";
@@ -285,9 +285,16 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
 
     // -------------------------------------------------------------- training
     const training = () => {
-      root.append(...header(), h("p", { text: `Experience means nothing until it is drilled into the bones. Pay the trainers when a hero has earned the next level. A level takes ${TRAINING_MINUTES / 60} hours of drill for each hero.` }));
+      // the campaign's service levels run up to 20 and have their own pace: the limit is the endless world's
+      const limitTier = ctx.poi?.id.startsWith("campaign:") ? undefined : ctx.tier;
+      const cap = limitTier === undefined ? Infinity : trainingCap(limitTier);
+      root.append(
+        ...header(),
+        h("p", { text: `Experience means nothing until it is drilled into the bones. Pay the trainers when a hero has earned the next level. A level takes ${TRAINING_MINUTES / 60} hours of drill for each hero.` }),
+        ...(Number.isFinite(cap) ? [h("p", { class: "small", text: `The trainers here teach up to level ${cap}. Only the trainers of the fifth tier have no limit.` })] : []),
+      );
       // one click for the whole party: the lowest level first, as far as the gold reaches
-      const plan = trainAllPlan(party);
+      const plan = trainAllPlan(party, limitTier);
       const everyone = plan.who.length + plan.waiting.length;
       if (everyone > 0) {
         root.append(h("div", { class: "row-btns" }, h("button", {
@@ -296,7 +303,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           title: `Trains every hero who can rise, beginning with the lowest level, as far as the gold lasts. Takes ${TRAINING_MINUTES / 60} hours per hero.`,
           disabled: plan.who.length === 0,
           onclick: () => {
-            const done = trainAll(party);
+            const done = trainAll(party, limitTier);
             for (const i of done.who) note(`${party.characters[i]!.name} reaches level ${party.characters[i]!.level}!`, "good");
             if (done.waiting.length > 0) note(`Not enough gold for ${done.waiting.map((i) => party.characters[i]!.name).join(", ")}.`, "bad");
             if (done.who.length > 0) ctx.passTime?.(TRAINING_MINUTES * done.who.length);
@@ -307,12 +314,13 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       party.characters.forEach((c, i) => {
         const need = xpToNextLevel(c);
         const cost = trainingCost(c, party);
-        root.append(row(h("span", { html: `<b>${c.name}</b> - level ${c.level} - ${thousands(c.xp)} xp` }), need > 0 ? `needs ${thousands(need)} more xp` : `train for ${thousands(cost)} gold`, () => {
-          const r = train(party, i);
-          note(r.ok ? `${c.name} reaches level ${c.level}!` : r.reason === "gold" ? "Not enough gold." : "Not enough experience.", r.ok ? "good" : "bad");
+        const capped = c.level >= cap;
+        root.append(row(h("span", { html: `<b>${c.name}</b> - level ${c.level} - ${thousands(c.xp)} xp` }), capped ? `taught up to level ${cap} here` : need > 0 ? `needs ${thousands(need)} more xp` : `train for ${thousands(cost)} gold`, () => {
+          const r = train(party, i, limitTier);
+          note(r.ok ? `${c.name} reaches level ${c.level}!` : r.reason === "gold" ? "Not enough gold." : r.reason === "cap" ? `The trainers here teach up to level ${r.cap} only.` : "Not enough experience.", r.ok ? "good" : "bad");
           if (r.ok) ctx.passTime?.(TRAINING_MINUTES);
           refresh();
-        }, need > 0 || party.gold < cost || !isAlive(c)));
+        }, capped || need > 0 || party.gold < cost || !isAlive(c)));
       });
     };
 

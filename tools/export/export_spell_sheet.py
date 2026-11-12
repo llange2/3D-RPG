@@ -33,6 +33,7 @@ DESCRIPTION_ADDITIONS = {
 # Prismatic Light only hits what the party sees, its beams do not pass walls. The rest is the spell consistency check of 8. 11. 2026: the text follows the spell
 # (lines instead of "all monsters", acid instead of poison, ...) or the spell was changed to follow the text (Awaken, Dragon Breath, Turn Undead, Levitate, Resurrect).
 DESCRIPTION_REPLACEMENTS = {
+    58: [("50% chance that item is duplicated, 25% chance that item is destroyed", "Sacrifice 10'000 gold for a 50% chance to duplicate an item. There is a 25% chance that the item is destroyed.")],  # Duplication: the gold is lost in every case (bug_fix_55)
     73: [("Hits all monsters.", "Hits all monsters in view."), ("90-100 random", "90-110 random")],  # Prismatic Light: the data say 90 to 110
     14: [("10 poison damage", "10 acid damage")],  # Toxic Cloud
     19: [("Damages or destroys a group of undead monsters.", "Does 100 damage to one undead monster. Nothing reduces it.")],  # Turn Undead
