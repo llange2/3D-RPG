@@ -9,6 +9,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
+import { unpackSave } from "../../src/game/saveCodec";
 
 const base = process.env.GAME_URL ?? "http://localhost:5195/";
 const outDir = process.argv[2] ?? "playtest57-shots";
@@ -106,6 +107,23 @@ try {
     })()`);
     console.log("dirt tile turns:", turns);
     await shot("floor");
+  }
+
+  if (what === "repack") {
+    // a save of the old format (plain JSON) in a slot and as a named save, a reload, and what start-up has made of them
+    await evalJs(`(() => { const g = __game.game; g.save("quick"); g.saveNamed("old one"); })()`);
+    const keys = await evalJs<string[]>(`Object.keys(localStorage).filter((k) => k.includes("save") || k.includes("quick"))`);
+    for (const key of keys) {
+      const raw = await evalJs<string>(`localStorage.getItem(${JSON.stringify(key)})`);
+      if (raw.startsWith("lz1:")) await page.evaluate((k: string, v: string) => localStorage.setItem(k, v), key, unpackSave(raw));
+    }
+    const plain = await evalJs<string>(`JSON.stringify(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k).startsWith("{")]))`);
+    console.log("before reload (key, plain):", plain);
+    await page.reload({ waitUntil: "load" });
+    await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
+    await sleep(3000);
+    const after = await evalJs<string>(`JSON.stringify(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k).slice(0, 4), localStorage.getItem(k).length]))`);
+    console.log("after reload (key, start, length):", after);
   }
 
   if (what === "saves") {

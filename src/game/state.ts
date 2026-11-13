@@ -337,6 +337,7 @@ export function readSave(kind: GameKind, slot: SaveSlot = "auto"): SaveFile | nu
  */
 export function splitLegacySaves(): void {
   migrateManualSaves();
+  packStoredSaves();
   try {
     for (const slot of SAVE_SLOTS) {
       const raw = localStorage.getItem(KEYS.world[slot]);
@@ -347,6 +348,37 @@ export function splitLegacySaves(): void {
   } catch {
     // storage unavailable or a damaged save: nothing to move
   }
+}
+
+/**
+ * Once at start-up: the saves written before they were packed (57th playtest, point 7) are packed now. The browser's storage was full of them (the newest two named saves of the
+ * playtest did not fit any more); packed they take about a quarter of the room. A save is only replaced when its packed form reads back to exactly the same text and is shorter, so
+ * nothing is lost whatever happens; a save that is already packed, or damaged, stays as it is. Returns how many characters this freed.
+ */
+export function packStoredSaves(): number {
+  let freed = 0;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith(namedKey("")) || GAME_KINDS.some((kind) => SAVE_SLOTS.some((slot) => KEYS[kind][slot] === key)))) keys.push(key);
+    }
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw || !raw.startsWith("{")) continue;
+        const packed = packSave(raw);
+        if (packed.length >= raw.length || unpackSave(packed) !== raw) continue;
+        localStorage.setItem(key, packed);
+        freed += raw.length - packed.length;
+      } catch {
+        // this one stays as it is
+      }
+    }
+  } catch {
+    // storage unavailable
+  }
+  return freed;
 }
 
 // ---------------------------------------------------------------- named saves ("Save game")
@@ -567,7 +599,7 @@ export function importSaves(text: string): { written: string[]; skipped: string[
     else if (!isSaveFile(save) || !!save.state.campaign !== (kind === "campaign")) skipped.push(`${name}: not a save of this kind of game`);
     else {
       try {
-        localStorage.setItem(KEYS[kind][slot], JSON.stringify(save));
+        localStorage.setItem(KEYS[kind][slot], packSave(JSON.stringify(save)));
         written.push(name);
       } catch {
         skipped.push(`${name}: the browser refused to store it`);
