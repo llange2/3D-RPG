@@ -1,6 +1,7 @@
 import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, type MonsterDef } from "../data/tables";
 import { earlyMissChance, fairyReduction, isV4, RULES, specialWithoutDamage } from "./balance";
+import { addMagicAge } from "./aging";
 import { addCondition, anyoneLeft, armor, attr, canAct, equippedItems, fightSpeed, getBaseValue, isRifted, itemBonus, pyRound, removeCondition, resistanceShare } from "./character";
 import { cheats } from "./cheats";
 import { journalEmit } from "./journal";
@@ -207,6 +208,8 @@ export interface HitResult {
   drained?: number;
   /** Years the hit added to the hero's magical age (Ghost, Phantom). */
   aged?: number;
+  /** The years were too many: the hero died of old age (and cannot be resurrected). */
+  agedToDeath?: boolean;
 }
 
 /**
@@ -230,6 +233,7 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
 
   let drained = 0;
   let aged = 0;
+  let agedToDeath = false;
   if (monster) {
     const specials = specialConditions(monster);
     // FORMULAS 1.2, 2.5: a hit without damage still counts for the special attack with a chance of 10 % (one roll for the hit, only when the monster has a special at all)
@@ -249,8 +253,10 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
       c.sp -= drained;
     }
     if (damage > 0 && monster.aging_years > 0) {
-      c.magicAge = (c.magicAge ?? 0) + monster.aging_years;
+      // old age (13. 11. 2026): from 80 on the years also cost base values, and the hero rolls against dying of old age
+      const { died } = addMagicAge(party, c, monster.aging_years);
       aged = monster.aging_years;
+      agedToDeath = died;
     }
   }
 
@@ -264,7 +270,7 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
     journalEmit({ t: "down", name: c.name, cls: c.classType, lvl: c.level, cond, by: monster?.name ?? "other", dmg: damage });
   }
 
-  return { damage, conditions: added, defeated: !anyoneLeft(party.characters), ...(drained > 0 ? { drained } : {}), ...(aged > 0 ? { aged } : {}) };
+  return { damage, conditions: added, defeated: !anyoneLeft(party.characters), ...(drained > 0 ? { drained } : {}), ...(aged > 0 ? { aged } : {}), ...(agedToDeath ? { agedToDeath } : {}) };
 }
 
 export function monsterById(id: number): MonsterDef {

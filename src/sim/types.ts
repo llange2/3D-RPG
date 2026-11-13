@@ -98,6 +98,15 @@ export interface Character {
   born?: number;
   /** Years that magic added (Resurrect, Divine Intervention, aging monsters); the old `magic_additional_age`. */
   magicAge?: number;
+  /**
+   * Share (0 to 1) the age takes off every base attribute and resistance (`sim/aging.ts`): the chance of death at that age (13. 11. 2026). Absent below 80.
+   * `str`, `resFire` and the rest keep the raw value; `baseValue` and `baseResistance` in character.ts give what the sheet shows. Set by `refreshAge`.
+   */
+  ageShare?: number;
+  /** Died of old age ("Dead (Age)"): no temple and no spell brings the hero back, until the temple has taken the magical age off (`templeCureAge`). */
+  diedOfAge?: boolean;
+  /** How many times the hero has rolled against dying of old age: part of the seed, so that a reload gives the same roll. */
+  ageRolls?: number;
   /** Spell effects that live on the hero alone (`CharacterMods`). */
   mods?: CharacterMods;
   /** Lloyd's Beacon: the fire this hero lit, and the only one the hero can go back to. */
@@ -164,6 +173,8 @@ export interface Party {
   lastCasts?: Record<string, LastCast>;
   /** Pandora's box: the game day (minutes / 1440) and how often it was cast on it. Absent until the first cast; a new day starts the count again (45th playtest, point 8). */
   pandora?: { day: number; casts: number };
+  /** The notice that heroes of 80 and more can die of old age and weaken has been shown (once per game, 13. 11. 2026). */
+  oldAgeShown?: boolean;
   gold: number;
   bankGold: number;
   food: number;

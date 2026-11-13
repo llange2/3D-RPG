@@ -2,7 +2,7 @@ import type { Rng } from "../core/rng";
 import { isUndead, monsterGroup, type MonsterDef } from "../data/tables";
 import { monsterShots, RULES, wolfBelow } from "./balance";
 import { applyHit, meleeDamage, monsterById, monsterDamage, rangedDamage, spellDamageToMonster, type DamageType } from "./combat";
-import { anyoneLeft, canAct, isRifted, itemBonus } from "./character";
+import { anyoneLeft, baseValue, canAct, isRifted, itemBonus } from "./character";
 import type { ConditionEvent } from "./conditions";
 import { ACTION_MINUTES, addXp, advanceTime } from "./party";
 import { generateItem } from "./items";
@@ -50,6 +50,8 @@ export interface MonsterInstance {
   hp: number;
   /** Dimensional Phasing: monster turns left. The monster neither moves nor attacks, and nothing can hurt it. */
   phased?: number;
+  /** Set for good once Dimensional Phasing has shifted this monster: it goes into the other dimension once only (robots never). */
+  wasPhased?: boolean;
   /** Immobilize: monster turns left in which the monster cannot move (it can still strike). */
   immobile?: number;
   /** Set for good once Immobilize has been cast on this monster: it works once on each. */
@@ -86,7 +88,7 @@ export type CombatEvent =
   | { type: "monster_open_door"; uid: string; at: [number, number] }
   /** Gravity: the monster is drawn to the party at once (a quick slide, no walking). */
   | { type: "monster_pull"; uid: string; from: [number, number]; to: [number, number] }
-  | { type: "monster_attack"; uid: string; target: number; damage: number; ranged: boolean; damageType: DamageType; conditions: Condition[]; drained?: number; aged?: number }
+  | { type: "monster_attack"; uid: string; target: number; damage: number; ranged: boolean; damageType: DamageType; conditions: Condition[]; drained?: number; aged?: number; agedToDeath?: boolean }
   /** A Troll or a Vampire heals a share of its health at the end of a monster turn. */
   | { type: "monster_regen"; uid: string; amount: number }
   | { type: "party_attack"; attacker: number | null; kind: "melee" | "ranged" | "magic"; uid: string; defId: number; damage: number; shots?: number; /** The element of an area spell's hit on this monster (Elemental Storm: one for each). */ element?: string }
@@ -577,6 +579,7 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
           conditions: hit.conditions,
           ...(hit.drained ? { drained: hit.drained } : {}),
           ...(hit.aged ? { aged: hit.aged } : {}),
+          ...(hit.agedToDeath ? { agedToDeath: true } : {}),
         });
         if (hit.defeated) {
           events.push({ type: "defeat" });
@@ -651,7 +654,7 @@ function speedOrder(party: Party): number[] {
   return party.characters
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => canAct(c))
-    .sort((a, b) => b.c.spd - a.c.spd || a.i - b.i)
+    .sort((a, b) => baseValue(b.c, "spd") - baseValue(a.c, "spd") || a.i - b.i)
     .map(({ i }) => i);
 }
 
@@ -1016,10 +1019,24 @@ export function phaseReach(enc: Encounter, px: number, py: number): MonsterInsta
   return enc.monsters.filter((m) => m.hp > 0 && !isPhased(m) && (m.x - px) ** 2 + (m.y - py) ** 2 <= PHASE_RADIUS ** 2);
 }
 
-/** Dimensional Phasing: every monster within the radius leaves the fight for `PHASE_TURNS` monster turns, except the robots. Returns who was caught. */
+/** Told to the player when every monster in reach has been shifted once already. */
+export const PHASE_USED_TEXT = "These monsters have been shifted into another dimension once already: nothing happens.";
+
+/** The monsters Dimensional Phasing would shift now: in the radius, alive, no robot and never shifted before. */
+export function phaseTargets(enc: Encounter, px: number, py: number): MonsterInstance[] {
+  return phaseReach(enc, px, py).filter((m) => !isPhaseProof(m) && !m.wasPhased);
+}
+
+/**
+ * Dimensional Phasing: every monster within the radius leaves the fight for `PHASE_TURNS` monster turns, except the robots and the monsters
+ * that were in the other dimension once before (each monster goes only once, `wasPhased`, like Immobilize). Returns who was caught.
+ */
 export function phaseMonsters(enc: Encounter, px: number, py: number): MonsterInstance[] {
-  const caught = enc.monsters.filter((m) => m.hp > 0 && !isPhaseProof(m) && (m.x - px) ** 2 + (m.y - py) ** 2 <= PHASE_RADIUS ** 2);
-  for (const m of caught) m.phased = PHASE_TURNS;
+  const caught = phaseTargets(enc, px, py);
+  for (const m of caught) {
+    m.phased = PHASE_TURNS;
+    m.wasPhased = true;
+  }
   return caught;
 }
 

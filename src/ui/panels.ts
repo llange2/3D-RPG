@@ -1,7 +1,7 @@
 import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { fairyReduction, fairyResistance, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { averageDamageLines } from "../sim/combat";
-import { ageOf, armor, attr, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, resistance, worstCondition, xpToNextLevel } from "../sim/character";
+import { ageOf, armor, attr, baseResistance, baseValue, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, resistance, worstCondition, xpToNextLevel } from "../sim/character";
 import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
 import { SPELL_GRID, spellCost, validTarget, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
@@ -11,7 +11,7 @@ import { portraitImage } from "./avatarFx";
 import { capybaraLoop } from "./capybaraClip";
 import { plateButton, preloadButtonArt } from "./buttonArt";
 import { assetPath, clear, h } from "./dom";
-import { conditionClass, conditionTitle, shownCondition } from "./conditionInfo";
+import { conditionClass, conditionLabel, conditionTitle } from "./conditionInfo";
 import { thousands } from "../core/format";
 import type { Option, UI } from "./ui";
 
@@ -102,6 +102,21 @@ const RESISTANCE_ELEMENT = { resFire: "fire", resIce: "ice", resAcid: "acid", re
  */
 function markedText(shown: string, plain: string, now: number, base: number): HTMLElement {
   return h("div", { class: now > base ? "v up" : now < base ? "v down" : "v", text: now !== base ? `${shown} (${plain})` : shown });
+}
+
+/** The dark grey of the base values of a hero of 80 and more: age has taken its share off them (13. 11. 2026). */
+const AGED_GREY = "#7a7a7a";
+
+/**
+ * One attribute or resistance of the sheet: the current value, and the hero's own (base) value in brackets when they differ. From 80 years on the base value is grey, and its
+ * mouse-over names the raw value and the share age took off. `raw` is what the hero would have without age.
+ */
+function agedValue(c: Character, cls: string, now: number, own: number, unit: string, raw: number): HTMLElement {
+  const aged = (c.ageShare ?? 0) > 0;
+  const title = aged ? `Base ${raw}${unit}, ${Math.round((c.ageShare ?? 0) * 100)}% less because of old age` : "";
+  const grey = (text: string) => h("span", { style: `color:${AGED_GREY}`, title, text });
+  if (now === own) return h("div", { class: cls, ...(aged ? { title } : {}) }, aged ? grey(`${now}${unit}`) : `${now}${unit}`);
+  return h("div", { class: cls }, `${now}${unit} `, aged ? grey(`(${own}${unit})`) : `(${own}${unit})`);
 }
 
 /** A spell scroll names its school and level and says whether this hero could learn it (same rules as the guild). */
@@ -340,8 +355,9 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       const adj = conditionAdjusted(c);
       const attrRows = ATTR_LABEL.flatMap(([key, label]) => {
         const now = attr(c, key, false);
-        const cls = now > c[key] ? "v up" : now < c[key] ? "v down" : "v";
-        return [h("div", { text: label }), h("div", { class: cls, text: `${now}${now !== c[key] ? ` (${c[key]})` : ""}` })];
+        const own = baseValue(c, key);
+        const cls = now > own ? "v up" : now < own ? "v down" : "v";
+        return [h("div", { text: label }), agedValue(c, cls, now, own, "", c[key])];
       });
       const need = xpToNextLevel(c);
       const age = ageOf(c, party.minutes);
@@ -362,11 +378,12 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
           // like the attributes: the current value (gear, a boon and the Fairy count) in green when it is above the hero's own, in red below, the own value in brackets
           ...RESISTANCES.flatMap(([key, , label]) => {
             const now = resistance(c, RESISTANCE_ELEMENT[key], party.mascot);
-            return [h("div", { text: label }), markedText(`${now}%`, `${c[key]}%`, now, c[key])];
+            const own = baseResistance(c, key);
+            return [h("div", { text: label }), agedValue(c, now > own ? "v up" : now < own ? "v down" : "v", now, own, "%", c[key])];
           }),
           h("div", { text: "Experience" }), h("div", { class: "v", text: thousands(c.xp) }),
           h("div", { text: "Next level" }), h("div", { class: "v", text: need > 0 ? `${thousands(need)} xp more` : "ready to train" }),
-          h("div", { text: "Condition" }), h("div", { class: `v ${conditionClass(c, party.minutes)}`, text: shownCondition(c, party.minutes), title: conditionTitle(c, party.minutes) }),
+          h("div", { text: "Condition" }), h("div", { class: `v ${conditionClass(c, party.minutes)}`, text: conditionLabel(c, party.minutes), title: conditionTitle(c, party.minutes) }),
         ),
       );
       const equip = h("div", { class: "equip-grid" }, ...EQUIP_LAYOUT.map((e) => slotEl(bag, e.slot, e.label)));

@@ -255,7 +255,8 @@ export function templeCure(party: Party, index: number, cond: Condition): boolea
 export function templeRevive(party: Party, index: number, tier: number): boolean {
   const c = party.characters[index]!;
   const cost = reviveCost(c, tier);
-  if (!(c.conditions.includes("Dead") || c.conditions.includes("Rotten")) || party.gold < cost) return false;
+  // a hero who died of old age stays dead until the temple has taken the magical age off (`templeCureAge`)
+  if (c.diedOfAge || !(c.conditions.includes("Dead") || c.conditions.includes("Rotten")) || party.gold < cost) return false;
   party.gold -= cost;
   removeCondition(c, "Dead");
   removeCondition(c, "Rotten");

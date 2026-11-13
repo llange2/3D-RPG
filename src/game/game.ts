@@ -51,14 +51,15 @@ import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
 import { addCondition, canAct, recalcValues, worstCondition, xpToNextLevel } from "../sim/character";
 import { journalEmit, pushJournal, setJournalSink, type FightEvent, type JournalEntry, type JournalEvent, type Stamp } from "../sim/journal";
+import { OLD_AGE, anyoneOld } from "../sim/aging";
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
 import { drawSearchMarks, placeSeen, searchPlaces, searchTerm, SEARCH_MIN_LETTERS } from "./mapSearch";
 import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
-  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, phaseReach, pullMonsters, weakestInCone,
-  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, STAR_BURST_RADIUS, isPhaseProof,
+  alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, phaseReach, phaseTargets, pullMonsters, weakestInCone,
+  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, STAR_BURST_RADIUS, isPhaseProof,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
@@ -188,6 +189,7 @@ const FIZZLE_TEXT: Partial<Record<FizzleReason, (caster: string) => string>> = {
   no_food: () => "The party has no food to rest on.",
   no_effect: () => "It would have no effect.",
   cannot_revive: () => "Nobody can bring that hero back: no Endurance is left.",
+  died_of_age: (n) => `${n} died of old age and can not be resurrected.`,
   no_hp: (n) => `${n} has too few hit points to pay for it.`,
   needs_target: () => "That spell needs somebody else to work on.",
   cannot_act: (n) => `${n} cannot act.`,
@@ -1574,14 +1576,30 @@ export class Game {
     this.logConditions(passed.conditions);
   }
 
+  /**
+   * The first time a hero is 80 or older, once per game: the player is told that from now on heroes can die of old age (for good) and grow weaker (13. 11. 2026).
+   * Called wherever years can be added: the clock, a ghost's touch, a spell's price. The flag is in the party, so a save does not show it twice.
+   */
+  private checkOldAge(): void {
+    const party = this.state?.party;
+    if (!party || party.oldAgeShown || !anyoneOld(party)) return;
+    party.oldAgeShown = true;
+    void this.ui.message(
+      `A hero has reached the age of ${OLD_AGE}. From now on, whenever a year passes (or magic adds years), heroes of ${OLD_AGE} and older can die of old age, and for good: no temple and no spell brings them back. The older they get, the weaker they grow: all base attributes and resistances shrink, and new points only count in part. Only a hero who was aged by magic can be saved: the temple of a tier 5 town takes the magical age off for 100'000 gold a year.`,
+      "Old age",
+    );
+  }
+
   /** Poison killing, drink turning into weakness, sleep ending: what the clock did to the heroes. The last hero to fall ends the game. */
   private logConditions(events: ConditionEvent[]): void {
     const party = this.state.party;
     for (const e of events) {
-      const c = party.characters[e.character];
-      if (c) this.ui.log(conditionEventText(c.name, e), e.outcome === "died" ? "bad" : "info");
+      const name = e.name ?? party.characters[e.character]?.name;
+      if (name) this.ui.log(conditionEventText(name, e), e.outcome === "died" ? "bad" : "info");
     }
     if (events.some((e) => e.outcome === "died") && !party.characters.some((c) => canAct(c)) && !this.over) void this.gameOver();
+    // the clock, the camp and the fight all end here: this is where the first hero of 80 is noticed
+    this.checkOldAge();
   }
 
   private logEnded(expired: TimedEffect[]): void {
@@ -3720,6 +3738,8 @@ export class Game {
             for (const c of e.conditions) this.ui.log(`${target.name} is ${c.toLowerCase()}!`, "bad");
             if (e.drained) this.ui.log(`${name} drains ${e.drained} spell points from ${target.name}.`, "bad");
             if (e.aged) this.ui.log(`${target.name} ages ${e.aged === 1 ? "a year" : `${e.aged} years`}.`, "bad");
+            if (e.agedToDeath) this.ui.log(`${target.name} died of old age and can not be resurrected.`, "bad");
+            if (e.aged) this.checkOldAge();
           });
           break;
         }
@@ -3957,7 +3977,9 @@ export class Game {
       case 13:
         // robots cannot be shifted: when only they are near, the cast is refused and costs nothing
         if (near(PHASE_RADIUS).length === 0) return "No monster is near enough.";
-        return near(PHASE_RADIUS).every((m) => isPhaseProof(m)) ? PHASE_ROBOT_TEXT : null;
+        if (phaseTargets(this.enc, tx, ty).length > 0) return null;
+        // nothing left to shift: robots never go, the others only once
+        return near(PHASE_RADIUS).every((m) => isPhaseProof(m)) ? PHASE_ROBOT_TEXT : PHASE_USED_TEXT;
       case 22:
         return near(GRAVITY_RADIUS).some((m) => !isAdjacent(m.x, m.y, tx, ty, view)) ? null : "No monster is near enough to be pulled.";
       case 26:
@@ -4087,12 +4109,16 @@ export class Game {
     const events: CombatEvent[] = [];
     switch (spellId) {
       case 13: {
-        const metal = phaseReach(this.enc, tx, ty).some((m) => isPhaseProof(m));
+        const reach = phaseReach(this.enc, tx, ty);
+        const metal = reach.some((m) => isPhaseProof(m));
         const caught = phaseMonsters(this.enc, tx, ty);
+        // the ones that were in the other dimension once before stay where they are, too
+        const again = reach.filter((m) => !isPhaseProof(m) && !caught.includes(m)).length;
         this.audio.play(9041);
         this.ui.log(`${caught.length} monster${caught.length === 1 ? "" : "s"} slip out of this world for ${PHASE_TURNS} turns.`, "good");
         // the robots stay where they are
         if (metal) this.ui.log(PHASE_ROBOT_TEXT, "info");
+        if (again > 0) this.ui.log(PHASE_USED_TEXT, "info");
         return true;
       }
       case 22: {
@@ -4325,7 +4351,7 @@ export class Game {
     switch (result.kind) {
       case "fizzle":
         this.audio.play(9040);
-        this.ui.log(FIZZLE_TEXT[result.reason]?.(c.name) ?? `The spell fizzles (${result.reason.replace(/_/g, " ")}).`, "bad");
+        this.ui.log(FIZZLE_TEXT[result.reason]?.(result.who ?? c.name) ?? `The spell fizzles (${result.reason.replace(/_/g, " ")}).`, "bad");
         break;
       case "attack": {
         // Meteor Shower, Elemental Storm, Prismatic Light and Dragon Breath hit every monster in the action radius, Star Burst every one within three tiles of the party: nothing to aim at
@@ -4382,12 +4408,16 @@ export class Game {
         this.ui.avatarEffect(result.target, "cure_hp");
         this.ui.log(`${party.characters[result.target]!.name} returns to life.`, "good");
         if (result.endurance) this.ui.log(`${party.characters[result.target]!.name} comes back with one point of Endurance less, and ${c.name} feels older.`, "info");
+        if (result.casterDied) this.ui.log(`${c.name} died of old age and can not be resurrected.`, "bad");
+        this.checkOldAge();
         break;
       case "intervention":
         this.audio.play(9031);
         for (const i of result.healed) this.ui.avatarEffect(i, "cure_hp");
         this.ui.log(result.revived.length ? "Divine light lifts the fallen and heals the whole party." : "Divine light heals the whole party.", "good");
         this.ui.log(`${c.name} feels ${SPELL_AGING} years older.`, "info");
+        if (result.casterDied) this.ui.log(`${c.name} died of old age and can not be resurrected.`, "bad");
+        this.checkOldAge();
         break;
       case "bless":
         this.audio.play(9032);
@@ -5458,6 +5488,8 @@ export class Game {
     // a new party (a hero swapped in the inn, a new game): its sheets load now, the portraits change to the ready pictures with the next update
     if (this.state.party.characters.map((c) => c.avatar).join(",") !== this.portraitKey) void this.preloadPortraits();
     if (cheats.god) maintainGod(this.state.party);
+    // (a night at the inn and every other service pass through here; the notice shows once)
+    this.checkOldAge();
     this.ui.updateHud(this.state.party, this.hudInfo());
     this.syncMonsterEffects();
     this.minimapDirty = true;

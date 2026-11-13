@@ -628,7 +628,7 @@ export class LegacyEngine {
     if (!(await this.ask(TEXTS[343]!))) return;
     this.party.gold += 100;
     // ten days of work: poison and disease that nobody cured have run their time by then
-    for (const e of advanceTime(this.party, 10 * 1440).conditions) this.ui.log(conditionEventText(this.party.characters[e.character]!.name, e), e.outcome === "died" ? "bad" : "info");
+    for (const e of advanceTime(this.party, 10 * 1440).conditions) this.ui.log(conditionEventText(e.name ?? this.party.characters[e.character]!.name, e), e.outcome === "died" ? "bad" : "info");
     this.host.port.checkDefeat();
     this.ui.sound(SOUND.coin);
     this.host.port.refresh();

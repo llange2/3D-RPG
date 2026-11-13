@@ -59,7 +59,7 @@ Prestidigitator und Prayer Master (Talente der Party) geben je `2 × Stufe` dazu
 - **Rüstung** `armor(c)` = Summe `arm` der getragenen Gegenstände; **Rage** halbiert sie (`trunc(/2)`), **Steinhaut** addiert danach `Stufe des Zaubernden`.
 - **Tempo im Kampf** `fightSpeed(c)` = TEM, mit Steinhaut `max(1, trunc(TEM / 2))`.
 - **Widerstand** gegen ein Element (Feuer, Eis, Säure, Magie) in Prozent: Grundwert des Helden + Gegenstände + Brunnen-Bonus; wirksam höchstens **80 %** (`RESISTANCE_CAP`, `resistanceShare`).
-- **Alter** in Jahren: `⌊(Minute − Geburtsminute) / 144 000⌋` (ein Jahr = 10 Wochen × 10 Tage × 24 h × 60 min) plus magisches Alter (Geister, Zauber); keine Wirkung außer der Anzeige und den 5 Jahren von Resurrect und Divine Intervention.
+- **Alter** in Jahren: `⌊(Minute − Geburtsminute) / 144 000⌋` (ein Jahr = 10 Wochen × 10 Tage × 24 h × 60 min) plus magisches Alter (Geister, Zauber, die 5 Jahre von Resurrect und Divine Intervention). **Ab 80 Jahren wirkt das Alter** (`sim/aging.ts`, seit 13. 11. 2026), siehe 1.7.
 
 ### 1.5 Erfahrung und Stufen
 
@@ -79,6 +79,15 @@ Wurf  = gleichverteilt zwischen ⌊Skill / 3⌋ und Skill
 ```
 
 Quelle: `thieverySkill`, `thieveryRoll`. Schlösser: Abschnitt 8.1.
+
+### 1.7 Alterung ab 80 Jahren (neu am 13. 11. 2026, `sim/aging.ts`)
+
+- **Alterskurve** (Gesamtalter A = natürliches + magisches Alter): `p(A) = 0` für A < 80, sonst `p(A) = 1 / (1 + e^(−0,1874 × (A − 104,5)))`. Ergibt p(80) = 1,0 %, p(90) = 6,2 %, p(100) = 30 %, p(104,5) = 50 %, p(120) = 94,8 %. Im Code steht die Kurve als Tabelle in ppm (`TABLE_PPM`, 80 bis 150 Jahre, danach der letzte Wert), weil `Math.exp` in der Sim verboten ist.
+- **Todeswurf**: bei jeder Alterserhöhung ab A ≥ 80 ein Wurf mit Wahrscheinlichkeit `p(A)`. **Geburtstag**: ein Wurf je vollendetem Jahr (`birthdays`, in `advanceTime`), jeweils mit dem Alter in diesem Jahr; **magisches Alter** (Geister, Resurrect, Divine Intervention): ein Wurf mit dem neuen Gesamtalter (`addMagicAge`). Es würfeln alle Helden außer „Dead (Age)“: Lebende, Tote, Verrottete, auch die Reserve. Zufall aus `seedFromString("old-age:<Name>:<Geburt>:<Alter>:<Zähler>")`, der Zähler `ageRolls` zählt jeden Wurf: ein Neuladen gibt dasselbe Ergebnis.
+- **Verlust** → „Dead (Age)“ (`Character.diedOfAge`, der Zustand bleibt `Dead`): alle anderen Zustände und Zauberwirkungen am Helden fallen weg, kein Tempel (`templeRevive`), kein Raise Dead / Resurrect (Text „<Name> died of old age and can not be resurrected.“) und keine Divine Intervention holen ihn zurück, er altert nicht mehr (auch nicht magisch) und würfelt nicht mehr.
+- **Grundwerte**: `ageShare = p(A)`. Angezeigter Grundwert = `round(Rohwert × (1 − p(A)))` (Attribute mindestens 1; Resistenzen in Prozent ohne Untergrenze). Der Rohwert (`c.str`, `c.resFire` …) bleibt unverändert und wächst bei Steigerungen voll; angezeigt wächst er anteilig (bei 100 Jahren sind +10 Punkte nur +7). Alle Formeln lesen den gealterten Wert (`baseValue`, `baseResistance`, `attr`, `resistance`, `fightSpeed`), LP und ZP werden bei jeder Änderung des Alters neu berechnet (`refreshAge`). Wird das magische Alter entfernt, kommen die Werte zurück. Gegenstände, Brunnen-Boni und die Fee werden nicht gemindert. Auf dem Charakterblatt stehen die Grundwerte ab A ≥ 80 in Dunkelgrau (Tooltip: Rohwert und Minderung).
+- **Hinweis**: das erste Mal, dass ein Held A ≥ 80 erreicht, zeigt das Spiel einmal pro Spielstand ein Fenster (`Party.oldAgeShown`, `Game.checkOldAge`).
+- **Tempel Stufe 5, „Cure Magical Age“** (`templeCureAge`): setzt das magische Alter auf 0, Preis `100 000 × magische Jahre` (`CURE_AGE_GOLD_PER_YEAR`, unabhängig von der Stufe). Der Zustand ändert sich nicht, nur „Dead (Age)“ wird zu „Dead“ (danach normale Wiederbelebung). Ein Held, der nur natürlich über 80 ist (kein magisches Alter), ist nach dem Alterstod endgültig tot.
 
 ---
 
@@ -172,9 +181,9 @@ Erzielt ein Monster keinen Schaden, hat es trotzdem eine 10% Chance die Sonderwi
 - **Flächenzauber**: Meteor Shower, Elemental Storm, Prismatic Light und Dragon Breath treffen jedes Monster im Aktionsradius, Star Burst jedes im Umkreis von 3 Feldern; Prismatic Light nur sichtbare Monster. Je Monster eigene Schadensart bei Storm und Prisma.
 - **Heilung**: gleichverteilt `heal_min … heal_max` der Zaubertabelle; Moon Ray heilt jeden Helden um bis zu 50; Half For Me: die Zaubernden zahlen `⌈fehlende LP / 2⌉` (mindestens 1 LP bleibt), der andere bekommt das Doppelte.
 - **Dauer**: Light, Protection, Detect Monster, Wizard's Eye je 8 Stunden (Light 8, Levitate und Walk on Water 4); Stone Skin und Rage 12 Stunden; Protection gibt `Stufe des Zaubernden` Punkte.
-- **Schutz-/Phasenzauber** zählen in Zügen der Monster: Dimensional Phasing 5, Immobilize 3, Dimensional Rift 5.
+- **Schutz-/Phasenzauber** zählen in Zügen der Monster: Dimensional Phasing 5, Immobilize 3, Dimensional Rift 5. **Dimensional Phasing** verschiebt jedes Monster nur einmal (`MonsterInstance.wasPhased`, Roboter nie; sind alle Monster im Radius verbraucht oder Roboter, lehnt der Zauber vor dem Bezahlen ab, `PHASE_USED_TEXT`).
 - **Pandora's Box**: dreimal je Spieltag; Wurf 1–100: 1–30 Gold (1–100), 31–60 Gegenstand Stufe 1, 61–80 Monster Stufe 1, 81–85 Gold (101–200), 86–90 Gegenstand Stufe 2, 91–95 Monster Stufe 2, 96–99 Gold (1000–10 000), 100 Dragon Lord.
-- **Raise Dead / Resurrect** (+5 Jahre Alter für die Zaubernden, −1 Ausdauer für den Geholten) holen mit 1 LP zurück; **Divine Intervention** macht alle ganz.
+- **Raise Dead / Resurrect** (+5 Jahre Alter für die Zaubernden, −1 Ausdauer für den Geholten) holen mit 1 LP zurück (nicht, wer an Altersschwäche starb, siehe 1.7); **Divine Intervention** macht alle ganz (ohne „Dead (Age)“). Die 5 Jahre sind ab 80 Jahren ein Todeswurf der Zaubernden (1.7).
 - **Teleport**: 2 bis 9 Felder vorwärts (Spieler wählt). **Turn Undead**: 100 Schaden an einem Untoten, ignoriert Widerstand. **Holy Word**: Untote mit mehr als 600 LP verlieren 25 % ihrer LP, sonst 150. **Mass Distortion**: jedes Monster auf der Linie mit 20 % halbe LP (nicht ab Treasure-Level 5). **Finger of Death**: 50 % Tod, nur Monster bis Treasure-Level 2.
 - **Preise der Rollen** (`spellPrice`): `max(10, round(Wert × bargain))`. Lernen nur Zauber der Schule der Klasse und ab der Stufe des Zaubers (`learnBlock`).
 
@@ -209,6 +218,7 @@ Erzielt ein Monster keinen Schaden, hat es trotzdem eine 10% Chance die Sonderwi
 - **Zustand heilen** `round(Preis × Stufe des Helden)` mit Preisen Poisoned 40, Diseased 80, Cursed 120, Crazy 100, Weak 30, Drunk 10, Sleeping 5, Paralyzed 150, Petrified 400, (Unconscious wird über die normale Heilung abgehandelt)
 - **Wiederbelebung (tot)** `round(300 × Tier)`; der Held kommt mit der Hälfte der LP (mindestens 1) zurück.
 - **Wiederbelebung (verrottet)**  `round(1000 × Tier)`; der Held kommt mit der Hälfte der LP (mindestens 1) zurück.
+- **Cure Magical Age** (nur Tempel der Stufe 5): `100 000 × magische Jahre` Gold, siehe 1.7. Wer „Dead (Age)“ ist, kann erst danach als „Dead“ wiederbelebt werden.
 - **Spenden** (`templeDonate`): kostet `round(10 × Tier)`, das Gold ist in jedem Fall weg; mit 20 % Chance (`DONATION_BLESSING_CHANCE`) erhält der Held den Zustand „Blessed“ für 24 Stunden (`BLESSING_MINUTES`), dessen Stärke der Tier des Tempels ist (1.1). Der Button ist nur sichtbar, wenn der Held lebt und nicht gesegnet ist; eine laufende Segnung wird nie gestapelt.
 
 ### 5.4 Bank

@@ -42,7 +42,13 @@ export function shownCondition(c: Character, now: number): Condition {
   return deadlyTimers(c, now)[0]?.condition ?? worst;
 }
 
-export const conditionClass = (c: Character, now = Number.NaN): string => `cond-${CONDITION_LOOK[Number.isNaN(now) ? worstCondition(c) : shownCondition(c, now)]}`;
+/** The word on the card: "Dead (Age)" for a hero who died of old age, else the condition. */
+export function conditionLabel(c: Character, now: number): string {
+  const cond = shownCondition(c, now);
+  return c.diedOfAge && cond === "Dead" ? "Dead (Age)" : cond;
+}
+
+export const conditionClass =(c: Character, now = Number.NaN): string => `cond-${CONDITION_LOOK[Number.isNaN(now) ? worstCondition(c) : shownCondition(c, now)]}`;
 
 /** "Dies in >8 hours": whole hours are enough, minutes would only promise a precision nobody can use. */
 export function deathNote(minutes: number): string {
@@ -55,6 +61,7 @@ export function deathNote(minutes: number): string {
  * "Crazy: Dies in >10 hours", the ones that kill first at the top, then the rest by severity.
  */
 export function conditionTitle(c: Character, now: number): string {
+  if (c.diedOfAge) return "Died of old age. Nothing brings the hero back until the temple of a tier 5 town has taken the magical age off.";
   if (c.conditions.length > 1) {
     const timers = deadlyTimers(c, now);
     const others = CONDITIONS.filter((cond) => c.conditions.includes(cond) && !timers.some((t) => t.condition === cond));

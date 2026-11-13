@@ -1,6 +1,7 @@
 import type { Rng } from "../core/rng";
 import { CONSTANTS, MONSTERS, SPELLS, walksOnLand, type SpellDef } from "../data/tables";
 import { orbSpellBonus } from "./balance";
+import { addMagicAge } from "./aging";
 import { addCondition, canAct, canBeHealed, healHp, isAlive, recalcValues, removeCondition } from "./character";
 import { suppressCondition } from "./conditions";
 import { generateItem } from "./items";
@@ -76,11 +77,12 @@ export type FizzleReason =
   | "no_food"
   | "no_effect"
   | "cannot_revive"
+  | "died_of_age"
   | "no_hp"
   | "pandora_spent";
 
 export type SpellResult =
-  | { kind: "fizzle"; reason: FizzleReason }
+  | { kind: "fizzle"; reason: FizzleReason; /** Whom the text is about when it is not the caster. */ who?: string }
   | { kind: "attack"; spellId: number; damage: number; type: string; penetrate: boolean; undead: boolean | null; special?: SpecialSpell; healed?: { target: number; amount: number }[] }
   | { kind: "heal"; target: number; amount: number; /** Half For Me: the hit points the caster paid. */ paid?: number }
   | { kind: "cure"; target: number; removed: Condition[] }
@@ -88,7 +90,7 @@ export type SpellResult =
   | { kind: "awaken"; awakened: number[] }
   /** `condition` is null when the hero did not have it (the spell is paid for all the same). */
   | { kind: "suppress"; target: number; condition: Condition | null }
-  | { kind: "revive"; target: number; /** Resurrect took a point of Endurance. */ endurance?: boolean }
+  | { kind: "revive"; target: number; /** Resurrect took a point of Endurance. */ endurance?: boolean; /** The caster lost the roll against old age on the five years. */ casterDied?: boolean }
   | { kind: "buff"; effect: TimedEffect }
   | { kind: "bless"; target: number }
   | { kind: "jump" }
@@ -100,7 +102,7 @@ export type SpellResult =
   | { kind: "pandora"; outcome: PandoraOutcome }
   | { kind: "food" }
   /** Divine Intervention: everybody who can still be helped is made whole; `revived` are the heroes that were dead. */
-  | { kind: "intervention"; healed: number[]; revived: number[] }
+  | { kind: "intervention"; healed: number[]; revived: number[]; casterDied?: boolean }
   /** Combine, Duplication, Transform Ring: the game asks which items. */
   | { kind: "items"; spellId: number; target: number };
 
@@ -293,20 +295,23 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
     const t = target!;
     // Raise Dead brings back only the dead; Resurrect only the rotten (what the old game called eradicated), the user's rule of 8. 11. 2026. Both leave the hero with 1 hit point.
     // Nobody with no Endurance left comes back.
+    // dead of old age (13. 11. 2026): no spell brings the hero back, only the temple that takes the magical age off makes them a plain "Dead" again; nothing is paid
+    if (t.diedOfAge) return { kind: "fizzle", reason: "died_of_age", who: t.name };
     if (!t.conditions.includes(spellId === 70 ? "Rotten" : "Dead")) return { kind: "fizzle", reason: "no_effect" };
     if (t.end <= 0) return { kind: "fizzle", reason: "cannot_revive" };
     pay();
     removeCondition(t, "Dead");
     removeCondition(t, "Rotten");
     removeCondition(t, "Unconscious");
+    let casterDied = false;
     if (spellId === 70) {
-      // the price: a point of Endurance for good, and the caster is five years older
+      // the price: a point of Endurance for good, and the caster is five years older (from 80 on that is a roll against old age)
       t.end -= 1;
       recalcValues(t, party.talents, false, party.mascot);
-      caster.magicAge = (caster.magicAge ?? 0) + SPELL_AGING;
+      casterDied = addMagicAge(party, caster, SPELL_AGING).died;
     }
     t.hp = 1;
-    return { kind: "revive", target: options.target!, endurance: spellId === 70 };
+    return { kind: "revive", target: options.target!, endurance: spellId === 70, ...(casterDied ? { casterDied } : {}) };
   }
 
   if (spellId === 1) {
@@ -442,14 +447,15 @@ export function castSpell(party: Party, casterIndex: number, spellId: number, rn
       const revived: number[] = [];
       party.characters.forEach((c, i) => {
         // everything but the rot goes, the dead come back, everybody is whole
-        if (c.conditions.includes("Rotten")) return;
+        // the rotten and those who died of old age stay as they are
+        if (c.conditions.includes("Rotten") || c.diedOfAge) return;
         if (c.conditions.includes("Dead")) revived.push(i);
         for (const cond of [...c.conditions]) if (cond !== "Healthy") removeCondition(c, cond);
         c.hp = c.health;
         healed.push(i);
       });
-      caster.magicAge = (caster.magicAge ?? 0) + SPELL_AGING;
-      return { kind: "intervention", healed, revived };
+      const casterDied = addMagicAge(party, caster, SPELL_AGING).died;
+      return { kind: "intervention", healed, revived, ...(casterDied ? { casterDied } : {}) };
     }
     case 21:
     case 34:

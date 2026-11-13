@@ -8,7 +8,7 @@ import { assetPath, clear, h } from "./dom";
 import { thousands } from "../core/format";
 import { DEFAULT_WORLD_SIZE, DUNGEON_DENSITIES, DUNGEON_DENSITY_NAMES, TITLE_DUNGEON_DENSITY, WORLD_SIZES, WORLD_SIZE_NAMES, type DungeonDensity, type WorldSize } from "../world/types";
 import { hitEffect, portraitImage, protectionEffect, type AvatarEffect } from "./avatarFx";
-import { conditionTitle, shownCondition } from "./conditionInfo";
+import { conditionLabel, conditionTitle, shownCondition } from "./conditionInfo";
 import { mascotPortrait } from "./panels";
 import { CapybaraClip } from "./capybaraClip";
 import { LoadingScreen } from "./loadingScreen";
@@ -273,7 +273,7 @@ export class UI {
         ),
         h("div", { class: "bar hp" }, h("i", { style: `width:${pct(c.hp, c.health)}%` })),
         c.mana > 0 ? h("div", { class: "bar sp" }, h("i", { style: `width:${pct(c.sp, c.mana)}%` })) : h("div", { class: "bar sp", style: "opacity:0.25" }, h("i", { style: "width:0" })),
-        cond !== "Healthy" ? h("div", { class: "cond", text: cond, title: conditionTitle(c, party.minutes) }) : null,
+        cond !== "Healthy" ? h("div", { class: "cond", text: conditionLabel(c, party.minutes), title: conditionTitle(c, party.minutes) }) : null,
       );
       card.dataset.index = String(i);
       this.cardsEl.append(card);

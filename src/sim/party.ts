@@ -1,6 +1,7 @@
 import { Rng, seedFromString } from "../core/rng";
 import { TALENTS } from "../data/tables";
 import { canAct, createCharacter, emptyInventory, isAlive, recalcValues, removeCondition, swapSlots } from "./character";
+import { birthdays, refreshAge } from "./aging";
 import { endBoon } from "./boons";
 import { seedConditionTimers, tickConditions, type ConditionEvent } from "./conditions";
 import { generateItem } from "./items";
@@ -62,6 +63,11 @@ export function normalizeParty(party: Party): Party {
   party.mascotBag ??= emptyInventory();
   party.mascots ??= [party.mascot];
   seedConditionTimers(party);
+  // old age (13. 11. 2026): the share that age takes off is derived, never saved; a save from before it has nobody of 80 and more, a later one gets it back here
+  for (const c of [...party.characters, ...party.reserve]) {
+    if (c.diedOfAge && !c.conditions.includes("Dead")) c.conditions = ["Dead"];
+    refreshAge(party, c);
+  }
   // bug_fix_50, point 27: saves from before `gainAttribute` kept the health and mana of the old attributes after a chalice, a statue or a shrine; they get what they gained
   for (const c of [...party.characters, ...party.reserve]) {
     const health = c.health;
@@ -279,7 +285,8 @@ export function advanceTime(party: Party, minutes: number): TimePassed {
     if (e.kind === "rage" && hero?.mods) delete hero.mods.rage;
     if (e.kind === "boon" && e.character !== undefined) endBoon(party, e.character, e.stat);
   }
-  return { interest, daysPassed, expired, conditions: tickConditions(party) };
+  // the conditions first (a hero who dies of poison on the day of the birthday does not roll), then the birthdays of the years that turned (old age, 13. 11. 2026)
+  return { interest, daysPassed, expired, conditions: [...tickConditions(party), ...birthdays(party, before)] };
 }
 
 export function clockText(party: Party): { day: number; hour: number; minute: number } {
