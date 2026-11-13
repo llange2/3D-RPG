@@ -27,6 +27,7 @@ OUT = ROOT / "src" / "data"
 DESCRIPTION_ADDITIONS = {
     72: "Works only outside.",  # Meteor Shower
     2: "Can be cast 3 times a day.",  # Pandora's box (`Party.pandora`, 3 per game day)
+    13: "Each monster can only be shifted once. Robots cannot be shifted.",  # Dimensional Phasing (`wasPhased`, 13. 11. 2026)
 }
 
 # Sentences of the sheet that the user rewrote (8. 11. 2026, 48th playtest): spell id -> list of (old text, new text); a pair only applies while the old text is still there.

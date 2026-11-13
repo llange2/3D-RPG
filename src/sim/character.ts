@@ -92,22 +92,37 @@ export function itemBonus(c: Character, key: BonusKey): number {
   return sumBonus(equippedItems(c), key);
 }
 
+/**
+ * The hero's own value of an attribute as the sheet shows it: the raw value less the share that age takes off from 80 years on (`ageShare`, `sim/aging.ts`).
+ * New points are added to the raw value, so at 100 years (30 %) +10 points show as +7. Never below 1.
+ */
+export function baseValue(c: Character, a: Attribute): number {
+  const raw = c[a];
+  return c.ageShare ? Math.max(Math.min(1, raw), Math.round(raw * (1 - c.ageShare))) : raw;
+}
+
+/** The same for a resistance (in percent). */
+export function baseResistance(c: Character, field: "resFire" | "resIce" | "resAcid" | "resMagic"): number {
+  const raw = c[field];
+  return c.ageShare ? Math.round(raw * (1 - c.ageShare)) : raw;
+}
+
 /** Attributes after condition effects (port of update_conditions). Equipment bonuses are not included. */
 export function conditionAdjusted(c: Character): Record<Attribute, number> & { bonusArmor: number } {
   const cur: Record<Attribute, number> & { bonusArmor: number } = {
-    str: c.str,
-    int: c.int,
-    per: c.per,
-    end: c.end,
-    spd: c.spd,
-    acc: c.acc,
-    lck: c.lck,
+    str: baseValue(c, "str"),
+    int: baseValue(c, "int"),
+    per: baseValue(c, "per"),
+    end: baseValue(c, "end"),
+    spd: baseValue(c, "spd"),
+    acc: baseValue(c, "acc"),
+    lck: baseValue(c, "lck"),
     bonusArmor: 0,
   };
   const all = (f: (v: number, a: Attribute) => number) => {
     for (const a of ATTRIBUTES) cur[a] = f(cur[a], a);
   };
-  const lower = (a: Attribute, n: number) => Math.max(1, c[a] - n);
+  const lower = (a: Attribute, n: number) => Math.max(1, baseValue(c, a) - n);
   for (const condition of c.conditions) {
     switch (condition) {
       case "Blessed": {
@@ -123,7 +138,7 @@ export function conditionAdjusted(c: Character): Record<Attribute, number> & { b
         for (const a of ["int", "per", "end", "acc", "lck"] as Attribute[]) cur[a] = lower(a, 3);
         break;
       case "Cursed":
-        cur.lck = Math.max(1, Math.floor(c.lck / 10));
+        cur.lck = Math.max(1, Math.floor(baseValue(c, "lck") / 10));
         break;
       case "Diseased":
         for (const a of ["int", "per", "end"] as Attribute[]) cur[a] = lower(a, 5);
@@ -140,7 +155,7 @@ export function conditionAdjusted(c: Character): Record<Attribute, number> & { b
         for (const a of ["str", "spd", "acc"] as Attribute[]) cur[a] = lower(a, 5);
         break;
       case "Weak":
-        all((_, a) => Math.max(1, Math.floor(c[a] / 2)));
+        all((_, a) => Math.max(1, Math.floor(baseValue(c, a) / 2)));
         break;
       default:
         break;
@@ -151,7 +166,7 @@ export function conditionAdjusted(c: Character): Record<Attribute, number> & { b
 
 /** Attribute including equipment. `base = true` uses the unmodified value, false the condition-adjusted one. */
 export function attr(c: Character, a: Attribute, base = true): number {
-  const value = base ? c[a] : conditionAdjusted(c)[a];
+  const value = base ? baseValue(c, a) : conditionAdjusted(c)[a];
   const total = value + itemBonus(c, ATTR_BONUS_KEY[a]) + (c.mods?.boon?.[a] ?? 0);
   // Stone Skin halves the speed (see `fightSpeed`); the sheet shows it
   return a === "spd" && !base && c.mods?.stoneSkin ? Math.max(1, Math.trunc(total / 2)) : total;
@@ -165,7 +180,7 @@ const RESISTANCE_BONUS = { fire: "res_fire", ice: "res_ice", acid: "res_acid", m
  * `fairyResistance()` points to every resistance of every hero). The sheet shows this sum; the damage formulas use `resistanceShare`.
  */
 export function resistance(c: Character, element: keyof typeof RESISTANCE_FIELD, mascot?: string | null): number {
-  return c[RESISTANCE_FIELD[element]] + itemBonus(c, RESISTANCE_BONUS[element]) + (c.mods?.boon?.[RESISTANCE_BONUS[element]] ?? 0) + (mascot === "Fairy" ? fairyResistance() : 0);
+  return baseResistance(c, RESISTANCE_FIELD[element]) + itemBonus(c, RESISTANCE_BONUS[element]) + (c.mods?.boon?.[RESISTANCE_BONUS[element]] ?? 0) + (mascot === "Fairy" ? fairyResistance() : 0);
 }
 
 /** What a resistance can take off an elemental hit at the most, in percent (51st playtest, point 13): more points on the sheet do not count. */
@@ -186,7 +201,7 @@ export function armor(c: Character): number {
 
 /** Speed in a fight: Stone Skin halves it (never below 1). */
 export function fightSpeed(c: Character): number {
-  return c.mods?.stoneSkin ? Math.max(1, Math.trunc(c.spd / 2)) : c.spd;
+  return c.mods?.stoneSkin ? Math.max(1, Math.trunc(baseValue(c, "spd") / 2)) : baseValue(c, "spd");
 }
 
 /** Game minutes in a year (the old `get_age`: ten weeks of ten days). */

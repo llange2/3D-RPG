@@ -1,6 +1,7 @@
 import type { ServiceKind } from "../actions/registry";
 import { LAYER, rngFor } from "../core/rng";
 import { SPELLS, TEXTS, talentInfo } from "../data/tables";
+import { CURE_AGE_GOLD_PER_YEAR, cureAgeCost, templeCureAge } from "../sim/aging";
 import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
 import { conditionEventText } from "../sim/conditions";
 import {
@@ -109,7 +110,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           h("button", { class: "btn primary", text: `Rest until morning (${thousands(cost)} gold)`, disabled: party.gold < cost, onclick: () => {
             const r = innRest(party, ctx.tier);
             note(r.ok ? "The party sleeps soundly and wakes refreshed." : "You cannot afford a room.", r.ok ? "good" : "bad");
-            for (const e of r.conditions ?? []) note(conditionEventText(party.characters[e.character]!.name, e), e.outcome === "died" ? "bad" : "info");
+            for (const e of r.conditions ?? []) note(conditionEventText(e.name ?? party.characters[e.character]!.name, e), e.outcome === "died" ? "bad" : "info");
             refresh();
           } }),
         ),
@@ -230,14 +231,17 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       party.characters.forEach((c, i) => {
         const heal = healCost(c, ctx.tier, party);
         root.append(h("div", { class: "sheet", style: "margin-top:8px" },
-          h("div", { html: `<b>${c.name}</b> - ${c.hp}/${c.health} HP - ${c.conditions.join(", ")}` }),
+          h("div", { html: `<b>${c.name}</b> - ${c.hp}/${c.health} HP - ${c.diedOfAge ? "Dead (Age)" : c.conditions.join(", ")}${c.magicAge ? ` - aged ${c.magicAge} years by magic` : ""}` }),
           h("div", { class: "row-btns" },
             isAlive(c) && c.hp < c.health ? h("button", { class: "btn", text: `Heal (${thousands(heal)})`, disabled: party.gold < heal, onclick: () => { if (templeHeal(party, i, ctx.tier)) note(`${c.name} is healed.`, "good"); refresh(); } }) : null,
             ...c.conditions.filter((x) => x !== "Healthy" && x !== "Dead" && x !== "Rotten" && x !== "Blessed" && x !== "Unconscious").map((cond) => {
               const cost = cureCost(cond as Condition, c);
               return h("button", { class: "btn", text: `Cure ${cond} (${thousands(cost)})`, disabled: party.gold < cost, onclick: () => { if (templeCure(party, i, cond as Condition)) note(`${c.name} is cured of ${cond}.`, "good"); refresh(); } });
             }),
-            c.conditions.includes("Dead") || c.conditions.includes("Rotten") ? h("button", { class: "btn primary", text: `Resurrect (${thousands(reviveCost(c, ctx.tier))})`, disabled: party.gold < reviveCost(c, ctx.tier), onclick: () => { if (templeRevive(party, i, ctx.tier)) note(`${c.name} returns to life.`, "good"); refresh(); } }) : null,
+            // 13. 11. 2026: a hero who died of old age is not resurrected, the temple of tier 5 first takes the magical age off (then the hero is a plain "Dead")
+            !c.diedOfAge && (c.conditions.includes("Dead") || c.conditions.includes("Rotten")) ? h("button", { class: "btn primary", text: `Resurrect (${thousands(reviveCost(c, ctx.tier))})`, disabled: party.gold < reviveCost(c, ctx.tier), onclick: () => { if (templeRevive(party, i, ctx.tier)) note(`${c.name} returns to life.`, "good"); refresh(); } }) : null,
+            // only the temple of a tier 5 town; 100'000 gold for each year of magical age, whatever the level; the hero keeps their condition (but "Dead (Age)" becomes "Dead")
+            ctx.tier >= 5 && (c.magicAge ?? 0) > 0 ? h("button", { class: "btn", text: `Cure Magical Age (${thousands(cureAgeCost(c))})`, title: `Takes the ${c.magicAge} years that magic added off: ${thousands(CURE_AGE_GOLD_PER_YEAR)} gold for each year.`, disabled: party.gold < cureAgeCost(c), onclick: () => { if (templeCureAge(party, i)) { note(`${c.name} is as old as the years since the birth again.`, "good"); ctx.sound?.(9032); } refresh(); } }) : null,
             // formulas 1.1 (5.3): a donation, 20 % for a day's blessing; the button is only there while the hero is not blessed
             canDonate(c) ? h("button", { class: "btn", text: `Donate (${thousands(donationCost(ctx.tier))})`, title: "A donation may win the blessing of the temple for a day.", disabled: party.gold < donationCost(ctx.tier), onclick: () => {
               const r = templeDonate(party, i, ctx.tier, rngFor(ctx.rootSeed, LAYER.LOOT, "donation", party.minutes, party.gold, i));

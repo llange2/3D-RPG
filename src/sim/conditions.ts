@@ -75,10 +75,14 @@ export function isSuppressed(c: Character, cond: Condition): boolean {
 }
 
 export interface ConditionEvent {
-  /** Index of the hero in the party. */
+  /** Index of the hero in the party; -1 for a hero in the reserve (then `name` says who). */
   character: number;
   condition: Condition;
   outcome: "died" | "weak" | "ended";
+  /** What killed the hero when it was not the condition itself ("old age"). */
+  cause?: string;
+  /** The hero's name, for the ones who are not in the party. */
+  name?: string;
 }
 
 /**
@@ -124,6 +128,7 @@ const CAUSE_OF_DEATH: Partial<Record<Condition, string>> = { Poisoned: "poison",
 
 /** The line for the log: "Maximus dies of poison." */
 export function conditionEventText(name: string, e: ConditionEvent): string {
+  if (e.outcome === "died" && e.cause === "old age") return `${name} dies of old age and cannot be resurrected.`;
   if (e.outcome === "died") return `${name} dies of ${CAUSE_OF_DEATH[e.condition] ?? e.condition.toLowerCase()}.`;
   if (e.outcome === "weak") return `${name} sobers up, but feels weak.`;
   switch (e.condition) {
@@ -138,7 +143,7 @@ export function conditionEventText(name: string, e: ConditionEvent): string {
 
 /** Minutes until the hero dies of poison, disease or madness if nobody helps, or null when none of them is running. */
 export function minutesToDeath(c: Character, now: number): number | null {
-  if (c.conditions.includes("Dead") || c.conditions.includes("Rotten")) return null;
+  if (c.conditions.includes("Dead") || c.conditions.includes("Rotten") || c.diedOfAge) return null;
   let soonest: number | null = null;
   for (const cond of DEADLY) {
     const at = c.conditionDue?.[cond];

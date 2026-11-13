@@ -85,7 +85,7 @@
  },
  "13": {
   "name": "Dimensional Phasing",
-  "description": "Put all monsters in a 4 field radius in a different dimensional phase for 5 turns.",
+  "description": "Put all monsters in a 4 field radius in a different dimensional phase for 5 turns. Each monster can only be shifted once. Robots cannot be shifted.",
   "scalesWithLevel": false,
   "explanation": "1) Stop all movement/animation for monsters in radius\n2) Color all monsters in purple and make the half transparent\n3) Monster do not/move attack and also cannot be attacked or take damage of any kind.\n4) After 5 turns return monsters to normal",
   "status": "done"
