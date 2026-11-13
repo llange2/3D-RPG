@@ -256,12 +256,14 @@ export const MONSTERS: Record<number, MonsterDef> = Object.fromEntries(
 export const MONSTER_IDS: number[] = Object.keys(MONSTERS).map(Number).sort((a, b) => a - b);
 
 const SHEET = SPELL_SHEET as Record<string, { name: string; description: string; explanation: string; scalesWithLevel?: boolean }>;
+/** Mana the user changed after the sheet (57th playtest, point 2): Power Cure costs 2 SP per level (4 at the rate of `SCALING_COST_SHARE`); `MANA_OVERRIDES` in `export_spell_sheet.py` is the same table. */
+const MANA_OVERRIDES: Record<number, number> = { 28: 4 };
 export const SPELLS: Record<number, SpellDef> = Object.fromEntries(
   Object.entries(SPELLS_RAW as unknown as Record<string, Omit<SpellDef, "id" | "title" | "text" | "explanation">>).map(([id, s]) => {
     const sheet = SHEET[id];
     // column H "Scales with level" of the sheet decides (the raw table also flags Dimensional Rift and Power Shield, which the sheet does not)
     const scales = sheet?.scalesWithLevel ?? s.scales_with_level;
-    return [Number(id), { ...s, scales_with_level: scales, id: Number(id), title: sheet?.name ?? textsRaw[s.name] ?? `Spell ${id}`, text: sheet?.description ?? textsRaw[s.description] ?? "", explanation: sheet?.explanation ?? "" } as SpellDef];
+    return [Number(id), { ...s, mana: MANA_OVERRIDES[Number(id)] ?? s.mana, scales_with_level: scales, id: Number(id), title: sheet?.name ?? textsRaw[s.name] ?? `Spell ${id}`, text: sheet?.description ?? textsRaw[s.description] ?? "", explanation: sheet?.explanation ?? "" } as SpellDef];
   }),
 );
 

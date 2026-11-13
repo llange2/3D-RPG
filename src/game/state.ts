@@ -1,4 +1,5 @@
 import { GEN_VERSION } from "../core/version";
+import { packSave, unpackSave } from "./saveCodec";
 import type { Facing } from "../interiors/types";
 import type { Item, Party } from "../sim/types";
 import type { JournalEntry } from "../sim/journal";
@@ -239,8 +240,9 @@ export function toSaveFile(state: GameState): SaveFile {
  * written once more without the journal: a game is never lost for the sake of the log. Returns whether the save was stored, and `withJournal` says whether it carries the journal.
  */
 function setSaveItem(key: string, file: SaveFile): { stored: boolean; withJournal: boolean } {
+  // (57th playtest, point 7: packed, a quarter of the room; `saveCodec.ts`)
   try {
-    localStorage.setItem(key, JSON.stringify(file));
+    localStorage.setItem(key, packSave(JSON.stringify(file)));
     return { stored: true, withJournal: true };
   } catch {
     // fall through to the retry without the journal
@@ -248,7 +250,7 @@ function setSaveItem(key: string, file: SaveFile): { stored: boolean; withJourna
   if (!file.state.journal || file.state.journal.length === 0) return { stored: false, withJournal: false };
   try {
     const { journal: _dropped, ...state } = file.state;
-    localStorage.setItem(key, JSON.stringify({ ...file, state }));
+    localStorage.setItem(key, packSave(JSON.stringify({ ...file, state })));
     return { stored: true, withJournal: false };
   } catch {
     return { stored: false, withJournal: false };
@@ -320,7 +322,7 @@ export function readSave(kind: GameKind, slot: SaveSlot = "auto"): SaveFile | nu
   try {
     const raw = localStorage.getItem(KEYS[kind][slot]);
     if (!raw) return null;
-    const file = JSON.parse(raw) as SaveFile;
+    const file = JSON.parse(unpackSave(raw)) as SaveFile;
     // a world slot never offers a campaign save and the other way round (see `splitLegacySaves`)
     return file.version === 1 && !!file.state?.campaign === (kind === "campaign") ? file : null;
   } catch {
@@ -338,7 +340,7 @@ export function splitLegacySaves(): void {
   try {
     for (const slot of SAVE_SLOTS) {
       const raw = localStorage.getItem(KEYS.world[slot]);
-      if (!raw || !(JSON.parse(raw) as SaveFile).state?.campaign || localStorage.getItem(KEYS.campaign[slot]) !== null) continue;
+      if (!raw || !(JSON.parse(unpackSave(raw)) as SaveFile).state?.campaign || localStorage.getItem(KEYS.campaign[slot]) !== null) continue;
       localStorage.setItem(KEYS.campaign[slot], raw);
       localStorage.removeItem(KEYS.world[slot]);
     }
@@ -374,13 +376,45 @@ export const cleanSaveName = (name: string): string => name.replace(/\s+/g, " ")
 const sameName = (a: string, b: string) => a.toLocaleLowerCase() === b.toLocaleLowerCase();
 
 function readIndex(): NamedSave[] {
+  let listed: NamedSave[] = [];
   try {
     const raw = localStorage.getItem(NAMED_INDEX);
     const list: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(list) ? (list as NamedSave[]).filter((e) => typeof e?.id === "string" && typeof e.name === "string") : [];
+    listed = Array.isArray(list) ? (list as NamedSave[]).filter((e) => typeof e?.id === "string" && typeof e.name === "string") : [];
   } catch {
-    return [];
+    listed = [];
   }
+  return [...listed, ...unlistedSaves(new Set(listed.map((e) => e.id)))];
+}
+
+/**
+ * Saves that sit in the browser but are not in the index (57th playtest, point 7: a save was written, then the browser had no room for the index entry, and the save was never
+ * listed). They are offered under a name made of the time they were saved, and go into the index with the next save.
+ */
+const recoveredSaves = new Map<string, NamedSave>();
+function unlistedSaves(known: ReadonlySet<string>): NamedSave[] {
+  const out: NamedSave[] = [];
+  try {
+    const prefix = namedKey("");
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(prefix)) continue;
+      const id = key.slice(prefix.length);
+      if (known.has(id)) continue;
+      let entry = recoveredSaves.get(id);
+      if (!entry) {
+        const file = readNamedSave(id);
+        if (!file || !isSaveFile(file)) continue;
+        const kind: GameKind = file.state.campaign ? "campaign" : "world";
+        entry = { id, name: cleanSaveName(`Recovered ${file.savedAt.slice(0, 16).replace("T", " ")}`), kind, note: describeSave(file), savedAt: file.savedAt };
+        recoveredSaves.set(id, entry);
+      }
+      out.push(entry);
+    }
+  } catch {
+    // storage unavailable: nothing to recover
+  }
+  return out;
 }
 
 /** The named saves of a kind of game (all kinds without one), the newest first. */
@@ -397,17 +431,29 @@ export function storeNamedSave(file: SaveFile, name: string): boolean {
   const clean = cleanSaveName(name);
   if (clean === "") return false;
   const kind: GameKind = file.state.campaign ? "campaign" : "world";
+  let id = "";
+  let isNew = false;
   try {
     const index = readIndex();
     const old = index.find((e) => e.kind === kind && sameName(e.name, clean));
-    const id = old?.id ?? `${Date.now().toString(36)}${index.length.toString(36)}`;
+    id = old?.id ?? `${Date.now().toString(36)}${index.length.toString(36)}`;
+    isNew = !old;
     const result = setSaveItem(namedKey(id), file);
     if (!result.stored) return false;
     if (!result.withJournal) journalDropped = true;
     const entry: NamedSave = { id, name: clean, kind, note: describeSave(file), savedAt: file.savedAt };
     localStorage.setItem(NAMED_INDEX, JSON.stringify([...index.filter((e) => e.id !== id), entry]));
+    recoveredSaves.delete(id);
     return true;
   } catch {
+    // the save is in, the index entry did not fit: a new save is taken out again, so that none is left in the browser that no list shows
+    if (isNew && id) {
+      try {
+        localStorage.removeItem(namedKey(id));
+      } catch {
+        // nothing more to do
+      }
+    }
     return false;
   }
 }
@@ -418,7 +464,7 @@ export const writeNamedSave = (state: GameState, name: string): boolean => store
 export function readNamedSave(id: string): SaveFile | null {
   try {
     const raw = localStorage.getItem(namedKey(id));
-    const file = raw ? (JSON.parse(raw) as SaveFile) : null;
+    const file = raw ? (JSON.parse(unpackSave(raw)) as SaveFile) : null;
     return file && file.version === 1 && file.state ? file : null;
   } catch {
     return null;
@@ -428,6 +474,7 @@ export function readNamedSave(id: string): SaveFile | null {
 export function deleteNamedSave(id: string): void {
   try {
     localStorage.removeItem(namedKey(id));
+    recoveredSaves.delete(id);
     localStorage.setItem(NAMED_INDEX, JSON.stringify(readIndex().filter((e) => e.id !== id)));
   } catch {
     // nothing to remove
@@ -448,7 +495,7 @@ export function migrateManualSaves(): void {
     try {
       const raw = localStorage.getItem(LEGACY_MANUAL[kind]);
       if (!raw) continue;
-      const file = JSON.parse(raw) as SaveFile;
+      const file = JSON.parse(unpackSave(raw)) as SaveFile;
       // a campaign save may sit in the world's key (see `splitLegacySaves`): the save itself says what it is
       if (isSaveFile(file)) {
         const own: GameKind = file.state.campaign ? "campaign" : "world";

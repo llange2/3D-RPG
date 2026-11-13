@@ -8,6 +8,7 @@ import { applyHit } from "../../src/sim/combat";
 import { thieverySkill, createCharacter, levelUp } from "../../src/sim/character";
 import { JOURNAL_LIMIT, rollChance, setJournalSink, thieverySummary, pushJournal, type JournalEntry, type JournalEvent, type LockEvent, type TrapEvent } from "../../src/sim/journal";
 import { createDefaultParty } from "../../src/sim/party";
+import { packSave } from "../../src/game/saveCodec";
 import { Rng } from "../../src/core/rng";
 import type { Party } from "../../src/sim/types";
 import { MONSTERS } from "../../src/data/tables";
@@ -243,10 +244,13 @@ describe("balance journal: the journal in the state and the save", () => {
 
     it("saves without the journal when the browser has no room for it, and says so once", () => {
       const state = newGameState("s", { x: 1, y: 1, facing: "N" });
-      const plain = JSON.stringify(toSaveFile(state)).length;
-      for (let i = 0; i < 400; i++) state.journal.push(entry(i));
-      const full = JSON.stringify(toSaveFile(state)).length;
-      expect(full).toBeGreaterThan(plain * 2);
+      // (saves are stored packed since the 57th playtest: the room is measured in packed characters)
+      const plain = packSave(JSON.stringify(toSaveFile(state))).length;
+      // (entries that do not pack away to nothing: a name of noise)
+      const noise = new Rng(seedFromString("journal-noise"));
+      for (let i = 0; i < 400; i++) state.journal.push({ ...entry(i), name: Array.from({ length: 24 }, () => String.fromCharCode(48 + noise.int(70))).join("") } as JournalEntry);
+      const full = packSave(JSON.stringify(toSaveFile(state))).length;
+      expect(full).toBeGreaterThan(plain + 400);
       limit = plain + 200;
       expect(writeSave(state, "auto")).toBe(true);
       const saved = readSave("world", "auto");

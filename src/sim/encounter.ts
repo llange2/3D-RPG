@@ -501,7 +501,7 @@ function fleeFromWater(view: GridView, enc: Encounter, px: number, py: number, r
  * All monsters near the player act: first everybody moves one step along its path, then everybody attacks
  * (melee when adjacent, ranged when it has a ranged attack and a clear line). Port of monster_action.
  */
-export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, radius = MONSTER_ACTION_RADIUS): CombatEvent[] {
+export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, radius = MONSTER_ACTION_RADIUS, peaceful = false): CombatEvent[] {
   const events: CombatEvent[] = [];
   const occupied = (x: number, y: number) => enc.monsters.some((m) => m.hp > 0 && m.x === x && m.y === y);
 
@@ -534,6 +534,9 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
 
   // 1b. a party that attacks from the water (or a water monster attacked from land): the wounded monsters without a way to it back off
   events.push(...fleeFromWater(view, enc, px, py, radius));
+
+  // 57th playtest, point 3: the monsters round a Super Shelter come up to the party but do not strike, and no turn of a spell effect runs out
+  if (peaceful) return events;
 
   // 2. attacks
   for (const s of scan(view, enc, px, py, radius)) {

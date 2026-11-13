@@ -972,6 +972,25 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
           effects.push({ type: "text", text: `A great wisdom flows through the party: ${thousands(amount)} experience points for everyone who can still stand.` });
           break;
         }
+        case "floor": {
+          // the glowing crystal of a level 5 end room (document 1.8): a random resistance of the hero with the least of it (base value, no gear) is brought up to `amount`; the hero is chosen
+          // by the game. When every hero has that much already, nothing happens.
+          const element = ELEMENTS[rng.int(ELEMENTS.length)]!;
+          const field = RESISTANCE_FIELD[element];
+          const active = activeCharacters(party);
+          const least = Math.min(...active.map((i) => party.characters[i]![field]));
+          const weakest = active.filter((i) => party.characters[i]![field] === least);
+          const who = weakest[rng.int(weakest.length)]!;
+          const c = party.characters[who]!;
+          if (c[field] >= amount) {
+            effects.push({ type: "text", text: "The glowing crystal does not seem to have an effect on you." });
+            break;
+          }
+          const gained = amount - c[field];
+          c[field] = amount;
+          effects.push({ type: "text", text: `${c.name} touches the glowing crystal and feels protected: ${element} resistance +${gained}% (now ${amount}%).` }, { type: "resistance", character: who, element, amount: gained });
+          break;
+        }
         case "attribute": {
           const attribute = ATTRS[rng.int(ATTRS.length)]!;
           const who = attributeRecipient(party, attribute, rng)!;

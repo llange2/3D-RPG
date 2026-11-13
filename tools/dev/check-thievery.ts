@@ -9,6 +9,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
+import { unpackSave } from "../../src/game/saveCodec";
 
 const outDir = process.argv[2];
 if (!outDir) throw new Error("usage: tsx tools/dev/check-thievery.ts <outDir> [url]");
@@ -105,7 +106,7 @@ try {
   notes.push(`journal entries in the state: ${inSave}`);
   await page.evaluate(`__game.game.save("quick")`);
   const rawSave = (await page.evaluate(`localStorage.getItem("mm3-seed-rpg:quicksave:v1")`)) as string;
-  writeFileSync(join(outDir, "saves.json"), JSON.stringify({ format: "mm3-saves", exportedAt: new Date().toISOString(), saves: [{ kind: "world", slot: "quick", save: JSON.parse(rawSave) }], named: [] }));
+  writeFileSync(join(outDir, "saves.json"), JSON.stringify({ format: "mm3-saves", exportedAt: new Date().toISOString(), saves: [{ kind: "world", slot: "quick", save: JSON.parse(unpackSave(rawSave)) }], named: [] }));
   notes.push(`traps set off by a failed attempt: ${fumbles} of ${attempts - picked} failures (aim: one in five)`);
 } finally {
   await browser.close();

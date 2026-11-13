@@ -139,7 +139,8 @@ describe("the end room", () => {
     // an object of its own for every orb (31st playtest, point 11): seven chests with one orb each, and the cell is free again once the orb is taken
     expect(quest.map((c) => c.params.quest).sort()).toEqual(["quest_green_keycard", "quest_key_blue", ...Array<string>(7).fill("quest_orb")]);
     expect(quest.every((c) => c.params.count === undefined)).toBe(true);
-    expect(chests.length).toBeGreaterThanOrEqual(quest.length + 2);
+    // (a reward is a chest, a chalice or a crystal since document 1.8)
+    expect(chests.length + of(content, "chalice").filter(inEnd).length + of(content, "shrine").filter(inEnd).length).toBeGreaterThanOrEqual(quest.length + 2);
     // take them: the party carries 7 orbs afterwards
     for (const c of quest) expect(use(c).consumed).toBe(true);
     const carried = party.characters.flatMap((c) => Object.values(c.inventory)).filter((i) => i && i.type === "quest_orb");
@@ -151,7 +152,7 @@ describe("the end room", () => {
   it("pays the rewards of its level: gold, attribute points, treasure, spells and levels", () => {
     const seen = new Set<string>();
     for (let variant = 0; variant < 60 && seen.size < 4; variant++) {
-      const tier = 1 + (variant % 4);
+      const tier = 1 + (variant % 5);
       const { content, ref } = questInterior("quest_5", "dungeon_4", tier, variant);
       const { party, use } = play(content);
       const end = ref.endRoom!;
@@ -170,11 +171,11 @@ describe("the end room", () => {
         const item = Number(c.params.item ?? c.params.chest);
         if (tier <= 3) expect([37, 88, 5, 117], `level ${tier} holds attribute points in a chalice`).toContain(item);
         else expect(item).toBe(86);
-        const before = party.characters.map((h) => ({ level: h.level, sum: h.str + h.int + h.per + h.end + h.spd + h.acc + h.lck }));
+        const before = party.characters.map((h) => ({ level: h.level, xp: h.xp, sum: h.str + h.int + h.per + h.end + h.spd + h.acc + h.lck + h.resFire + h.resIce + h.resAcid + h.resMagic }));
         const out = use(c, undefined, 2);
         expect(out.consumed).toBe(true);
         party.characters.forEach((h, i) => {
-          const changed = h.level > before[i]!.level || h.str + h.int + h.per + h.end + h.spd + h.acc + h.lck > before[i]!.sum;
+          const changed = h.level > before[i]!.level || h.xp > before[i]!.xp || h.str + h.int + h.per + h.end + h.spd + h.acc + h.lck + h.resFire + h.resIce + h.resAcid + h.resMagic > before[i]!.sum;
           expect(changed, `hero ${i} after ${String(c.params.bonus)}`).toBe(i === 2);
         });
         seen.add(c.params.bonus === "level" ? "levels" : "attributes");
