@@ -9,6 +9,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
+import { unpackSave } from "../../src/game/saveCodec";
 
 const outDir = process.argv[2];
 if (!outDir) throw new Error("usage: tsx tools/dev/check-journal.ts <outDir> [url]");
@@ -77,11 +78,11 @@ try {
   await page.evaluate(`__game.game.save("quick")`);
   const raw = (await page.evaluate(`localStorage.getItem("mm3-seed-rpg:quicksave:v1")`)) as string | null;
   if (!raw) throw new Error("no quick save in the storage");
-  const save = JSON.parse(raw) as { state: { journal?: { t: string; s: number; m: number; at: string }[] } };
+  const save = JSON.parse(unpackSave(raw)) as { state: { journal?: { t: string; s: number; m: number; at: string }[] } };
   const saved = save.state.journal ?? [];
   notes.push(`quick save: ${raw.length} bytes, journal ${saved.length} entries (${JSON.stringify(saved).length} bytes), first stamp ${JSON.stringify(saved[0] ? { s: saved[0].s, m: saved[0].m, at: saved[0].at } : null)}`);
   if (saved.length === 0) problems.push("the save has no journal");
-  writeFileSync(join(outDir, "saves.json"), JSON.stringify({ format: "mm3-saves", exportedAt: new Date().toISOString(), saves: [{ kind: "world", slot: "quick", save: JSON.parse(raw) }], named: [] }));
+  writeFileSync(join(outDir, "saves.json"), JSON.stringify({ format: "mm3-saves", exportedAt: new Date().toISOString(), saves: [{ kind: "world", slot: "quick", save: JSON.parse(unpackSave(raw)) }], named: [] }));
   const fight = saved.find((e) => e.t === "fight");
   if (fight) notes.push(`first fight: ${JSON.stringify(fight)}`);
 } finally {

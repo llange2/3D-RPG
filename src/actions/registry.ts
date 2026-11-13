@@ -88,7 +88,7 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     trigger: "interact",
     persistence: "once",
     minimap: "tex_mm_persona",
-    params: loose({ effect: z.enum(["resist", "attribute", "heal", "xp", "hurt"]), amount: z.number().int() }),
+    params: loose({ effect: z.enum(["resist", "attribute", "heal", "xp", "hurt", "floor"]), amount: z.number().int() }),
   },
   fountain: {
     kind: "fountain",

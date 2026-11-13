@@ -30,7 +30,8 @@ export function questIssues(map: InteriorMap, content: MapContent): string[] {
   if (items.slice().sort().join() !== expected.slice().sort().join()) issues.push(`${key}: the end room holds [${items.join(", ")}], the plan says [${expected.join(", ")}]`);
   if (end.isolated && !of("qportal").some(inEnd)) issues.push(`${key}: the end room is a pocket and has no portal back`);
   if (!end.isolated && !end.seal) issues.push(`${key}: the end room has neither a seal nor is it a pocket`);
-  if (of("treasure").filter(inEnd).length < 1 + expected.length) issues.push(`${key}: the end room holds no reward besides the quest items`);
+  // (a reward is a chest, a chalice or a crystal: since document 1.8 the pick of a level 5 room may be a chalice and a crystal only)
+  if ([...of("treasure"), ...of("chalice"), ...of("shrine")].filter(inEnd).length < 1 + expected.length) issues.push(`${key}: the end room holds no reward besides the quest items`);
   for (const a of content.actions) if (!inEnd(a) && a.kind === "treasure" && typeof a.params.quest === "string") issues.push(`${a.uid}: a quest item outside the end room`);
 
   switch (ref.quest) {

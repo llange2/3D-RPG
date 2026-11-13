@@ -159,7 +159,8 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
 
   // 2. the keys: the dungeons of level 3 to 5 are locked as far as the nine keys go, each key lies in the end room of a level 1 or 2 place
   const keyHolders = ordinary.filter((p) => p.tier <= 2);
-  const lockable = rng.shuffle(dungeons.filter((p) => p.tier >= 3));
+  // (quest document 1.8: key cards lie only in dungeons that ask for a key, so the deepest dungeons are locked first: the level 4 and 5 ones, then level 3)
+  const lockable = rng.shuffle(dungeons.filter((p) => p.tier >= 3)).sort((a, b) => Number(b.tier >= 4) - Number(a.tier >= 4));
   const keyCount = Math.min(KEY_COLORS.length, lockable.length, keyHolders.length * perRoom);
   const colours = rng.shuffle([...KEY_COLORS]);
   const requires = new Map<string, string>();
@@ -183,7 +184,11 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
 
   // 3. the key cards: one for each pyramid, in the end room of a level 4 or 5 dungeon
   // a small world may have fewer such dungeons than pyramids: then a room holds more cards than keys (three at most), so that every pyramid has its card
-  const cardHolders = dungeons.filter((p) => p.tier >= 4).length > 0 ? dungeons.filter((p) => p.tier >= 4) : dungeons;
+  // the golden rule of document 1.8: only a dungeon that asks for a key may hold a card (the level 4 and 5 ones first, else any locked one; a world with no lock keeps the old pick)
+  const locked = dungeons.filter((p) => requires.has(p.id));
+  const lockedDeep = locked.filter((p) => p.tier >= 4);
+  const deep = dungeons.filter((p) => p.tier >= 4);
+  const cardHolders = lockedDeep.length > 0 ? lockedDeep : locked.length > 0 ? locked : deep.length > 0 ? deep : dungeons;
   const cardsPerRoom = Math.min(3, Math.max(perRoom, Math.ceil(pyramids.length / Math.max(1, cardHolders.length))));
   const cardCount = Math.min(CARD_COLORS.length, pyramids.length, cardHolders.length * cardsPerRoom);
   const sectionOf = new Map<string, number>();
@@ -342,7 +347,7 @@ export interface ChainPlace {
 
 /**
  * Checks the rules of the chain for the places of a world. Returns the problems found; empty means it holds: every key or key card a place asks
- * for lies in exactly one place and opens only one, keys lie in level 1 or 2 places, key cards in level 4 or 5 dungeons, and a free place asks for nothing.
+ * for lies in exactly one place and opens only one, keys lie in level 1 or 2 places, key cards in dungeons that ask for a key (the level 4 and 5 ones first), and a free place asks for nothing.
  */
 export function checkKeyChain(places: readonly ChainPlace[], tierOf: (id: string) => number): string[] {
   const issues: string[] = [];
@@ -355,7 +360,8 @@ export function checkKeyChain(places: readonly ChainPlace[], tierOf: (id: string
     for (const g of p.ref.gives) {
       add(holders, g, p.id);
       if (isKey(g) && tierOf(p.id) > 2) issues.push(`${p.id}: holds the key ${g} but is level ${tierOf(p.id)}`);
-      if (isCard(g) && (tierOf(p.id) < 4 || p.ref.layout.startsWith("cave"))) issues.push(`${p.id}: holds the key card ${g} but is no level 4 or 5 dungeon`);
+      // the golden rule of quest document 1.8: a key card lies only in a dungeon that asks for a key (level 3 to 5, never a cave)
+      if (isCard(g) && (p.ref.klass !== "B" || p.ref.layout.startsWith("cave"))) issues.push(`${p.id}: holds the key card ${g} but is no dungeon that asks for a key`);
     }
     if (p.ref.requires) add(openers, p.ref.requires, p.id);
     if (p.ref.klass === "A" && p.ref.requires) issues.push(`${p.id}: a free place asks for ${p.ref.requires}`);

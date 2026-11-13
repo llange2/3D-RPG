@@ -19,7 +19,12 @@ type Params = Record<string, ParamValue>;
  * A reward is a chest, or a few chalices (object 86): a level or points of one attribute lie in a chalice, the party is asked who drinks it, and only
  * that hero gets the bonus.
  */
-type Reward = { name: string; kind: "treasure" | "chalice"; parts: Params[] };
+type Reward = { name: string; kind: "treasure" | "chalice" | "shrine"; parts: Params[] };
+
+/** The crystal (item 117) of the level 5 reward that lifts a resistance (`shrine`, effect `floor`). */
+const CRYSTAL = 117;
+/** The resistances a package of points may be (`ELEMENTS` of the handlers, as the words the chalice uses). */
+const ELEMENTS_OF_POINTS = ["fire", "ice", "acid", "magic"] as const;
 
 /** The objects that hold attribute points on levels 1 to 3 (the chalice is for levels 4 and 5): the magic wells, the barrel and the crystals. */
 const BARREL = 5;
@@ -30,24 +35,27 @@ const CHALICE_FROM_LEVEL = 4;
 function rewardsOf(level: number, rng: Rng, fits: (item: number) => boolean): Reward[] {
   const t = END_LOOT[Math.min(5, Math.max(1, level))]!;
   const lv = Math.min(8, level);
-  const out: Reward[] = [{ name: "gold", kind: "treasure", parts: [{ level: lv, gold: rng.range(t.gold[0], t.gold[1]), items: 0 }] }];
-  if (t.attributes) {
-    const packages = rng.range(t.attributes.packages[0], t.attributes.packages[1]);
-    const parts: Params[] = [];
-    // a level 1 to 3 package lies in a well, a barrel or crystals that the place and its inhabitants allow (`FORBIDDEN_PROPS`: no barrel for a mage, no crystals
-    // for fire folk); the chalice only from level 4 on
+  const raw = rng.range(t.gold[0], t.gold[1]);
+  const gold = t.goldStep ? Math.max(t.goldStep, Math.round(raw / t.goldStep) * t.goldStep) : raw;
+  const out: Reward[] = [{ name: "gold", kind: "treasure", parts: [{ level: lv, gold, items: 0 }] }];
+  if (t.points) {
+    // one package: points of a random attribute or of a random resistance, by chance (document 1.8: "15 Attributspunkte, bzw. 7 Resistenzpunkte"); a level 1 to 3 package lies in a well, a
+    // barrel or crystals that the place and its inhabitants allow (`FORBIDDEN_PROPS`: no barrel for a mage, no crystals for fire folk); the chalice only from level 4 on
     const vessels = ATTRIBUTE_VESSELS.filter(fits);
-    for (let i = 0; i < packages; i++) {
-      const item = level >= CHALICE_FROM_LEVEL || vessels.length === 0 ? 86 : vessels[rng.int(vessels.length)]!;
-      parts.push({ item, bonus: "attr", attr: ATTRS[rng.int(ATTRS.length)]!, amount: t.attributes.package });
-    }
-    out.push({ name: "attributes", kind: "chalice", parts });
+    const item = level >= CHALICE_FROM_LEVEL || vessels.length === 0 ? 86 : vessels[rng.int(vessels.length)]!;
+    const resistance = t.points.resistance > 0 && rng.int(2) === 0;
+    out.push({
+      name: "points",
+      kind: "chalice",
+      parts: [resistance ? { item, bonus: "res", element: ELEMENTS_OF_POINTS[rng.int(ELEMENTS_OF_POINTS.length)]!, amount: t.points.resistance } : { item, bonus: "attr", attr: ATTRS[rng.int(ATTRS.length)]!, amount: t.points.attributes }],
+    });
   }
-  if (t.levelUps) {
-    const ups = rng.range(t.levelUps[0], t.levelUps[1]);
-    out.push({ name: "levels", kind: "chalice", parts: Array.from({ length: ups }, () => ({ item: 86, bonus: "level", amount: 1 })) });
-  }
-  out.push({ name: "treasure", kind: "treasure", parts: [{ level: lv, gold: 0, items: rng.range(t.treasure[0], t.treasure[1]) }] });
+  if (t.levelUps) out.push({ name: "levels", kind: "chalice", parts: [{ item: 86, bonus: "level", amount: t.levelUps }] });
+  if (t.xp) out.push({ name: "xp", kind: "chalice", parts: [{ item: 86, bonus: "xp", amount: t.xp[rng.int(t.xp.length)]! }] });
+  // the crystal: no hero is asked, the weakest one gets it (a place that forbids crystals has none)
+  if (t.crystal && fits(CRYSTAL)) out.push({ name: "crystal", kind: "shrine", parts: [{ item: CRYSTAL, effect: "floor", amount: t.crystal }] });
+  // the treasure is one level above the place (document 1.8)
+  if (t.treasure) out.push({ name: "treasure", kind: "treasure", parts: [{ level: Math.min(8, level + 1), gold: 0, items: rng.range(t.treasure[0], t.treasure[1]) }] });
   return out;
 }
 
@@ -105,7 +113,7 @@ export function fillEndRoom(env: QuestEnv): void {
       return ([[0, 1], [1, 0], [0, -1], [-1, 0]] as const).some(([dx, dy]) => seen.has(key(bx + dx, by + dy)));
     });
   };
-  const put = (name: string, params: Params, kind: "treasure" | "chalice" = "treasure"): ActionInstance | null => {
+  const put = (name: string, params: Params, kind: "treasure" | "chalice" | "shrine" = "treasure"): ActionInstance | null => {
     const at = cells.findIndex(keeps);
     if (at < 0) return null;
     const cell = cells.splice(at, 1)[0]!;
@@ -145,8 +153,11 @@ export function fillEndRoom(env: QuestEnv): void {
   for (const reward of pool.slice(0, wanted)) {
     for (const part of reward.parts) {
       // a barrel is a container wherever it stands (`treasure` with chest 5): the points in it are drunk like those of a chalice (`resolveAction`)
-      if (part.item === BARREL) put(reward.name, { level: 1, gold: 0, items: 0, chest: BARREL, bonus: part.bonus!, attr: part.attr!, amount: part.amount! }, "treasure");
-      else if (reward.kind === "chalice") put(reward.name, part, "chalice");
+      if (part.item === BARREL) {
+        const { item: _barrel, ...gift } = part;
+        put(reward.name, { level: 1, gold: 0, items: 0, chest: BARREL, ...gift }, "treasure");
+      }
+      else if (reward.kind === "chalice" || reward.kind === "shrine") put(reward.name, part, reward.kind);
       else put(reward.name, { ...part, chest: env.theme.chest });
     }
   }

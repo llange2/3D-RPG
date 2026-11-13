@@ -804,7 +804,10 @@ export class Game {
       }
     }
     const loc = at.mode === "overworld" ? at : { x: this.world.startPosition().x, y: this.world.startPosition().y, facing: "N" as Facing };
-    const free = isTileWalkable(this.world.tile(loc.x, loc.y)) ? loc : { ...loc, ...this.nearestWalkableTile(loc.x, loc.y) };
+    // 57th playtest, point 8: a party saved on deep water (the Seafarer, Walk on Water) stands there again; only a tile it cannot stand on any more (a place was built over it) is moved
+    const here = this.world.tile(loc.x, loc.y);
+    const onSea = here.deco === 0 && here.ground === GROUND.WATER && canSail(this.state.party);
+    const free = isTileWalkable(here) || onSea ? loc : { ...loc, ...this.nearestWalkableTile(loc.x, loc.y) };
     await this.enterOverworld(free.x, free.y, loc.facing);
   }
 
@@ -4046,8 +4049,10 @@ export class Game {
       .filter((k) => k.startsWith(PORTAL_KEY) && k !== exclude)
       .map((k) => this.world.poiById(k.slice(PORTAL_KEY.length)))
       // the level of the town and, in the one town that has him, the quartermaster: "Loomhaven (L3, Quartermaster)", "Roomhaven (L3)"
-      .flatMap((p) => (p ? [{ label: `${p.name} (L${p.tier}${hasQuartermaster(this.world, p) ? ", Quartermaster" : ""})`, value: p.id }] : []))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .flatMap((p) => (p ? [{ label: `${p.name} (L${p.tier}${hasQuartermaster(this.world, p) ? ", Quartermaster" : ""})`, value: p.id, tier: p.tier }] : []))
+      // the highest level first (57th playtest, point 1), the towns of one level by name
+      .sort((a, b) => b.tier - a.tier || a.label.localeCompare(b.label))
+      .map(({ label, value }) => ({ label, value }));
   }
 
   /** Asks which town and goes there; the party appears next to that town's portal. */
@@ -4149,7 +4154,29 @@ export class Game {
         else this.ui.log(`${caster.name} turns to mist, and the party slips through.`, "good");
         return false;
       case 52: {
-        // Super Shelter: the same as resting with no monster about
+        // Super Shelter: the party rests as in camp, but the shelter holds: the monsters of the camp radius gather round it without a blow (57th playtest, point 3),
+        // and the party wakes with the first action (no monster's turn follows, `worldSpell` returns false)
+        if (party.food <= 0) {
+          this.ui.log("No food available. The party cannot rest!", "bad");
+          return false;
+        }
+        this.busy = true;
+        try {
+          const hunters = monstersReaching(this.gridView(), this.enc, tx, ty, CAMP_RADIUS);
+          if (hunters.length > 0) {
+            this.ui.log("Monsters gather round the shelter, but cannot get in.", "info");
+            for (let turn = 0; turn < CAMP_TURNS; turn++) {
+              const moved = monsterTurn(party, this.gridView(), this.enc, tx, ty, this.combatRng(), CAMP_RADIUS, true);
+              this.handleEvents(moved);
+              updateBattleMode(this.enc, tx, ty, this.gridView());
+              this.refresh();
+              if (!moved.some((e) => e.type === "monster_move")) break;
+              await new Promise((r) => setTimeout(r, 220));
+            }
+          }
+        } finally {
+          this.busy = false;
+        }
         const r = rest(party);
         if (!r.ok) {
           this.ui.log("No food available. The party cannot rest!", "bad");
@@ -5219,8 +5246,10 @@ export class Game {
       if (this.saveNamed(name)) {
         this.save("auto");
         this.ui.toast(`Game saved: ${name}`);
+        return true;
       }
-      return true;
+      // 57th playtest, point 7: a save that did not go in must not look like one that did (the line in the log was easy to miss): say so, and stay in the list
+      await this.ui.message("The game could not be saved: the storage of the browser is full. Delete a save you no longer need (Esc > Load game > Delete a save) and try again.", "Save game");
     }
   }
 

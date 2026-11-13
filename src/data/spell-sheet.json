@@ -190,7 +190,7 @@
  },
  "28": {
   "name": "Power Cure",
-  "description": "Heals one character for 2-12 hit points per caster level. Costs 2.5 mana per caster level (rounded up).",
+  "description": "Heals one character for 2-12 hit points per caster level. Costs 2 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
   "status": "done"

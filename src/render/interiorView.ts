@@ -62,6 +62,8 @@ const TILE_OVERLAP = 1.004;
  * Cut to the cell plus twice the bend (1.03), the flat tops of neighbours meet and nothing of the groove is left.
  */
 const TILE_OVERLAP_BY_MODEL: Readonly<Record<string, number>> = { gndx_dirt: 1.05 };
+/** The dirt tile (the floor of the caves): it lies turned in steps of 90 degrees (`pushFloor`). */
+const DIRT_TILE = "gndx_dirt";
 /**
  * Floor models whose relief the flat quad below would cut through (56th playtest, point 7): the level of the bottom of their body in model units. Set by the face alone, half of
  * the castle floor's stones lay under the quad, and the flat floor showed through them. These tiles lie with their body bottom `TILE_BASE_LIFT` above the quad, and everything that stands on
@@ -475,7 +477,11 @@ export class InteriorView {
       }
       const fit = this.tileFit(model);
       // the face of the tile (not the tip of its highest engraving) lies a hair above the flat quad: set by the tips, the face lay under the quad and only the engravings showed
-      if (fit) list.push({ model, x: cellCenterX(x), y: this.tileOrigin(model, fit, (x + y) & 1), z: cellCenterZ(y), rotY: 0, scale: fit.scale[0], scaleXYZ: fit.scale, atOrigin: true });
+      if (!fit) continue;
+      // 57th playtest, point 5: the dirt tile of the caves lies turned in steps of 90 degrees, by the cell, so that neighbours do not repeat; a quarter turn swaps the tile's two sides
+      const turns = model === DIRT_TILE ? (hash2(0x3b, x, y) >>> 8) % 4 : 0;
+      const scale: [number, number, number] = turns % 2 === 1 ? [fit.scale[2], fit.scale[1], fit.scale[0]] : fit.scale;
+      list.push({ model, x: cellCenterX(x), y: this.tileOrigin(model, fit, (x + y) & 1), z: cellCenterZ(y), rotY: (turns * Math.PI) / 2, scale: scale[0], scaleXYZ: scale, atOrigin: true });
     }
     this.props.setInstances(owner, list);
     this.props.flush();

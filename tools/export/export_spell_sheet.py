@@ -57,6 +57,9 @@ DESCRIPTION_REPLACEMENTS = {
     23: [('Reduces "Diseased" status on one character to minimum.', "Doubles the time left until one character dies of disease. Holds until the character is cured.")],  # Suppress Disease
 }
 
+# Mana the user changed after the sheet (57th playtest, point 2): Power Cure costs 2 SP per level (mana 4 at the rate of 0.5); `MANA_OVERRIDES` in data/tables.ts is the same table.
+MANA_OVERRIDES = {28: 4}
+
 # Names the user corrected: spell id -> name.
 NAME_REPLACEMENTS = {24: "Wizard's Eye"}
 
@@ -84,7 +87,7 @@ def export_spells() -> int:
         scales = bool(d.get("Scales with level"))
         if scales:
             # the cost per caster level is half the sheet's number since the 54th playtest (`SCALING_COST_SHARE` in sim/spells.ts), rounded up per cast
-            per_level = int(d["Mana"]) / 2
+            per_level = MANA_OVERRIDES.get(spell_id, int(d["Mana"])) / 2
             shown = str(int(per_level)) if per_level == int(per_level) else str(per_level)
             description = f"{description} Costs {shown} mana per caster level (rounded up)."
         out[str(spell_id)] = {
