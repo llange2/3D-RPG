@@ -105,7 +105,7 @@ import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
 import { preloadPortraits } from "../ui/portraitSheets";
 import { cursorStepped, setCursorFade, tooltipBesidePointer } from "../ui/cursor";
-import { h } from "../ui/dom";
+import { assetPath, h } from "../ui/dom";
 import { thousands } from "../core/format";
 import { UI, randomSeed, type HudInfo, type Option } from "../ui/ui";
 import { SUPPORT_BEAM, TRAP_RELOAD_STEPS, TREASURE_HEAP, type ServiceKind } from "../actions/registry";
@@ -2998,8 +2998,8 @@ export class Game {
   }
 
   /**
-   * The end of the game: the party uses the console of the bridge with life support and the engines running and the black key card. The outro of the old game plays if the file
-   * `assets/ui/outro.mp4` is there (it is 88 MB and kept out of git: `public/assets/ui/outro.mp4` is copied in by hand from `old_code/resources/movies/Game Outro.mp4`), then a last message.
+   * The end of the game: the party uses the console of the bridge with life support and the engines running and the black key card. The outro of the old game plays (`public/assets/ui/outro.mp4`,
+   * the old 88 MB movie re-encoded to 13 MB with x264 crf 25, PSNR 44.8 dB; committed, a missing file only skips it), then a last message.
    */
   private async playEnding(): Promise<void> {
     this.player.locked = true;
@@ -3011,7 +3011,7 @@ export class Game {
     document.documentElement.classList.add("ending-on");
     await new Promise<void>((resolve) => {
       const video = document.createElement("video");
-      video.src = "assets/ui/outro.mp4";
+      video.src = assetPath("ui/outro.mp4");
       video.autoplay = true;
       video.controls = false;
       video.style.cssText = "position:fixed;inset:0;width:100%;height:100%;background:#000;z-index:9999;object-fit:contain;cursor:pointer";

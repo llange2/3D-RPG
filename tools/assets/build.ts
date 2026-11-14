@@ -24,6 +24,7 @@ function groupOf(path: string): string {
   if (interior) return `interior:${interior[1] === "cave" ? "cave" : interior[1]}`;
   if (path.startsWith("ui/town/") || path.startsWith("ui/loading") || path === "ui/title.webp" || path === "ui/mm3_009.webp" || path === "ui/tex_main_menu.webp") return "screens";
   if (path.startsWith("models/obj_") || path.startsWith("models/ci_") || path.startsWith("models/proj_") || path.startsWith("models/frame_")) return "objects";
+  if (path === "ui/outro.mp4") return "outro"; // only played at the very end of the game, so it must not count against the core budget
   if (path.startsWith("campaign/")) return "campaign";
   if (path.startsWith("terrain/flat/")) return "terrain-flat"; // the painted ground tiles: the flat mode draws them all, the 3D mode the full tiles under its models
   return "core";
