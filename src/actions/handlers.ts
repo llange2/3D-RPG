@@ -22,6 +22,7 @@ import { answerMatches } from "../data/riddles";
 import { CONSOLE_SEEN_FLAG, CRATE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL } from "../data/quest-table";
 import * as SHIP from "../data/ship-texts";
 import { SUPPORT_BEAM, trapElementOf, type ServiceKind } from "./registry";
+import { coinPoints, scaleAction, type RewardScale } from "./rewardScale";
 
 export type Effect =
   /** `tone`: how the log shows it when the action is no trap itself (the trap of a chest says "bad" for its hit and "good" for a miss). */
@@ -92,6 +93,8 @@ export interface ActionContext {
   usedToday?: boolean;
   /** Where a brittle wall lies from the party's point of view, for its question (the party may stand beside it after a jump, not only before it). */
   wallSide?: WallSide;
+  /** The reward factors of the world (bug_fix_59): the gold of containers and the points of shrines and chalices are multiplied by them. Absent: as the tables say. */
+  scale?: RewardScale;
 }
 
 export type WallSide = "front" | "side" | "behind";
@@ -569,7 +572,9 @@ function shipTerminal(action: ActionInstance, ctx: ActionContext): ActionOutcome
  * Resolves what happens when the party uses an action. The result is a list of effects for the UI layer;
  * this function changes the party (gold, items, damage) but never touches the DOM or the renderer.
  */
-export function resolveAction(action: ActionInstance, ctx: ActionContext): ActionOutcome {
+export function resolveAction(original: ActionInstance, ctx: ActionContext): ActionOutcome {
+  // the rewards of the action at the factors of the world (`rewardScale.ts`)
+  const action = scaleAction(original, ctx.scale);
   const { party } = ctx;
   const rng = actionRng(ctx, action.uid);
   const p = action.params;
@@ -828,8 +833,10 @@ export function resolveAction(action: ActionInstance, ctx: ActionContext): Actio
       const hero = party.characters[ctx.hero];
       if (!hero || !takeOne(party, "quest_quatloo_coin")) return { effects, consumed: false };
       const attribute = p.attr as Attribute;
-      gainAttribute(hero, attribute, 3, party.talents, party.mascot);
-      effects.push({ type: "text", text: `${hero.name} puts the coin into the slot. The statue hums, and ${attribute.toUpperCase()} rises by 3.` }, { type: "attribute", character: ctx.hero, attribute, amount: 3 });
+      // (three points, or what the factor of a small world makes of them: the coins carry what its containers cannot)
+      const points = coinPoints(ctx.scale);
+      gainAttribute(hero, attribute, points, party.talents, party.mascot);
+      effects.push({ type: "text", text: `${hero.name} puts the coin into the slot. The statue hums, and ${attribute.toUpperCase()} rises by ${points}.` }, { type: "attribute", character: ctx.hero, attribute, amount: points });
       return { effects, consumed: false };
     }
 

@@ -77,7 +77,7 @@ export const RULES = {
     xpFlat: 1_024_000,
     xpGrowthAfter: 1.02,
     /** Training costs `10 × level²` per hero. */
-    trainingPerLevelSquared: 10,
+    trainingStep: 100,
   },
   legacy: {
     healthFlat: 0,

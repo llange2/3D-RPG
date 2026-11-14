@@ -1,6 +1,6 @@
 # Formeln des Spiels
 
-Stand: 12. 11. 2026 (Version 1.2, umgesetzt in `bug_fix_56`). Diese Datei sammelt **alle Rechenregeln** des Spiels an einer Stelle: wie Werte entstehen, wie Schaden, Preise, Zeiten und Chancen berechnet werden. Sie beschreibt den Code, sie ersetzt ihn nicht: Bei jeder Änderung an einer Formel gehört die Zeile hier mit hinein (Quelle jeweils in Klammern).
+Stand: 14. 11. 2026 (Version 1.2, umgesetzt in `bug_fix_56`; Nachträge in `bug_fix_59`: Ring-Schadenszuwachs 2.2/2.3/2.4, Training 5.5, Belohnungsfaktoren 7.6). Diese Datei sammelt **alle Rechenregeln** des Spiels an einer Stelle: wie Werte entstehen, wie Schaden, Preise, Zeiten und Chancen berechnet werden. Sie beschreibt den Code, sie ersetzt ihn nicht: Bei jeder Änderung an einer Formel gehört die Zeile hier mit hinein (Quelle jeweils in Klammern).
 
 **Schreibweise:** `⌈x⌉` aufrunden, `⌊x⌋` abrunden, `trunc` Nachkommastellen abschneiden, `round` Rundung auf die nächste ganze Zahl (Pythons `round`: .5 geht zur geraden Nachbarzahl, `pyRound` in `sim/character.ts`), `Stufe` die Stufe des Helden, `Tier` die Stufe (1 bis 5) des Ortes. Alle Kampfzahlen stehen in `RULES.v4` (`sim/balance.ts`); der Zweig `legacy` ist die alte Rechnung und nur noch Rückweg (Abschnitt „Alte Formeln“ am Ende). Zufall kommt immer aus `core/rng.ts`, nie aus `Math.random`.
 
@@ -114,9 +114,10 @@ Gesamt  = ⌈Waffe + Basis × Stufe / 3⌉ + Rage
          − Rüstung des Monsters
          × (1 − res_physical des Monsters)
 Ergebnis = max(0, trunc(Gesamt))
+         × (1 + Σ dam_pct der getragenen Gegenstände / 100), gerundet     (Schadenszuwachs der Ringe, bug_fix_59)
 ```
 
-`/ 3` ist `meleeLevelDivisor` (legacy: 1, also `Basis × Stufe + Waffe`). Der Nahkampf trifft immer. Ringe mit Schaden zählen über `dam_min/max` mit.
+`/ 3` ist `meleeLevelDivisor` (legacy: 1, also `Basis × Stufe + Waffe`). Der Nahkampf trifft immer. **Schadenszuwachs der Ringe** (`dam_pct`, `damageIncreased` in `sim/combat.ts`, bug_fix_59, Punkt 3): erst wird der Schlag wie oben bis zum Ergebnis ermittelt (Rüstung und Widerstand eingerechnet), danach mit `1 + Σ Prozent / 100` multipliziert und auf eine ganze Zahl gerundet (`round`; 2 % bringen einen Punkt ab einem Schlag von 25, −1 % nimmt einen ab 51). Die Prozente aller getragenen Ringe **addieren** sich (2 % + 2 % = 4 %, nicht 4,04 %). Die Ring-Affixe: +2 % (Präfix Stufe 3, Suffix Stufe 2), +5 % mit −10 Rüstung, −1 % mit +10 Rüstung. Ringe tragen **kein** flaches `dam_min/max` mehr; ein alter Ring aus einem Spielstand behält es (er zählt weiter flach).
 
 ### 2.3 Fernkampfschaden der Helden (`rangedDamage`)
 
@@ -124,16 +125,17 @@ Ergebnis = max(0, trunc(Gesamt))
 Trefferchance = min(1, max(0, GEN / (Tempo_Monster × Abstand × 1)))        legacy: Faktor 0,5 im Nenner
               × 0,5, wenn der Abstand 1 ist (rangedPointBlank)
 Basis   = GEN / 10 + 0,8 × (Klassenwert_Fernkampf + Rassenwert_Fernkampf)  (0,8 = rangedClassShare; legacy 1)
-Waffe   = gleichverteilt zwischen ranged_dam_min + Ring-dam_min und ranged_dam_max + Ring-dam_max
+Waffe   = gleichverteilt zwischen ranged_dam_min + Ring-dam_min und ranged_dam_max + Ring-dam_max   (nur alte Ringe)
 Gesamt  = ⌈Basis × Stufe / 1,5 + Waffe⌉ + Rage                             (1,5 = rangedLevelDivisor; legacy 1)
          × (1 − Abwehrstellung), − trunc(Rüstung des Monsters × 2/3), × (1 − res_physical)        (2/3 = rangedArmorShare; legacy 1/2)
+         × (1 + Σ dam_pct / 100), gerundet                                    (Schadenszuwachs der Ringe, wie beim Nahkampf)
 ```
 
 Jeder Held mit Fernwaffe schießt in der freien Bewegung; Pfeile je Schütze `shots`.
 
 ### 2.4 Durchschnittsschaden im Gegenstands-Tooltip (`averageHit`, `averageDamageLines`)
 
-Dieselbe Formel mit der **Mitte** der Waffe statt des Wurfs, ohne Monster (keine Rüstung, kein Widerstand) und ohne Trefferchance. Die Zeile „Average … damage per hit“ zeigt den Wert **mit** dem Gegenstand; die farbige Zahl in Klammern ist die Änderung gegenüber dem, was der Held jetzt austeilt (grün besser, rot schlechter; bei einem getragenen Gegenstand keine Klammer). Ein Ring von STÄ/GEN wird über `attrChange` im Stufenanteil mitgerechnet.
+Dieselbe Formel (auch der Schadenszuwachs der Ringe, ohne die Rundung) mit der **Mitte** der Waffe statt des Wurfs, ohne Monster (keine Rüstung, kein Widerstand) und ohne Trefferchance. Die Zeile „Average … damage per hit“ zeigt den Wert **mit** dem Gegenstand; die farbige Zahl in Klammern ist die Änderung gegenüber dem, was der Held jetzt austeilt (grün besser, rot schlechter; bei einem getragenen Gegenstand keine Klammer). Ein Ring von STÄ/GEN wird über `attrChange` im Stufenanteil mitgerechnet.
 
 ### 2.5 Monsterschaden gegen Helden (`monsterDamage`)
 
@@ -228,7 +230,7 @@ Erzielt ein Monster keinen Schaden, hat es trotzdem eine 10% Chance die Sonderwi
 
 ### 5.5 Training
 
-- Kosten je Held `round(10 × Stufe² × bargain)` (legacy: 250 × Stufe); „Train all“: niedrigste Stufe zuerst, je Held eine Stufe, hört beim ersten unbezahlbaren auf.
+- Kosten je Held `100 × Stufe × (Stufe + 1)` mit der **aktuellen** Stufe (L1 → L2 = 200, L99 → L100 = 990 000; ein Held von 1 auf 100: 33,33 Mio, vier Helden 133,32 Mio), **ohne Rabatt** (Bargainer und Merchant gelten nicht; bug_fix_59, Punkt 5; `RULES.v4.trainingStep`). Legacy: `round(250 × Stufe × bargain)`; „Train all“: niedrigste Stufe zuerst, je Held eine Stufe, hört beim ersten unbezahlbaren auf.
 
 ### 5.6 Gilde
 
@@ -295,7 +297,21 @@ Es würfelt nur der beste aktive Dieb (höchster Skill). Gelingt `Wurf ≥ Schwi
 - **Schädel** 1 000 Gold und 1 000 XP je Stück (Skull Miser), ab 5 ein Ring der Stufe 2.
 - **Perlen** 50 000 Gold und 100 000 XP je Stück (Piratenkönigin), 20 in der Welt.
 - **Artefakte** (neu im 55. Playtest): 200 000 XP je Stück an jeden Helden, der handeln kann (`ARTIFACT_XP`); je Art (gut, neutral, böse) 5 in der Welt (`ARTIFACTS_PER_KIND`), eines je Ort (auf einer kleinen Welt mit wenigen Dungeons auch zwei, damit die Zahl bleibt), in verschlossenen Kisten von Höhlen und Dungeons ab Stufe 2.
-- **Orbs**: 11 für den König; **Quatloo-Münzen**: 25 in der Welt, eine kauft 3 Punkte eines Attributs.
+- **Orbs**: 11 für den König; **Quatloo-Münzen**: 25 in der Welt, eine kauft 3 Punkte eines Attributs (`COIN_POINTS`; in kleinen Welten mehr, siehe 7.6).
+
+### 7.6 Belohnungsfaktoren der Welt (neu in `bug_fix_59`, `actions/rewardScale.ts`, `actions/rewardMeasure.ts`)
+
+Jede Welt zahlt dieselben Summen wie die Default-Welt, gleich welche Größe und welcher Seed (Entscheidung des Nutzers vom 14. 11. 2026: Gold, XP, Attribute und Resistenzen sind konstant, in kleinen Welten bekommt jede Belohnung mehr, in großen weniger). Beim **Anlegen eines neuen Spiels vom Titel aus** misst `measureWorld` die Welt einmal (alle Orte, wilde Monster, Hütten, jeder Behälter mit dem echten Handler; etwa 2 bis 9 Sekunden hinter dem Ladebild), `rewardScaleOf` rechnet fünf Faktoren aus, `GameState.scale` hält sie im Spielstand (fehlt er: alle 1, ein alter Stand zahlt wie die Tabellen).
+
+```
+gold = (Ziel_Gold − Gold der Quests) / (Gold der Monster + Gold der Behälter, Endräume und Hütten)    Ziel_Gold = 125 000 000
+xp   = (Ziel_XP − XP der Quests)     / (XP der Monster, Hütten, Schreine und Kelche)                  Ziel_XP   = 950 000 000 je Held
+attr = min(4, (Ziel_Attr − Münzpunkte) / Attributpunkte der Behälter)                                  Ziel_Attr = 190 je Held mit den Münzen
+coin = min(4, max(1, (Ziel_Attr − attr × Behälterpunkte) / Münzpunkte))                                (die Münze gibt 3 × coin Punkte, höchstens 12)
+res  = min(4, Ziel_Res / Resistenzpunkte der Behälter)                                                 Ziel_Res  = 295 Punkte (alle vier Elemente) je Held
+```
+
+Angewendet wird zur Spielzeit (kein `GEN_VERSION`, keine Zufallszahl): **Gold** eines Monsters (`Game`, `scaledGold`), einer Truhe, eines Endraums, einer Rätselstatue und einer niedergebrannten Hütte (`scaleAction` am Eingang von `resolveAction`; ab 1 000 Gold auf drei gültige Stellen gerundet, `niceAmount`); **XP** eines Monsters (`Encounter.xpScale`, `monsterXp`), einer Hütte und eines Schreins oder Kelchs; **Punkte** eines Kelchs, Fasses, Schreins (`amount` nach `bonus` bzw. `effect`; Brüche rundet die uid des Gegenstands, mindestens 1). **Nie** skaliert: Gold, XP und Perlen der Quests (Orbs 1 Mio, Schädel, Perlen), der Heilbrunnen, Stufenaufstiege der Kelche und der Kristall `floor`. Tools und Tests, die ein Spiel ohne Titel starten (`?autostart=1`, `newGame(…, scaled = false)`), zahlen nach den Tabellen. Prüfung: `tools/dev/reward-survey.ts` (Spalten `scale`, `paid`), `tests/unit/bugfix59.test.ts`.
 
 ---
 
@@ -304,7 +320,8 @@ Es würfelt nur der beste aktive Dieb (höchster Skill). Gelingt `Wurf ≥ Schwi
 - **Weltgrößen**: klein 100 × 70, normal 200 × 140, groß 300 × 210, riesig 400 × 280 Kacheln; Landanteil 50 / 46 / 43 / 40 %; eine Kachel hinter der Kante ist die gegenüberliegende.
 - **Chunk** 10 × 10 Kacheln. Sichtweite 10 / 18 / 25 Kacheln (nah/mittel/weit).
 - **Monster der Überwelt**: je Insel `max(1, round(Fläche / 90))` wilde Gruppen; Hüttenmonster nach `levelAt` (Stufe der Insel + Weg zur nächsten Stadt); Gruppen über Stufe 1 halten 12 Kacheln Abstand zu Starthaven.
-- **Orte**: eine Stadt/Burg/Höhle/Dungeon je 60 Landkacheln einer Insel (`LAND_PER_PLACE`); Dungeon-Dichte few 0,5 / default 0,75 / maximum 1.
+- **Orte**: eine Stadt/Burg/Höhle/Dungeon je 60 Landkacheln einer Insel (`LAND_PER_PLACE`); Dungeon-Dichte few 0,5 / default 0,75 / maximum 1 (seit bug_fix_59 nicht mehr im Hauptmenü: ein neues Spiel nimmt `default`; die Adresse `?dungeons=` und alte Stände mit `few` oder `maximum` laden ihre Welt weiter).
+- **Stufen der Inseln** (`buildLayout`): Insel 0 Stufe 1 und 2, Insel 1 Stufe 3, die fernere der beiden Hauptinseln Stufe 5, die andere Stufe 4; **jede weitere Insel** nach ihrer Entfernung von Starthaven geordnet, die fernsten Stufe 5, und die Grenze zwischen 4 und 5 liegt dort, wo beide Stufen **etwa gleich viel Land** haben (bug_fix_59, `GEN_VERSION` 67; vorher entschied die Entfernung zur Mitte, das Land der Stufe 5 schwankte von 2263 bis 4670 Kacheln).
 - **Innenräume**: Wandhöhe Dungeon/Cyber 4,5, Festung 4,2, Stadt/Höhle 3. Kein gerader Gang über 8 Zellen. Labyrinth 25 / 33 / 39 / 47 / 55 Zellen für Stufe 1–5.
 - **Burgen**: 17 bis 21 Zellen je Seite; Nebenräume (2×2-Blöcke außerhalb von Tor, Thron und Statuen) bekommen immer ein Banner und einen Gegenstand; unter Stufe 5 mit 50 % hinter einem Gitter.
 - **Quartiermeister** steht in genau einer Stadt der Stufe 3, die Städte der Stufe 2 nennen den Dungeon von Seth Squirm (`townHints`).

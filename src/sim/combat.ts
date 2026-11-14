@@ -38,7 +38,16 @@ export function meleeDamage(c: Character, monster: MonsterDef | null, rng: Rng):
   // BALANCE v4: what the monster's physical resistance (sheet column, 0 to 1) holds back is taken off after the armor
   if (isV4() && monster) total *= 1 - monster.res_physical;
   // a weak hero (Wizard with Strength 7) must never heal the monster, whatever its armor
-  return Math.max(0, Math.trunc(total));
+  return damageIncreased(c, Math.max(0, Math.trunc(total)));
+}
+
+/**
+ * The damage increase of the rings (bug_fix_59, point 3: "+2 %", "-1 %"): the blow or shot is worked out as always, armor and resistance included, and the sum of the percentages of the
+ * worn pieces multiplies the whole number afterwards (rounded to a whole number: 2 % adds a point from a blow of 25 up, and -1 % takes one from a blow of 51 up).
+ */
+export function damageIncreased(c: Character, damage: number): number {
+  const percent = itemBonus(c, "dam_pct");
+  return percent === 0 || damage <= 0 ? damage : Math.max(0, Math.round(damage * (1 + percent / 100)));
 }
 
 /** Damage that rings and affixes add (they carry `dam_min/max` only); the bow has its own `ranged_dam_*`. */
@@ -71,14 +80,14 @@ export function rangedDamage(c: Character, monster: MonsterDef | null, distance:
   if (monster && monster.armor > 0) total -= Math.trunc(monster.armor * rules.rangedArmorShare);
   // BALANCE v4 (ranged): the physical resistance holds the arrow back as it holds the sword back (after the armor, like in `meleeDamage`)
   if (rules.rangedResPhysical && monster) total *= 1 - monster.res_physical;
-  return Math.max(0, Math.trunc(total));
+  return damageIncreased(c, Math.max(0, Math.trunc(total)));
 }
 
 /**
  * The average hit of a hero with a weapon that rolls `min` to `max` (the item tooltips, 53rd playtest point 18): the same formula as `meleeDamage` and `rangedDamage`, with the
  * middle of the weapon's range instead of the roll, and without a monster (no armor, no resistance) and without the chance to hit. The level term is the whole number the hit rounds it up to.
  */
-export function averageHit(c: Character, kind: "melee" | "ranged", min: number, max: number, attrChange: { str?: number; acc?: number } = {}): number {
+export function averageHit(c: Character, kind: "melee" | "ranged", min: number, max: number, attrChange: { str?: number; acc?: number } = {}, percent = itemBonus(c, "dam_pct")): number {
   const lo = Math.min(min, max);
   const hi = Math.max(min, max);
   let weapon = (lo + hi) / 2;
@@ -95,7 +104,8 @@ export function averageHit(c: Character, kind: "melee" | "ranged", min: number, 
   }
   let total = weapon + Math.ceil(levelTerm) + (c.mods?.rage ?? 0);
   if (c.defensiveStance) total *= STANCE();
-  return Math.max(0, total);
+  // the damage increase of the rings multiplies the average as it multiplies every blow (`damageIncreased`, without the rounding)
+  return Math.max(0, total * (1 + percent / 100));
 }
 
 /**
@@ -106,7 +116,9 @@ export function averageDamageLines(c: Character, item: Item, replaced: Item | nu
   const own = (key: BonusKey) => item.bonus[key] ?? 0;
   const delta = (key: BonusKey) => (worn ? 0 : own(key) - (replaced?.bonus[key] ?? 0));
   const ringDelta = (key: "dam_min" | "dam_max") => (worn ? 0 : (item.type === "ring" ? own(key) : 0) - (replaced?.type === "ring" ? replaced.bonus[key] ?? 0 : 0));
-  const hitsMelee = own("dam_min") !== 0 || own("dam_max") !== 0;
+  const hitsMelee = own("dam_min") !== 0 || own("dam_max") !== 0 || own("dam_pct") !== 0;
+  // the damage increase against the one the item replaces (a piece that is worn is in the hero's sum already)
+  const percent = itemBonus(c, "dam_pct") + delta("dam_pct");
   const shoots = own("ranged_dam_min") !== 0 || own("ranged_dam_max") !== 0;
   const hasBow = itemBonus(c, "ranged_dam_max") + delta("ranged_dam_max") > 0;
   const lines: { label: string; value: number; change: number }[] = [];
@@ -120,14 +132,14 @@ export function averageDamageLines(c: Character, item: Item, replaced: Item | nu
   const attrChange = { str: delta("str"), acc: delta("acc") };
   // 55th playtest, point 1: `change` is the difference to what the hero hits for now (green or red in brackets, like the other values); 0 for an item that is worn already
   if (wantsMelee) {
-    const value = round(averageHit(c, "melee", itemBonus(c, "dam_min") + delta("dam_min"), itemBonus(c, "dam_max") + delta("dam_max"), attrChange));
+    const value = round(averageHit(c, "melee", itemBonus(c, "dam_min") + delta("dam_min"), itemBonus(c, "dam_max") + delta("dam_max"), attrChange, percent));
     const now = round(averageHit(c, "melee", itemBonus(c, "dam_min"), itemBonus(c, "dam_max")));
     lines.push({ label: "Average melee damage per hit", value, change: worn ? 0 : round(value - now) });
   }
   if (wantsRanged) {
     const min = itemBonus(c, "ranged_dam_min") + ringDamage(c, "dam_min") + delta("ranged_dam_min") + ringDelta("dam_min");
     const max = itemBonus(c, "ranged_dam_max") + ringDamage(c, "dam_max") + delta("ranged_dam_max") + ringDelta("dam_max");
-    const value = round(averageHit(c, "ranged", min, max, attrChange));
+    const value = round(averageHit(c, "ranged", min, max, attrChange, percent));
     const now = round(averageHit(c, "ranged", itemBonus(c, "ranged_dam_min") + ringDamage(c, "dam_min"), itemBonus(c, "ranged_dam_max") + ringDamage(c, "dam_max")));
     lines.push({ label: "Average ranged damage per hit", value, change: worn ? 0 : round(value - now) });
   }

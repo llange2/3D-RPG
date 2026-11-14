@@ -30,7 +30,8 @@ describe("41st playtest, point 2: the cartographer is always in Starthaven", () 
 describe("41st playtest, point 7: a quest that teleports has a pocket for its end room", () => {
   it("gives the Grotto of Wilana (quest 3, seed cedar-peak-198) an end room the runes can teleport into", () => {
     const world = new World("cedar-peak-198", "default");
-    const poi = world.allPois().find((p) => p.id === "p:0:0:128" /* the Grotto of Wilana before the 51st playtest doubled the names */)!;
+    // (the Grotto of Wilana, p:0:0:128, until bug_fix_59 changed the levels of the islands: the places of quest 3 stand for it now)
+    const poi = world.allPois().find((p) => p.kind !== "town" && planDungeon(world, p)?.quest === "quest_3")!;
     const map = generateInterior(world, poi);
     expect(map.dungeon?.quest).toBe("quest_3");
     expect(map.dungeon?.endRoom?.isolated).toBe(true);
@@ -58,9 +59,9 @@ describe("41st playtest, point 7: a quest that teleports has a pocket for its en
 describe("41st playtest, point 5: a statue never stands in the only way through a corridor", () => {
   it("keeps the riddle statue of the Grotto of Wilana off cell 30/29", () => {
     const world = new World("cedar-peak-198", "default");
-    const poi = world.allPois().find((p) => p.id === "p:0:0:128" /* the Grotto of Wilana before the 51st playtest doubled the names */)!;
-    const content = buildMapContent(world, poi, generateInterior(world, poi));
-    const riddles = content.actions.filter((a) => a.kind === "riddle");
+    // (the Grotto of Wilana, p:0:0:128, until bug_fix_59 changed the levels of the islands: the places of quest 3 stand for it now)
+    const places = world.allPois().filter((p) => p.kind !== "town" && planDungeon(world, p)?.quest === "quest_3");
+    const riddles = places.flatMap((poi) => buildMapContent(world, poi, generateInterior(world, poi)).actions.filter((a) => a.kind === "riddle"));
     expect(riddles.length).toBeGreaterThan(0);
     expect(riddles.some((a) => a.x === 30 && a.y === 29)).toBe(false);
   });

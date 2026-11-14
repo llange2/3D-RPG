@@ -114,7 +114,7 @@ const PREFIXES: Record<number, BonusEntry[]> = {
     [65, "end", 30],
     [66, "spd", 5, "int", 5, "per", 5, "end", 5, "acc", 5, "lck", 5],
     [67, "end", 10, "spd", 10, "acc", 10],
-    [68, "dam_min", 2, "dam_max", 2],
+    [68, "dam_pct", 2],
   ],
 };
 const SUFFIXES: Record<number, BonusEntry[]> = {
@@ -132,7 +132,7 @@ const SUFFIXES: Record<number, BonusEntry[]> = {
     [79, "res_ice", 10],
   ],
   2: [
-    [80, "dam_min", 2, "dam_max", 2],
+    [80, "dam_pct", 2],
     [81, "res_fire", 10, "res_ice", 10, "res_acid", 10, "res_magic", 10],
     [82, "str", 5, "acc", 5],
     [83, "spd", 5, "lck", 5],
@@ -141,10 +141,10 @@ const SUFFIXES: Record<number, BonusEntry[]> = {
   3: [
     [85, "per", 30],
     [86, "int", 30],
-    [87, "arm", 10, "dam_min", -1, "dam_max", -1],
+    [87, "arm", 10, "dam_pct", -1],
     [88, "res_magic", 30, "per", 15],
     [89, "acc", 15, "lck", 15],
-    [90, "dam_min", 5, "dam_max", 5, "arm", -10],
+    [90, "dam_pct", 5, "arm", -10],
   ],
   4: [
     [91, "acc", -10, "int", 50, "end", -10],
@@ -339,11 +339,14 @@ const BONUS_LABELS: [BonusKey, string][] = [
   ["dam_max", "Max. Damage"],
   ["ranged_dam_min", "Min. Ranged Damage"],
   ["ranged_dam_max", "Max. Ranged Damage"],
+  ["dam_pct", "Damage Increase"],
 ];
 
 export interface BonusLine {
   label: string;
   value: number;
+  /** Shown after the value ("%" for the damage increase), empty for a plain number. */
+  unit?: string;
   /** What putting the item on would change compared with `replaced` (negative: worse), or null without a comparison. */
   change: number | null;
 }
@@ -356,7 +359,7 @@ export function bonusLines(item: Item, replaced: Item | null = null): BonusLine[
   const has = (i: Item | null, key: BonusKey) => (i?.bonus[key] ?? 0) !== 0;
   return BONUS_LABELS.filter(([key]) => has(item, key) || has(replaced, key)).map(([key, label]) => {
     const value = item.bonus[key] ?? 0;
-    return { label, value, change: replaced ? value - (replaced.bonus[key] ?? 0) : null };
+    return { label, value, ...(key === "dam_pct" ? { unit: "%" } : {}), change: replaced ? value - (replaced.bonus[key] ?? 0) : null };
   });
 }
 

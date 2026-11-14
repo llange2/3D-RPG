@@ -70,8 +70,10 @@ export interface MonsterInstance {
 }
 
 /** The XP the party gets for this monster. */
-export function monsterXp(m: MonsterInstance, def: MonsterDef): number {
-  return Math.floor((def.xp * (m.xpPercent ?? 100)) / 100);
+export function monsterXp(m: MonsterInstance, def: MonsterDef, factor = 1): number {
+  const xp = Math.floor((def.xp * (m.xpPercent ?? 100)) / 100);
+  // bug_fix_59: the experience factor of the world (`actions/rewardScale.ts`); a monster that gave any gives at least 1
+  return factor === 1 || xp <= 0 ? xp : Math.max(1, Math.floor(xp * factor));
 }
 
 export interface Encounter {
@@ -80,6 +82,8 @@ export interface Encounter {
   /** Character indices in the order they act this round (fastest first). */
   sequence: number[];
   attacker: number | null;
+  /** The experience factor of the world (`RewardScale.xp`, set by the game; absent: 1). */
+  xpScale?: number;
 }
 
 export type CombatEvent =
@@ -626,7 +630,7 @@ function killIfDead(party: Party, enc: Encounter, m: MonsterInstance, rng: Rng, 
   }
   if (m.hp > 0) return;
   enc.monsters = enc.monsters.filter((x) => x.uid !== m.uid);
-  const xp = monsterXp(m, def);
+  const xp = monsterXp(m, def, enc.xpScale);
   addXp(party, xp);
   events.push({ type: "monster_dead", uid: m.uid, defId: m.defId, x: m.x, y: m.y, xp, loot: rollLoot(rng, def) });
 }

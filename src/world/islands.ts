@@ -882,8 +882,30 @@ function makeLayout(seed: SeedState, size: WorldSize): Layout {
   const home = startEnd(placed[0]!, axis);
   const fromStart = (i: number): number => wrapDist2(placed[i]!.x, placed[i]!.y, home.x, home.y, width, height);
   if (fromStart(2) > fromStart(3)) [placed[2], placed[3]] = [placed[3]!, placed[2]!];
-  const middle = (fromStart(2) + fromStart(3)) / 2;
-  const levels: (readonly number[])[] = placed.map((_, i) => (i < 4 ? [[1, 2], [3], [4], [5]][i]! : [fromStart(i) < middle ? 4 : 5]));
+  // bug_fix_59, point 4: the other islands share the levels 4 and 5 so that both have about the same land (a level-5 place is worth six times a level-4 one in XP and gold: by the distance
+  // alone the land of level 5 swung from 2263 to 4670 tiles between seeds, and the gold of a default world from 124 to 169 million). The rule "the stronger, the farther" stays: the islands
+  // are ordered by their distance from the start and the line between level 4 and level 5 is drawn where the land of the two levels is the most alike (the middle between the main islands
+  // was where it fell before).
+  const extras = placed.map((_, i) => i).filter((i) => i >= 4);
+  extras.sort((x, y) => fromStart(y) - fromStart(x) || x - y);
+  const land4 = placed[2]!.built.area;
+  const land5 = placed[3]!.built.area;
+  const total = extras.reduce((sum, i) => sum + placed[i]!.built.area, 0);
+  let bestSplit = 0;
+  let bestGap = Infinity;
+  let far = 0;
+  for (let k = 0; k <= extras.length; k++) {
+    // the k farthest islands are level 5
+    const gap = Math.abs(land5 + far - (land4 + total - far));
+    if (gap < bestGap) {
+      bestGap = gap;
+      bestSplit = k;
+    }
+    if (k < extras.length) far += placed[extras[k]!]!.built.area;
+  }
+  const extraLevel = new Map<number, number>();
+  extras.forEach((i, k) => extraLevel.set(i, k < bestSplit ? 5 : 4));
+  const levels: (readonly number[])[] = placed.map((_, i) => (i < 4 ? [[1, 2], [3], [4], [5]][i]! : [extraLevel.get(i)!]));
   const islands: Island[] = placed.map((p, index) => {
     const tiers = levels[index]!;
     const towns = index < 4 ? townTiers(tiers) : [];

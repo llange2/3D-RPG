@@ -1,6 +1,7 @@
-import { BAG_SLOTS, type Character } from "../sim/types";
+import { BAG_SLOTS, type Character, type Item } from "../sim/types";
 import { clear, h } from "./dom";
 import { itemIcon } from "./itemIcons";
+import { itemTooltip } from "./panels";
 import type { UI } from "./ui";
 
 export interface BackpackChoice {
@@ -29,6 +30,14 @@ export async function pickFromBackpack(ui: UI, hero: Character, choice: Backpack
     const grid = h("div", { class: "slots", style: "justify-content:center;margin:10px 0" });
     const action = h("button", { class: "btn primary", text: choice.verb, disabled: true });
     const hint = h("div", { class: "small", style: "text-align:center;min-height:1.4em" });
+    // bug_fix_59, point 2: the details of the item under the pointer (the window of the backpack shows them the same way), so that the right ones are picked: rings of one level carry
+    // other bonuses, and what Combine, Duplication or Transform Ring do to an item is not undone. A box of fixed height, so that the window does not jump from item to item.
+    const details = h("div", { class: "pick-details" });
+    const showDetails = (item: Item | null) => {
+      clear(details);
+      details.append(item ? itemTooltip(null, item) : h("div", { class: "tooltip", text: "Move the pointer over an item to see its details." }));
+    };
+    showDetails(null);
     const draw = () => {
       clear(grid);
       for (const slot of BAG_SLOTS) {
@@ -50,6 +59,8 @@ export async function pickFromBackpack(ui: UI, hero: Character, choice: Backpack
           },
           item ? itemIcon(item) : null,
         );
+        el.addEventListener("mouseenter", () => showDetails(item));
+        el.addEventListener("mouseleave", () => showDetails(null));
         grid.append(el);
       }
       const ok = picked.length === choice.count && choice.valid(picked);
@@ -66,6 +77,7 @@ export async function pickFromBackpack(ui: UI, hero: Character, choice: Backpack
       h("div", { class: "small", style: "text-align:center", text: `${hero.name}: ${choice.text}` }),
       grid,
       hint,
+      details,
       h("div", { class: "row-btns", style: "justify-content:center" }, action, h("button", { class: "btn", text: "Abort", onclick: () => close() })),
     );
     root.style.width = "min(420px, 96vw)";

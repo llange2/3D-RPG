@@ -1,5 +1,6 @@
 import { GEN_VERSION } from "../core/version";
 import { packSave, unpackSave } from "./saveCodec";
+import { NEUTRAL_SCALE, parseRewardScale, type RewardScale } from "../actions/rewardScale";
 import type { Facing } from "../interiors/types";
 import type { Item, Party } from "../sim/types";
 import type { JournalEntry } from "../sim/journal";
@@ -114,6 +115,8 @@ export interface GameState {
   size: WorldSize;
   /** How many of the caves and dungeons the world keeps (title screen, "Dungeons"); a save without it has all of them. */
   dungeons: DungeonDensity;
+  /** The reward factors of this world (bug_fix_59: gold, experience, attribute and resistance points as in a default world), worked out when the game was created; a save without them pays as the tables say. */
+  scale: RewardScale;
   /** Set when the game is played in the campaign maps instead of the endless world. */
   campaign: CampaignSave | null;
   party: Party;
@@ -146,6 +149,7 @@ export function newGameState(seed: string, start: { x: number; y: number; facing
     seed,
     size,
     dungeons,
+    scale: { ...NEUTRAL_SCALE },
     campaign: null,
     party: createDefaultParty(),
     at: { mode: "overworld", x: start.x, y: start.y, facing: start.facing },
@@ -187,6 +191,8 @@ export interface SaveFile {
     size?: WorldSize;
     /** Absent in saves from before the choice of how many dungeons a world has: they have all of them. */
     dungeons?: DungeonDensity;
+    /** Absent in saves from before the reward factors: they pay as the tables say. */
+    scale?: RewardScale;
     party: Party;
     at: Location;
     opened: string[];
@@ -217,6 +223,7 @@ export function toSaveFile(state: GameState): SaveFile {
       seed: state.seed,
       size: state.size,
       dungeons: state.dungeons,
+      scale: state.scale,
       party: state.party,
       at: state.at,
       opened: [...state.opened],
@@ -272,6 +279,7 @@ export function fromSaveFile(file: SaveFile): GameState {
     seed: s.seed,
     size,
     dungeons: parseDungeonDensity(s.dungeons),
+    scale: parseRewardScale(s.scale),
     party: normalizeParty(s.party),
     at: s.at,
     opened: new Set(s.opened),

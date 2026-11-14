@@ -17,7 +17,8 @@ import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { BROKEN_PIECES, CEILING_RELIEF, floorModelOfTexture, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
 import { CELL_SIZE, ceilingDropOf, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type DoorFrame, type WallPanel } from "./interiorMesher";
-import { ALTAR_SCALE, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
+import { DECO_MODELS } from "../data/wall-deco";
+import { ALTAR_SCALE, decoSink, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
 import { GlowLines } from "./glowLines";
@@ -25,6 +26,9 @@ import { FLAT_Z_OFFSET, flatTileMaterial } from "./materials";
 import type { PropRenderer } from "./props";
 import type { PropInstance } from "./terrainMesher";
 import type { Renderer } from "./engine";
+
+/** The reliefs the user made (not the moose king's carving): the wall decorations that are sunk into a wall of 3D pieces (`decoSink`). */
+const DECO_ITEMS: ReadonlySet<number> = new Set(Object.keys(DECO_MODELS).map(Number));
 
 /** The old game hung its shop signs at 0.55 of the model size. */
 const SIGN_SCALE = 0.55;
@@ -827,6 +831,11 @@ export class InteriorView {
         if (this.panelList.length > 0 && WALL_HUNG.has(shownItem(a) ?? -1)) {
           themed.x += Math.sin(themed.rotY) * PANEL_DEPTH;
           themed.z += Math.cos(themed.rotY) * PANEL_DEPTH;
+        } else if (DECO_ITEMS.has(shownItem(a) ?? -1)) {
+          // bug_fix_59, point 1: a flat wall (the tower's in every environment, every wall in "Flat" and "3D Floor/Ceiling") has no stones to hide the sunk plate in: the relief hangs with its plate flush
+          const out = decoSink(shownItem(a)!, this.staticInfo);
+          themed.x += Math.sin(themed.rotY) * out;
+          themed.z += Math.cos(themed.rotY) * out;
         }
         (a.kind === "treasure" && typeof a.params.chest === "number" && SPINNING_ITEMS.has(a.params.chest) ? this.spinners : instances).push(themed);
         continue;

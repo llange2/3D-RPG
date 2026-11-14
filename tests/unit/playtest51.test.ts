@@ -116,8 +116,8 @@ describe("51st playtest, point 11: the hint wagon on a lava island", () => {
     const place = world.poiById("p:3:0:125")!;
     const wagon = caravansOf(world, place)[0]!;
     expect(wagon.hint?.place).toBe(place.id);
-    expect([wagon.x, wagon.y]).toEqual([91, 22]);
-    expect(world.tile(91, 23).ground).toBe(GROUND.LAND);
-    expect(world.tile(91, 22).ground).toBe(GROUND.LAND);
+    expect([wagon.x, wagon.y]).toEqual([91, 30]); // (bug_fix_59: the islands share their levels by land, the lane moved from 22 to 30)
+    expect(world.tile(91, 29).ground).toBe(GROUND.LAND); // (the lane leads north now)
+    expect(world.tile(91, 30).ground).toBe(GROUND.LAND);
   });
 });
