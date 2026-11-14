@@ -230,7 +230,7 @@ describe("BALANCE v4: levels and training", () => {
     expect(inMode("legacy", () => xpToNextLevel(knight(1), 1))).toBe(1500);
   });
 
-  it("training costs 100 × level × (level + 1) per hero, without a discount (250 × level in the legacy mode)", () => {
+  it("training costs 100 Ã— level Ã— (level + 1) per hero, without a discount (250 Ã— level in the legacy mode)", () => {
     const party = createDefaultParty();
     const c = party.characters[0]!;
     c.level = 1;
