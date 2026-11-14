@@ -35,6 +35,8 @@ export type BonusKey =
   | "dam_max"
   | "ranged_dam_min"
   | "ranged_dam_max"
+  /** Damage increase (or decrease, negative) in percent of the whole blow or shot, from rings (bug_fix_59, point 3); the sums of all worn pieces add up. */
+  | "dam_pct"
   | "arm";
 export type Bonus = Partial<Record<BonusKey, number>>;
 

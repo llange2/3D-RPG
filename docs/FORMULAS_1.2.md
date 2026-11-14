@@ -228,7 +228,7 @@ Erzielt ein Monster keinen Schaden, hat es trotzdem eine 10% Chance die Sonderwi
 
 ### 5.5 Training
 
-- Kosten je Held `round(10 × Stufe² × bargain)` (legacy: 250 × Stufe); „Train all“: niedrigste Stufe zuerst, je Held eine Stufe, hört beim ersten unbezahlbaren auf.
+- Kosten je Held `100 × Stufe × (Stufe + 1)` mit der **aktuellen** Stufe (L1 → L2 = 200, L99 → L100 = 990 000; ein Held von 1 auf 100: 33,33 Mio, vier Helden 133,32 Mio), **ohne Rabatt** (Bargainer und Merchant gelten nicht; bug_fix_59, Punkt 5; `RULES.v4.trainingStep`). Legacy: `round(250 × Stufe × bargain)`; „Train all“: niedrigste Stufe zuerst, je Held eine Stufe, hört beim ersten unbezahlbaren auf.
 
 ### 5.6 Gilde
 

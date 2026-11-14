@@ -666,14 +666,26 @@ export class Game {
     this.audio.setAmbient(new Map());
     this.audio.playMusic(9000);
     const params = new URLSearchParams(location.search);
-    const choice = await this.ui.title({ seed: defaultSeed || randomSeed(), size: parseWorldSize(params.get("size")), dungeons: params.has("dungeons") ? parseDungeonDensity(params.get("dungeons")) : TITLE_DUNGEON_DENSITY, saves: this.titleSaves(), onOptions: () => void this.optionsMenu() });
+    const choice = await this.ui.title({ seed: defaultSeed || randomSeed(), size: parseWorldSize(params.get("size")), saves: this.titleSaves(), onOptions: () => void this.optionsMenu() });
     this.audio.play(9001);
-    if (choice.action === "load") {
-      const file = choice.save();
-      if (file) await this.loadFromFile(file);
-      else await this.start(defaultSeed); // the save could not be read (a damaged or removed one): back to the title
-    } else if (choice.action === "campaign") await this.newCampaign(choice.seed);
-    else await this.newGame(choice.seed, true, choice.size, choice.dungeons);
+    // bug_fix_59, point 7: the loading screen goes up over the title before anything else happens (reading the save, building the world, the portraits), and only then the title goes
+    await this.beginLoading();
+    this.ui.dismissTitle();
+    try {
+      if (choice.action === "load") {
+        const file = choice.save();
+        if (file) await this.loadFromFile(file);
+        else {
+          this.abortLoading();
+          await this.start(defaultSeed); // the save could not be read (a damaged or removed one): back to the title
+        }
+      } else if (choice.action === "campaign") await this.newCampaign(choice.seed);
+      // the dungeon density is no choice of the menu any more (bug_fix_59, point 6): a new game keeps the title's default; the address may still name one (the tools and the playtest links do)
+      else await this.newGame(choice.seed, true, choice.size, params.has("dungeons") ? parseDungeonDensity(params.get("dungeons")) : TITLE_DUNGEON_DENSITY);
+    } catch (error) {
+      this.abortLoading();
+      throw error;
+    }
   }
 
   /**
@@ -788,6 +800,8 @@ export class Game {
     this.lastSnap = this.state.steps;
     // every way into a game comes through here (title, load, `?autostart=1`, the resume after a reload), so the sink is set here and not in `start`
     this.watchJournal();
+    // bug_fix_59, point 7: the loading screen stands before the HUD shows and before the portraits load (a way in that does not come from the title: the resume after a reload, `?autostart=1`)
+    await this.beginLoading();
     this.ui.setHudVisible(true);
     // the portraits of the chosen heroes in all their states, before the first frame (45th playtest, point 5)
     await this.preloadPortraits();

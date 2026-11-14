@@ -67,6 +67,8 @@ PROPOSALS.v3 = makeFormulas(V3_PARAMS, "v3", "Kampfformeln, Vorschlag v3");
 
 /** Training cost of the user's own formula sheet (level squared times ten); the game charges 250 a level. */
 export const trainingSquare = (level: number): number => level * level * 10;
+/** The game since bug_fix_59: from level L to L + 1 it costs 100 × L × (L + 1). */
+export const trainingStep = (level: number): number => level * (level + 1) * 100;
 
 /** The complete proposal: combat formulas v3, the smooth XP curve and the cheaper early training. */
 PROPOSALS.v3x = { ...PROPOSALS.v3!, id: "v3x", title: "Vorschlag komplett: Kampf v3, XP glatt (25 x Basis, +25 %, +8 %), Training Stufe^2 x 10, Wolf 1/3, Fee 30", xpStep: xpSmooth(25, 1.25, 18, 1.08), trainingCost: trainingSquare, wolfBelow: 1 / 3, fairyReduction: 30 };
@@ -115,7 +117,7 @@ export function makeV4(id: string, melee: keyof typeof V4_MELEE): Formulas {
     },
     // the game's table (rounded per level, `xpStepV4` in src/sim/balance.ts, the old doubling up to level 10, then 1'024'000 Ã— 1.08^(level âˆ’ 10)); the first v4 table was `xpSmooth(25, 1.25, 18, 1.08)`
     xpStep: (cls, level) => xpStepV4(CONSTANTS.CHARACTER_XP[cls] ?? 2000, level),
-    trainingCost: trainingSquare,
+    trainingCost: trainingStep,
     wolfBelow: 0.1,
     orbMana: 0,
     orbSpell: 0.2,

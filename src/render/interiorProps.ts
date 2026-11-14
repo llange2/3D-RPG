@@ -117,6 +117,20 @@ export function stairsScale(bounds: readonly number[] | undefined): [number, num
   return [CELL_SIZE / (b[3]! - b[0]!), TOWER_STOREY / (b[4]! - b[1]!), CELL_SIZE / (b[5]! - b[2]!)];
 }
 
+/**
+ * How far a relief is sunk into a wall that carries 3D wall pieces ("Full 3D" in a dungeon, bug_fix_59, point 1): a third of its depth (plate to the front-most point, 54th playtest, point 3),
+ * so that its figure does not stand too far out of the stones. A flat wall has no stones to hide the plate in: there the relief hangs with its plate flush (`InteriorView.buildObjects` takes
+ * the sink off again), or the plate and the frame of the plaque vanished in the wall and only the figure was left (the barbarian of the towers, whose wall is flat in every environment).
+ */
+export function decoSink(item: number, staticInfo: Record<string, StaticModelInfo>): number {
+  const own = OWN_MODELS[item];
+  if (!own || !(item in DECO_MODELS)) return 0;
+  const back = (staticInfo[own.model]?.bounds?.[2] ?? -0.2) * own.scale;
+  const plate = DECO_PLATE[own.model];
+  const front = (staticInfo[own.model]?.bounds?.[5] ?? 0.2) * own.scale;
+  return Math.max(0, (front - (plate !== undefined ? plate * own.scale : back)) * (DECO_SINK_SHARE_OF[own.model] ?? DECO_SINK_SHARE));
+}
+
 /** The prop for a themed object, or null when the action shows nothing of the theme (then the view picks a chest or well by chance). `bearing` is degrees, 0 = north. */
 export function themedProp(a: ActionInstance, x: number, z: number, bearing: number, staticInfo: Record<string, StaticModelInfo>, opened: ReadonlySet<string> = new Set(), content?: MapContent): PropInstance | null {
   let item = shownItem(a);
@@ -159,9 +173,8 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
     // the view moves the relief out by the depth of the wall pieces afterwards (`buildObjects`). A model without a measured plate keeps the old rule.
     const plate = DECO_PLATE[own.model];
     // 54th playtest, point 3 (Undercroft of Siletha 31/60): the figure still looked too far out of the wall, so the relief sinks by a third of its depth (plate to the front-most point) into it
-    const front = (staticInfo[own.model]?.bounds?.[5] ?? 0.2) * own.scale;
-    const sink = (front - (plate !== undefined ? plate * own.scale : back)) * (DECO_SINK_SHARE_OF[own.model] ?? DECO_SINK_SHARE);
-    const push = (plate !== undefined ? WALL_AT - DECO_FLUSH + plate * own.scale : WALL_AT + DECO_BURY + back) + Math.max(0, sink);
+    const sink = decoSink(item, staticInfo);
+    const push = (plate !== undefined ? WALL_AT - DECO_FLUSH + plate * own.scale : WALL_AT + DECO_BURY + back) + sink;
     const rotY = (bearing * Math.PI) / 180;
     return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
   }

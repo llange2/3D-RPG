@@ -346,6 +346,9 @@ html.ending-on #game-cursor { display: none; }
 .slot.ok { border-color: var(--good); }
 .equip-grid { display: grid; grid-template-columns: repeat(3, 58px); gap: 6px; justify-content: center; margin: 8px 0; }
 .tooltip { margin-top: 8px; min-height: 90px; padding: 8px 10px; background: #00000044; border: 1px solid var(--gold-dim); border-radius: 6px; font-size: 15px; white-space: pre-wrap; }
+/* Combine, Duplication, Transform Ring: the details of the item under the pointer, in a box that keeps its height (bug_fix_59, point 2) */
+.pick-details { min-height: 200px; margin: 4px 0 8px; }
+.pick-details .tooltip { margin-top: 0; min-height: 190px; box-sizing: border-box; }
 .tooltip .t { font-family: var(--font-head); color: var(--gold); font-size: 16px; margin-bottom: 2px; }
 .tooltip .hint { font-style: italic; opacity: 0.8; margin-bottom: 2px; }
 .tooltip .delta.up { color: var(--good); }

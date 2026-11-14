@@ -375,9 +375,10 @@ export function bankSliderAmount(max: number, position: number): number {
 export const TRAINING_MINUTES = 120;
 
 export function trainingCost(c: Character, party: Party): number {
-  // BALANCE v4: 10 Ã— levelÂ² per hero (the formula of the user's source list); LEGACY (balance v4): 250 Ã— level
-  const base = isV4() ? c.level * c.level * RULES.v4.trainingPerLevelSquared : c.level * RULES.legacy.trainingPerLevel;
-  return Math.round(base * bargainFactor(party));
+  // bug_fix_59, point 5: `100 × level × (level + 1)` (level = the hero's present one, so L1 to L2 is 200 and L99 to L100 is 990'000); the talents Bargainer and Merchant give no discount on it
+  // (a hero from 1 to 100 costs 33.33 million, four heroes 133.32 million: the gold of a world, and a player who saves in the bank can go further). LEGACY (balance v4): 250 × level with the discount
+  if (isV4()) return c.level * (c.level + 1) * RULES.v4.trainingStep;
+  return Math.round(c.level * RULES.legacy.trainingPerLevel * bargainFactor(party));
 }
 
 /** Training grounds of a town of tier T train up to level T Ã— 10; only the trainers of tier 5 have no limit (bug_fix_55, point 4). */

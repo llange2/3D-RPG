@@ -230,13 +230,27 @@ describe("BALANCE v4: levels and training", () => {
     expect(inMode("legacy", () => xpToNextLevel(knight(1), 1))).toBe(1500);
   });
 
-  it("training costs 10 Ã— levelÂ² per hero (250 Ã— level in the legacy mode)", () => {
+  it("training costs 100 × level × (level + 1) per hero, without a discount (250 × level in the legacy mode)", () => {
     const party = createDefaultParty();
     const c = party.characters[0]!;
+    c.level = 1;
+    expect(trainingCost(c, party)).toBe(200);
     c.level = 7;
-    expect(trainingCost(c, party)).toBe(490);
+    expect(trainingCost(c, party)).toBe(5_600);
     c.level = 40;
-    expect(trainingCost(c, party)).toBe(16_000);
-    expect(inMode("legacy", () => trainingCost(c, party))).toBe(10_000);
+    expect(trainingCost(c, party)).toBe(164_000);
+    c.level = 99;
+    expect(trainingCost(c, party)).toBe(990_000);
+    expect(inMode("legacy", () => trainingCost(c, party))).toBe(24_750);
+    // bug_fix_59, point 5: the talents Bargainer and Merchant give no discount on training
+    party.talents.push("talent_merchant");
+    expect(trainingCost(c, party)).toBe(990_000);
+    // one hero from 1 to 100: 33.33 million, four heroes 133.32 million
+    let sum = 0;
+    for (let level = 1; level < 100; level++) {
+      c.level = level;
+      sum += trainingCost(c, party);
+    }
+    expect(sum).toBe(33_330_000);
   });
 });
