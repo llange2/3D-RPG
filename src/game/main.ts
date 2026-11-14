@@ -5,6 +5,7 @@ import { interiorFingerprints } from "../actions/fingerprint";
 import { chunkHash, World } from "../world/world";
 import { installCursor } from "../ui/cursor";
 import { preloadImages } from "../ui/dom";
+import { AVATAR_EFFECTS, effectFile } from "../ui/avatarFx";
 import { preloadButtonArt } from "../ui/buttonArt";
 import { preloadSpellIcons } from "../ui/spellIcons";
 import { keepSpellArtWarm, loadFonts } from "../ui/warmUp";
@@ -28,8 +29,9 @@ async function main(): Promise<void> {
   void keepSpellArtWarm();
   // the same for the item pictures: every slot of an inventory or a shop is a window onto one decoded sheet
   void preloadItemIcons();
-  // the status symbols beside the minimap (Wizard's Eye, Power Shield, Levitate, the four protections): a cast would otherwise show them only after the download
-  preloadImages(["levitate", "power_shield", "wizard_eye", "detect_monster", "protect_acid", "protect_fire", "protect_ice", "protect_magic"].map((n) => `ui/tex_gui_${n}.webp`));
+  // every effect picture: the status symbols beside the minimap (Wizard's Eye, Power Shield, Levitate, the four protections) and the hits and cures over the portraits.
+  // A cast or a hit would otherwise show them only after the download (bug_fix_60: the hit and cure pictures were never loaded ahead)
+  preloadImages(AVATAR_EFFECTS.map(effectFile));
   splitLegacySaves();
   // the textures are chosen once, before the first one is asked for (a change in the menu reloads the page)
   setTextureQuality(readSettings().textureQuality);

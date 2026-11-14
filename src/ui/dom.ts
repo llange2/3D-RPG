@@ -7,6 +7,8 @@ export interface Props {
   title?: string;
   src?: string;
   alt?: string;
+  /** Images: `sync` decodes the picture with the frame that shows it, so it never appears a frame or more after its box. */
+  decoding?: "sync" | "async" | "auto";
   type?: string;
   value?: string;
   placeholder?: string;

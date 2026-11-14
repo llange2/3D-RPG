@@ -67,7 +67,7 @@ PROPOSALS.v3 = makeFormulas(V3_PARAMS, "v3", "Kampfformeln, Vorschlag v3");
 
 /** Training cost of the user's own formula sheet (level squared times ten); the game charges 250 a level. */
 export const trainingSquare = (level: number): number => level * level * 10;
-/** The game since bug_fix_59: from level L to L + 1 it costs 100 × L × (L + 1). */
+/** The game since bug_fix_59: from level L to L + 1 it costs 100 Ã— L Ã— (L + 1). */
 export const trainingStep = (level: number): number => level * (level + 1) * 100;
 
 /** The complete proposal: combat formulas v3, the smooth XP curve and the cheaper early training. */

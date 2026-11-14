@@ -7,7 +7,7 @@ import type { Character, Party } from "../sim/types";
 import { assetPath, clear, h } from "./dom";
 import { thousands } from "../core/format";
 import { DEFAULT_WORLD_SIZE, WORLD_SIZES, WORLD_SIZE_NAMES, type WorldSize } from "../world/types";
-import { hitEffect, portraitImage, protectionEffect, type AvatarEffect } from "./avatarFx";
+import { effectFile, hitEffect, portraitImage, protectionEffect, type AvatarEffect } from "./avatarFx";
 import { conditionLabel, conditionTitle, shownCondition } from "./conditionInfo";
 import { mascotPortrait } from "./panels";
 import { CapybaraClip } from "./capybaraClip";
@@ -256,7 +256,8 @@ export class UI {
       else if (e.kind === "wizard_eye") icons.set("gui_wizard_eye", "Wizard's Eye: the whole map shows");
       else if (e.kind === "detect_monster") icons.set("gui_detect_monster", "Detect Monster: the monsters show on the minimap");
     }
-    this.status.replaceChildren(...[...icons].map(([name, title]) => h("img", { src: assetPath(`ui/tex_${name}.webp`), title, alt: title })));
+    // no alt text: while a picture is on its way the browser would show the alt text in its place (the symbol appeared as words first, bug_fix_60); the title stays for the mouse-over
+    this.status.replaceChildren(...[...icons].map(([name, title]) => h("img", { src: assetPath(effectFile(name)), title, alt: "", decoding: "sync" })));
   }
 
   private renderCards(party: Party, attacker: number | null, battle: boolean): void {
@@ -304,8 +305,9 @@ export class UI {
     const size = Math.round(r.width * 1.7);
     const img = h("img", {
       class: "fx",
-      src: assetPath(`ui/tex_${effect}.webp`),
+      src: assetPath(effectFile(effect)),
       alt: "",
+      decoding: "sync",
       style: `left:${Math.round(r.left + r.width / 2 - size / 2)}px;top:${Math.round(r.top + r.height / 2 - size / 2)}px;width:${size}px;height:${size}px`,
     });
     img.addEventListener("animationend", () => img.remove());

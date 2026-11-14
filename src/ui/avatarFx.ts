@@ -31,6 +31,36 @@ export type AvatarEffect =
   | "gui_protect_ice"
   | "gui_protect_magic";
 
+/** Every effect picture, as a record so that the compiler asks for a new name here: `main.ts` fetches them all at start-up and `warmUp.ts` keeps them decoded (bug_fix_60). */
+const ALL_EFFECTS: Record<AvatarEffect, true> = {
+  cure_hp: true,
+  cure_crazy: true,
+  cure_curse: true,
+  cure_disease: true,
+  cure_paralysis: true,
+  cure_petrified: true,
+  cure_poison: true,
+  cure_sleeping: true,
+  cure_weak: true,
+  acid_hit: true,
+  fire_hit: true,
+  ice_hit: true,
+  magic_hit: true,
+  physical_hit: true,
+  gui_levitate: true,
+  gui_power_shield: true,
+  gui_wizard_eye: true,
+  gui_detect_monster: true,
+  gui_protect_acid: true,
+  gui_protect_fire: true,
+  gui_protect_ice: true,
+  gui_protect_magic: true,
+};
+export const AVATAR_EFFECTS: readonly AvatarEffect[] = Object.keys(ALL_EFFECTS) as AvatarEffect[];
+
+/** The file of an effect picture, relative to `assets/`. */
+export const effectFile = (effect: AvatarEffect): string => `ui/tex_${effect}.webp`;
+
 const CURE_OF: Partial<Record<Condition, AvatarEffect>> = {
   Sleeping: "cure_sleeping",
   Weak: "cure_weak",

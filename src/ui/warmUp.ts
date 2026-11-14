@@ -1,4 +1,5 @@
 import { plateButton, preloadButtonArt } from "./buttonArt";
+import { AVATAR_EFFECTS, effectFile } from "./avatarFx";
 import { assetPath, h } from "./dom";
 import { preloadItemIcons, warmItemIcon } from "./itemIcons";
 import { preloadSpellIcons, spellPlate } from "./spellIcons";
@@ -43,9 +44,10 @@ export async function keepSpellArtWarm(): Promise<void> {
     frame.style.cssText = "display:inline-block;min-height:0;width:auto";
     parts.push(frame);
   }
-  for (const name of ["levitate", "power_shield", "wizard_eye", "detect_monster", "protect_acid", "protect_fire", "protect_ice", "protect_magic"]) {
-    parts.push(h("img", { src: assetPath(`ui/tex_gui_${name}.webp`), alt: "", style: "width:40px;height:40px" }));
-  }
+  // every effect picture (status symbols, hits, cures), in one row that the holder shows whole: what is clipped away is not painted and so not held decoded
+  const row = h("div", { style: "display:flex;gap:2px;width:640px" });
+  for (const effect of AVATAR_EFFECTS) row.append(h("img", { src: assetPath(effectFile(effect)), alt: "", style: "width:26px;height:26px;flex:none" }));
+  parts.push(row);
   // a line of text in each face: a face that no visible text uses can be dropped, and the text then shows in the stand-in font until it is fetched again
   for (const [weight, family] of FONTS) parts.push(h("span", { text: FONT_SAMPLE, style: `font:${weight} 16px "${family}", Georgia, serif;white-space:nowrap;display:block` }));
   const holder = h("div", { class: "art-warm" }, ...parts);
