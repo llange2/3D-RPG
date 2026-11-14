@@ -169,5 +169,6 @@
  * like the chests in the niches (`warn: "alarm"`), and a place has the tier of the place everywhere: the deeper half is no longer one tier harder (formulas 1.1, point 4: `tierAt`).
  * 66 = the 57th playtest (quest document 1.8): the rewards of the end rooms follow the new table (one package of attribute or resistance points, experience on level 4, a level and the resistance crystal on level 5,
  * the treasure one level above the place), and key cards lie only in dungeons that ask for a key (the level 4 and 5 ones are locked first, `planPlaces`).
+ * 67 = bug_fix_59, point 4: the islands after the two main ones share the levels 4 and 5 by land (both levels get about the same land) instead of by their distance from the start (`buildLayout`).
  */
-export const GEN_VERSION = 66;
+export const GEN_VERSION = 67;

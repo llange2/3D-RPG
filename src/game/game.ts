@@ -102,6 +102,8 @@ import { CAVE_EXPLORER, SENSE_STEPS, pickOf, senseFlag, senseLine, wallsSensed }
 import { SKULL_MISER_MET,clueFlag, hintHeardFlag, lockSeenFlag, placeSegments, reachedFlag, unlockedFlag, worldQuestLog, type QuestLogView } from "./questLog";
 import { capybaraSpot, overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
+import { scaledGold, scaledXp } from "../actions/rewardScale";
+import { rewardScaleFor } from "../actions/rewardMeasure";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
 import { preloadPortraits } from "../ui/portraitSheets";
 import { cursorStepped, setCursorFade, tooltipBesidePointer } from "../ui/cursor";
@@ -681,7 +683,7 @@ export class Game {
         }
       } else if (choice.action === "campaign") await this.newCampaign(choice.seed);
       // the dungeon density is no choice of the menu any more (bug_fix_59, point 6): a new game keeps the title's default; the address may still name one (the tools and the playtest links do)
-      else await this.newGame(choice.seed, true, choice.size, params.has("dungeons") ? parseDungeonDensity(params.get("dungeons")) : TITLE_DUNGEON_DENSITY);
+      else await this.newGame(choice.seed, true, choice.size, params.has("dungeons") ? parseDungeonDensity(params.get("dungeons")) : TITLE_DUNGEON_DENSITY, true);
     } catch (error) {
       this.abortLoading();
       throw error;
@@ -718,11 +720,14 @@ export class Game {
   }
 
   /** `inTown`: begin on the street in front of the inn of Starthaven (what a player gets); false begins outside on the road, for the tools that measure the overworld. */
-  async newGame(seed: string, inTown = true, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY): Promise<void> {
+  async newGame(seed: string, inTown = true, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY, scaled = false): Promise<void> {
     this.setSeedInUrl(seed, size, dungeons);
     this.world = new World(seed, size, dungeons);
     const start = this.world.startPosition();
     this.state = newGameState(seed, start, size, dungeons);
+    // bug_fix_59, points 4 and 6: the world pays what a default world pays (gold, experience, attribute and resistance points). The measure builds every place once (a few seconds, behind the loading screen of
+    // the new game); the tools and the tests that start a game without the title screen keep the plain tables (`scaled` false)
+    if (scaled) this.state.scale = rewardScaleFor(this.world);
     // a new game begins in Starthaven, on the street in front of the inn, with the back to its door
     const town = inTown ? this.world.poiById(START_TOWN_ID) : null;
     if (town) {
@@ -1041,7 +1046,7 @@ export class Game {
       this.setLamps([]);
       this.monsters.clear();
       this.sceneChanged();
-      this.enc = createEncounter();
+      this.enc = this.freshEncounter();
       this.overworldSpawns.clear();
       this.props.setInstances(this.lootOwner, []);
       this.sky.setVisible(true);
@@ -1116,7 +1121,7 @@ export class Game {
       for (const a of content.actions) if (a.kind === "decor" && Number(a.params.item) === SUPPORT_BEAM && (a.params.side === "E" || a.params.side === "S")) beams.set(a.y * map.width + a.x, a.params.side);
       this.interior = { poi, map, content, blocked, actionAt, beams };
       this.syncQuestBlocks();
-      this.enc = createEncounter();
+      this.enc = this.freshEncounter();
       // the sliding doors of the spaceship are shut when the level is entered (a save may have been made with one open), the airlocks keep their state; they open and close as long as their sound plays
       if (map.spaceship) {
         const from = at ?? map.spawn;
@@ -1855,7 +1860,7 @@ export class Game {
       this.sceneChanged();
       this.props.setInstances(this.lootOwner, []);
       this.mode = "interior";
-      this.enc = createEncounter();
+      this.enc = this.freshEncounter();
       const snap = this.campaignSnapshot(model);
       this.interior = { poi: this.campaignPoi(model), ...snap, campaign: { slug, model } };
       this.campaignView.mascot = this.state.party.mascot;
@@ -2212,12 +2217,13 @@ export class Game {
     const def = MONSTERS[hut.monster]!;
     const party = this.state.party;
     this.state.opened.add(`hut:${hut.id}@burnt`);
-    addXp(party, def.hut_xp);
+    const hutXp = scaledXp(def.hut_xp, this.state.scale);
+    addXp(party, hutXp);
     const rng = rngFor(this.world.rootSeed, LAYER.LOOT, "hut", hut.id);
     const items = Array.from({ length: HUT_ITEMS }, () => generateItem(rng, def.treasure_level));
-    this.dropLoot(hut.x, hut.y, hutGold(hut.monster), items);
+    this.dropLoot(hut.x, hut.y, scaledGold(hutGold(hut.monster), this.state.scale), items);
     this.audio.play(9001);
-    this.ui.log(`The hut burns down. +${thousands(def.hut_xp)} xp`, "good");
+    this.ui.log(`The hut burns down. +${thousands(hutXp)} xp`, "good");
     this.announceLevelUps(party);
     this.hutShown = "";
     this.syncHuts();
@@ -2605,12 +2611,20 @@ export class Game {
 
   // ---------------------------------------------------------------- actions
 
+  /** A new encounter for a new scene, with the experience factor of the world (bug_fix_59: `GameState.scale`). */
+  private freshEncounter(): Encounter {
+    const enc = createEncounter();
+    enc.xpScale = this.state?.scale.xp ?? 1;
+    return enc;
+  }
+
   private actionContext(): ActionContext {
     const rt = this.interior;
     return {
       party: this.state.party,
       rootSeed: this.world.rootSeed,
       attempt: this.state.steps,
+      scale: this.state.scale,
       monsterThemes: rt?.map.theme.monsterThemes ?? { beast: 1 },
       tier: rt?.content.tier ?? 1,
     };
@@ -3798,7 +3812,7 @@ export class Game {
           // quest 5: the end boss stands before the end room, and its death opens it
           if (isEndBoss(e.uid)) this.openEndRoom();
           this.state.kills++;
-          this.dropLoot(e.x, e.y, e.loot.gold, e.loot.item ? [e.loot.item] : [], true);
+          this.dropLoot(e.x, e.y, scaledGold(e.loot.gold, this.state.scale), e.loot.item ? [e.loot.item] : [], true);
           const epoch = this.fxEpoch;
           at(landing(e.uid), () => {
             this.ui.log(`${def.name} is defeated. +${thousands(e.xp)} xp`, "good");

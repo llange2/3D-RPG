@@ -346,7 +346,7 @@ export interface BonusLine {
   label: string;
   value: number;
   /** Shown after the value ("%" for the damage increase), empty for a plain number. */
-  unit: string;
+  unit?: string;
   /** What putting the item on would change compared with `replaced` (negative: worse), or null without a comparison. */
   change: number | null;
 }
@@ -359,7 +359,7 @@ export function bonusLines(item: Item, replaced: Item | null = null): BonusLine[
   const has = (i: Item | null, key: BonusKey) => (i?.bonus[key] ?? 0) !== 0;
   return BONUS_LABELS.filter(([key]) => has(item, key) || has(replaced, key)).map(([key, label]) => {
     const value = item.bonus[key] ?? 0;
-    return { label, value, unit: key === "dam_pct" ? "%" : "", change: replaced ? value - (replaced.bonus[key] ?? 0) : null };
+    return { label, value, ...(key === "dam_pct" ? { unit: "%" } : {}), change: replaced ? value - (replaced.bonus[key] ?? 0) : null };
   });
 }
 

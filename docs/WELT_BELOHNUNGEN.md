@@ -1,6 +1,6 @@
 # Was eine Welt verteilt: Übersicht der 12 Kombinationen
 
-Stand 7. 11. 2026 (47. Playtest, Punkt 7), `GEN_VERSION` 55. Reine Auswertung, am Spiel ist dafür nichts geändert. Das Werkzeug: `npx tsx tools/dev/reward-survey.ts <Seed>` (Mittel aus den Seeds `table-47`, `table-48`, `table-49`; ein Lauf dauert etwa eine Minute).
+**Stand 14. 11. 2026: die Vorschläge unten sind durch die Umsetzung von `bug_fix_59` überholt** (siehe den Abschnitt „Umsetzung in bug_fix_59“ am Ende: eine feste Summe für alle Größen statt der Faktoren 0,5 bis 4). Die Tabellen und Vorschläge bleiben als Messung der Rohwerte stehen (Stand 7. 11. 2026, 47. Playtest, Punkt 7, `GEN_VERSION` 55). Das Werkzeug: `npx tsx tools/dev/reward-survey.ts <Seed>` (Mittel aus den Seeds `table-47`, `table-48`, `table-49`; ein Lauf dauert etwa eine Minute).
 
 ## So ist gezählt
 
@@ -212,3 +212,40 @@ Stufe 4 bleibt, wie sie ist: 80 % Resistenz sind schon fast Immunität, ein grö
 2. **`tools/dev/reward-survey.ts`** liest die XP direkt aus `MONSTERS[id].xp`; es muss den Faktor mitrechnen, sonst zeigt eine neue Messung die alten Zahlen. Danach alle zwölf Zeilen neu messen (drei Seeds) und die Faktoren auf 5 % nachziehen: `small` ist mit 22 bis 32 Orten pro Seed sehr unruhig.
 3. **Ein Spiel auf `small / few`:** vier Gruppen aus Monstern mit dem Vierfachen der XP fühlen sich anders an als vierzig; ob die Sprünge pro Kill gefallen, entscheidet der Playtest, nicht die Rechnung.
 4. **Entscheidung für Sie:** (a) Hütten bleiben außen vor (empfohlen, ~0.4 % der Baseline); (b) T < 1 auf den großen Welten, mindestens für die Resistenzen; (c) Kelchstufen mit 2 je Kelch auf `small` und 1 bis 2 Kelche auf `huge`; (d) Tabelle oder Formel `122 / Orte` für den XP-Faktor.
+
+---
+
+# Umsetzung in bug_fix_59 (14. 11. 2026, `GEN_VERSION` 67)
+
+Entscheidung des Nutzers: **die Summen sind in jeder Weltgröße und in jedem Seed die der Default-Welt** (Gold, XP, Attribute, Resistenzen); die Auswahl „Dungeons“ ist aus dem Hauptmenü gestrichen (ein neues Spiel nimmt `default`, 0,75 der Höhlen und Dungeons). Die Vorschläge oben (Faktoren je Größe und Dichte in einer Tabelle, Grenzen 0,5 und 4) gelten nicht mehr; die Faktoren werden **je Welt** gemessen (`src/actions/rewardMeasure.ts`, Formeln in `docs/FORMULAS_1.2.md` 7.6).
+
+## 1. Stufen der Inseln (Generator)
+
+Die Streuung des Roh-Golds kam aus der Aufteilung der weiteren Inseln auf Stufe 4 und 5 (Orte der Stufe 5 sind etwa sechsmal so viel wert). Seit `GEN_VERSION` 67 liegt die Grenze zwischen Stufe 4 und 5 dort, wo beide Stufen **etwa gleich viel Land** haben (`buildLayout`, Test `bugfix59.test.ts`); die Reihenfolge „je stärker, desto weiter von Starthaven“ bleibt. Default-Welt, Roh-Gold (Monster, Behälter, Endräume, Hütten, mit den Quests):
+
+| | Gold gesamt roh (Mio) | XP roh (Mio je Held) |
+|---|--:|--:|
+| vorher (Seeds `table-47` bis `-51`) | 124 bis 174 | 509 bis 1 208 |
+| nachher (Seeds `table-47` bis `-56`) | 144 bis 175 | 806 bis 1 204 |
+
+Das Land allein glättet den Rest nicht (die Zahl der Orte, Berge und die Wahl der Monster streuen weiter); darum der Faktor je Welt.
+
+## 2. Faktoren je Welt
+
+Beim Anlegen eines Spiels vom Titel aus misst das Spiel die Welt (2 bis 9 Sekunden, hinter dem Ladebild), rechnet Gold-, XP-, Attribut-, Münz- und Resistenzfaktor aus und legt sie im Spielstand ab (`GameState.scale`; fehlt er, zahlt ein alter Stand nach den Tabellen). Ziele: **Gold 125 Mio mit den Quests** (Spanne 120 bis 130), **XP 950 Mio je Held**, **Attribute 190 Punkte je Held** (mit den Münzen), **Resistenzen 295 Punkte je Held** (alle vier Elemente); die drei letzten sind der Mittelwert von zehn Default-Welten (Seeds `table-47` bis `-56`).
+
+Drei Seeds je Größe (`npx tsx tools/dev/reward-survey.ts <Seed> <Größe> default`), Faktoren und danach gezahlte Summen:
+
+| Welt (Dungeons `default`) | Orte | Faktor Gold | Faktor XP | Faktor Attribut | Münze | Faktor Resistenz | Gold gezahlt (Mio) | XP je Held (Mio) | Attribute je Held | Resistenzen je Held |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| small | 26 bis 28 | 1,95 bis 2,58 | 4,0 bis 10,1 | 4 (Grenze) | 4 (12 Punkte) | 3,6 bis 4 (Grenze) | 125,0 | 950 | 182 bis 186 | 178 bis 295 |
+| default | 120 bis 123 | 0,71 bis 0,78 | 1,00 bis 1,18 | 0,93 bis 1,22 | 1 | 0,87 bis 1,24 | 124,9 bis 125,0 | 950 | 190 | 295 |
+| large | 238 bis 257 | 0,33 bis 0,34 | 0,36 | 0,42 bis 0,49 | 1 | 0,42 bis 0,44 | 125,0 bis 125,1 | 950 | 190 | 295 |
+| huge | 388 bis 403 | 0,19 bis 0,22 | 0,19 bis 0,22 | 0,28 bis 0,34 | 1 | 0,24 bis 0,26 | 124,8 bis 125,2 | 949 bis 951 | 190 | 295 |
+
+- **Gold** liegt in jedem gemessenen Seed (zehn Default-Welten, drei je andere Größe) bei 125 Mio ± 0,2; die Spanne 120 bis 130 ist eingehalten (im Spiel kommen kleine Rundungen dazu, außerdem Gold aus Verkäufen, Arbeitsvermittlern und Monsterbeute, das hier nicht gezählt ist).
+- **Kleine Welten:** wenige Quellen, darum greifen die Grenzen: ein einzelnes Geschenk wächst höchstens auf das Vierfache (`MAX_POINT_FACTOR`), die Münze auf 12 Punkte statt 3 (`MAX_COIN_FACTOR`), die 25 Münzen tragen den Rest. Die Resistenzen erreichen das Ziel in kleinen Welten nur zum Teil (60 % bis 100 %), die Attribute fast ganz.
+- **XP auf kleinen Welten:** ein Kill gibt das Vier- bis Zehnfache der Tabelle; das Stufenfenster in `docs/KAMPF_BALANCE_L1.md` ist dafür **nicht** nachgerechnet (offen).
+- **Nicht skaliert:** was die Quest-Geber zahlen (Orbs, Schädel, Perlen), der Heilbrunnen, die Stufenaufstiege der Kelche, die Zauberrollen (146 je Welt).
+- Hütten: `hutXpPercent` (150 / 100 / 75 / 60 %) bleibt; der Weltfaktor kommt darauf, die Summe stimmt trotzdem.
+- Training: 33,33 Mio je Held von L1 auf L100, **133,32 Mio für vier Helden** ohne Rabatt (`100 × L × (L + 1)`) gegen 125 Mio Gold: gewollt knapp, die Bank mit Zinsen und „Work for a week“ gleichen es aus.

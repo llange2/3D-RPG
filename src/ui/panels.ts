@@ -82,7 +82,7 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     // the item type is a technical word of the old tables ("crossbow", "silver_skull"): the player gets what it is worth, or that it is a quest item
     h("div", { text: item.quest ? "Quest item" : `Worth: ${thousands(item.value)} gold` }),
     // 40th playtest, point 9: up to 14 lines (a ring against a ring with other stats) run in two columns, so that the window stays a size that fits the screen
-    h("div", { class: `bonus-lines${lines.length > 6 ? " many" : ""}` }, ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}${l.unit}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change}${l.unit})` }) : null))),
+    h("div", { class: `bonus-lines${lines.length > 6 ? " many" : ""}` }, ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}${l.unit ?? ""}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change}${l.unit ?? ""})` }) : null))),
     // 53rd playtest, point 18: what a weapon or a damage ring hits for on average, from the hero's level and attributes
     ...(c ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage" }, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null)) : []),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
