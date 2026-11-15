@@ -194,7 +194,9 @@ describe("34th playtest: traps in chests that are not locked", () => {
     const seen = new Set<string>();
     for (let n = 0; n < 60; n++) {
       const out = resolveAction(chest({ chest: 1, trapped: "fire", trapDamage: 12, trapLevel: 1 }, `t:1#chest:${n}`), context(party));
-      const line = texts(out.effects).find((l) => l.includes("protection spell"))!;
+      const line = texts(out.effects).find((l) => l.includes("protection spell"));
+      // (a hero's Luck is never below 1 since the 62nd playtest: now and then the trap is dodged and says nothing about the spell)
+      if (!line) continue;
       const who = party.characters.find((c) => line.includes(c.name))!;
       const female = CONSTANTS.CHARACTER_FEMALE.includes(who.avatar);
       expect(line, who.name).toContain(female ? "in her face" : "in his face");

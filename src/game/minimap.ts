@@ -416,6 +416,8 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "treasure": return "event";
     case "door": return opened.has(a.uid) ? "door_open" : "door";
     case "transfer": return "exit";
+    // 62nd playtest, point 6: every transporter tube of the spaceship is a way out, not only the one of the section the party came in by (an airlock that is open leads to the others)
+    case "tube": return "exit";
     case "service": return typeof a.params.service === "string" ? (SERVICE_SYMBOL[a.params.service] ?? "inn") : "inn";
     case "talent": case "work": case "king": case "skullmiser": case "quartermaster": case "keeper": return "persona";
     case "portal": return "teleporter_city";
@@ -548,9 +550,12 @@ export function drawInteriorMap(canvas: HTMLCanvasElement, map: InteriorMap, con
     }
   }
   // the way out lies beyond the edge of the map: a marker on the edge points to it (the party came in there, so it is known)
-  const ex = map.exit.x - mx;
-  const ey = map.exit.y - my;
-  if ((Math.abs(ex) > half || Math.abs(ey) > half) && (eye || explored.has(key, map.exit.y * map.width + map.exit.x))) {
+  // (62nd playtest, point 6: the other transporter tubes of the spaceship are ways out as well, once the party has seen them, e.g. behind an airlock it has opened)
+  const exits = [map.exit, ...content.actions.filter((a) => a.kind === "tube" && (a.x !== map.exit.x || a.y !== map.exit.y)).map((a) => ({ x: a.x, y: a.y }))];
+  for (const spot of exits) {
+    const ex = spot.x - mx;
+    const ey = spot.y - my;
+    if ((Math.abs(ex) <= half && Math.abs(ey) <= half) || !(eye || explored.has(key, spot.y * map.width + spot.x))) continue;
     const k = half / Math.max(Math.abs(ex), Math.abs(ey));
     const cx = (Math.round(ex * k) + half + 0.5) * s;
     const cy = (Math.round(ey * k) + half + 0.5) * s;
@@ -734,7 +739,7 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
       switch (a.kind) {
         case "treasure": return `Chest${used}`;
         case "door": return `Door${used}`;
-        case "transfer": return "Way out";
+        case "transfer": case "tube": return "Way out";
         case "service": return `${typeof a.params.service === "string" ? a.params.service[0]!.toUpperCase() + a.params.service.slice(1) : "Service"}`;
         case "shrine": return `Shrine${used}`;
         case "fountain": return "Fountain";

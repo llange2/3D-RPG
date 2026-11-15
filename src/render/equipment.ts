@@ -140,11 +140,14 @@ export function handTransform(hand: Hand, gripY = 0, tweak?: (typeof GRIP_TWEAK)
 /** The middle of the palm in the glTF frame of the hand joint, in centimetres: a hand's breadth along the fingers from the wrist. */
 const PALM = new Vector3(0, 6, 0);
 
-/** Hangs a mesh of an item under the joint node of a hand with the old game's fit. */
-export function holdInHand(item: TransformNode, joint: TransformNode, hand: Hand, gripY = 0, tweak?: (typeof GRIP_TWEAK)[string]): void {
+/**
+ * Hangs a mesh of an item under the joint node of a hand with the old game's fit. `unit` is the size of one unit of the joint's space in the old rig's: 1 for the old skeletons
+ * (centimetres), 0.01 for the user's Mixamo rigs (`mixamorig:RightHand`, metres, 62nd playtest).
+ */
+export function holdInHand(item: TransformNode, joint: TransformNode, hand: Hand, gripY = 0, tweak?: (typeof GRIP_TWEAK)[string], unit = 1): void {
   const t = handTransform(hand, gripY, tweak);
   item.parent = joint;
-  item.position.copyFrom(t.position);
+  item.position.copyFrom(t.position.scale(unit));
   item.rotationQuaternion = t.rotation;
-  item.scaling.setAll(t.scale);
+  item.scaling.setAll(t.scale * unit);
 }

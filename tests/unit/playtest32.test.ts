@@ -61,8 +61,8 @@ describe("32nd playtest", () => {
       for (const name of Object.keys(MONSTER_LAMPS)) expect(() => monsterId(name), name).not.toThrow();
     });
 
-    it("hangs the Wizard at the height of the party's eyes like the other monsters without feet", () => {
-      expect(EYES_AT[monsterId("Wizard")]).toBeGreaterThan(0.5);
+    it("no longer hangs the Wizard in the air: the Evil Wizard of the user (62nd playtest) is an animated model with feet", () => {
+      expect(EYES_AT[monsterId("Wizard")]).toBeUndefined();
     });
   });
 

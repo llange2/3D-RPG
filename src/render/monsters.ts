@@ -19,7 +19,10 @@ import { GRIP_TWEAK, GRIP_Y, holdInHand, type Hand } from "./equipment";
 import { FLOAT_AMPLITUDE, floatY } from "./itemProps";
 import { toStandardMaterial } from "./props";
 
-const ATTACK_NAMES = ["Charged_Upward_Slash", "Left_Slash", "Axe_Spin_Attack", "Archery_Shot_1", "mage_soell_cast_3", "mage_soell_cast_4", "Charged_Spell_Cast_1", "Sweeping_Kick"];
+// (`mage_soell_cast_2`, the spelling is the file's: the Evil Wizard's own clip)
+const ATTACK_NAMES = ["Charged_Upward_Slash", "Left_Slash", "Axe_Spin_Attack", "Archery_Shot_1", "mage_soell_cast_2", "mage_soell_cast_3", "mage_soell_cast_4", "Charged_Spell_Cast_1", "Sweeping_Kick"];
+/** One unit of the user's Mixamo rigs (metres) in the old skeletons' (centimetres), for the item fit of `holdInHand`. */
+const MIXAMO_UNIT = 0.01;
 const IDLE_NAMES = ["Alert", "Idle_11", "Idle_9", "Idle_3"];
 /**
  * The attack clips that are drawn turned about the model's vertical axis (radians, positive is clockwise seen from above): the Archer's shot is made with the body turned away from the target, so
@@ -77,7 +80,6 @@ export const EYES_AT: Readonly<Record<number, number>> = {
   67: 0.58, // Spirit Shield
   69: 0.59, // Terminator
   77: 0.82, // Wicked Witch
-  79: 0.85, // Wizard (stood on the floor with his face below the party's eyes, 32nd playtest, point 9)
   84: 0.65, // Eye Master
 };
 
@@ -268,12 +270,15 @@ export class MonsterRenderer {
     // the old game's `assign_item`: the weapon in the right hand, the shield in the left, hung under the hand joints of the skeleton so that they follow its clips
     const bow: AbstractMesh[] = [];
     for (const { hand, container: itemContainer, key } of kit) {
-      const joint = holder.getDescendants(false, (n) => n.name === `${uid}:${hand === "right" ? "RightHand" : "LeftHand"}`)[0] as TransformNode | undefined;
+      const side = hand === "right" ? "RightHand" : "LeftHand";
+      // the user's own models carry the Mixamo rig (`mixamorig:RightHand`, joints in metres where the old skeletons count centimetres)
+      const joint = holder.getDescendants(false, (n) => n.name === `${uid}:${side}` || n.name === `${uid}:mixamorig:${side}`)[0] as TransformNode | undefined;
       if (!joint) continue;
+      const unit = joint.name.includes("mixamorig:") ? MIXAMO_UNIT : 1;
       const copy = itemContainer.instantiateModelsToScene((n) => `${uid}:${hand}:${n}`, false);
       for (const root of copy.rootNodes) {
         for (const mesh of root.getChildMeshes(true)) {
-          holdInHand(mesh, joint, hand, GRIP_Y[key] ?? 0, GRIP_TWEAK[key]);
+          holdInHand(mesh, joint, hand, GRIP_Y[key] ?? 0, GRIP_TWEAK[key], unit);
           // the bow is only there while the Archer shoots
           if (key === BOW_MODEL) {
             mesh.setEnabled(false);

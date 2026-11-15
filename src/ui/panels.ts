@@ -1,7 +1,7 @@
 import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { fairyReduction, fairyResistance, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { averageDamageLines } from "../sim/combat";
-import { ageOf, armor, attr, baseResistance, baseValue, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, recalcValues, replacedItems, resistance, worstCondition, xpToNextLevel } from "../sim/character";
+import { ageOf, armor, attr, baseResistance, baseValue, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, offHandRingSlot, recalcValues, replacedItems, resistance, worstCondition, xpToNextLevel } from "../sim/character";
 import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
 import { SPELL_GRID, spellCost, validTarget, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
@@ -64,7 +64,7 @@ const NOTHING: Item = makeItem({ name: "", type: "combined" });
  * hero would take off by putting this item on: each value then shows the change in brackets, green when it gets better, red when worse.
  * `worn` is set for an item on the equipment slots (a right click takes it off). `talents` are the party's: obsidian gear needs the Arms Master.
  */
-export function itemTooltip(c: Character | null, item: Item | null, replaced: Item | null = null, worn = false, talents: readonly string[] = [ARMS_MASTER]): HTMLElement {
+export function itemTooltip(c: Character | null, item: Item | null, replaced: Item | null = null, worn = false, talents: readonly string[] = [ARMS_MASTER], offHandRing: "hint" | "on" | null = null): HTMLElement {
   if (!item) return h("div", { class: "tooltip", text: "Select an item to see its details." });
   const allowed = !c || (BASE_CLASS[c.classType]?.valid_items ?? []).includes(item.type) || item.quest || item.type === "spell";
   // only a hero whose class could wear it is told about the talent (a Wizard cannot use a sword of any material)
@@ -86,6 +86,7 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     // 53rd playtest, point 18: what a weapon or a damage ring hits for on average, from the hero's level and attributes
     ...(c ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage" }, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null)) : []),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
+    offHandRing ? h("div", { class: "small compare-hint", text: offHandRing === "on" ? "Comparing to off-hand ring." : "Press Ctrl to compare to off-hand ring." }) : null,
     c && !allowed ? h("div", { class: "small", style: "color:#e8745f", text: `A ${c.classType} cannot use this.` }) : null,
     untrained ? h("div", { class: "small", style: "color:#e8745f", text: "Requires Arms Master talent to equip" }) : null,
     shieldBlocked ? h("div", { class: "small", style: "color:#e8745f", text: "Not with a two-handed weapon in the weapon hand." }) : null,
@@ -272,8 +273,11 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
         const it = (slot ? bag.inventory[slot] : null) ?? null;
         // a hero compares what lies in the backpack with what would come off (a two-hander takes the shield off too), if the class may wear it
         // an empty slot compares against nothing, so the full bonus shows as the change
-        const replaced = it && slot?.startsWith("slot") && bag.hero && !cannotWear(bag, it) && equipTarget(bag.inventory, it) ? combineItems(replacedItems(bag.inventory, it)) ?? NOTHING : null;
-        tip.replaceChildren(itemTooltip(bag.hero, it, replaced, !!slot && !slot.startsWith("slot"), party.talents));
+        const fits = !!it && !!slot?.startsWith("slot") && !!bag.hero && !cannotWear(bag, it) && !!equipTarget(bag.inventory, it);
+        // 62nd playtest, point 5: a ring that would replace one of two worn rings is compared with the left one; Ctrl switches to the right one
+        const offHand = fits && it ? offHandRingSlot(bag.inventory, it) !== null : false;
+        const replaced = fits && it ? combineItems(replacedItems(bag.inventory, it, offHand && compareOffHand)) ?? NOTHING : null;
+        tip.replaceChildren(itemTooltip(bag.hero, it, replaced, !!slot && !slot.startsWith("slot"), party.talents, offHand ? (compareOffHand ? "on" : "hint") : null));
       };
       show();
       tipUpdaters.push(show);
@@ -282,6 +286,12 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
     let tipUpdaters: (() => void)[] = [];
     const refreshTips = () => {
       for (const show of tipUpdaters) show();
+    };
+    let compareOffHand = false;
+    const setCompareOffHand = (on: boolean) => {
+      if (on === compareOffHand) return;
+      compareOffHand = on;
+      refreshTips();
     };
 
     const slotEl = (bag: BagOwner, slot: string, label?: string) => {
@@ -511,8 +521,19 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       e.stopPropagation();
       if (next !== view) go(next);
     };
+    // Ctrl held compares a ring with the off-hand ring (the tooltip of the item under the pointer is drawn again when it changes)
+    const onCtrl = (e: KeyboardEvent) => setCompareOffHand(e.ctrlKey);
+    const onBlur = () => setCompareOffHand(false);
     document.addEventListener("keydown", onKey, true);
-    removeKeys = () => document.removeEventListener("keydown", onKey, true);
+    document.addEventListener("keydown", onCtrl);
+    document.addEventListener("keyup", onCtrl);
+    window.addEventListener("blur", onBlur);
+    removeKeys = () => {
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("keydown", onCtrl);
+      document.removeEventListener("keyup", onCtrl);
+      window.removeEventListener("blur", onBlur);
+    };
 
     render();
   }).finally(() => removeKeys());

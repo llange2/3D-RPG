@@ -95,11 +95,11 @@ export function averageHit(c: Character, kind: "melee" | "ranged", min: number, 
   if (kind === "melee") {
     if (weapon === 0) weapon = 1; // `meleeDamage` turns a roll of 0 into 1
     // `attrChange`: what an item that is not worn yet would add to Strength or Accuracy (a ring of Strength raises the level term of the blow)
-    const base = (attr(c, "str") + (attrChange.str ?? 0)) / 10 + getBaseValue(c.raceType, c.classType, "base_melee");
+    const base = Math.max(1, attr(c, "str") + (attrChange.str ?? 0)) / 10 + getBaseValue(c.raceType, c.classType, "base_melee");
     levelTerm = isV4() ? (base * c.level) / RULES.v4.meleeLevelDivisor : base * c.level;
   } else {
     const rules = isV4() ? RULES.v4 : RULES.legacy;
-    const base = (attr(c, "acc") + (attrChange.acc ?? 0)) / 10 + getBaseValue(c.raceType, c.classType, "base_ranged") * rules.rangedClassShare;
+    const base = Math.max(1, attr(c, "acc") + (attrChange.acc ?? 0)) / 10 + getBaseValue(c.raceType, c.classType, "base_ranged") * rules.rangedClassShare;
     levelTerm = (base * c.level) / rules.rangedLevelDivisor;
   }
   let total = weapon + Math.ceil(levelTerm) + (c.mods?.rage ?? 0);
@@ -116,16 +116,19 @@ export function averageDamageLines(c: Character, item: Item, replaced: Item | nu
   const own = (key: BonusKey) => item.bonus[key] ?? 0;
   const delta = (key: BonusKey) => (worn ? 0 : own(key) - (replaced?.bonus[key] ?? 0));
   const ringDelta = (key: "dam_min" | "dam_max") => (worn ? 0 : (item.type === "ring" ? own(key) : 0) - (replaced?.type === "ring" ? replaced.bonus[key] ?? 0 : 0));
-  const hitsMelee = own("dam_min") !== 0 || own("dam_max") !== 0 || own("dam_pct") !== 0;
+  // 62nd playtest, point 5: a line shows when the item or the piece it replaces moves the value. A ring of Accuracy that replaces a ring of Strength took the Strength away and showed only
+  // the shot (+58), and the other way round the blow went up (+97) while the shot fell by as much, and the line of the shot stayed away
+  const moves = (key: BonusKey) => own(key) !== 0 || (!worn && (replaced?.bonus[key] ?? 0) !== 0);
+  const hitsMelee = moves("dam_min") || moves("dam_max") || moves("dam_pct");
   // the damage increase against the one the item replaces (a piece that is worn is in the hero's sum already)
   const percent = itemBonus(c, "dam_pct") + delta("dam_pct");
-  const shoots = own("ranged_dam_min") !== 0 || own("ranged_dam_max") !== 0;
+  const shoots = moves("ranged_dam_min") || moves("ranged_dam_max");
   const hasBow = itemBonus(c, "ranged_dam_max") + delta("ranged_dam_max") > 0;
   const lines: { label: string; value: number; change: number }[] = [];
   const round = (x: number) => Number(x.toFixed(1));
   // 54th playtest, point 1: Strength moves the blow and Accuracy the shot as damage does, so a ring (or any piece) of Strength or Accuracy shows its line, too; a shot only counts for a hero with a bow
-  const strength = own("str") !== 0;
-  const accuracy = own("acc") !== 0;
+  const strength = moves("str");
+  const accuracy = moves("acc");
   const wantsMelee = hitsMelee || strength;
   const wantsRanged = shoots || ((accuracy || (hitsMelee && item.type === "ring")) && hasBow);
   // what the item changes in the attributes against what it replaces (nothing when it is worn already: the hero's values hold it)

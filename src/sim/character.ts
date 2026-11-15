@@ -167,7 +167,8 @@ export function conditionAdjusted(c: Character): Record<Attribute, number> & { b
 /** Attribute including equipment. `base = true` uses the unmodified value, false the condition-adjusted one. */
 export function attr(c: Character, a: Attribute, base = true): number {
   const value = base ? baseValue(c, a) : conditionAdjusted(c)[a];
-  const total = value + itemBonus(c, ATTR_BONUS_KEY[a]) + (c.mods?.boon?.[a] ?? 0);
+  // 62nd playtest, point 3: no attribute is ever below 1, whatever a ring, a condition or a boon takes off (a cursed ring of -5 on a hero with 3 gave -2)
+  const total = Math.max(1, value + itemBonus(c, ATTR_BONUS_KEY[a]) + (c.mods?.boon?.[a] ?? 0));
   // Stone Skin halves the speed (see `fightSpeed`); the sheet shows it
   return a === "spd" && !base && c.mods?.stoneSkin ? Math.max(1, Math.trunc(total / 2)) : total;
 }
@@ -450,9 +451,20 @@ export function equipTarget(inv: Inventory, item: Item): string | undefined {
   return EQUIPMENT_SLOTS.filter((s) => canEquip(inv, item, s)).sort((a, b) => Number((inv[a] ?? null) !== null) - Number((inv[b] ?? null) !== null))[0];
 }
 
-/** What wearing `item` would take off: whatever sits in the slot `equipTarget` picks, plus the shield for a two-hander. Empty when a free slot takes it. */
-export function replacedItems(inv: Inventory, item: Item): Item[] {
+/**
+ * The ring slot that is not the one `equipTarget` picks, for a ring that would replace one of two worn rings (62nd playtest, point 5: the tooltip compares with the left ring and
+ * with the right one while Ctrl is held). null for everything else: a free ring slot takes the ring without replacing, and no other piece has a second slot.
+ */
+export function offHandRingSlot(inv: Inventory, item: Item): string | null {
   const slot = equipTarget(inv, item);
+  if (slot !== "left_ring" && slot !== "right_ring") return null;
+  const other = slot === "left_ring" ? "right_ring" : "left_ring";
+  return inv[slot] && inv[other] && canEquip(inv, item, other) ? other : null;
+}
+
+/** What wearing `item` would take off: whatever sits in the slot `equipTarget` picks (`offHand`: the other ring slot, see `offHandRingSlot`), plus the shield for a two-hander. Empty when a free slot takes it. */
+export function replacedItems(inv: Inventory, item: Item, offHand = false): Item[] {
+  const slot = offHand ? (offHandRingSlot(inv, item) ?? equipTarget(inv, item)) : equipTarget(inv, item);
   if (!slot) return [];
   const out: Item[] = [];
   const there = inv[slot];

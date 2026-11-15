@@ -19,10 +19,11 @@ import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { ARTIFACT_TYPE, ARTIFACT_XP, KEEPERS } from "../data/keepers";
 import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
-import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
+import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, POWER_CRYSTAL, SKULL, SKULLS_FOR_RING, STORAGE_BAY } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, showcaseLabelAt, hasQuartermaster, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
+import { hasRoundWalls } from "../interiors/roundCorners";
 import { towerFloorAt } from "../interiors/stairs";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
 import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
@@ -99,7 +100,7 @@ import { BOON_SPENT, boonText } from "../data/boon-texts";
 import { BOON_HOURS, applyBoon } from "../sim/boons";
 import { landmarkBoon, type LandmarkBoon } from "./landmarkBoons";
 import { CAVE_EXPLORER, SENSE_STEPS, pickOf, senseFlag, senseLine, wallsSensed } from "./caveSense";
-import { SKULL_MISER_MET,clueFlag, hintHeardFlag, lockSeenFlag, placeSegments, reachedFlag, unlockedFlag, worldQuestLog, type QuestLogView } from "./questLog";
+import { SKULL_MISER_MET,clueFlag, hintHeardFlag, lockSeenFlag, placeSegments, reachedFlag, shipSectionDone, unlockedFlag, worldQuestLog, type QuestLogView } from "./questLog";
 import { capybaraSpot, overworldMascotSpots, townMascotSpot, type MascotSpot } from "../world/mascots";
 import { START_TOWN_ID, innStart, portalStart } from "../actions";
 import { scaledGold, scaledXp } from "../actions/rewardScale";
@@ -886,6 +887,8 @@ export class Game {
         obstacle: (x, y) => !!rt.campaign && rt.blocked.has(y * map.width + x),
         // the party can stand in front of a brittle wall's wall piece, and nothing reaches across it
         wallBetween: (x0, y0, x1, y1) => slabBetween(rt.slabs, map.width, x0, y0, x1, y1) || beamBetween(rt.beams, map.width, x0, y0, x1, y1),
+        // 62nd playtest, point 7: the corners of the spaceship are round, a diagonal shot slips past them; everywhere else a wall at the corner stops it
+        roundCorners: hasRoundWalls(map),
         // a monster that has noticed the party opens the sliding doors of the spaceship (not its airlocks, they have levers)
         opensDoor: (x, y) => {
           const a = rt.actionAt.get(y * map.width + x);
@@ -3522,6 +3525,22 @@ export class Game {
     this.refresh();
   }
 
+  /** The uids of the two crates of the storage bay that hold a spare power crystal: the ship's content is a pure function of the seed, so it is generated once from any pyramid. */
+  private crystalCrateUids: readonly string[] | null = null;
+
+  /** Has the party done what the section behind this pyramid asks for (`shipSectionDone`)? False for every other place. */
+  private pyramidDone(poiId: string): boolean {
+    const ref = this.world.dungeonRef(poiId);
+    if (ref?.quest !== "spaceship" || ref.section === undefined) return false;
+    if (ref.section === STORAGE_BAY && !this.crystalCrateUids) {
+      const poi = this.world.poiById(poiId);
+      if (!poi) return false;
+      const content = buildMapContent(this.world, poi, generateInterior(this.world, poi, 0));
+      this.crystalCrateUids = content.actions.filter((a) => a.kind === "treasure" && a.params.quest === POWER_CRYSTAL).map((a) => a.uid);
+    }
+    return shipSectionDone(ref.section, this.state.opened, this.crystalCrateUids ?? []);
+  }
+
   /** The cells that the heads of a ring block follow the levers: set them again from the state in the save. */
   private syncQuestBlocks(): void {
     const rt = this.interior;
@@ -4867,7 +4886,8 @@ export class Game {
         tip.textContent = `${atParty ? "You are here" : text}  (${cx}, ${cy})`;
         // a cave or dungeon whose end room the party has reached gets a green tick after its position (35th playtest)
         const placeId = interior ? null : this.world.tile(cx, cy).poiId;
-        if (placeId && this.state.opened.has(reachedFlag(placeId))) tip.append(h("span", { class: "map-tick", text: " ✔", style: "color:#6fdc6f;font-weight:bold" }));
+        // (62nd playtest, point 4: a pyramid gets it once the party has done what its section of the spaceship asks for)
+        if (placeId && (this.state.opened.has(reachedFlag(placeId)) || this.pyramidDone(placeId))) tip.append(h("span", { class: "map-tick", text: " ✔", style: "color:#6fdc6f;font-weight:bold" }));
         const box = root.getBoundingClientRect();
         // flush with the game's pointer: left edge at the right edge of the arrow, top edge at its highest point
         const beside = tooltipBesidePointer();
