@@ -22,7 +22,7 @@ export const SHOWCASE_NAME = "Showcase: all monsters and objects";
  * Models that no old item stands for: the fountain of a town and its statue (the interior view's), the cottage that takes the place of a third of the caravans and the pirate ship
  * (the overworld's, the user's own models; they are loaded for the showcase only: `OVERWORLD_EXTRAS`).
  */
-export const OVERWORLD_EXTRAS = ["obj_cottage", "obj_pirate_ship"] as const;
+export const OVERWORLD_EXTRAS = ["obj_cottage", "obj_pirate_ship", "poi_castle_ruin"] as const;
 /** The user's spaceship models of quest_7 (loaded for the showcase until the spaceship's own loading names them): the crate, the broken power crystal and the console. */
 export const SPACESHIP_EXTRAS = ["obj_futuristic_box", "obj_power_crystal_broken", "obj_spaceship_console"] as const;
 /** The user's models of the tower (quest document 1.7): the spiral staircase inside, and the building the tower is on the overworld (the Fort door the stairs down use is item 100, shown as an item). */
@@ -33,6 +33,8 @@ export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: 
   { model: "obj_statue", scale: 1.15 },
   { model: "obj_cottage", scale: COTTAGE_SCALE, height: COTTAGE_HEIGHT_FACTOR },
   { model: "obj_pirate_ship", scale: 2.4 },
+  // the ruin of a castle that lost the race for the orbs (bug_fix_64, point 4), as large as the castle's own entry
+  { model: "poi_castle_ruin", scale: 1.5 },
   // the spaceship of quest_7 (quest document 1.5): the crate of the storage bay, the broken power crystal (the intact one is item 67) and the console of the bridge
   { model: "obj_futuristic_box", scale: 1.6 },
   { model: "obj_power_crystal_broken", scale: 2.03, height: 1.03 },

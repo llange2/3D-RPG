@@ -102,8 +102,9 @@ def first_y(block: str) -> float:
 
 # Items whose extra yaw differs here from the old code. Every building on the Outside map faces the compass bearing stored
 # on its cell (`ir`: the "enter" action lies on the cell in front of it, checked for all 29 places). The old game's GLB loader
-# showed the cave's door on +x, so the old code adds 270 degrees; the glTF import here shows it on -z, which needs 180.
-YAW_OVERRIDE = {42: 180.0}
+# showed the cave's door on +x, so the old code adds 270 degrees; the glTF import here shows it on -z, which needed 180. That was the old file, whose node carried a half turn:
+# the user's `Cave_Entrance.glb` (bug_fix_64, point 3, `REPLACED_ITEMS` in `build-models.ts`) has no node turn and its door on +z, like every model: no extra yaw.
+YAW_OVERRIDE = {42: 0.0}
 
 
 def strip_comment(line: str) -> str:

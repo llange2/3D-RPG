@@ -15,7 +15,7 @@ import { LAYER, Rng, rngFor, seedFromString } from "../core/rng";
 import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
-import { KING_GREETING, guardsOf, type Alignment } from "../data/castles";
+import { ALIGNMENTS, KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { ARTIFACT_TYPE, ARTIFACT_XP, KEEPERS } from "../data/keepers";
 import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
@@ -46,7 +46,7 @@ import { PropRenderer } from "../render/props";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
-import { LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setUltraGround, tileModelKeys, towerTorchSpots, type PropInstance } from "../render/terrainMesher";
+import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setRuinedCastleKinds, setUltraGround, tileModelKeys, towerTorchSpots, type PropInstance } from "../render/terrainMesher";
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
@@ -472,7 +472,7 @@ export class Game {
       this.minimapIcons = icons;
       this.minimapDirty = true;
     });
-    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", "poi_dungeon", "poi_cave", "poi_pyramid", "poi_tower", "obj_loot", ...PROJECTILE_MODELS], (share) => progress?.(0.15 + 0.8 * share));
+    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", CASTLE_RUIN_MODEL, "poi_dungeon", "poi_cave", "poi_pyramid", "poi_tower", "obj_loot", ...PROJECTILE_MODELS], (share) => progress?.(0.15 + 0.8 * share));
     this.sceneInst = new SceneInstrumentation(this.r.scene);
     this.sceneInst.captureFrameTime = true;
 
@@ -987,6 +987,8 @@ export class Game {
       const cell = map.cells[y * map.width + x];
       if (cell === CELL.LOW) return this.canCross(x, y);
       const i = y * map.width + x;
+      // bug_fix_64, point 2: a wall that is giving way is a wall until its stone has gone down into the floor (the end of the sound)
+      if (this.stoneSinking(i)) return false;
       // a brittle wall's cell is open to the party from the side opposite its wall piece; the wall piece itself is a wall
       const open = !blocked.has(i) || !!this.interior.slabs?.has(i);
       // the party never walks into a staircase or a Fort door of a tower: bumping into one climbs it (`climbStairs`)
@@ -1003,6 +1005,24 @@ export class Game {
 
   private canSwim(): boolean {
     return canSwim(this.state.party);
+  }
+
+  /** Wall cells whose stone is still going down (`sinkWall`), by grid index, with the wall-clock time (ms) at which the way is free. The map beneath is open already, the party is not allowed in yet. */
+  private sinkingStones = new Map<number, number>();
+
+  /** The way through the cell is shut until the stone has gone down: `seconds` is the length of the sound that goes with it (the same time `InteriorView.sinkWall` takes). */
+  private holdStone(index: number, seconds: number): void {
+    this.sinkingStones.set(index, performance.now() + seconds * 1000);
+  }
+
+  private stoneSinking(index: number): boolean {
+    const until = this.sinkingStones.get(index);
+    if (until === undefined) return false;
+    if (performance.now() >= until) {
+      this.sinkingStones.delete(index);
+      return false;
+    }
+    return true;
   }
 
   // ---------------------------------------------------------------- mode changes
@@ -1062,6 +1082,9 @@ export class Game {
       this.props.setInstances(this.lootOwner, []);
       this.sky.setVisible(true);
       this.chunks?.dispose();
+      // bug_fix_64, point 4: the castles of the kings that lost stand as ruins (every entry builds the chunks anew, so the kinds are set here)
+      const winner = [...this.state.opened].find((k) => k.startsWith("king:winner="))?.split("=")[1];
+      setRuinedCastleKinds(winner ? ALIGNMENTS.filter((k) => k !== winner) : []);
       this.chunks = new ChunkManager(this.world, this.r, this.terrain, this.props, chunkRadius(this.viewDistance));
       this.state.at = { mode: "overworld", x, y, facing };
       const p = this.worldPos(x, y);
@@ -1192,6 +1215,7 @@ export class Game {
     this.lootHeld.clear();
     this.volleyUntil = 0;
     this.projectiles.clear();
+    this.sinkingStones.clear();
   }
 
   private monsterWorld(m: MonsterInstance): { x: number; y: number; z: number } {
@@ -1743,6 +1767,11 @@ export class Game {
       }
     }
     if (this.mode === "interior" && this.interior) {
+      // the stone of a wall that has just been opened is still going down: a bump against it, nothing to use
+      if (this.stoneSinking(this.cellIndex(x, y))) {
+        this.audio.play(9014, 0.35);
+        return;
+      }
       const a = this.interior.actionAt.get(this.cellIndex(x, y));
       if (this.interior.campaign) {
         if (a?.legacy) {
@@ -2971,7 +3000,11 @@ export class Game {
             this.interiorView.wallBroken(a.uid);
             // a cave's rock has no broken model: the stone goes down into the floor as long as the sound lasts, like the seal of an end room
             // (a broken wall falls apart with the noise of the pit's stones, 9007, 6. 11. 2026; the end room's seal keeps the grinding of 9050)
-            if (rt.map.kind === "cave") this.interiorView.sinkWall(a.x, a.y, this.audio.durationOf(9007, 1.6));
+            if (rt.map.kind === "cave") {
+              const seconds = this.audio.durationOf(9007, 1.6);
+              this.interiorView.sinkWall(a.x, a.y, seconds);
+              this.holdStone(a.y * rt.map.width + a.x, seconds);
+            }
             this.audio.play(9007);
           }
           break;
@@ -3329,7 +3362,9 @@ export class Game {
       rt.map.cells[end.seal.y * rt.map.width + end.seal.x] = CELL.FLOOR;
       this.interiorView.refresh(rt.map);
       // the wall goes down into the floor as long as the sound of the stone lasts (it used to stand until the next step)
-      this.interiorView.sinkWall(end.seal.x, end.seal.y, this.audio.durationOf(9050, 1.6));
+      const sinkSeconds = this.audio.durationOf(9050, 1.6);
+      this.interiorView.sinkWall(end.seal.x, end.seal.y, sinkSeconds);
+      this.holdStone(end.seal.y * rt.map.width + end.seal.x, sinkSeconds);
       this.audio.play(9050);
       // 53rd playtest, point 24: the quest is solved, which sounds like the one that is reached in the end room (`noteEndRoom`); a little after the stone starts, so that both are heard
       this.later(0.3, () => this.audio.play(9018));

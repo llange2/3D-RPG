@@ -96,9 +96,6 @@ const CAVE_WALL_RADIUS = 12;
 /** Yaw of the exit model so that it faces north, towards the party. The first reading of the old maps (opening towards the floor, glTF turned by half a circle) had it the wrong way round: the user saw it turned by 180 degrees. */
 const CAVE_EXIT_YAW = 0;
 
-/** How many cells round the party the rounded corners of the spaceship are drawn (two models per corner, a few hundred corners in all). */
-const ROUND_RADIUS = 14;
-
 /** The models of the rounded corners of the spaceship (`Round inner corner.obj`, `Round outer corner.obj`). */
 export function roundModelKeys(map: InteriorMap): string[] {
   return hasRoundWalls(map) ? [itemModelKey(ROUND_ITEM.inner), itemModelKey(ROUND_ITEM.outer)].filter((k): k is string => k !== null) : [];
@@ -223,7 +220,7 @@ export class InteriorView {
   private caveShown: { x: number; y: number } | null = null;
   private caveModels = false;
   private roundList: RoundCorner[] = [];
-  private roundShown: { x: number; y: number } | null = null;
+  private roundShown = false;
   private roundModels = false;
 
   constructor(
@@ -301,7 +298,7 @@ export class InteriorView {
     this.owner = `interior:${map.key}`;
     this.floorFocus = null;
     this.caveShown = null;
-    this.roundShown = null;
+    this.roundShown = false;
     this.ceilingShown = null;
     this.panelShown = null;
     this.updateRise();
@@ -349,7 +346,7 @@ export class InteriorView {
     this.viewShare = share;
     if (!this.map) return;
     this.caveShown = null;
-    this.roundShown = null;
+    this.roundShown = false;
     this.pushFloor(true);
     this.pushCeiling(true);
     this.pushPanels(true);
@@ -409,17 +406,19 @@ export class InteriorView {
     this.pushRoundCorners(cx, cy);
   }
 
-  /** The rounded corners of the spaceship within `ROUND_RADIUS` cells of the party. */
-  private pushRoundCorners(cx: number, cy: number): void {
+  /**
+   * All rounded corners of the spaceship, however far away (bug_fix_64, point 1: in a window of 14 cells they popped in one step at a time, and the wall
+   * faces they cover are missing from the mesh, so what lay outside the window had gaps). The models are 22 and 36 triangles, a few hundred of them cost
+   * nothing; the party's cell does not matter, so they are built once per map.
+   */
+  private pushRoundCorners(_cx: number, _cy: number): void {
     const map = this.map;
     const owner = `${this.owner}:round`;
     if (!map || !this.roundModels) return;
-    if (this.roundShown && this.roundShown.x === cx && this.roundShown.y === cy) return;
-    this.roundShown = { x: cx, y: cy };
-    const radius = Math.max(4, Math.round(ROUND_RADIUS * this.viewShare));
+    if (this.roundShown) return;
+    this.roundShown = true;
     const list: PropInstance[] = [];
     for (const c of this.roundList) {
-      if (Math.abs(c.x - cx) > radius || Math.abs(c.y - cy) > radius) continue;
       const inst = itemProp(ROUND_ITEM[c.kind], c.yaw, cellCenterX(c.x), cellCenterZ(c.y), this.staticInfo);
       if (inst) list.push(inst);
     }
@@ -684,7 +683,7 @@ export class InteriorView {
     // the models of a cave's rock and of the round corners are chosen from the cells: a changed map (a wall that gave way) shows them again at once, not with the next step
     if (this.floorFocus) {
       this.caveShown = null;
-      this.roundShown = null;
+      this.roundShown = false;
       this.pushCaveWalls(this.floorFocus.x, this.floorFocus.y);
       this.pushRoundCorners(this.floorFocus.x, this.floorFocus.y);
     }
@@ -1194,7 +1193,7 @@ export class InteriorView {
     this.caveShown = null;
     this.caveModels = false;
     this.roundList = [];
-    this.roundShown = null;
+    this.roundShown = false;
     this.roundModels = false;
     this.floorCells = [];
     this.floorShown = null;

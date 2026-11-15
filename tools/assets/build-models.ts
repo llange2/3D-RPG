@@ -708,6 +708,8 @@ const REPLACED_ITEMS: Record<number, Pick<ModelSpec, "source" | "rotateY">> = {
   // the rustic caravan, the dungeon entrance and the pyramid (51st playtest, point 12: the user's upgrades of the old models; `Rustic_Caravan.glb`, `Dungeon_entrance.glb` and `Pyramid.glb`)
   26: { source: "new:Rustic_Caravan.glb" },
   41: { source: "new:Dungeon_entrance.glb" },
+  // the cave entrance (bug_fix_64, point 3: the user's `Cave_Entrance.glb`, 1.88 x 1.16 x 1.90 against the old 1.65 x 1.21 x 2.0; the old file carried a half turn in its node, the new one none)
+  42: { source: "new:Cave_Entrance.glb" },
   43: { source: "new:Pyramid.glb" },
   44: { source: "new:Castle.glb" },
   47: { source: "new:Village (poi_town).glb" },
@@ -743,6 +745,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   // points of interest seen from the overworld
   { ...S("poi_castle", "new:Castle.glb", 9000, 1024), normals: "smooth", ...REPLACED_ITEMS[44] },
   { ...S("poi_town", "new:Village (poi_town).glb", 9000, 1024), normals: "smooth", ...REPLACED_ITEMS[47] },
+  // the two castles that are left in ruins when one king holds the eleventh orb (bug_fix_64, point 4: `Castle_destroyed.glb`, 18 574 triangles, a little taller than the castle); it takes the castle's place on the overworld
+  { ...S("poi_castle_ruin", "new:Castle_destroyed.glb", 9000, 1024), normals: "smooth" },
   // the cottage: a house that stands in the place of every third rustic caravan (`world/caravans.ts`, the caravan landmarks), and the pirate ship of ue_quest_4
   S("obj_cottage", "new:Cottage.glb", 3000, 1024),
   // the tower of the layout dungeon_5 (quest document 1.7, the user's models): the building on the overworld (2 x 2 tiles, 10 314 triangles) and the spiral staircase inside (9 372)
@@ -773,7 +777,7 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("poi_hut", "Hut.obj", 1200),
   { ...S("poi_pyramid", "new:Pyramid.glb", 900), ...REPLACED_ITEMS[43] },
   { ...S("poi_dungeon", "new:Dungeon_entrance.glb", 1200), ...REPLACED_ITEMS[41] },
-  S("poi_cave", "Cave entrance.glb", 1200),
+  { ...S("poi_cave", "new:Cave_Entrance.glb", 1200), ...REPLACED_ITEMS[42] },
   S("poi_gate", "Castle Gate.glb", 1500),
   S("poi_portal", "Portal.obj", 600),
   // vegetation and mountains (each covers one tile)
