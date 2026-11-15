@@ -2,6 +2,7 @@ import { LAYER, rngFor } from "../core/rng";
 import { hintTale } from "../data/caravan-hints";
 import { hutIndex } from "./huts";
 import { overworldMascotSpots } from "./mascots";
+import type { Island } from "./islands";
 import { DECO, GROUND, poiBounds, type Poi } from "./types";
 import type { World } from "./world";
 
@@ -33,7 +34,25 @@ export interface CaravanSpot {
   cottage: boolean;
   /** A wagon near a locked place (49th playtest): the tale it tells about the place `place` (a dungeon that asks for a key, a pyramid that asks for a key card) and about where the thing lies. */
   hint?: { place: string; need: string; holder: string };
+  /** The cottage of the cartographer of an island (58th playtest, point 8): he sells the map of the island `island` for `price` gold. */
+  islandMap?: { island: number; price: number; size: IslandMapSize };
 }
+
+export type IslandMapSize = "small" | "medium" | "large";
+
+/** Land tiles from which an island counts as medium or large (58th playtest: 45 to 206 tiles are small, 498 to 540 medium on a default world, 712 and up large). */
+export const MEDIUM_ISLAND_TILES = 300;
+export const LARGE_ISLAND_TILES = 620;
+
+/** What the map of an island costs by its size. */
+export const ISLAND_MAP_PRICE: Readonly<Record<IslandMapSize, number>> = { small: 500, medium: 2000, large: 10_000 };
+
+export function islandMapSize(island: Pick<Island, "area">): IslandMapSize {
+  return island.area >= LARGE_ISLAND_TILES ? "large" : island.area >= MEDIUM_ISLAND_TILES ? "medium" : "small";
+}
+
+/** The flag in `GameState.opened` that says the party owns the map of this island. */
+export const islandMapFlag = (island: number): string => `islandmap:${island}`;
 
 /** One in this many caravans is a cottage. */
 export const COTTAGE_EVERY = 3;
@@ -175,11 +194,101 @@ export function wagonTale(world: World, wagon: Pick<CaravanSpot, "cottage" | "hi
  * those places step aside for, ask without them.
  */
 export function caravansIn(world: World, x0: number, y0: number, x1: number, y1: number, withHints = false): CaravanSpot[] {
-  return world.poisInRect(x0, y0, x1, y1).filter((poi) => withHints || poi.kind !== "dungeon").flatMap((poi) => {
+  const wagons = world.poisInRect(x0, y0, x1, y1).filter((poi) => withHints || poi.kind !== "dungeon").flatMap((poi) => {
     // a town seen across the seam stands where the copy is: its caravans are shifted with it
     const home = world.poiById(poi.id) ?? poi;
     const dx = poi.x - home.x;
     const dy = poi.y - home.y;
     return caravansOf(world, home).map((c) => (dx === 0 && dy === 0 ? c : { ...c, x: c.x + dx, y: c.y + dy, faceX: c.faceX + dx, faceY: c.faceY + dy }));
   });
+  // the cartographers' cottages step aside for the mascots and the huts like the wagons of the locked places do, so they come with the hints only
+  return withHints ? [...wagons, ...mapCottagesIn(world, x0, y0, x1, y1)] : wagons;
+}
+
+/** How far from its reference point the cottage of an island's cartographer is searched: past the far shore of the island (`reach`), so that the last free tile of a rocky island is found. */
+const MAP_SEARCH_EXTRA = 8;
+
+const mapCottageCache = new WeakMap<World, (CaravanSpot | null | undefined)[]>();
+
+/**
+ * The cottage of one island's cartographer (58th playtest, point 8): every island has one, on open ground (`isOpenGround`, `leavesPassage`) that belongs to the island itself,
+ * as near as possible to the front of its first place (the town of an island that has one, any place otherwise), or to the middle of the island when it has no place at all.
+ * It steps aside for everything else that stands on the open land (mascots, huts, the wagons of the towns and of the locked places) and nothing steps aside for it, so nothing in
+ * the generated world changes (no `GEN_VERSION`). Null for an island with no ground to put it on.
+ */
+export function mapCottageOf(world: World, island: Island): CaravanSpot | null {
+  let known = mapCottageCache.get(world);
+  if (!known) mapCottageCache.set(world, (known = world.islands.map(() => undefined)));
+  const cached = known[island.index];
+  if (cached !== undefined) return cached;
+  const mine = world.allPois().filter((p) => world.islandAt(p.x, p.y)?.index === island.index);
+  const anchor = mine.find((p) => p.kind === "town") ?? mine[0];
+  const ref = anchor ? world.frontOf(anchor) : { x: island.x, y: island.y };
+  const taken: { x: number; y: number }[] = [...overworldMascotSpots(world), ...hutIndex(world).huts];
+  for (const p of mine) taken.push(...caravansOf(world, p));
+  const rng = rngFor(world.rootSeed, LAYER.POI, "island-map", String(island.index));
+  let spot: CaravanSpot | null = null;
+  // the demands ease step by step: a small island has no "open ground" of 300 tiles and no ring of a place to keep open, but it holds its cottage all the same (the party swims or sails
+  // there, and the island is all it has); `strict` 0 asks for all of it, 1 for a passage that stays open, 2 for nothing but a free land tile of the island
+  const steps: readonly (readonly [number, number])[] = [[3, 0], [2, 0], [1, 0], [0, 0], [1, 1], [0, 1], [0, 2]];
+  for (const [needRoom, strict] of steps) {
+    for (let r = anchor ? 3 : 0; r <= island.reach * 2 + MAP_SEARCH_EXTRA && !spot; r++) {
+      const ring: [number, number][] = [];
+      for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) if (Math.max(Math.abs(ox), Math.abs(oy)) === r) ring.push([ref.x + ox, ref.y + oy]);
+      for (const [x, y] of rng.shuffle(ring)) {
+        const t = world.tile(x, y);
+        if (t.ground !== GROUND.LAND || t.deco !== DECO.NONE || t.poiId !== null || world.poiAtEntrance(x, y) !== null) continue;
+        if (world.islandAt(x, y)?.index !== island.index) continue;
+        if (strict === 0 && (!world.leavesPassage(x, y) || !world.keepsRingOpen(x, y, taken) || !world.isOpenGround(x, y))) continue;
+        if (strict === 1 && !world.leavesPassage(x, y)) continue;
+        // room to walk round it, and between it and everything else that stands there
+        if (taken.some((o) => Math.max(Math.abs(o.x - x), Math.abs(o.y - y)) < 2)) continue;
+        let room = 0;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) if (world.tile(x + dx, y + dy).ground === GROUND.LAND && world.tile(x + dx, y + dy).deco === DECO.NONE) room++;
+        if (room < needRoom) continue;
+        const size = islandMapSize(island);
+        spot = { id: islandMapFlag(island.index), town: anchor?.id ?? "", talent: null, x: world.wrapX(x), y: world.wrapY(y), faceX: ref.x, faceY: ref.y, cottage: true, islandMap: { island: island.index, price: ISLAND_MAP_PRICE[size], size } };
+        break;
+      }
+    }
+    if (spot) break;
+  }
+  known[island.index] = spot;
+  return spot;
+}
+
+/** The cottages of the cartographers of every island. */
+export function mapCottages(world: World): CaravanSpot[] {
+  return world.islands.flatMap((isl) => mapCottageOf(world, isl) ?? []);
+}
+
+/** The cartographers' cottages inside a tile rectangle (the player's coordinates run over the seam, so the copies on the other side of it count as well). */
+export function mapCottagesIn(world: World, x0: number, y0: number, x1: number, y1: number): CaravanSpot[] {
+  const out: CaravanSpot[] = [];
+  for (const c of mapCottages(world)) {
+    for (const ox of [-world.width, 0, world.width]) {
+      for (const oy of [-world.height, 0, world.height]) {
+        const x = c.x + ox;
+        const y = c.y + oy;
+        if (x >= x0 && x <= x1 && y >= y0 && y <= y1) out.push(ox === 0 && oy === 0 ? c : { ...c, x, y, faceX: c.faceX + ox, faceY: c.faceY + oy });
+      }
+    }
+  }
+  return out;
+}
+
+/** The tiles the map of an island shows: its land and two tiles of sea round it (canonical coordinates). */
+export function islandMapTiles(world: World, island: Island): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  const m = 2;
+  for (let dy = island.box.y0 - m; dy <= island.box.y1 + m; dy++) {
+    for (let dx = island.box.x0 - m; dx <= island.box.x1 + m; dx++) {
+      const x = world.wrapX(island.x + dx);
+      const y = world.wrapY(island.y + dy);
+      let near = false;
+      for (let ey = -m; ey <= m && !near; ey++) for (let ex = -m; ex <= m && !near; ex++) near = world.islandAt(x + ex, y + ey)?.index === island.index;
+      if (near) out.push({ x, y });
+    }
+  }
+  return out;
 }

@@ -174,7 +174,7 @@ describe("13 Nov 2026, no way back from old age, except through the temple", () 
     expect(c.diedOfAge).toBe(true);
     expect(castSpell(p, 3, 65, rng("a"), { target: 0 })).toMatchObject({ kind: "fizzle", reason: "died_of_age", who: c.name });
     p.gold = 1_000_000_000;
-    expect(templeRevive(p, 0, 1)).toBe(false);
+    expect(templeRevive(p, 0)).toBe(false);
     p.characters[3]!.magicAge = 0;
     const result = castSpell(p, 3, 78, rng("a"), {});
     expect(result.kind).toBe("intervention");
@@ -196,7 +196,7 @@ describe("13 Nov 2026, no way back from old age, except through the temple", () 
     expect(c.diedOfAge).toBeUndefined();
     expect(c.conditions).toEqual(["Dead"]);
     p.gold = 1_000_000;
-    expect(templeRevive(p, 0, 1)).toBe(true);
+    expect(templeRevive(p, 0)).toBe(true);
     expect(c.hp).toBeGreaterThan(0);
   });
 

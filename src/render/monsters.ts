@@ -238,16 +238,29 @@ export class MonsterRenderer {
 
   /** Creates the view of a monster at the given world position. Safe to call before the model has loaded. `npc` makes it a person who stands where he is put. */
   add(uid: string, defId: number, x: number, y: number, z: number, npc: NpcLook | null = null, fadeSeconds = 0): Promise<void> {
-    const p: Promise<void> = this.create(uid, defId, x, y, z, npc, fadeSeconds).finally(() => this.adding.delete(p));
+    const ticket = ++this.ticket;
+    this.wanted.set(uid, ticket);
+    const p: Promise<void> = this.create(uid, defId, x, y, z, npc, fadeSeconds, ticket).finally(() => {
+      this.adding.delete(p);
+      if (this.wanted.get(uid) === ticket) this.wanted.delete(uid);
+    });
     this.adding.add(p);
     return p;
   }
 
-  private async create(uid: string, defId: number, x: number, y: number, z: number, npc: NpcLook | null, fadeSeconds: number): Promise<void> {
+  /**
+   * The views still to be built, by uid, with the number of the `add` that asked for them. `remove`, `die` and `clear` strike a uid off: a model that arrives afterwards builds nothing
+   * (58th playtest, point 1: a monster that fell before its model had loaded came to life where it had stood, and nothing in the game owned it any more).
+   */
+  private readonly wanted = new Map<string, number>();
+  private ticket = 0;
+
+  private async create(uid: string, defId: number, x: number, y: number, z: number, npc: NpcLook | null, fadeSeconds: number, ticket: number): Promise<void> {
     if (this.views.has(uid)) return;
     const info = this.info[String(defId)];
     const container = await this.container(defId);
     const kit = info?.animated ? await this.kit(defId) : [];
+    if (this.wanted.get(uid) !== ticket) return;
     if (!container || !info || this.views.has(uid)) return;
     const entries = container.instantiateModelsToScene((n) => `${uid}:${n}`, false);
     const holder = new TransformNode(`monster:${uid}`, this.scene);
@@ -310,6 +323,7 @@ export class MonsterRenderer {
     };
     if (view.fade) this.setVisibility(view, 0);
     this.views.set(uid, view);
+    this.wanted.delete(uid);
     for (const g of view.groups) g.stop();
     if (npc) holder.rotation.y = (npc.yaw * Math.PI) / 180;
     this.playIdle(view);
@@ -457,6 +471,7 @@ export class MonsterRenderer {
     const v = this.views.get(uid);
     const dead = v ? this.group(v, ["Dead"]) : undefined;
     if (!v || !dead) {
+      // (a view that is not built yet never will be: `remove` strikes it off the list)
       this.remove(uid);
       then();
       return;
@@ -479,6 +494,7 @@ export class MonsterRenderer {
   }
 
   remove(uid: string): void {
+    this.wanted.delete(uid);
     const v = this.views.get(uid);
     if (!v) return;
     for (const g of v.groups) g.dispose();
@@ -490,6 +506,8 @@ export class MonsterRenderer {
   }
 
   clear(): void {
+    // the models still on their way belong to the scene that is going away: they build nothing in the next one
+    this.wanted.clear();
     for (const uid of [...this.views.keys()]) this.remove(uid);
   }
 

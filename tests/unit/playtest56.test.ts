@@ -153,7 +153,7 @@ describe("point 10: formulas 1.1", () => {
     expect(party.food).toBe(food);
   });
 
-  it("prices the temple by the hero's level, and revival by the temple's tier (5.3)", () => {
+  it("prices the temple by the hero's level, revival included (5.3, formulas 1.3)", () => {
     const party = createDefaultParty();
     const hero = party.characters[0]!;
     hero.level = 7;
@@ -163,13 +163,13 @@ describe("point 10: formulas 1.1", () => {
     expect(healCost(hero, 5, party)).toBe(10 * 2 * 7);
     expect(cureCost("Poisoned", hero)).toBe(40 * 7);
     expect(cureCost("Petrified", hero)).toBe(400 * 7);
-    expect(reviveCost(hero, 3)).toBe(900);
+    expect(reviveCost(hero)).toBe(300 * 7);
     hero.conditions = ["Rotten"];
-    expect(reviveCost(hero, 3)).toBe(3000);
+    expect(reviveCost(hero)).toBe(1000 * 7);
     expect(donationCost(4)).toBe(40);
   });
 
-  it("brings the dead back for 300 a tier and the rotten for 1000 a tier, with half the hit points", () => {
+  it("brings the dead back for 300 a hero level and the rotten for 1000 a hero level, with half the hit points", () => {
     const party = createDefaultParty();
     party.gold = 5000;
     const [dead, rotten] = [party.characters[0]!, party.characters[1]!];
@@ -177,10 +177,12 @@ describe("point 10: formulas 1.1", () => {
     dead.hp = 0;
     rotten.conditions = ["Rotten"];
     rotten.hp = 0;
-    expect(templeRevive(party, 0, 2)).toBe(true);
+    dead.level = 2;
+    rotten.level = 2;
+    expect(templeRevive(party, 0)).toBe(true);
     expect(party.gold).toBe(5000 - 600);
     expect(dead.hp).toBe(Math.floor(dead.health / 2));
-    expect(templeRevive(party, 1, 2)).toBe(true);
+    expect(templeRevive(party, 1)).toBe(true);
     expect(party.gold).toBe(5000 - 600 - 2000);
     expect(rotten.conditions).not.toContain("Rotten");
   });

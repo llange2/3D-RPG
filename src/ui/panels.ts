@@ -222,9 +222,9 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       h(
         "div",
         { class: "tabs" },
-        ...party.characters.map((ch, i) => h("div", { class: `tab${view === i ? " on" : ""}`, text: ch.name, onclick: () => go(i) })),
+        ...party.characters.map((ch, i) => h("div", { class: `tab${view === i ? " on" : ""}`, text: ch.name, onclick: () => (selected && view !== i ? give(ch.inventory, `${ch.name}'s`) : go(i)) })),
         h("div", { class: `tab${view === "perks" ? " on" : ""}`, text: "Party Info", onclick: () => go("perks") }),
-        h("div", { class: `tab${view === "mascot" ? " on" : ""}`, text: "Mascot", onclick: () => go("mascot") }),
+        h("div", { class: `tab${view === "mascot" ? " on" : ""}`, text: "Mascot", onclick: () => (selected && party.mascot === "Donkey" && view !== "mascot" ? give(party.mascotBag, "The Donkey's") : go("mascot")) }),
       );
 
     // ---- what belongs to the whole party: gold, food, talents and achievements

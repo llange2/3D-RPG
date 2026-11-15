@@ -7,7 +7,7 @@ import { isAlive, levelUp, recalcValues, removeCondition, xpToNextLevel } from "
 import { generateItem, spellScroll } from "./items";
 import { advanceTime, MINUTES_PER_DAY, giveItem } from "./party";
 import { addCondition, type ConditionEvent } from "./conditions";
-import { isSpellImplemented, learnBlock } from "./spells";
+import { isSpellImplemented, learnBlock, SPELL_SCHOOL } from "./spells";
 import { BAG_SLOTS, type Character, type Condition, type Item, type Party } from "./types";
 
 /** Price multiplier from the party's talents (25% / 50% discount, as in the old bargain_factor). */
@@ -72,6 +72,20 @@ export const GUILD_SCHOOLS: readonly GuildSchool[] = ["Arcane", "Clerical", "Nat
 export function guildScrolls(guildLevel: number, school: GuildSchool): SpellDef[] {
   return Object.values(SPELLS)
     .filter((s) => s.type.includes(school) && guildTeaches(guildLevel, s.level))
+    .sort((a, b) => a.level - b.level || a.id - b.id);
+}
+
+/**
+ * What a guild of this level still has to teach one hero (58th playtest, point 5): every spell of the hero's school from the lowest guild band up to the top of this guild's band
+ * that the hero has not learned yet, lowest level first, so the guild of level 5 offers them all. A class without a school has no lessons: `null` ("... does not have any
+ * magical abilities"). Spells above the hero's level stay on the list (the button is off and says why), spells of another school never appear.
+ */
+export function guildLessons(c: Character, guildLevel: number): SpellDef[] | null {
+  const school = SPELL_SCHOOL[c.classType];
+  if (!school) return null;
+  const top = GUILD_SPELL_LEVELS[Math.max(1, Math.min(5, guildLevel))]![1];
+  return Object.values(SPELLS)
+    .filter((s) => s.type.includes(school) && s.level >= GUILD_SPELL_LEVELS[1]![0] && s.level <= top && !c.spells.includes(s.id) && isSpellImplemented(s.id))
     .sort((a, b) => a.level - b.level || a.id - b.id);
 }
 
@@ -189,9 +203,9 @@ export function cureCost(cond: Condition, c: Character): number {
   return Math.round((CURE_PRICE[cond] ?? 100) * c.level);
 }
 
-/** Dead: 300 per tier; Rotten: 1000 per tier (a hero who is both costs the rotten price). */
-export function reviveCost(c: Character, tier: number): number {
-  return Math.round((c.conditions.includes("Rotten") ? 1000 : 300) * tier);
+/** Dead: 300 per hero level; Rotten: 1000 per hero level (a hero who is both costs the rotten price; formulas 1.3, 5.3). */
+export function reviveCost(c: Character): number {
+  return Math.round((c.conditions.includes("Rotten") ? 1000 : 300) * c.level);
 }
 
 /** Donation at the temple: 10 gold per tier, 20 % for a day's blessing (formulas 1.1, 5.3). */
@@ -251,10 +265,10 @@ export function templeCure(party: Party, index: number, cond: Condition): boolea
   return true;
 }
 
-/** Brings back the dead (300 per tier) or the rotten (1000 per tier) with half their hit points. */
-export function templeRevive(party: Party, index: number, tier: number): boolean {
+/** Brings back the dead (300 per hero level) or the rotten (1000 per hero level) with half their hit points. */
+export function templeRevive(party: Party, index: number): boolean {
   const c = party.characters[index]!;
-  const cost = reviveCost(c, tier);
+  const cost = reviveCost(c);
   // a hero who died of old age stays dead until the temple has taken the magical age off (`templeCureAge`)
   if (c.diedOfAge || !(c.conditions.includes("Dead") || c.conditions.includes("Rotten")) || party.gold < cost) return false;
   party.gold -= cost;
