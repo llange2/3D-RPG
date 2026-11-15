@@ -1,14 +1,17 @@
 import ITEM_MODELS_RAW from "./item-models.json";
 
+/** The cave entrance (item 42, the overworld's `poi_cave` and the campaign's cave) at 130 % of the size the table gives, height, width and depth alike. */
+export const CAVE_ENTRANCE_SIZE = 1.3;
+
 /**
  * Corrections of the user's to the sizes of the old items (`item-models.json` is generated from the old code and stays as it is). Factors on the
  * height of the model: the Rustic caravan (item 26) stands at 75 % of its old height, then 15 % higher again (41st playtest, point 3: 0.75 x 1.15). The user's Mermaid fountain (item 89, `Mermaid_Fountain.glb`) is drawn at half the size of the old one (0.94 wide against 1.9, same shape): twice the height and width gives the old size back. The cave entrance (item 42) is as high as the old game drew it
- * (a 10 % increase in the 41st playtest was taken back: it was too high). The user's new models of 8 Nov 2026 (51st playtest, point 12) are as big as the old ones again: the new rustic caravan is 1.86 high against 1.8 of the old file (the height factor takes it back), the new pyramid 1.85 high and 1.89 wide against 1.57 and 2.0.
+ * (a 10 % increase in the 41st playtest was taken back: it was too high); the user's new `Cave_Entrance.glb` is drawn 30 % larger in all three dimensions (15 Nov 2026, bug_fix_65: `CAVE_ENTRANCE_SIZE`). The user's new models of 8 Nov 2026 (51st playtest, point 12) are as big as the old ones again: the new rustic caravan is 1.86 high against 1.8 of the old file (the height factor takes it back), the new pyramid 1.85 high and 1.89 wide against 1.57 and 2.0.
  */
-export const HEIGHT_FACTOR: Readonly<Record<string, number>> = { "26": 0.75 * 1.15 * (1.8 / 1.86), "43": 1.57 / 1.85, "89": 2 };
+export const HEIGHT_FACTOR: Readonly<Record<string, number>> = { "26": 0.75 * 1.15 * (1.8 / 1.86), "42": CAVE_ENTRANCE_SIZE, "43": 1.57 / 1.85, "89": 2 };
 
 /** Factors on the width and depth of the model: the Rustic caravan is 85 % as wide as the old game drew it, the Mermaid fountain twice (see above). */
-export const WIDTH_FACTOR: Readonly<Record<string, number>> = { "26": 0.85, "43": 2 / 1.89, "89": 2 };
+export const WIDTH_FACTOR: Readonly<Record<string, number>> = { "26": 0.85, "42": CAVE_ENTRANCE_SIZE, "43": 2 / 1.89, "89": 2 };
 
 /**
  * Items that stand on the ground, so their lowest point rests on it: the wheels of the caravan and the barrow, the feet of the donkey, the

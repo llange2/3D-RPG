@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { HEIGHT_FACTOR } from "../../src/data/item-tuning";
+import { HEIGHT_FACTOR, WIDTH_FACTOR } from "../../src/data/item-tuning";
 import { setTileModels, tileToWorldX, tileToWorldZ } from "../../src/render/heights";
 import { meshChunk } from "../../src/render/terrainMesher";
 import { CHUNK_SIZE } from "../../src/world/types";
@@ -9,8 +9,9 @@ describe("41st playtest, follow-up: the cave entrance", () => {
   beforeAll(() => setTileModels(true));
   afterAll(() => setTileModels(false));
 
-  it("has the height the old game drew (the 10 % were taken back)", () => {
-    expect(HEIGHT_FACTOR["42"]).toBeUndefined();
+  it("is 30 % larger in every dimension than the table says (bug_fix_65; the 10 % of the 41st playtest were taken back, this is the new model)", () => {
+    expect(HEIGHT_FACTOR["42"]).toBe(1.3);
+    expect(WIDTH_FACTOR["42"]).toBe(1.3);
   });
 
   it("always stands on dirt in the 3D ground, whatever the climate of its island", { timeout: 120_000 }, () => {
