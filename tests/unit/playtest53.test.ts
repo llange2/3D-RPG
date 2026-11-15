@@ -172,10 +172,11 @@ describe("a shot never grazes a wall corner on a slanted line (point 26)", () =>
     expect(lineOfSight(gridOf(["..", ".#", "..", ".."]), null, 0, 3, 1, 0)).toBe(false);
   });
 
-  it("still passes when the wall is not at that corner, and on an exact diagonal along one wall", () => {
+  it("still passes when the wall is not at that corner", () => {
     expect(lineOfSight(gridOf(["....", "...."]), null, 0, 1, 3, 0)).toBe(true);
     expect(lineOfSight(gridOf(["....", "#..."]), null, 0, 1, 3, 0)).toBe(true);
-    expect(lineOfSight(gridOf([".#.", "...", "..."]), null, 0, 0, 1, 1)).toBe(true);
+    // an exact diagonal along a wall no longer slips by (62nd playtest, point 7: `bugfix62.test.ts`)
+    expect(lineOfSight(gridOf([".#.", "...", "..."]), null, 0, 0, 1, 1)).toBe(false);
   });
 
   it("keeps an archer from shooting past that corner", () => {

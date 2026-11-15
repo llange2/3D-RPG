@@ -1243,26 +1243,26 @@
  },
  "54": {
   "file": "models-original/monster_54.glb",
-  "tris": 9973,
-  "bytes": 1476204,
+  "tris": 10300,
+  "bytes": 1978804,
   "bounds": [
-   -0.0084999988563359,
-   5.5686978227412776e-11,
-   -0.0017459517327110818,
-   0.0084999988563359,
-   0.016424109568653034,
-   0.0017459511366646474
+   -0.8177982568740845,
+   4.089363958570402e-9,
+   -0.22931599617004395,
+   0.8177981376647949,
+   1.7000000476837158,
+   0.22931598126888275
   ],
   "animations": [
+   "Running",
+   "Walking",
    "Alert",
    "Dead",
-   "Left_Slash",
-   "Running",
-   "Walking"
+   "Left_Slash"
   ],
   "groundTop": 0,
   "fromObj": false,
-  "mean": 0.273,
+  "mean": 0.242,
   "animated": true,
   "scale": 1.4,
   "y": 0
@@ -1831,24 +1831,29 @@
  },
  "79": {
   "file": "models-original/monster_79.glb",
-  "tris": 9927,
-  "bytes": 1131212,
+  "tris": 10076,
+  "bytes": 1924224,
   "bounds": [
-   -0.9373540282249451,
-   -0.9565100073814392,
-   -0.9607260227203369,
-   0.9557849764823914,
-   0.9450719952583313,
-   0.9471049904823303
+   -0.5813523530960083,
+   2.769459939155894e-10,
+   -0.2930510938167572,
+   0.5813524127006531,
+   1.7000001668930054,
+   0.29305100440979004
   ],
-  "animations": [],
-  "groundTop": -0.95,
-  "surface": -0.45,
-  "fromObj": true,
-  "mean": 0.233,
-  "animated": false,
-  "scale": 0.8,
-  "y": 1.7
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "mage_soell_cast_2"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.291,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
  },
  "80": {
   "file": "models-original/monster_80.glb",

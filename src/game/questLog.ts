@@ -1,4 +1,4 @@
-import { ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ORBS_FOR_KING, PEARL, PEARLS_IN_WORLD, POWER_CRYSTAL, SKULLS_FOR_RING, type QuestId } from "../data/quest-table";
+import { BRIDGE, CONSOLE_SEEN_FLAG, CONTROL_ROOM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, ENGINE_ROOM, LIFE_FLAG, LIFE_SUPPORT, ORBS_FOR_KING, STORAGE_BAY, PEARL, PEARLS_IN_WORLD, POWER_CRYSTAL, SKULLS_FOR_RING, type QuestId } from "../data/quest-table";
 import { ALIGNMENTS } from "../data/castles";
 import { ARTIFACT_TYPE, KEEPERS } from "../data/keepers";
 import { MONSTERS, QUEST_ITEMS } from "../data/tables";
@@ -25,6 +25,28 @@ export const unlockedFlag = (poiId: string): string => `unlocked:${poiId}`;
 /** The party has been told by the wagon near a locked place where its key or key card lies (`Game.visitHintWagon`, 49th playtest). */
 export const hintHeardFlag = (poiId: string): string => `hint:${poiId}`;
 export const reachedFlag = (poiId: string): string => `reached:${poiId}`;
+
+/**
+ * Has the party done what its section of the spaceship asks for (62nd playtest, point 4: the pyramid is ticked off on the map)? The bridge: the console started with the black key card
+ * (`CONSOLE_SEEN_FLAG`); the control room: the engines started; life support and the engine room: their power crystal replaced; the storage bay: both spare crystals taken from their
+ * crates (`crystalCrates` are the uids of those two crates, read from the content of the ship). `section` is the number a pyramid opens (`SECTION_NAMES`).
+ */
+export function shipSectionDone(section: number, opened: ReadonlySet<string>, crystalCrates: readonly string[]): boolean {
+  switch (section) {
+    case BRIDGE:
+      return opened.has(CONSOLE_SEEN_FLAG);
+    case CONTROL_ROOM:
+      return opened.has(ENGINES_FLAG);
+    case LIFE_SUPPORT:
+      return opened.has(LIFE_FLAG);
+    case ENGINE_ROOM:
+      return opened.has(ENGINE_CRYSTAL_FLAG);
+    case STORAGE_BAY:
+      return crystalCrates.length > 0 && crystalCrates.every((uid) => opened.has(uid));
+    default:
+      return false;
+  }
+}
 /** A thing the heroes have found out in a place (the words of a statue, what a hero heard in his mind): the text rides in the flag, so the save format stays as it is. */
 export const clueFlag = (poiId: string, text: string): string => `clue:${poiId}|${text}`;
 

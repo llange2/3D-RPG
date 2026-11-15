@@ -190,6 +190,14 @@ const percent = (share: number): string => `${Math.round(share * 100)}%`;
 const TERRAIN_OVERRIDES: Readonly<Record<number, "land" | "water" | "both">> = { 37: "water" };
 
 /**
+ * What a monster holds in its hands after the user's change (62nd playtest, point 1): the Paladin (54) carries Draconi's sword (20) and the Castle Guard's shield (8). `MONSTER_DATA.json`
+ * is generated from the old game (`npm run data:export`), so the correction lives here.
+ */
+const EQUIPMENT_OVERRIDES: Readonly<Record<number, Pick<OldMonster, "anim_weapon" | "anim_shield">>> = {
+  54: { anim_weapon: "resources/objects/Sword 3.glb", anim_shield: "resources/objects/Shield 2.glb" },
+};
+
+/**
  * A monster of the user's sheet (`docs/RPG_0.1.xlsx`, exported by `npm run data:monsters`) laid over the old table: stats, resistances, XP
  * (the sheet's new XP column; the old one is not used any more), treasure level, abilities and the Monster Hut come from the sheet, the
  * animation and sound entries only the old table has stay.
@@ -209,6 +217,7 @@ function monsterFromSheet(id: number, old: OldMonster, row: MonsterSheetRow): Mo
   ].filter((a) => a !== "");
   return {
     ...old,
+    ...EQUIPMENT_OVERRIDES[id],
     id,
     name: row.name,
     health: row.health,

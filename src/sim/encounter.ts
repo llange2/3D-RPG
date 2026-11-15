@@ -35,6 +35,8 @@ export interface GridView {
    * whose cell the party may enter): nobody reaches across it, neither with a blade nor with a shot.
    */
   wallBetween?(x0: number, y0: number, x1: number, y1: number): boolean;
+  /** The walls of the map have round corners (the spaceship): an exact diagonal shot passes a corner of which only one of the two flanking tiles is a wall. Elsewhere one is enough to stop it. */
+  roundCorners?: boolean;
   /**
    * A closed door that a monster which has noticed the party opens on its way (the sliding doors of the spaceship, not its airlocks). `walkable` and `opaque` still treat it as
    * shut: a monster behind it knows nothing of the party until it has noticed it by another way, and only then the door is no obstacle (user, 6. 11. 2026).
@@ -301,8 +303,10 @@ export function lineOfSight(view: GridView, enc: Encounter | null, x0: number, y
       const first = blocks(same ? x + 1 : x, y);
       const second = blocks(same ? x : x + 1, y + 1);
       // 53rd playtest, point 26: on a slanted line (not an exact diagonal) one blocking tile at the corner is enough: the shot would graze the wall and, with a body of its own, did not get through
-      // (Catacombs of Lunzea: an archer on 14/58 hit a party on 17/57 past the wall on 16/58). On an exact diagonal both must block, as before.
-      if (Math.abs(dx) === Math.abs(dy) ? first && second : first || second) return false;
+      // (Catacombs of Lunzea: an archer on 14/58 hit a party on 17/57 past the wall on 16/58).
+      // 62nd playtest, point 7: so is it on an exact diagonal (a wall in front of the party and the monster beside it: the shot does not fly round the corner). Only where the corners are round
+      // (`GridView.roundCorners`, the spaceship) both must block, as before: the rounded wall leaves the gap.
+      if (Math.abs(dx) === Math.abs(dy) && view.roundCorners ? first && second : first || second) return false;
     }
   }
   return true;

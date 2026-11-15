@@ -44,9 +44,10 @@ describe("twentieth playtest, point 8: no monster stronger than the level of its
 // (the castles of the twentieth playtest - vaults, gates, monsters by kind - were replaced by quest document 1.2: see quests12-castles.test.ts)
 
 describe("twentieth playtest, point 5: monsters hold the weapons and shields of the old game", () => {
-  it("knows the equipment of the ten monsters that have some", () => {
+  it("knows the equipment of the eleven monsters that have some", () => {
     const equipped = Object.values(MONSTERS).filter((m) => m.anim_weapon || m.anim_shield);
-    expect(equipped.map((m) => m.name).sort()).toEqual(["Castle Guard", "Draconi", "Goblin", "Mad Dwarf", "Minotaur", "Minotaur King", "Ogre", "Orc Warrior", "Skeleton", "Troll"]);
+    // (the Paladin since the 62nd playtest: Draconi's sword and the Castle Guard's shield)
+    expect(equipped.map((m) => m.name).sort()).toEqual(["Castle Guard", "Draconi", "Goblin", "Mad Dwarf", "Minotaur", "Minotaur King", "Ogre", "Orc Warrior", "Paladin", "Skeleton", "Troll"]);
     for (const m of equipped) {
       expect(equipmentModel(m.anim_weapon), m.name).not.toBeNull();
       if (m.anim_shield) expect(equipmentModel(m.anim_shield), m.name).not.toBeNull();

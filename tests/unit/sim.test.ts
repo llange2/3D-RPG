@@ -483,18 +483,21 @@ describe("line of sight of ranged attacks", () => {
     expect(lineOfSight(gridOf(["....", "....", "....", "..#."]), null, 0, 0, 3, 2)).toBe(true);
   });
 
-  it("does not slip through the corner where two walls touch, but may pass along a single wall", () => {
+  it("does not slip through the corner where two walls touch, nor past a single wall (62nd playtest, point 7)", () => {
     // (0,0) to (1,1) crosses the corner point shared by (1,0) and (0,1)
     expect(lineOfSight(gridOf([".#.", "#..", "..."]), null, 0, 0, 1, 1)).toBe(false);
     expect(lineOfSight(gridOf([".#.", "#..", "..."]), null, 1, 1, 0, 0)).toBe(false);
-    expect(lineOfSight(gridOf([".#.", "...", "..."]), null, 0, 0, 1, 1)).toBe(true);
-    expect(lineOfSight(gridOf(["...", "#..", "..."]), null, 0, 0, 1, 1)).toBe(true);
+    // one wall at the corner stops an exact diagonal, too (the shot does not fly round it); only the round corners of the spaceship leave the gap
+    expect(lineOfSight(gridOf([".#.", "...", "..."]), null, 0, 0, 1, 1)).toBe(false);
+    expect(lineOfSight(gridOf(["...", "#..", "..."]), null, 0, 0, 1, 1)).toBe(false);
+    expect(lineOfSight({ ...gridOf([".#.", "...", "..."]), roundCorners: true }, null, 0, 0, 1, 1)).toBe(true);
     // the same on the way from (0,0) to (2,2): the second corner is shared by (2,1) and (1,2)
     expect(lineOfSight(gridOf(["...", "..#", ".#."]), null, 0, 0, 2, 2)).toBe(false);
-    expect(lineOfSight(gridOf(["...", "..#", "..."]), null, 0, 0, 2, 2)).toBe(true);
+    expect(lineOfSight(gridOf(["...", "..#", "..."]), null, 0, 0, 2, 2)).toBe(false);
+    expect(lineOfSight(gridOf(["...", "...", "..."]), null, 0, 0, 2, 2)).toBe(true);
     // the other diagonal: (2,0) to (0,2) crosses the corner shared by (1,0) and (2,1) on its way to the middle tile
     expect(lineOfSight(gridOf([".#.", "..#", "..."]), null, 2, 0, 0, 2)).toBe(false);
-    expect(lineOfSight(gridOf([".#.", "...", "..."]), null, 2, 0, 0, 2)).toBe(true);
+    expect(lineOfSight(gridOf([".#.", "...", "..."]), null, 2, 0, 0, 2)).toBe(false);
   });
 
   it("is stopped by an obstacle item such as a gate, which is not a wall", () => {

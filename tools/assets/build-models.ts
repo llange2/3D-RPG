@@ -14,6 +14,7 @@ import { ALL_EXTENSIONS, EXTTextureWebP } from "@gltf-transform/extensions";
 import { dedup, prune, resample, simplify, weld } from "@gltf-transform/functions";
 import { MeshoptSimplifier } from "meshoptimizer";
 import sharp from "sharp";
+import { USER_MONSTER_MODELS } from "../../src/data/monster-models";
 import { PERSONAS, personaModelId } from "../../src/data/personas";
 import { OLD, OUT, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
 
@@ -938,15 +939,22 @@ export interface MonsterModel extends ModelInfo {
 }
 
 /** One model per monster: the animated glb where the old game had one, else the static obj. */
-export async function buildMonsters(profile: ModelProfile = "reduced"): Promise<Record<number, MonsterModel>> {
+export async function buildMonsters(profile: ModelProfile = "reduced", only?: ReadonlySet<number>): Promise<Record<number, MonsterModel>> {
   const monsters = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "src", "data", "raw", "MONSTER_DATA.json"), "utf-8")) as Record<string, { name: string; anim_path?: string; anim_scale?: number }>;
   const staticMap = readStaticMonsterMap();
   const result: Record<number, MonsterModel> = {};
-  const jobs = Object.entries(monsters).map(([id, m]) => ({ id: Number(id), ...m }));
+  const jobs = Object.entries(monsters)
+    .map(([id, m]) => ({ id: Number(id), ...m }))
+    .filter((job) => !only || only.has(job.id));
   await pool(jobs, 3, async (job) => {
+    const own = USER_MONSTER_MODELS[job.id];
     const animSource = job.anim_path?.replace("resources/objects/", "");
     const stat = staticMap[job.id];
-    if (animSource && existsSync(join(OBJ_DIR, animSource))) {
+    if (own) {
+      // the user's own model (62nd playtest): animated, wherever the old game drew a static one
+      const info = await buildModel(S(`monster_${job.id}`, `${own.file}.glb`, 3500, 512, true), profile);
+      if (info) result[job.id] = { ...info, animated: true, scale: own.scale, y: 0 };
+    } else if (animSource && existsSync(join(OBJ_DIR, animSource))) {
       const info = await buildModel(S(`monster_${job.id}`, animSource, 3500, 512, true), profile);
       if (info) result[job.id] = { ...info, animated: true, scale: job.anim_scale ?? 1, y: 0 };
     } else if (stat) {
@@ -963,7 +971,7 @@ export async function buildMonsters(profile: ModelProfile = "reduced"): Promise<
     }
   });
   // the people of the campaign maps: the same rig, so the same renderer. Ids from PERSONA_BASE up, size and clip as in the old game
-  await pool(Object.entries(PERSONAS), 3, async ([item, persona]) => {
+  await pool(Object.entries(PERSONAS).filter(([item]) => !only || only.has(personaModelId(Number(item)))), 3, async ([item, persona]) => {
     // (`new:<file>` names a model of the user's own folder, like the static models)
     const source = persona.file.startsWith(NEW_PREFIX) ? `${persona.file}.glb` : `personas/animated/${persona.file}.glb`;
     if (!existsSync(sourcePath(source))) {
@@ -990,6 +998,17 @@ export async function buildAllModels(only?: string, profile: ModelProfile = "red
 if (process.argv[1]?.endsWith("build-models.ts")) {
   const only = process.argv.find((a) => a.startsWith("--only="))?.slice(7);
   const profile: ModelProfile = process.argv.includes("--original") ? "original" : "reduced";
+  // `--monster=54,79` builds only these monster models (ids of the monster registry) and keeps the rest of both registries
+  const monsterArg = process.argv.find((a) => a.startsWith("--monster="))?.slice(10);
+  if (monsterArg !== undefined) {
+    const ids = new Set(monsterArg.split(",").map(Number));
+    const built = await buildMonsters(profile, ids);
+    const file = join(OUT, PROFILES[profile].monsterRegistry);
+    const previous = existsSync(file) ? (JSON.parse(readFileSync(file, "utf-8")) as Record<string, MonsterModel>) : {};
+    writeFileSync(file, JSON.stringify({ ...previous, ...built }, null, 1));
+    for (const [id, m] of Object.entries(built)) console.log(`monster ${id}: ${m.tris} tris ${Math.round(m.bytes / 1024)} KB`);
+    process.exit(0);
+  }
   const registry = await buildAllModels(only, profile);
   let bytes = 0;
   let tris = 0;
