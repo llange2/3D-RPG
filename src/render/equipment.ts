@@ -141,12 +141,31 @@ export function handTransform(hand: Hand, gripY = 0, tweak?: (typeof GRIP_TWEAK)
 const PALM = new Vector3(0, 6, 0);
 
 /**
- * Hangs a mesh of an item under the joint node of a hand with the old game's fit. `unit` is the size of one unit of the joint's space in the old rig's: 1 for the old skeletons
- * (centimetres), 0.01 for the user's Mixamo rigs (`mixamorig:RightHand`, metres, 62nd playtest).
+ * How a weapon lies in the hand of the user's Mixamo rigs (`mixamorig:RightHand`, 63rd playtest): the old fit was made for the old skeleton and laid the Evil Paladin's sword flat out sideways
+ * (blade pointing away from the body, the pommel beside the fist). `rotation` is a quaternion (x, y, z, w) of the item in the hand joint's frame, `position` in the old rig's centimetres (`unit` turns
+ * them into the joint's metres). Measured with `tools/dev/check-paladin-sword.ts` against the user's mock-up `.ignore/paladin.jpg` in the Alert pose seen from the front: the blade rises across the body
+ * (up and towards the sword's left, 41 to 48 degrees), the cross guard just above the fist, the middle of the grip behind the hand (shifted 6 centimetres along the fingers and 6 behind the palm), the
+ * pommel looking out below it. A blade in the other clips follows the hand.
  */
-export function holdInHand(item: TransformNode, joint: TransformNode, hand: Hand, gripY = 0, tweak?: (typeof GRIP_TWEAK)[string], unit = 1): void {
+export const MIXAMO_GRIP: Record<string, { rotation: readonly [number, number, number, number]; position: readonly [number, number, number] }> = {
+  wpn_sword1: { rotation: [0.8245, 0, 0.4157, 0.3838], position: [-9.96, -12.01, 15.75] },
+  wpn_sword2: { rotation: [0.8245, 0, 0.4157, 0.3838], position: [-9.96, -12.01, 15.75] },
+  wpn_sword3: { rotation: [0.8245, 0, 0.4157, 0.3838], position: [-9.96, -12.01, 15.75] },
+};
+
+/**
+ * Hangs a mesh of an item under the joint node of a hand with the old game's fit. `unit` is the size of one unit of the joint's space in the old rig's: 1 for the old skeletons
+ * (centimetres), 0.01 for the user's Mixamo rigs (`mixamorig:RightHand`, metres, 62nd playtest). `fixed` is a measured grip that replaces the fit (`MIXAMO_GRIP`).
+ */
+export function holdInHand(item: TransformNode, joint: TransformNode, hand: Hand, gripY = 0, tweak?: (typeof GRIP_TWEAK)[string], unit = 1, fixed?: (typeof MIXAMO_GRIP)[string]): void {
   const t = handTransform(hand, gripY, tweak);
   item.parent = joint;
+  if (fixed) {
+    item.position.set(fixed.position[0] * unit, fixed.position[1] * unit, fixed.position[2] * unit);
+    item.rotationQuaternion = new Quaternion(...fixed.rotation);
+    item.scaling.setAll(t.scale * unit);
+    return;
+  }
   item.position.copyFrom(t.position.scale(unit));
   item.rotationQuaternion = t.rotation;
   item.scaling.setAll(t.scale * unit);
