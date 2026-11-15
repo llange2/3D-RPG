@@ -80,7 +80,7 @@ import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllKeys, debugAllSpells, deb
 import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
 import { sellerParams } from "../data/talent-sellers";
-import { CARAVAN_ITEM, caravansIn, caravansOf, wagonTale, type CaravanSpot } from "../world/caravans";
+import { CARAVAN_ITEM, caravansIn, caravansOf, islandMapFlag, islandMapTiles, mapCottages, wagonTale, type CaravanSpot } from "../world/caravans";
 import { BURNT_HUT_ITEM, HUT_ITEM, HUT_ITEMS, HUT_MODELS, HUT_RADIUS, hutGold, hutIndex, hutXpPercent, slotDistance, slotKey, type HutSpot } from "../world/huts";
 import { PIRATE_RETURN_MINUTES, pirateDistance, pirateHome, pirateSail } from "../world/pirate";
 import { PIRATE_SHIP_MODEL, PirateShip } from "../render/pirateShip";
@@ -357,6 +357,14 @@ export class Game {
   private projectiles!: Projectiles;
   /** Bumped when the scene changes, so effects scheduled for the old scene do nothing. */
   private fxEpoch = 0;
+  /**
+   * Monsters that have fallen in the simulation and whose view is still in the picture until its death has been shown (`handleEvents` runs the death later than `sim/*` decides it).
+   * `pruneMonsterViews` leaves them alone.
+   */
+  private readonly fallen = new Set<string>();
+  /** The monsters whose view the game itself asked for (`addMonsterView`); tools that put views into the renderer by hand are not the game's business. */
+  private readonly viewed = new Set<string>();
+  private pruneIn = 1;
   /** The level at which a hero was told "can advance a level" (55th playtest, point 2): the toast comes once per level, not after every kill. */
   private readonly levelToasted = new WeakMap<Character, number>();
   /** `performance.now()` until which a volley is in the air; the party does not shoot or cast in the meantime. */
@@ -1175,6 +1183,8 @@ export class Game {
   /** The old scene is gone: shots in the air vanish and effects that were still waiting for them are dropped. */
   private sceneChanged(): void {
     this.fxEpoch++;
+    this.fallen.clear();
+    this.viewed.clear();
     this.endFight("left");
     this.lootHeld.clear();
     this.volleyUntil = 0;
@@ -1190,9 +1200,33 @@ export class Game {
     return p;
   }
 
+  /**
+   * 58th playtest, point 1: a monster in the picture that the encounter does not know (a model that arrived after its monster had fallen, a view that outlived a load) stays for good, moves
+   * about and, when the party walks into it, fills the screen with a giant body. Every second the views the game asked for are checked against the monsters of the encounter, and the strangers
+   * go. What is kept: the monsters whose fall has not been shown yet (`fallen`); the persons and the showcase never were in `viewed`.
+   */
+  private pruneMonsterViews(): void {
+    if (!this.state || this.mode === "title" || this.viewed.size === 0) return;
+    const known = new Set(this.enc.monsters.map((m) => m.uid));
+    for (const uid of [...this.viewed]) {
+      if (known.has(uid) || this.fallen.has(uid)) continue;
+      this.viewed.delete(uid);
+      this.monsters.remove(uid);
+    }
+  }
+
+  /** Is this tile the one the party stands on (or steps onto)? A monster is never placed there: the camera would be inside its body (58th playtest, point 1). */
+  private onPartyTile(x: number, y: number): boolean {
+    const wx = this.world.wrapX(x);
+    const wy = this.world.wrapY(y);
+    const p = this.player.entering;
+    return (wx === this.world.wrapX(this.player.tx) && wy === this.world.wrapY(this.player.ty)) || (!!p && wx === this.world.wrapX(p.x) && wy === this.world.wrapY(p.y));
+  }
+
   /** `fade` (seconds): the monster is not there when the scene is built but turns up (an ambush), so it fades in. */
   private addMonsterView(m: MonsterInstance, fade = 0): void {
     const p = this.monsterWorld(m);
+    this.viewed.add(m.uid);
     void this.monsters.add(m.uid, m.defId, p.x, p.y, p.z, null, fade);
   }
 
@@ -1308,7 +1342,7 @@ export class Game {
             // a world smaller than the view holds the same group in two chunks: the one that is there already stays
             if (this.enc.monsters.some((m) => m.uid.startsWith(`${s.uid}#`))) continue;
             const water = monsterById(s.monsterIds[0]!).terrain === "water";
-            const free = water ? (tx: number, ty: number) => view.water(tx, ty) && this.world.tile(tx, ty).ground === GROUND.WATER : (tx: number, ty: number) => view.walkable(tx, ty);
+            const free = water ? (tx: number, ty: number) => view.water(tx, ty) && this.world.tile(tx, ty).ground === GROUND.WATER && !this.onPartyTile(tx, ty) : (tx: number, ty: number) => view.walkable(tx, ty) && !this.onPartyTile(tx, ty);
             for (const m of this.placeGroup(s.uid, s.monsterIds, s.x, s.y, free)) {
               this.enc.monsters.push(m);
               this.addMonsterView(m);
@@ -1719,6 +1753,17 @@ export class Game {
       if (a?.kind === "stairs") {
         await this.climbStairs(a);
         return;
+      }
+      // 58th playtest, point 7: the party answered "Stay" on the exit cell and pushes on towards the gate: the question comes up again (the exit cell is a gap in a wall, so
+      // the step onwards is a bump, and no new step onto the cell is made)
+      const onExit = this.interior.actionAt.get(this.cellIndex(this.player.tx, this.player.ty));
+      if (onExit?.kind === "transfer" && onExit.params.mode === "poi_exit" && !this.interior.campaign) {
+        const back = FACING_DELTA[this.interior.map.spawn.facing];
+        if (x - this.player.tx === -back.dx && y - this.player.ty === -back.dy) {
+          this.passTime(ACTION_MINUTES);
+          await this.useAction(onExit);
+          return;
+        }
       }
       // bug_fix_55, point 5: the party stands on the cell of a shop it has just left and walks on into the door wall (it forgot something): the shop opens again.
       // Stepping onto the cell enters a shop, so the cell itself can only be entered again from the wall behind it.
@@ -2280,7 +2325,7 @@ export class Game {
         // the globe: at the copy of its place that is nearest to the party
         const sx = tx + wrapDelta(tx, slot.x, W);
         const sy = ty + wrapDelta(ty, slot.y, H);
-        for (const m of this.placeGroup(base, [hut.monster], sx, sy, (x, y) => view.walkable(x, y))) {
+        for (const m of this.placeGroup(base, [hut.monster], sx, sy, (x, y) => view.walkable(x, y) && !this.onPartyTile(x, y))) {
           m.xpPercent = xpPercent;
           this.enc.monsters.push(m);
           this.addMonsterView(m);
@@ -2475,11 +2520,52 @@ export class Game {
   /** The party bumps into a caravan: the talent it sells, asked and paid like at the people of the towns (`talent` action). */
   private async visitCaravan(caravan: CaravanSpot): Promise<void> {
     this.passTime(ACTION_MINUTES);
+    if (caravan.islandMap) {
+      await this.visitMapCottage(caravan);
+      return;
+    }
     if (caravan.hint || caravan.talent === null) {
       await this.visitHintWagon(caravan);
       return;
     }
     await this.useAction({ uid: caravan.id, kind: "talent", x: caravan.x, y: caravan.y, params: { talent: caravan.talent, ...sellerParams(caravan.talent, caravan.cottage) } });
+  }
+
+  /**
+   * The cottage of the cartographer of an island (58th playtest, point 8): the map of the island for 500 (small), 2 000 (medium) or 10 000 gold (large). Buying it marks the whole island
+   * and two tiles of sea round it as explored on the maps (the big map itself still needs the Cartographer talent). The map is bought once (`islandMapFlag` in `state.opened`).
+   */
+  private async visitMapCottage(cottage: CaravanSpot): Promise<void> {
+    const info = cottage.islandMap;
+    const island = info ? this.world.islands[info.island] : undefined;
+    if (!info || !island) return;
+    const flag = islandMapFlag(info.island);
+    if (this.state.opened.has(flag)) {
+      this.ui.log('The cartographer nods at you from behind his charts: "You have my map of this island already. Mind the mountains."', "info");
+      return;
+    }
+    this.player.locked = true;
+    const yes = await this.ui.confirm(
+      "Cartographer",
+      `A cartographer lives in this cottage, between rolled charts and ink pots. "I have walked every beach of this ${info.size} island and drawn every coast, mountain, road and place on it. One map, ${thousands(info.price)} gold. Would you like it?"`,
+      "Buy",
+      "Leave",
+    );
+    this.player.locked = false;
+    if (!yes) return;
+    if (this.state.party.gold < info.price) {
+      this.ui.log("You cannot afford that.", "bad");
+      return;
+    }
+    this.state.party.gold -= info.price;
+    this.state.opened.add(flag);
+    for (const t of islandMapTiles(this.world, island)) this.state.explored.markOverworld(t.x, t.y);
+    this.minimapDirty = true;
+    this.audio.play(9000);
+    this.audio.play(9024);
+    this.ui.log("You buy the map of this island. Every coast, mountain, road and place of it is on your maps now.", "good");
+    this.refresh();
+    this.save("auto");
   }
 
   /**
@@ -2630,6 +2716,9 @@ export class Game {
     };
   }
 
+  /** How often each lock (door, chest) has been tried since the game started: the roll of the next try differs (`lockRng`). Not saved: a loaded game rolls from the start. */
+  private readonly lockTries = new Map<string, number>();
+
   /** Step number at which a generated spear or guillotine trap went off last, by action uid (the campaign keeps its own in its progress). */
   private readonly trapFired = new Map<string, number>();
 
@@ -2719,7 +2808,11 @@ export class Game {
     this.busy = true;
     // a fountain works once a day: the day it was used is part of the key, so nothing else has to be saved or reset
     const usedKey = `${a.uid}@${Math.floor(this.state.party.minutes / MINUTES_PER_DAY)}`;
-    const ctx = { ...this.actionContext(), content: this.interior?.content, opened: this.state.opened, attempt: this.state.steps * 7 + this.state.opened.size, usedToday: this.state.opened.has(usedKey), ...(a.kind === "breakable_wall" ? { wallSide: this.wallSide(a.x, a.y) } : {}) };
+    // a lock that held is tried again by pushing on, without a step back first (58th playtest, point 3): every try at the same lock rolls on its own stream
+    const lockable = a.kind === "door" || a.kind === "treasure";
+    const retries = lockable ? this.lockTries.get(a.uid) ?? 0 : 0;
+    if (lockable) this.lockTries.set(a.uid, retries + 1);
+    const ctx = { ...this.actionContext(), content: this.interior?.content, opened: this.state.opened, attempt: this.state.steps * 7 + this.state.opened.size, retries, usedToday: this.state.opened.has(usedKey), ...(a.kind === "breakable_wall" ? { wallSide: this.wallSide(a.x, a.y) } : {}) };
     let outcome = resolveAction(a, ctx);
     // a statue asks its question; the answer is the player's, and the statue decides on it
     const ask = outcome.effects.find((e) => e.type === "ask");
@@ -3808,6 +3901,7 @@ export class Game {
         case "monster_dead": {
           const def = monsterById(e.defId);
           this.state.killed.add(e.uid);
+          this.fallen.add(e.uid);
           this.noteHutDeath(e.uid);
           // quest 5: the end boss stands before the end room, and its death opens it
           if (isEndBoss(e.uid)) this.openEndRoom();
@@ -3818,7 +3912,10 @@ export class Game {
             this.ui.log(`${def.name} is defeated. +${thousands(e.xp)} xp`, "good");
             this.audio.play(isRobot(e.defId) ? ROBOT_SOUND.powerOff : 9045);
             // the pile appears when the body is gone: at once for a model without a death clip, after the clip for one with
-            this.monsters.die(e.uid, () => this.releaseLoot(e.x, e.y, epoch));
+            this.monsters.die(e.uid, () => {
+              this.fallen.delete(e.uid);
+              this.releaseLoot(e.x, e.y, epoch);
+            });
             this.announceLevelUps(party);
           });
           break;
@@ -5568,7 +5665,7 @@ export class Game {
   }
 
   /** Every caravan of the world (fixed by the seed), for the maps. */
-  private caravanSites: { world: World; list: (MapEvent & { talent: string | null; hint?: string; home: string })[] } | null = null;
+  private caravanSites: { world: World; list: (MapEvent & { talent: string | null; hint?: string; islandMap?: number; home: string })[] } | null = null;
 
   /**
    * What the maps mark with a question mark on the open land: the mascots still waiting (the one in the party is gone from its place), the Monster Huts
@@ -5577,14 +5674,17 @@ export class Game {
   private overworldEvents(): MapEvent[] {
     if (!this.state) return [];
     if (this.caravanSites?.world !== this.world) {
-      const list: (MapEvent & { talent: string | null; hint?: string; home: string })[] = [];
+      const list: (MapEvent & { talent: string | null; hint?: string; islandMap?: number; home: string })[] = [];
       // a wagon drawn as the cottage is called a cottage on the maps; the ones near a locked place only tell a tale
       for (const poi of this.world.allPois()) for (const c of caravansOf(this.world, poi)) list.push({ x: c.x, y: c.y, label: `${c.cottage ? "Cottage" : "Caravan"} (${c.hint ? "old tales" : "talent trader"})`, talent: c.talent, ...(c.hint ? { hint: c.hint.place } : {}), home: c.cottage ? "Cottage" : "Caravan" });
+      // the cartographer of every island (58th playtest, point 8)
+      for (const c of mapCottages(this.world)) list.push({ x: c.x, y: c.y, label: "Cottage (island map)", talent: null, islandMap: c.islandMap!.island, home: "Cottage" });
       this.caravanSites = { world: this.world, list };
     }
     // a caravan whose talent the party has bought has nothing left to sell: its question mark is grey
     // (and one whose tale the party has heard has told it: grey too)
-    const out: MapEvent[] = this.caravanSites.list.map(({ talent, hint, home, ...ev }) => {
+    const out: MapEvent[] = this.caravanSites.list.map(({ talent, hint, islandMap, home, ...ev }) => {
+      if (islandMap !== undefined) return this.state.opened.has(islandMapFlag(islandMap)) ? { ...ev, label: `${home} (island map: bought)`, done: true } : ev;
       if (hint) return this.state.opened.has(hintHeardFlag(hint)) ? { ...ev, label: `${home} (old tales: heard)`, done: true } : ev;
       return talent !== null && this.state.party.talents.includes(talent) ? { ...ev, label: `${home} (${talentInfo(talent).name}: bought)`, done: true } : ev;
     });
@@ -5628,6 +5728,11 @@ export class Game {
     this.interiorView.update(dt);
     this.terrain.animate(dt);
     this.monsters.update(dt, this.player.x, this.player.z);
+    this.pruneIn -= dt;
+    if (this.pruneIn <= 0) {
+      this.pruneIn = 1;
+      this.pruneMonsterViews();
+    }
     this.projectiles.update(dt);
     this.campaignView.tick(dt);
     this.syncMascots();
@@ -6067,7 +6172,8 @@ function stepSound(t: TileInfo): number {
   // in the water the party swims: the three strokes of the old game take turns instead of footsteps
   if (t.ground === GROUND.WATER || t.ground === GROUND.SHALLOW) return 9051;
   if (t.biome === BIOME.SNOW) return 9053;
-  if (t.biome === BIOME.SWAMP) return 9054;
+  // the cobbled roads of a swamp island are hard ground: the plain step (58th playtest, point 6); the squelch is for the swamp itself
+  if (t.biome === BIOME.SWAMP) return t.ground === GROUND.ROAD || t.ground === GROUND.BRIDGE || t.ground === GROUND.PASS ? 9010 : 9054;
   return 9010;
 }
 

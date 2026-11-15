@@ -5,8 +5,8 @@ import { CURE_AGE_GOLD_PER_YEAR, cureAgeCost, templeCureAge } from "../sim/aging
 import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
 import { conditionEventText } from "../sim/conditions";
 import {
-  BANK_SLIDER_STEPS, bankSliderAmount, buyBackItem, buyItem, buyScroll, buyTavernFood, cureCost, deposit, guildScrolls, GUILD_SCHOOLS, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, sellScroll, smithStock, spellPrice, type SmithShelf, type SoldItem,
-  canDonate, donationCost, templeCure, templeDonate, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCap, trainingCost, withdraw, guildTalent, TRAINING_MINUTES, type GuildSchool,
+  BANK_SLIDER_STEPS, bankSliderAmount, buyBackItem, buyItem, buyTavernFood, cureCost, deposit, guildLessons, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, smithStock, spellPrice, type SmithShelf, type SoldItem,
+  canDonate, donationCost, templeCure, templeDonate, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCap, trainingCost, withdraw, guildTalent, TRAINING_MINUTES,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
 import { isSpellImplemented, learnBlock, SCALING_COST_SHARE } from "../sim/spells";
@@ -239,7 +239,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
               return h("button", { class: "btn", text: `Cure ${cond} (${thousands(cost)})`, disabled: party.gold < cost, onclick: () => { if (templeCure(party, i, cond as Condition)) note(`${c.name} is cured of ${cond}.`, "good"); refresh(); } });
             }),
             // 13. 11. 2026: a hero who died of old age is not resurrected, the temple of tier 5 first takes the magical age off (then the hero is a plain "Dead")
-            !c.diedOfAge && (c.conditions.includes("Dead") || c.conditions.includes("Rotten")) ? h("button", { class: "btn primary", text: `Resurrect (${thousands(reviveCost(c, ctx.tier))})`, disabled: party.gold < reviveCost(c, ctx.tier), onclick: () => { if (templeRevive(party, i, ctx.tier)) note(`${c.name} returns to life.`, "good"); refresh(); } }) : null,
+            !c.diedOfAge && (c.conditions.includes("Dead") || c.conditions.includes("Rotten")) ? h("button", { class: "btn primary", text: `Resurrect (${thousands(reviveCost(c))})`, disabled: party.gold < reviveCost(c), onclick: () => { if (templeRevive(party, i)) note(`${c.name} returns to life.`, "good"); refresh(); } }) : null,
             // only the temple of a tier 5 town; 100'000 gold for each year of magical age, whatever the level; the hero keeps their condition (but "Dead (Age)" becomes "Dead")
             ctx.tier >= 5 && (c.magicAge ?? 0) > 0 ? h("button", { class: "btn", text: `Cure Magical Age (${thousands(cureAgeCost(c))})`, title: `Takes the ${c.magicAge} years that magic added off: ${thousands(CURE_AGE_GOLD_PER_YEAR)} gold for each year.`, disabled: party.gold < cureAgeCost(c), onclick: () => { if (templeCureAge(party, i)) { note(`${c.name} is as old as the years since the birth again.`, "good"); ctx.sound?.(9032); } refresh(); } }) : null,
             // formulas 1.1 (5.3): a donation, 20 % for a day's blessing; the button is only there while the hero is not blessed
@@ -329,10 +329,8 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
     };
 
     // -------------------------------------------------------------- guild
+    // (58th playtest, point 5: the guild only teaches. One tab per hero, the lessons that hero has not learned yet, one button "Learn"; no scrolls are bought or sold here)
     let guildWho = 0;
-    let guildTab: GuildSchool | "sell" = "Arcane";
-    /** Scrolls bought on this visit leave the shelf; the old guild was stocked afresh at every visit. */
-    const bought = new Set<string>();
     const guild = () => {
       const level = Math.max(1, Math.min(5, ctx.tier));
       // only members are let in (the old game checks the talent `guild_level_<n>`; the skull in the wall sends the others away)
@@ -347,54 +345,26 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       root.append(
         ...header(),
         h("p", { text: tidy(TEXTS[274] ?? "Come on in!") }),
-        // the guild sells the scrolls of all three schools, as the old one did; reading one (right click in the backpack) is up to the class
-        h("div", { class: "tabs" }, ...[...GUILD_SCHOOLS, "sell" as const].map((tab) => h("div", { class: `tab${tab === guildTab ? " on" : ""}`, text: tab === "sell" ? "Sell scrolls" : tab, onclick: () => ((guildTab = tab), render()) }))),
-        h("div", { class: "small", text: guildTab === "sell" ? "Whose scrolls?" : "Into whose backpack does the scroll go?" }),
         h("div", { class: "tabs" }, ...party.characters.map((c, i) => h("div", { class: `tab${i === guildWho ? " on" : ""}`, text: c.name, onclick: () => ((guildWho = i), render()) }))),
       );
       const c = party.characters[guildWho]!;
-      if (guildTab === "sell") {
-        const scrolls = BAG_SLOTS.filter((slot) => c.inventory[slot]?.type === "spell");
-        if (scrolls.length === 0) root.append(h("p", { text: `${c.name} has no scrolls to sell.` }));
-        for (const slot of scrolls) {
-          const item = c.inventory[slot]!;
-          root.append(row(scrollLabel(item.spellId, item), `sell for ${thousands(sellPrice(item, party))}`, () => {
-            if (sellScroll(party, guildWho, slot)) {
-              for (const school of GUILD_SCHOOLS) bought.delete(`${school}:${item.spellId}`);
-              ctx.sound?.(9000);
-              note(`Sold ${item.name.trim()}.`, "good");
-            }
-            refresh();
-          }));
-        }
+      const lessons = guildLessons(c, level);
+      if (lessons === null) {
+        root.append(h("p", { text: `${c.name} does not have any magical abilities.` }));
         return;
       }
-      const shelf = guildScrolls(level, guildTab).filter((s) => !bought.has(`${guildTab}:${s.id}`));
-      if (shelf.length === 0) root.append(h("p", { text: "The shelf is empty." }));
-      for (const s of shelf) {
+      if (lessons.length === 0) root.append(h("p", { text: "We have taught you everything we know." }));
+      for (const s of lessons) {
         const price = spellPrice(s, party);
         const block = learnBlock(c, s.id);
-        const why = block === "class" ? `A ${c.classType} cannot learn this.` : block === "level" ? `${c.name} needs level ${s.level}.` : block === "known" ? `${c.name} already knows this.` : "";
-        const key = `${guildTab}:${s.id}`;
-        const buy = h("button", { class: "btn", text: "Buy scroll", disabled: party.gold < price, onclick: () => {
-          const r = buyScroll(party, guildWho, s.id);
-          if (r.ok) {
-            bought.add(key);
-            ctx.sound?.(9000);
-          }
-          note(r.ok ? `Bought the scroll of ${TEXTS[s.name]}.` : r.reason === "gold" ? "Not enough gold." : "Every backpack is full.", r.ok ? "good" : "bad");
+        const why = block === "level" ? `${c.name} needs level ${s.level}.` : "";
+        const learn = h("button", { class: "btn", text: "Learn", disabled: block !== null || party.gold < price, onclick: () => {
+          const r = learnSpell(party, guildWho, s.id);
+          if (r.ok) ctx.sound?.(9000);
+          note(r.ok ? `${c.name} learns ${s.title}.` : "Not enough gold.", r.ok ? "good" : "bad");
           refresh();
         } });
-        // a hero who can learn it right away may skip the scroll
-        const learn = block === null && isSpellImplemented(s.id)
-          ? h("button", { class: "btn", text: "Buy & learn", disabled: party.gold < price, onclick: () => {
-              const r = learnSpell(party, guildWho, s.id);
-              if (r.ok) ctx.sound?.(9000);
-              note(r.ok ? `${c.name} learns ${s.title}.` : "Not enough gold.", r.ok ? "good" : "bad");
-              refresh();
-            } })
-          : null;
-        root.append(row(scrollLabel(s.id, null, why), h("span", { style: "display:flex;gap:8px;align-items:center;white-space:nowrap" }, h("span", { text: `${thousands(price)} gold` }), buy, learn)));
+        root.append(row(scrollLabel(s.id, null, why), h("span", { style: "display:flex;gap:8px;align-items:center;white-space:nowrap" }, h("span", { text: `${thousands(price)} gold` }), learn)));
       }
     };
 

@@ -217,7 +217,7 @@ Stufe 4 bleibt, wie sie ist: 80 % Resistenz sind schon fast Immunität, ein grö
 
 # Umsetzung in bug_fix_59 (14. 11. 2026, `GEN_VERSION` 67)
 
-Entscheidung des Nutzers: **die Summen sind in jeder Weltgröße und in jedem Seed die der Default-Welt** (Gold, XP, Attribute, Resistenzen); die Auswahl „Dungeons“ ist aus dem Hauptmenü gestrichen (ein neues Spiel nimmt `default`, 0,75 der Höhlen und Dungeons). Die Vorschläge oben (Faktoren je Größe und Dichte in einer Tabelle, Grenzen 0,5 und 4) gelten nicht mehr; die Faktoren werden **je Welt** gemessen (`src/actions/rewardMeasure.ts`, Formeln in `docs/FORMULAS_1.2.md` 7.6).
+Entscheidung des Nutzers: **die Summen sind in jeder Weltgröße und in jedem Seed die der Default-Welt** (Gold, XP, Attribute, Resistenzen); die Auswahl „Dungeons“ ist aus dem Hauptmenü gestrichen (ein neues Spiel nimmt `default`, 0,75 der Höhlen und Dungeons). Die Vorschläge oben (Faktoren je Größe und Dichte in einer Tabelle, Grenzen 0,5 und 4) gelten nicht mehr; die Faktoren werden **je Welt** gemessen (`src/actions/rewardMeasure.ts`, Formeln in `docs/FORMULAS_1.3.md` 7.6).
 
 ## 1. Stufen der Inseln (Generator)
 

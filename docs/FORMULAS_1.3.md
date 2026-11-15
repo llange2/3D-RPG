@@ -1,6 +1,6 @@
 # Formeln des Spiels
 
-Stand: 14. 11. 2026 (Version 1.2, umgesetzt in `bug_fix_56`; Nachträge in `bug_fix_59`: Ring-Schadenszuwachs 2.2/2.3/2.4, Training 5.5, Belohnungsfaktoren 7.6). Diese Datei sammelt **alle Rechenregeln** des Spiels an einer Stelle: wie Werte entstehen, wie Schaden, Preise, Zeiten und Chancen berechnet werden. Sie beschreibt den Code, sie ersetzt ihn nicht: Bei jeder Änderung an einer Formel gehört die Zeile hier mit hinein (Quelle jeweils in Klammern).
+Stand: 15. 11. 2026 (Version 1.3, umgesetzt im 58. Playtest: Wiederbelebung im Tempel nach Heldenlevel, 5.3; Nachträge in `bug_fix_59`: Ring-Schadenszuwachs 2.2/2.3/2.4, Training 5.5, Belohnungsfaktoren 7.6). Diese Datei sammelt **alle Rechenregeln** des Spiels an einer Stelle: wie Werte entstehen, wie Schaden, Preise, Zeiten und Chancen berechnet werden. Sie beschreibt den Code, sie ersetzt ihn nicht: Bei jeder Änderung an einer Formel gehört die Zeile hier mit hinein (Quelle jeweils in Klammern).
 
 **Schreibweise:** `⌈x⌉` aufrunden, `⌊x⌋` abrunden, `trunc` Nachkommastellen abschneiden, `round` Rundung auf die nächste ganze Zahl (Pythons `round`: .5 geht zur geraden Nachbarzahl, `pyRound` in `sim/character.ts`), `Stufe` die Stufe des Helden, `Tier` die Stufe (1 bis 5) des Ortes. Alle Kampfzahlen stehen in `RULES.v4` (`sim/balance.ts`); der Zweig `legacy` ist die alte Rechnung und nur noch Rückweg (Abschnitt „Alte Formeln“ am Ende). Zufall kommt immer aus `core/rng.ts`, nie aus `Math.random`.
 
@@ -218,8 +218,8 @@ Erzielt ein Monster keinen Schaden, hat es trotzdem eine 10% Chance die Sonderwi
 
 - **Heilung** `round(fehlende LP × 2 × Stufe des Helden)` (seit dem 55. Playtest mit der Stufe; vorher ohne).
 - **Zustand heilen** `round(Preis × Stufe des Helden)` mit Preisen Poisoned 40, Diseased 80, Cursed 120, Crazy 100, Weak 30, Drunk 10, Sleeping 5, Paralyzed 150, Petrified 400, (Unconscious wird über die normale Heilung abgehandelt)
-- **Wiederbelebung (tot)** `round(300 × Tier)`; der Held kommt mit der Hälfte der LP (mindestens 1) zurück.
-- **Wiederbelebung (verrottet)**  `round(1000 × Tier)`; der Held kommt mit der Hälfte der LP (mindestens 1) zurück.
+- **Wiederbelebung (tot)** `round(300 × Heldenlevel)`; der Held kommt mit der Hälfte der LP (mindestens 1) zurück.
+- **Wiederbelebung (verrottet)**  `round(1000 × Heldenlevel)`; der Held kommt mit der Hälfte der LP (mindestens 1) zurück.
 - **Cure Magical Age** (nur Tempel der Stufe 5): `100 000 × magische Jahre` Gold, siehe 1.7. Wer „Dead (Age)“ ist, kann erst danach als „Dead“ wiederbelebt werden.
 - **Spenden** (`templeDonate`): kostet `round(10 × Tier)`, das Gold ist in jedem Fall weg; mit 20 % Chance (`DONATION_BLESSING_CHANCE`) erhält der Held den Zustand „Blessed“ für 24 Stunden (`BLESSING_MINUTES`), dessen Stärke der Tier des Tempels ist (1.1). Der Button ist nur sichtbar, wenn der Held lebt und nicht gesegnet ist; eine laufende Segnung wird nie gestapelt.
 
@@ -339,3 +339,4 @@ Angewendet wird zur Spielzeit (kein `GEN_VERSION`, keine Zufallszahl): **Gold** 
   | 1.0 | Initiales Dokument |
   | 1.1 | \- 1.1:"Blessed" aktualisiert<br>2.3: Monsterrüstung bei Fernkampf zählt jetzt 2/3 (vorher 1/2)<br>\- 4: Den Bonus der "tieferen Ort" entfernt (Materiallevel jetzt max Dungeon Tier+1)<br>5.1: aktualisiert<br>\- 5.3: aktualisiert<br>\- 5.8: ergänzt (Ladenstufe = Stufe der Stadt) |
   | 1.2 | 2.5 Ergänzt: Sonderwirkung Monster auch wenn kein Schaden erzielt wird<br>2.5/2.7: Fee erhöht die Resistenzen aller Helden um 15 % statt 30 Punkte abzuziehen<br>2.6: Sonderwirkung (auch Eradication des Terminators) gilt auch bei Fernangriffen; ein tödlicher Treffer bleibt „tot“ |
+  | 1.3 | 5.3 Tempel: Heilung von "Rotten" und "Dead" skaliert mit dem Heldenlevel, anstatt Tempel Tier |

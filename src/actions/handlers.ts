@@ -86,6 +86,8 @@ export interface ActionContext {
   hero?: number | null;
   /** Counts attempts at a repeatable check (door, wall), so every attempt rolls differently but reproducibly. */
   attempt?: number;
+  /** How often this lock has been tried before (the game counts them per action): standing still and pushing on rolls again (58th playtest, point 3). */
+  retries?: number;
   /** Monster families of the current map, for ambushes. */
   monsterThemes: Record<string, number>;
   tier: number;
@@ -170,6 +172,14 @@ export const ATTRS: Attribute[] = ["str", "int", "per", "end", "spd", "acc", "lc
 /** The random stream of one action: a pure function of the world seed, the action uid and the attempt number. */
 export function actionRng(ctx: Pick<ActionContext, "rootSeed" | "attempt">, uid: string): Rng {
   return rngFor(ctx.rootSeed, LAYER.LOOT, uid, ctx.attempt ?? 0);
+}
+
+/**
+ * The stream of the roll at a lock: like `actionRng`, but every new try at the same lock rolls again (`retries`), without a step in between. The loot of a chest keeps its own
+ * stream (`actionRng`), so a try changes nothing about what is inside.
+ */
+export function lockRng(ctx: Pick<ActionContext, "rootSeed" | "attempt" | "retries">, uid: string): Rng {
+  return rngFor(ctx.rootSeed, LAYER.LOOT, uid, (ctx.attempt ?? 0) + (ctx.retries ?? 0) * 1_000_003);
 }
 
 const EMPTY: MapContent = { mapKey: "", tier: 1, actions: [], spawns: [] };
@@ -597,29 +607,29 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
           return { effects: [{ type: "text", text: "As the seal breaks, a horn sounds through the castle. Heavy guards come running between the throne room and the gate!" }, { type: "guards", kind: "heavy" }], consumed: false, state: { add: [flag], remove: [] } };
         }
         // the lock grows with the level of the party (`data/locks.ts`); the roll has a stream of its own, so the loot below stays what it was
-        const lockRng = actionRng(ctx, `${action.uid}@lock`);
+        const lockStream = lockRng(ctx, `${action.uid}@lock`);
         const need = lockDifficulty("king chest", ctx.tier, lockPartyLevel(party));
-        const picked = pickLock(party, lockRng);
+        const picked = pickLock(party, lockStream);
         const { best, picker } = picked;
         const logged = logLock(party, action.uid, "king chest", ctx.tier, need, picked);
         if (best < need) {
           const holds: Effect[] = [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }];
-          if (fumbleLock(action, ctx, holds, lockRng, picker, logged)) holds.push({ type: "defeat" });
+          if (fumbleLock(action, ctx, holds, lockStream, picker, logged)) holds.push({ type: "defeat" });
           return { effects: holds, consumed: false };
         }
       }
       // an ordinary chest has a lock (`data/locks.ts`): the best thief of the party picks it. The roll has a stream of its own, so the loot below stays what it was;
       // the attempt number changes with every step, so a failed party tries again after a few steps. A failed attempt may set off the trap of the chest
       if (p.lock === undefined && Number(p.difficulty ?? 0) > 0) {
-        const lockRng = actionRng(ctx, `${action.uid}@lock`);
+        const lockStream = lockRng(ctx, `${action.uid}@lock`);
         const need = lockDifficulty("chest", ctx.tier, lockPartyLevel(party));
-        const picked = pickLock(party, lockRng);
+        const picked = pickLock(party, lockStream);
         const { best, picker } = picked;
         // an alarm chest asks first and is resolved a second time with the answer: the same roll, noted once
         const logged = p.warn !== "alarm" || ctx.answer === undefined ? logLock(party, action.uid, "chest", ctx.tier, need, picked) : undefined;
         if (best < need) {
           const locked: Effect[] = [{ type: "text", text: "The chest is locked, and nobody in your party can pick the lock yet. Try again in a few steps." }];
-          if (fumbleLock(action, ctx, locked, lockRng, picker, logged)) locked.push({ type: "defeat" });
+          if (fumbleLock(action, ctx, locked, lockStream, picker, logged)) locked.push({ type: "defeat" });
           return { effects: locked, consumed: false };
         }
         effects.push({ type: "text", text: `${party.characters[picker]!.name} picks the lock.` });
@@ -876,7 +886,7 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
       // the lock of a door grows with the level of the party like the lock of a chest, an easier one (`data/locks.ts`)
       // (a gate with `harder` is worked out for a place that many levels higher: the gates of a castle's side rooms, 55th playtest, point 11)
       const difficulty = lockDifficulty("door", Math.min(5, ctx.tier + Number(p.harder ?? 0)), lockPartyLevel(party));
-      const picked = pickLock(party, rng);
+      const picked = pickLock(party, lockRng(ctx, `${action.uid}@lock`));
       const { best } = picked;
       logLock(party, action.uid, "door", ctx.tier, difficulty, picked);
       if (best >= difficulty) {
