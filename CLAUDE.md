@@ -101,6 +101,8 @@ betretbaren Orten plus die 34 handgebauten Kampagnenkarten des Altspiels. Alles 
 
 - **bug_fix_62** (15. 11. 2026, kein `GEN_VERSION`, `docs/HANDOVER.md` „bug_fix_62“, `tests/unit/bugfix62.test.ts`, `tools/dev/check-bugfix62.ts`): **Monster mit eigener Nutzer-Datei** stehen in `USER_MONSTER_MODELS` (`data/monster-models.ts`: Paladin 54 und Wizard 79 = `Evil_Paladin.glb`, `Evil_Wizard.glb`), gebaut mit `build-models.ts --monster=<ids>` (auch `--original`); die Dateien tragen das **Mixamo-Rig** (Gelenke `mixamorig:RightHand` in Metern), die Waffenhalterung rechnet mit `MIXAMO_UNIT` um; Waffen ändert `EQUIPMENT_OVERRIDES` in `tables.ts`, nie `MONSTER_DATA.json`. **`attr()` liefert nie unter 1**; **ein Diagonalschuss läuft nicht um eine Mauerecke** (`lineOfSight`, Ausnahme `GridView.roundCorners` im Raumschiff); **Ringvergleich zeigt die Zeilen auch für Werte des ersetzten Gegenstands, Ctrl vergleicht mit dem Zweitring** (`offHandRingSlot`); **jede Transportröhre ist ein Ausgang** (`minimap.ts`); **Pyramiden bekommen im Kartentooltip den Haken, wenn ihre Sektion erledigt ist** (`shipSectionDone`). Der Worktree braucht für die Asset-Pipeline eine Junction `.claude/worktrees/old_code` (danach mit `cmd /c rmdir` entfernen).
 
+- **bug_fix_63** (15. 11. 2026, `docs/HANDOVER.md` „bug_fix_63“, `tests/unit/bugfix63.test.ts`, `tools/dev/check-paladin-sword.ts`): **das Schwert in der Hand eines Mixamo-Rigs liegt nach `MIXAMO_GRIP`** (`render/equipment.ts`), nicht nach der Altpassung; neue Waffen für Nutzer-Modelle mit `check-paladin-sword.ts` gegen ein Mockup messen. **Gelenke der Nutzer-Rigs spiegeln:** Richtungen über die Inverse der Weltmatrix rechnen, nie über `decompose`.
+
 ## Vor dem Abschluss einer Änderung
 ```
 npm run typecheck

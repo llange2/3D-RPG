@@ -15,7 +15,7 @@ import "@babylonjs/loaders/glTF";
 import { BOW_MODEL, BOW_MONSTERS, equipmentModel } from "../data/equipment";
 import { MONSTERS } from "../data/tables";
 import { assetUrl, type MonsterModelInfo, type StaticModelInfo } from "./assets";
-import { GRIP_TWEAK, GRIP_Y, holdInHand, type Hand } from "./equipment";
+import { GRIP_TWEAK, GRIP_Y, MIXAMO_GRIP, holdInHand, type Hand } from "./equipment";
 import { FLOAT_AMPLITUDE, floatY } from "./itemProps";
 import { toStandardMaterial } from "./props";
 
@@ -278,7 +278,8 @@ export class MonsterRenderer {
       const copy = itemContainer.instantiateModelsToScene((n) => `${uid}:${hand}:${n}`, false);
       for (const root of copy.rootNodes) {
         for (const mesh of root.getChildMeshes(true)) {
-          holdInHand(mesh, joint, hand, GRIP_Y[key] ?? 0, GRIP_TWEAK[key], unit);
+          // (the user's Mixamo rigs hold the sword in the right hand by a measured grip, `MIXAMO_GRIP`)
+          holdInHand(mesh, joint, hand, GRIP_Y[key] ?? 0, GRIP_TWEAK[key], unit, unit !== 1 && hand === "right" ? MIXAMO_GRIP[key] : undefined);
           // the bow is only there while the Archer shoots
           if (key === BOW_MODEL) {
             mesh.setEnabled(false);
