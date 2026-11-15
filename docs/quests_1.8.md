@@ -7,9 +7,7 @@
 | 1.4 | 1.5 | \- **spaceship\_1** aktualisiert (Power Crystal darf nur als Teil des Quests verwendet werden)<br>\- **quest\_7** eränzt<br>\- Generierungstabelle aktualisert (Spaceship hat immer quest\_7)<br>\- IDs der neuen Assets (Modelle, Quest-Item, Sounds) in quest\_7 ergänzt (Stand 5. 11. 2026, Version bleibt 1.5)<br>\- **Spaceship (Stand 5. 11. 2026, Version bleibt 1.5):** Die Konsole der Bridge braucht laufende Engines und Life Support UND die schwarze Key Card (statt der Transportröhre des Kontrolldecks); einheitliche Sektionsnamen (Storage Bay, Engine Room, Life Support, Control Room, Bridge); 2 Orbs je Sektion außer der Bridge (8 im Spaceship, 23 auf L5-Dungeons); Pyramide-zu-Sektion zufällig, die der Bridge auf einem L5-Territory; Licht, Sounds und Aktionen gelten für das ganze Schiff; Hinweistexte der Kisten; Terminatoren; Computer (ID68) pro Level mit ComputerScreen |
 | 1.5 | 1.6 | \- **dungeon\_3** Levelgrößen ergänzt |
 | 1.6 | 1.7 | \- **dungeon\_6** ergänzt |
-| 1.7 | - 1.8 | - **Goldene Regel** ergänzt (Dungeons mit Keycards nur in Dungeons, die einen Key benötigen)<br>- Sektion **Loot** überarbeitet |
-
-# 
+| 1.7 | \- 1.8 | \- **Goldene Regel** ergänzt (Dungeons mit Keycards nur in Dungeons, die einen Key benötigen)<br>\- Sektion **Loot** überarbeitet |
 
 - Generierung
 
@@ -795,11 +793,11 @@ Die fett geschriebenen Punkte müssen immer dabei sein. Wähle **zusätzlich** z
 
 | Level | Loot |
 | --- | --- |
-| \- 1 | \- 5-10k Gold<br>\- 5 Attributspunkte (von zufälligem Typ)<br>\- 5-10 x Treasure L2<br>\- L1 Spell<br>**\- Schlüssel (s. Goldene Regeln)** |
-| \- 2 | \- 10-50k Gold<br>\- 10 Attributspunkte (von zufälligem Typ), bzw. 5 Resistenzpunkte<br>\- 5-10 x Treasure L3<br>\- L2 Spell<br>**\- Schlüssel (s. Goldene Regeln)** |
-| 3 | \- 50 - 200 k Gold<br>\- 15 Attributspunkte (von zufälligem Typ), bzw. 7 Resistenzpunkte<br>\- 5-10 x Treasure L4<br>\- 0-2 L3 Spells |
-| \- 4 | \- 200-1000 k Gold (auf 100k gerundet)<br>\- 20 Attributspunkte (von zufälligem Typ), bzw. 10 Resistenzpunkte<br>\- 500k, 750k oder 1 mio XP<br>\- 5-10 x Treasure L5<br>\- 4 Spells<br>**\- Key Card (s. Goldene Regeln)** |
-| 5 | \- 1-2 mio Gold (auf 250k gerundet)<br>\- Levelaufstieg (+1 Level)<br>\- L5 Spell<br>\- Eine zufällige Resistenz beim schwächsten Charakter auf einen Basiswert von 20 bringen. Als Objekt den Kristall nutzen. Automatische Charakterwahl. Haben alle Charaktere den zufällig gewählten Resistenzwert schon bei >=20 passiert nichts ("The glowing crystal does not seem to have an effect on you.")<br>**\- Key Card (s. Goldene Regeln)<br>\- Orb of ultimate power: 2 Orbs pro Sektion im Spaceship, außer in der Bridge (2x4 = 8). Die anderen 23 Orbs auf die L5 Dungeon möglichst gleichmäßig verteilen (hängt von der Kartengröße ab -> daher kann es auch vorkommen, dass kein Orb in einem L5 Dungeon zu finden ist)** |
+| \- 1 | \- 5-10k Gold<br>\- 5 Attributspunkte (von zufälligem Typ)<br>\- 5-10 x Treasure L2<br>**\- Schlüssel (s. Goldene Regeln)** |
+| \- 2 | \- 10-50k Gold<br>\- 10 Attributspunkte (von zufälligem Typ), bzw. 5 Resistenzpunkte<br>\- 5-10 x Treasure L3<br>**\- Schlüssel (s. Goldene Regeln)** |
+| 3 | \- 50 - 200 k Gold<br>\- 15 Attributspunkte (von zufälligem Typ), bzw. 7 Resistenzpunkte<br>\- 5-10 x Treasure L4 |
+| \- 4 | \- 200-1000 k Gold (auf 100k gerundet)<br>\- 20 Attributspunkte (von zufälligem Typ), bzw. 10 Resistenzpunkte<br>\- 500k, 750k oder 1 mio XP<br>\- 5-10 x Treasure L5<br>**\- Key Card (s. Goldene Regeln)** |
+| 5 | \- 1-2 mio Gold (auf 250k gerundet)<br>\- Levelaufstieg (+1 Level)<br>\- Eine zufällige Resistenz beim schwächsten Charakter auf einen Basiswert von 20 bringen. Als Objekt den Kristall nutzen. Automatische Charakterwahl. Haben alle Charaktere den zufällig gewählten Resistenzwert schon bei >=20 passiert nichts ("The glowing crystal does not seem to have an effect on you.")<br>**\- Key Card (s. Goldene Regeln)<br>\- Orb of ultimate power: 2 Orbs pro Sektion im Spaceship, außer in der Bridge (2x4 = 8). Die anderen 23 Orbs auf die L5 Dungeon möglichst gleichmäßig verteilen (hängt von der Kartengröße ab -> daher kann es auch vorkommen, dass kein Orb in einem L5 Dungeon zu finden ist)** |
 
 # Referenzen
 
