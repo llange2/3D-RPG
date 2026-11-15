@@ -2,7 +2,7 @@ import { INTERIOR_THEMES } from "../data/interior-themes";
 import { COTTAGE_HEIGHT_FACTOR, COTTAGE_SCALE, tunedItemModels } from "../data/item-tuning";
 import { PERSONAS } from "../data/personas";
 import { DECO_MODELS, DECO_SCALE } from "../data/wall-deco";
-import { MONSTERS } from "../data/tables";
+import { MAP_ITEMS, MONSTERS } from "../data/tables";
 import { Builder } from "./builder";
 import type { InteriorMap, LightLine, ShowcaseLayout } from "./types";
 
@@ -68,6 +68,23 @@ function slots(count: number, y: number, pitch: number, columns: number, x0: num
   const cells: { x: number; y: number }[] = [];
   for (let i = 0; i < count; i++) cells.push({ x: x0 + pitch * (i % columns), y: y + pitch * Math.floor(i / columns) });
   return { cells, next: y + pitch * Math.ceil(count / columns) + pitch };
+}
+
+/**
+ * What stands on a cell of the showcase, as a line with the kind, the number and the name ("Monster 12: Goblin"), or null for an empty cell. The game says it when the party
+ * steps on the cell or bumps into the object, so that nothing has to be looked up in the tables to name what one sees.
+ */
+export function showcaseLabelAt(layout: ShowcaseLayout, x: number, y: number): string | null {
+  const here = (c: { x: number; y: number }): boolean => c.x === x && c.y === y;
+  const monster = layout.monsters.find(here);
+  if (monster) return `Monster ${monster.defId}: ${MONSTERS[monster.defId]?.name ?? "?"}`;
+  const persona = layout.personas.find(here);
+  if (persona) return `Person ${persona.persona}: ${PERSONAS[persona.persona]?.file ?? "?"}`;
+  const item = layout.items.find(here);
+  if (item) return `Object ${item.item}: ${MAP_ITEMS[item.item]?.name ?? "?"}`;
+  const extra = layout.extras.find(here);
+  if (extra) return `Model: ${extra.model}`;
+  return null;
 }
 
 /** The showcase map. The party starts at the south end and looks north over the objects (and their lights), the monsters and the people lie beyond. */

@@ -16,7 +16,7 @@ import { generateTown } from "./town";
 import type { InteriorMap } from "./types";
 
 export * from "./types";
-export { SHOWCASE_ID, SHOWCASE_NAME } from "./showcase";
+export { SHOWCASE_ID, SHOWCASE_NAME, showcaseLabelAt } from "./showcase";
 export { analyzeTopology, type Topology, type Mouth } from "./topology";
 export { checkKeyChain, planDungeon } from "./dungeonPlan";
 

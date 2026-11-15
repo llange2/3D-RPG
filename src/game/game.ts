@@ -21,7 +21,7 @@ import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
 import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, SKULL, SKULLS_FOR_RING } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, talentInfo } from "../data/tables";
-import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, hasQuartermaster, planDungeon, type Facing, type InteriorMap } from "../interiors";
+import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, showcaseLabelAt, hasQuartermaster, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { towerFloorAt } from "../interiors/stairs";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
@@ -1300,6 +1300,13 @@ export class Game {
     }
   }
 
+  /** In the showcase, a line with the kind, the number and the name of what stands on the cell (`showcaseLabelAt`); nothing anywhere else. */
+  private sayShowcaseLabel(x: number, y: number): void {
+    const showcase = this.interior?.map.showcase;
+    const label = showcase ? showcaseLabelAt(showcase, x, y) : null;
+    if (label) this.ui.log(label, "info");
+  }
+
   private spawnInteriorMonsters(): void {
     const rt = this.interior!;
     const view = this.gridView();
@@ -1534,6 +1541,8 @@ export class Game {
       else if (!this.interior.campaign) {
         const spot = this.mascotSpots().find((m) => m.x === x && m.y === y);
         if (spot && mascotSpotItem(spot.item, s.party.mascot) === BIRD_PERCH) this.ui.log(propLine(BIRD_PERCH), "info");
+        // the monsters, people and models of the showcase have no action: their cell names them (an object's action says it itself, `useAction`)
+        if (!a) this.sayShowcaseLabel(x, y);
       }
       this.closeSlidingDoors();
     }
@@ -2789,6 +2798,7 @@ export class Game {
 
   private async useAction(a: ActionInstance): Promise<void> {
     if (isSpent(a, this.state.opened)) return;
+    this.sayShowcaseLabel(a.x, a.y);
     // an object the party can walk over says what it is the first time only (every step over a bone pile would be a line in the log)
     if (a.kind === "decor" && actionTrigger(a) === "enter") {
       const seen = `${a.uid}@seen`;
