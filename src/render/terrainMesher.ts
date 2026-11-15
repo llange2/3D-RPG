@@ -292,6 +292,16 @@ const POI_MODEL: Record<string, { model: string; scale: number; scaleXYZ: [numbe
 // per tile fills the footprint (5.4 of 6 units), and 2.4 times its height makes it 9.1 high: tall like a tower, a little over the castle
 POI_MODEL.tower = { model: "poi_tower", scale: 2.8, scaleXYZ: [2.8, 2.4, 2.8], yaw: 0 };
 
+/**
+ * bug_fix_64, point 4: when one king holds the eleventh orb the castles of the other two kinds are rubble (`Game.meetKing`, `askToEnter`). The ruin (the user's `Castle_destroyed.glb`)
+ * stands on the castle's footprint with the castle's scale and turn. The game sets the kinds before it builds the overworld (every entry makes a new `ChunkManager`).
+ */
+export const CASTLE_RUIN_MODEL = "poi_castle_ruin";
+let ruinedCastleKinds: ReadonlySet<string> = new Set();
+export function setRuinedCastleKinds(kinds: Iterable<string>): void {
+  ruinedCastleKinds = new Set(kinds);
+}
+
 /** Which of the models above a place is drawn with: a dungeon is a pyramid (3 tiles wide) or a tower (2 wide, layout dungeon_5) as well as an entrance. */
 const poiModelKind = (poi: Poi): string => (poi.kind !== "dungeon" ? poi.kind : poi.size === 3 ? "pyramid" : isTower(poi) ? "tower" : "dungeon");
 
@@ -491,7 +501,7 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
   // points of interest are drawn once, by the chunk that holds their centre
   // (the world is a globe: a place across the seam is found at the position it has beside this chunk)
   for (const poi of world.poisInRect(x0, y0, x0 + CHUNK_SIZE - 1, y0 + CHUNK_SIZE - 1)) {
-    props.push(poiProp(poi, ch, x0, y0, tileAt));
+    props.push(poiProp(poi, ch, x0, y0, tileAt, poi.kind === "castle" && ruinedCastleKinds.has(world.castleAlignment(poi.id) ?? "")));
   }
 
   // pack groups into shared buffers; every group is one contiguous index range = one submesh
@@ -552,8 +562,8 @@ export function towerTorchSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { 
 /** Yaw that turns a model whose front is +z (north) towards a side; grid y grows south, which is -z. */
 const SIDE_YAW: Record<PoiSide, number> = { N: 0, E: Math.PI / 2, S: Math.PI, W: -Math.PI / 2 };
 
-function poiProp(poi: Poi, ch: (i: number, j: number) => number, x0: number, y0: number, tileAt: (lx: number, ly: number) => TileInfo): PropInstance {
-  const spec = POI_MODEL[poiModelKind(poi)]!;
+function poiProp(poi: Poi, ch: (i: number, j: number) => number, x0: number, y0: number, tileAt: (lx: number, ly: number) => TileInfo, ruined = false): PropInstance {
+  const spec = ruined ? { ...POI_MODEL.castle!, model: CASTLE_RUIN_MODEL } : POI_MODEL[poiModelKind(poi)]!;
   const lx = poi.x - x0;
   const ly = poi.y - y0;
   const base = (ch(lx, ly) + ch(lx + 1, ly) + ch(lx + 1, ly + 1) + ch(lx, ly + 1)) / 4;

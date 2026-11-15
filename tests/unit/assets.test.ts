@@ -86,7 +86,8 @@ describe.skipIf(!built)("asset pipeline output", () => {
     // towns and castles are seen once or twice at a time and get a bigger budget than props; the dungeon doors are two carved parts that the
     // simplifier cannot reduce below about 5500 triangles without shattering them (the sloppy pass ignores the texture seams)
     // the full ground tiles of the quality "ultra" (`gndx_*`) are the old models as they are, 2250 to 7900 triangles
-    const budget = (key: string) => (key === "poi_town" || key === "poi_castle" || key === "poi_tower" ? 10_000 : key.startsWith("gndx_") ? 9000 : key === "blk_door_closed" || key === "blk_door_open" ? 6000 : key === "ci_70" ? 10_500 : 5000); // ci_70, the bone pile: a baked atlas that any reduction shatters
+    // the ruined castle (`poi_castle_ruin`, bug_fix_64) keeps 11 998 triangles in the reduced set: the simplifier stops there (rubble and broken towers, 18 574 in the file)
+    const budget = (key: string) => (key === "poi_town" || key === "poi_castle" || key === "poi_tower" ? 10_000 : key === "poi_castle_ruin" ? 12_500 : key.startsWith("gndx_") ? 9000 : key === "blk_door_closed" || key === "blk_door_open" ? 6000 : key === "ci_70" ? 10_500 : 5000); // ci_70, the bone pile: a baked atlas that any reduction shatters
     for (const [key, m] of Object.entries(stat)) expect(m.tris, key).toBeLessThan(budget(key));
   });
 });

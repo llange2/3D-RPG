@@ -144,8 +144,8 @@ describe("places on the outside map", () => {
     expect(ITEMS["47"]!.scale3).toEqual([1.8, 2.5, 1.8]);
     expect(ITEMS["43"]!.scale3).toEqual([2, 2.4, 2]);
     expect(ITEMS["44"]!.scale3).toEqual([1.6, 2.4, 1.6]);
-    // the cave's door is built on -z in our import (the old loader showed it on +x, hence its 270)
-    expect(ITEMS["42"]!.yaw).toBe(180);
+    // the old file's cave door was built on -z in our import (the old loader showed it on +x, hence its 270, and the export set 180); the user's `Cave_Entrance.glb` (bug_fix_64) has its door on +z: no extra yaw
+    expect(ITEMS["42"]!.yaw).toBe(0);
   });
 
   it("face the compass bearing stored on their cell, with the enter action on the cell in front (so nobody walks into them)", async () => {

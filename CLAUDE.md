@@ -103,6 +103,8 @@ betretbaren Orten plus die 34 handgebauten Kampagnenkarten des Altspiels. Alles 
 
 - **bug_fix_63** (15. 11. 2026, `docs/HANDOVER.md` „bug_fix_63“, `tests/unit/bugfix63.test.ts`, `tools/dev/check-paladin-sword.ts`): **das Schwert in der Hand eines Mixamo-Rigs liegt nach `MIXAMO_GRIP`** (`render/equipment.ts`), nicht nach der Altpassung; neue Waffen für Nutzer-Modelle mit `check-paladin-sword.ts` gegen ein Mockup messen. **Gelenke der Nutzer-Rigs spiegeln:** Richtungen über die Inverse der Weltmatrix rechnen, nie über `decompose`.
 
+- **bug_fix_64** (15. 11. 2026, kein `GEN_VERSION`, `docs/HANDOVER.md` „bug_fix_64“, `tests/unit/bugfix64.test.ts`, `tools/dev/check-bugfix64.ts`, `check-cave-wall.ts`): **die runden Ecken des Raumschiffs stehen auf der ganzen Karte** (kein Fenster um die Gruppe: die verdeckten Wandflächen fehlen im Mesh); **eine geöffnete Höhlenwand (und das Siegel eines Endraums) sperrt, bis der Stein im Boden ist** (`Game.holdStone`, Länge des Tons 9007 bzw. 9050); **der Höhleneingang ist `Cave_Entrance.glb`** (Tür auf +z, `YAW_OVERRIDE` 42 = 0); **hat ein König den elften Orb, stehen die beiden anderen Burgen als `poi_castle_ruin` (`Castle_destroyed.glb`)** (`setRuinedCastleKinds`, vor dem Bau der Überwelt gesetzt in `Game`; Betreten ist gesperrt, `askToEnter`). Wer ein Modell eines Ortes ersetzt, prüft vor dem Eintragen die Blickrichtung der neuen Datei (vier Instanzen mit 0°/90°/180°/270° nebeneinander), nie den Override der alten übernehmen.
+
 ## Vor dem Abschluss einer Änderung
 ```
 npm run typecheck
