@@ -172,5 +172,6 @@
  * 67 = bug_fix_59, point 4: the islands after the two main ones share the levels 4 and 5 by land (both levels get about the same land) instead of by their distance from the start (`buildLayout`).
  * 68 = quest document 1.9: the bridge of the spaceship has a fixed layout (`interiors/bridge.ts`: terminators and Titanic Automatos, bone piles, the generator room with the computer terminal and
  * the temporal field generator behind a locked door, the airlock with its lever at the end of the tube's corridor), and the computers of the other sections have a new line.
+ * 69 = the console of the bridge faces east (bearing 90, a quarter turn against the clock).
  */
-export const GEN_VERSION = 68;
+export const GEN_VERSION = 69;
