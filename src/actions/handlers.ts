@@ -596,7 +596,7 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
         payOut(p, rng, party, effects);
         return { effects, consumed: true, ...(first ? { state: { add: [flag], remove: [] } } : {}) };
       }
-      // the key or key card of a place (chapter 1.2 of docs/DUNGEON_THEMES.md): a chest that holds nothing else stays shut until it fits in a backpack
+      // the key or key card of a place (docs/quests_1.10.md, golden rules): a chest that holds nothing else stays shut until it fits in a backpack
       if (typeof p.quest === "string") {
         const found = questItem(p.quest);
         if (!found) throw new Error(`unknown quest item ${p.quest} in ${action.uid}`);

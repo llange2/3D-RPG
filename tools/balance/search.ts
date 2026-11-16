@@ -38,7 +38,7 @@ export interface Targets {
  * Tiers 1 and 2 are warm-up tiers: their monsters are weak by their own numbers, so any monotone party is past them after a few levels and
  * they are only asked to stay a little costly. From tier 3 on a fight costs about two fifths of the party's health when the tier begins and
  * about an eighth when the next tier takes over. The bands are the levels at which clearing half of every lower tier brings the party under
- * the smooth XP table (docs/KAMPF_BALANCE.md).
+ * the smooth XP table (the old report docs/KAMPF_BALANCE.md is in the git history).
  */
 export const DEFAULT_TARGETS: Targets = {
   bands: [1, 5, 11, 19, 33],

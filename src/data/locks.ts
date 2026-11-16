@@ -33,7 +33,7 @@ export function lockGear(level: number): number {
   return 1 + 0.3 * Math.min(1, Math.max(0, (level - 10) / 2));
 }
 
-/** The levels a tier is meant for (the design bands of the combat simulator, `KAMPF_BALANCE.md` 4.1); index = tier 1 to 5. */
+/** The levels a tier is meant for (the design bands of the combat simulator, `docs/FORMULAS_1.3.md` 10.2); index = tier 1 to 5. */
 export const TIER_ENTRY: readonly number[] = [1, 5, 11, 19, 33];
 export const TIER_EXIT: readonly number[] = [4, 10, 18, 32, 50];
 

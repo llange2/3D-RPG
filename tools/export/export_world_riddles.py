@@ -16,7 +16,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 DOC = ROOT / ".ignore" / "quests_1.2.md"
 OUT = ROOT / "src" / "data" / "riddles-world.json"
-REPORT = ROOT / "docs" / "RAETSEL_BEREINIGUNG.md"
 
 MAX_SAME = 4
 
@@ -194,28 +193,7 @@ def main() -> None:
     OUT.write_bytes((json.dumps(out, indent=1, ensure_ascii=False) + "\n").replace("\n", "\r\n").encode("utf-8"))
 
     answers = Counter(r["answer"] for r in kept.values())
-    by_len = Counter(len(r["answer"]) for r in kept.values())
     quest6 = sorted({r["answer"] for r in kept.values() if re.fullmatch(r"[a-z]{3,8}", r["answer"]) and r["answer"] not in r["question"].lower()})
-    lines = [
-        "# Bereinigung der Rätselliste (generiert)",
-        "",
-        "Erzeugt von `tools/export/export_world_riddles.py` aus `.ignore/quests_1.2.md`; Ergebnis `src/data/riddles-world.json`. Die Kampagne nutzt weiter die unveränderte `RIDDLES_MASTER`.",
-        "",
-        f"- Vorher: {len(src)} Rätsel. Nachher: **{len(kept)}** (Ziel 250 bis 300).",
-        f"- Verschiedene Antworten: {len(answers)}; höchstens {MAX_SAME} Rätsel je Antwort.",
-        f"- Für quest_6 (ein Wort, 3 bis 8 Buchstaben, nicht in der Frage): {len(quest6)} verschiedene Wörter.",
-        "",
-        "## Gestrichen (Grund)",
-        "",
-    ]
-    lines += [f"- #{n}: {why}" for n, why in sorted({**DROP, **capped}.items())]
-    lines += ["", "## Repariert (neue Antwort, alte bleibt als Alias)", ""]
-    lines += [f"- #{n}: `{a}` (Alias: {', '.join(al)})" for n, (a, al) in sorted(FIX.items())]
-    lines += ["", "## Hinzugefügt (Rätsel des Mittelalters, 40. Playtest)", ""]
-    lines += [f"- #{n}: `{a}`" for n, (_, a, _al) in sorted(ADD.items())]
-    lines += ["", "## Länge der Antworten", ""]
-    lines += [f"- {k} Buchstaben: {v}" for k, v in sorted(by_len.items())]
-    REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"{len(src)} -> {len(kept)} riddles, {len(answers)} answers, {len(quest6)} words for quest_6")
 
 

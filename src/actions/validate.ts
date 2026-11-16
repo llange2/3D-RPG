@@ -41,7 +41,7 @@ export function itemIssues(map: InteriorMap, content: MapContent): string[] {
 }
 
 /**
- * What a dungeon theme demands of its content (docs/DUNGEON_THEMES.md): only its own monsters, its one kind of trap, props that
+ * What a dungeon theme demands of its content (src/data/dungeon-themes.ts, docs/OBJECTS.md): only its own monsters, its one kind of trap, props that
  * its inhabitants may have, and exactly the keys and key card of its class (chapter 1.2, rules 1 to 3 and 7).
  */
 export function themeIssues(map: InteriorMap, content: MapContent): string[] {

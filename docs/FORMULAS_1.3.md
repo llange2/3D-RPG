@@ -330,9 +330,63 @@ Angewendet wird zur Spielzeit (kein `GEN_VERSION`, keine Zufallszahl): **Gold** 
 
 ## 9\. Alte Formeln (Rückweg)
 
-`BALANCE.mode = "legacy"` in `sim/balance.ts` schaltet auf die alten Formeln zurück: LP `(AUS / 2 + …) × Stufe`, Nahkampf `Basis × Stufe + Waffe`, Fernkampf ohne Faktor 0,8 und ohne Teiler 1,5, Monsterrüstung als flacher Abzug, Wolf 90 %, Fee 20, Orb +20 % ZP, Training `250 × Stufe`, Stufentabelle mit flachen 1 024 000 ab Stufe 11. Siehe `docs/BALANCE_V4_UMSETZUNG.md` und `docs/KAMPF_BALANCE_V4.md`.
+`BALANCE.mode = "legacy"` in `sim/balance.ts` schaltet auf die alten Formeln zurück: LP `(AUS / 2 + …) × Stufe`, Nahkampf `Basis × Stufe + Waffe`, Fernkampf ohne Faktor 0,8 und ohne Teiler 1,5, Monsterrüstung als flacher Abzug, Wolf 90 %, Fee 20, Orb +20 % ZP, Training `250 × Stufe`, Stufentabelle mit flachen 1 024 000 ab Stufe 11. Das Zurückstellen ist eine Zeile; die Umsetzung von Balance v4 (25./26. 10. 2026) ist sonst nur noch in Git dokumentiert.
 
-## 10\. Versionskontrolle
+### 9.1 Rückweg und Nachändern
+
+- **Zurücksetzen:** in `src/sim/balance.ts` `export const BALANCE = { mode: "v4" }` auf `"legacy"` setzen. Prüfung: `npx tsx tools/balance/verify.ts 5000 legacy` und die Tests, die alte Zahlen im Modus `legacy` festschreiben (`legacyRules` in `sim.test.ts`, `playtest13.test.ts`, `combatFixes.test.ts`).
+- **Nachändern:** alle Zahlen stehen in `RULES.v4` (`healthFlat`, `meleeLevelDivisor`, `rangedClassShare`, `rangedHitFactor`, `wolfBelow`, `fairyReduction`, `orbSpellBonus`, `monsterArmorK`, `earlyMiss`, `rangedArmorShare`, `trainingStep`, die XP-Parameter …). Danach `npx tsx tools/balance/verify.ts 5000` (muss „OK“ melden; das Werkzeug liest dieselben Formeln aus `tools/balance/proposals.ts`, `PROPOSALS.v4 = makeV5("v4", V4_RANGED)`; die Formeln vor dem Fernkampf-Paket heißen `v4pre`) und `tests/unit/balanceV4.test.ts` anpassen.
+- **Beobachtungen aus dem Spiel** (zu schwer, zu leicht) legt man gegen die Simulation: `npx tsx tools/balance/challenge.ts --formulas=v4 --cells=1:1,1:10,2:10,2:20,3:20,3:30,4:30,4:40,5:40,5:50 --runs=300` (Erklärung im Kopf der Datei, weitere Befehle in `tools/balance/README.md`).
+- **Jede geänderte Stelle trägt im Code den Kommentar `BALANCE v4`**, die alte Fassung steht daneben als `LEGACY (balance v4)`: `grep -rn "BALANCE v4" src tools tests docs`.
+- **Neue Kampfformeln nie am Modus vorbei** in `combat.ts` oder `character.ts` einstreuen: Zahl nach `RULES`, beide Zweige, Test in `balanceV4.test.ts`.
+
+### 9.2 Offene Frage für das Clean-up
+
+> **Es gibt noch die alten Kampfformeln im Code. Sollen diese beim Clean-up endgültig gelöscht werden?**
+
+Die Frage ist dem Nutzer zu stellen, nicht von selbst zu entscheiden. Löschen hieße: `BALANCE`, `isV4`, `setBalanceMode` und `RULES.legacy` in `src/sim/balance.ts`, alle `LEGACY (balance v4)`-Zweige in `character.ts`, `combat.ts`, `economy.ts`, `encounter.ts`, `panels.ts`, `spells.ts` und `campaign/engine.ts`, `ORB_MANA_BONUS`, in `tools/balance/` `CURRENT`/`PARAM` und der Legacy-Zweig von `verify.ts`, dazu die Legacy-Tests (`legacyRules`, `inMode("legacy", …)`).
+
+## 10\. Herleitung der Zahlen (Balance)
+
+Der Stand der Formeln steht oben. Dieser Abschnitt hält fest, **warum** sie so liegen und wie man sie wieder misst. Die Berichte mit den damaligen Tabellen (Oktober und November 2026) sind gelöscht; sie stehen in der Git-Historie (`docs/KAMPF_BALANCE*.md`, `docs/BALANCE_V4_UMSETZUNG.md`).
+
+### 10.1 Das Werkzeug
+
+`tools/balance/` rechnet Kämpfe, Aufstiege und die Welt ohne das Spiel durch (`npx tsx tools/balance/<Datei>`, nicht in `package.json`; Befehle und Annahmen in `tools/balance/README.md`). `verify.ts` vergleicht die Formeln des Werkzeugs mit den echten Spielfunktionen (`recalcValues`, `meleeDamage`, `rangedDamage`, `monsterDamage`, `xpToNextLevel`) auf Tausenden zufälliger Helden und Monster und **muss nach jeder Formeländerung „OK“ melden** (beide Modi). `crosscheck.ts` lässt Gruppen durch die echte Engine und den Simulator laufen: bei ein bis zwei Monstern liegen Siegquoten wenige Prozentpunkte auseinander, bei drei ist der Simulator etwas strenger. Annahmen, die man kennen muss: Attribute steigen in der Rechnung linear auf 40 bei Stufe 50 (das Spiel hat kein automatisches Wachstum), die Gruppe rastet nach jedem Kampf, Buffs, Schutz- und Zustandszauber sind nicht modelliert (die Gruppe ist in der Rechnung eher etwas zu schwach).
+
+### 10.2 Zielbild
+
+Bänder, in denen ein Tier „dran“ ist: Tier 1 ab Stufe 1, Tier 2 ab 5, Tier 3 ab 11, Tier 4 ab 19, Tier 5 ab 33 (`TIER_ENTRY` in `data/locks.ts`; Austritt `TIER_EXIT` 4 / 10 / 18 / 32 / 50). Ab Tier 3 kostet ein Kampf beim Betreten des Bandes etwa 40 % der Lebenspunkte der Gruppe, am Ende etwa 12 %, geometrisch dazwischen. Tier 1 und 2 sind Aufwärm-Tiers; auf Stufe 1 bis 4 soll höchstens 0,1 Held je Kampf sterben. In den Bändern Siegquote mindestens 90 %, höchstens 0,2 Tote je Kampf (Tier 5: 0,25). Ohne Bogen darf der Verlust das 1,15- bis 1,6-fache sein („stark, aber nicht übermächtig“).
+
+### 10.3 Was die Balance bestimmt
+
+- **Die Ausrüstung ist der stärkste Hebel** (Faktor 4 bis 5 zwischen typischer und bester Ausrüstung des Tiers), weil Rüstung und Waffenbonus flach gelten. Sie ist Itemtabelle, nicht Formel.
+- **Das Wachstum der Attribute** (Schreine, Tränke, Ringe) ist Teil der Balance: ohne es verdoppeln bis vervierfachen sich die Toten in Tier 4 und 5.
+- **Leben mit Grundwert** (`+10`, LP-Formel 1.2): ohne ihn sterben Helden auf Stufe 1 bis 4 und in den Eintrittsstufen; ein Magier hatte vorher auf Stufe 1 zwei Lebenspunkte.
+- **Ein Nahkampf gegen Rüstung als flachen Abzug** schluckt den Nahkampf (daher der Divisor 3 und `res_physical`); Terminator, Skelette und Geister sind nahkampfresistent. Der Terminator (`res_physical` 1) entscheidet die Toten in Tier 5.
+- **Der Bogen** war ohne Faktor 0,8, Teiler 1,5, Nahschussfaktor 0,5 und `res_physical` die stärkste Waffe (gegen den Zombie war die Salve 8-mal so stark wie die Nahkampfrunde). Physische Fernschützen der Monster richteten gegen die Ausrüstung ihres Tiers 0 an, daher `monsterShots` und der Mindestanteil (2.5).
+
+### 10.4 Die vier Korrekturen am Spielcode (23. 10. 2026, `tests/unit/combatFixes.test.ts`)
+
+1. **Ein negativer Schlag heilte Monster ohne Rüstung** (Magier, Druide): `meleeDamage` und `rangedDamage` enden in `Math.max(0, …)`.
+2. **Ein verfehlter Fernschuss eines Monsters richtete vollen Schaden an** (bei `physical` wurde die Trefferchance nicht angewandt): `monsterDamage` kehrt bei einem Fehlschuss sofort mit 0 zurück.
+3. **Die Attribute und Resistenzen der Ausrüstung wirkten im Kampf nicht**, und Ringe mit Schaden zählten nur im Nahkampf: Kampfformeln lesen `attr(c, …)` und `resistance(c, element)`, nie `c.str`, `c.acc`, `c.lck`, `c.resFire` allein; `ringDamage` zählt auch im Fernkampf.
+4. **Die Sonderangriffs-Chance war bei Glück ≤ 14 gleich 100 %** (`10 / (GLÜ² × 0,05)`): „Causes Dead“ und „Eradication“ treffen mit der halben Chance (`5 / (GLÜ² × 0,05)`), alle anderen Zustände bleiben bei der vollen.
+
+### 10.5 Stufen 1 bis 3 und Fallen (45. Playtest, Versuch vom 7. 11. 2026)
+
+- **Befund:** Gegen die 18 Landmonster der Klasse 1 (10 körperlich, 8 elementar) macht die Rüstung der Gruppe (15 bis 21 auf Stufe 1 bis 5, 24 bis 32 auf Stufe 7 bis 10, 42 bis 66 ab 12) alles Körperliche früh harmlos; die Monster haben keine Stufe, ihr Schaden ist fest. Die Schwierigkeit auf Stufe 1 bis 3 tragen wenige elementare Monster, deren Fernschüsse und Fluch die Rüstung umgehen (Candle Creep: 70 Leben, 2 × 2–10 Feuer; Wicked Witch, Sprite, Scorpia, Cryo Spore). Drei Candle Creeps schlagen eine frische Gruppe immer.
+- **Fallen** wachsen als `Wert × (1 + Stufe / 10)` (`trapDamageFor`) langsamer als das Leben: auf Stufe 1 nimmt eine Falle 37 % eines Helden, auf Stufe 3 20 %, auf Stufe 10 9 %, auf Stufe 20 6 %.
+- **Im Spiel** (Entscheidung des Nutzers, 2.5): körperlicher Schaden `Wurf × 30 / (30 + Rüstung)` und 50 / 30 / 15 % zusätzliche Fehlchance gegen Helden der Stufe 1 / 2 / 3. Messung: Stufe 1 wurde schwerer statt leichter (3er-Gruppen 21 → 36 % Verlust, 2er-Gruppen 14 → 18 %), Stufe 2 und 3 auch (3er-Gruppen Stufe 3: 9 → 17 %), ab Stufe 7 bleibt der Verlust unter 2 %. Kein Level-1-Monster ist mehr harmlos (auch auf Stufe 30 verletzen 17 bis 18 von 18 Arten). Ein kleineres K hilft kaum, weil die 8 Elementaren die Hälfte des Schadens liefern.
+- **Nicht umgesetzt (Idee):** ein „Stufenfenster“ für den Monsterschaden (Schaden mal Faktor, der über die ersten Heldenstufen ansteigt, wie bei den Fallen) und kleinere Wertkorrekturen von Candle Creep und Wicked Witch. Das Werkzeug `tools/balance/l1curve.ts` (`curve`, `pass`, `hit`; Formelsatz `v6`, `makeV6`) rechnet es nach. Wer Stufe 1 bis 3 leichter will, braucht eine größere Fehlchance (etwa 65 / 50 / 35 %) oder dieses Fenster. Messwerte und Text des Vorschlags: `git log -- docs/KAMPF_BALANCE_L1.md`.
+
+### 10.6 Bekannte Balance-Lücken
+
+- Tier 5 ist auf den Stufen 40 und 50 noch hart (Messung von Ende Oktober: Verlust 46 % bei Stufe 40, 31 % bei 50, 22 % bei 60); die Nahkampfgruppe (Ritter, Barbar, Paladin, Kleriker) ist am schwächsten. Der Terminator ist für Helden der Stufe 60 keine Herausforderung mehr (Stufe 40: 35 % Sieg, Stufe 50: 99 %).
+- In Dungeons sind die Monster gemischt; die harte Wand liegt in der Überwelt und bei den Hütten.
+- Wolf (Tötung unter 10 %), Orb (+20 % Zauberschaden) und die Gesamtkurve der Stufen ab 11 (2 % je Stufe) sind Designwerte des Nutzers, keine Messergebnisse.
+
+## 11\. Versionskontrolle
 
 - | Version | Änderung |
   | --- | --- |
@@ -340,3 +394,4 @@ Angewendet wird zur Spielzeit (kein `GEN_VERSION`, keine Zufallszahl): **Gold** 
   | 1.1 | \- 1.1:"Blessed" aktualisiert<br>2.3: Monsterrüstung bei Fernkampf zählt jetzt 2/3 (vorher 1/2)<br>\- 4: Den Bonus der "tieferen Ort" entfernt (Materiallevel jetzt max Dungeon Tier+1)<br>5.1: aktualisiert<br>\- 5.3: aktualisiert<br>\- 5.8: ergänzt (Ladenstufe = Stufe der Stadt) |
   | 1.2 | 2.5 Ergänzt: Sonderwirkung Monster auch wenn kein Schaden erzielt wird<br>2.5/2.7: Fee erhöht die Resistenzen aller Helden um 15 % statt 30 Punkte abzuziehen<br>2.6: Sonderwirkung (auch Eradication des Terminators) gilt auch bei Fernangriffen; ein tödlicher Treffer bleibt „tot“ |
   | 1.3 | 5.3 Tempel: Heilung von "Rotten" und "Dead" skaliert mit dem Heldenlevel, anstatt Tempel Tier |
+  | 1.3 (Doku, 16. 11. 2026) | Keine Formeländerung: Abschnitt 9 (Rückweg und Löschliste des Legacy-Zweigs) und neuer Abschnitt 10 (Herleitung der Balance) aus den gelöschten Berichten `KAMPF_BALANCE*.md` und `BALANCE_V4_UMSETZUNG.md` |

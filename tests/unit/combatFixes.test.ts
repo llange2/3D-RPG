@@ -16,7 +16,7 @@ function wizard(level: number): Character {
   return createCharacter({ name: "W", classType: "Wizard", raceType: "Human", avatar: "character05", level, attrs: { str: 7, int: 20, per: 12, end: 10, spd: 12, acc: 8, lck: 12 } });
 }
 
-describe("fixes of docs/KAMPF_BALANCE.md section 3.5", () => {
+describe("the four combat fixes of docs/FORMULAS_1.3.md section 10.4", () => {
   it("1. a blow never turns negative, so it cannot heal a monster (with or without armor)", () => {
     const noArmor = monsters.find((m) => m.armor === 0)!;
     const armored = monsters.find((m) => m.armor > 0)!;
