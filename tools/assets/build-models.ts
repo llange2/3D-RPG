@@ -761,6 +761,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_futuristic_box", "new:Futuristic_Box.glb", 3000, 1024),
   S("obj_power_crystal_broken", "new:Power_crystal_broken.glb", 3000, 1024),
   S("obj_spaceship_console", "new:Spaceship_Console.glb", 3000, 1024),
+  // the temporal field generator in the generator room of the bridge (quest document 1.9, the user's model of 15. 11. 2026: 20 472 triangles, 1.1 x 1.9 x 1.0 around its middle)
+  S("obj_temporal_field_generator", "new:Temporal_field_generator.glb", 4800, 1024),
   // the sliding doors of the spaceship (6. 11. 2026): the user's lock (10 202 triangles, the doorway always there) and the two leaves, boxes with the halves of the user's picture
   // of a double door (`gen-space-doors.ts`)
   S("obj_space_lock", "new:Space_lock.glb", 3000, 1024),

@@ -261,14 +261,16 @@ export interface SpaceshipLayout {
   height: number;
   /** The top left cell of every section. */
   origins: { x: number; y: number }[];
-  /** The transporter tube of every section: the cell it stands on and the cell in front of it (the way in from the pyramid that opens the section, and out again). */
-  tubes: { x: number; y: number; front: { x: number; y: number } }[];
-  /** The console in the middle of the bridge's hall: with life support, the engines running and the black key card it ends the game. */
+  /** The transporter tube of every section: the cell it stands on and the cell in front of it (the way in from the pyramid that opens the section, and out again), and the way the party looks when it arrives (south unless the tube stands on the south wall, like the bridge's). */
+  tubes: { x: number; y: number; front: { x: number; y: number }; facing?: Facing }[];
+  /** The console of the bridge (stands in the middle of its western room, with a terminator on every side): with life support, the engines running and the black key card it ends the game. */
   console: { x: number; y: number; front: { x: number; y: number } };
   /** The airlock between two sections: the cell it shuts, the niches of its two levers and the sections it joins (`axis` x: they lie side by side, y: one under the other). */
   locks: { door: { x: number; y: number }; a: { x: number; y: number }; b: { x: number; y: number }; from: number; to: number; axis: "x" | "y" }[];
-  /** The big hall of the bridge and the rooms of every section. */
-  hall: { x: number; y: number; w: number; h: number };
+  /** Where the bridge's fixed layout lies (`interiors/bridge.ts`, quest document 1.9); the rooms of every section, the bridge has none of the generated kind. */
+  bridge: { x: number; y: number; w: number; h: number };
+  /** Cells whose corner stays square although the walls run on straight: beside the doors of the bridge (a round corner would reach into the frame) and under the objects that stand in a corner (`roundCorners`). */
+  square: { x: number; y: number }[];
   rooms: { x: number; y: number; w: number; h: number }[][];
   /** The code words of the mini quests of the world, by level of the place (the computers of the control room show them). Made by `generateInterior`, from the plan of the world. */
   codeWords: { tier: number; place: string; words: string[] }[];

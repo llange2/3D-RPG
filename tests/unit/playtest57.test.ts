@@ -177,11 +177,11 @@ describe("57th playtest, point 7: saves are packed and none is lost", () => {
 
   it("stores a save packed and reads it back, and still reads an old plain one", () => {
     const state = newGameState("pack", { x: 3, y: 4, facing: "E" });
-    state.journal = Array.from({ length: 500 }, (_, i) => ({ t: "snap", s: i, m: i, at: "ow", x: 1, y: 2, why: "steps", tier: 1, heroes: [], gold: 1, bank: 0, food: 3, kills: i }) as never);
+    for (let i = 0; i < 500; i++) state.opened.add(`padding:the-same-long-prefix-of-every-flag-in-this-save:${i}`);
     expect(writeSave(state, "quick")).toBe(true);
     expect(store.get("mm3-seed-rpg:quicksave:v1")!.startsWith(PACKED_PREFIX)).toBe(true);
-    expect(store.get("mm3-seed-rpg:quicksave:v1")!.length).toBeLessThan(JSON.stringify(state.journal).length / 3);
-    expect(readSave("world", "quick")?.state.journal).toHaveLength(500);
+    expect(store.get("mm3-seed-rpg:quicksave:v1")!.length).toBeLessThan(JSON.stringify([...state.opened]).length / 3);
+    expect(readSave("world", "quick")?.state.opened).toHaveLength(500);
     store.set("mm3-seed-rpg:save:v1", JSON.stringify({ version: 1, genVersion: 3, savedAt: new Date().toISOString(), seed: "old", state: { ...state, opened: [], broken: [], killed: [], visited: [], explored: {} } }));
     expect(readSave("world", "auto")?.seed).toBe("old");
   });

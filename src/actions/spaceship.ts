@@ -3,7 +3,6 @@ import {
   BRIDGE,
   BROKEN_CRYSTAL_ITEM,
   COMPUTER_ITEM,
-  CONSOLE_CLEAR,
   CONSOLE_ITEM,
   CONTROL_ROOM,
   CRATE_ITEM,
@@ -15,18 +14,20 @@ import {
   POWER_CRYSTAL_ITEM,
   SECTIONS,
   STORAGE_BAY,
+  TEMPORAL_ITEM,
 } from "../data/quest-table";
 import { CODE_LINES_PER_PAGE, CODE_TITLE } from "../data/ship-texts";
 import { MONSTERS, monsterGroup } from "../data/tables";
 import { CELL, type InteriorMap } from "../interiors/types";
+import { BRIDGE_BONES_TEXT, BRIDGE_DOOR_AXIS, BRIDGE_TERMINAL_TEXT, TEMPORAL_GENERATOR_TEXT, bridgeFeatures } from "../interiors/bridge";
 import { stillOpen } from "../interiors/castle";
 import { Builder } from "../interiors/builder";
 import { blocksPassage } from "../interiors/passage";
 import type { ActionInstance, MapContent, SpawnPoint } from "./types";
 
 /**
- * The objects of the spaceship (quest document 1.5, quest_7): the transporter tubes, the four airlocks with their levers, robots (terminators guard the bridge, in the others
- * they are rare), two orbs of ultimate power in every section but the bridge, ten crates in the storage bay (eight with pills and serum, two with a spare power crystal), four
+ * The objects of the spaceship (quest document 1.5, quest_7): the transporter tubes, the four airlocks with their levers, robots (the bridge has its fixed ones, quest document 1.9;
+ * in the others they are rare), two orbs of ultimate power in every section but the bridge, ten crates in the storage bay (eight with pills and serum, two with a spare power crystal), four
  * power crystals and a broken one in the engine room and in life support, in the control room the status computer and the computers with the code words of the mini quests, and
  * the console of the bridge that ends the game for a party with working engines, life support and the black key card (`shipTerminal` in `handlers.ts`).
  */
@@ -34,8 +35,10 @@ import type { ActionInstance, MapContent, SpawnPoint } from "./types";
 const TUBE = 40;
 const LEVER = 39;
 const ORB_OBJECT = 109;
-/** The terminator (monster 69), the robot of the bridge. */
+/** The terminator (monster 69) and the Titanic Automato (88), the robots of the bridge; the bone pile (70) is its decoration. */
 const TERMINATOR = 69;
+const TITANIC_AUTOMATO = 88;
+const BONE_PILE = 70;
 /** How rare a terminator is among the robots of the other sections: about one in twelve (percent). */
 const RARE_TERMINATOR_PERCENT = 8;
 
@@ -44,7 +47,7 @@ const COMPUTER_LINES = [
   "A voice from the terminal: \"Simulation cycle running. All sections nominal. Visitors detected.\"",
   "The screen shows a map of the world, small and blue. A red mark blinks over a pyramid.",
   "\"Warning: the airlocks between the sections are sealed. Manual override needs both levers.\"",
-  "The terminal displays the words: THE WORLD IS A GAME. THE GAME IS ALMOST OVER.",
+  "Last log entry: 'An unknown anomaly from the planet has been detected and has affected our systems. Update follows.'",
 ];
 
 const ATTRIBUTES = ["str", "int", "per", "end", "spd", "acc", "lck"] as const;
@@ -86,11 +89,9 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
     blocked.delete(i);
     return false;
   };
-  /** The cells round the console stay free, so that it can be seen and walked round (it is big and may reach into them). */
-  const clear = new Set<number>();
   const put = (a: ActionInstance, blocks: boolean): boolean => {
     const i = a.y * w + a.x;
-    if (taken.has(i) || map.cells[i] !== CELL.FLOOR || clear.has(i)) return false;
+    if (taken.has(i) || map.cells[i] !== CELL.FLOOR) return false;
     if (blocks && !canBlock(a.x, a.y)) return false;
     taken.add(i);
     actions.push(a);
@@ -99,23 +100,60 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
 
   // the tubes: the way in from a pyramid and out again, one in every section
   layout.tubes.forEach((t, s) => put({ uid: uid("tube"), kind: "tube", x: t.x, y: t.y, params: { item: TUBE, section: s } }, false));
-  // the console in the middle of the bridge's hall (nothing is built around it: two cells all round stay free)
+  // the console of the bridge, with a terminator on every side of it (the fixed layout of the bridge follows below)
   put({ uid: uid("console"), kind: "lore", x: layout.console.x, y: layout.console.y, params: { item: CONSOLE_ITEM, terminal: "console", pool: "dungeon", line: 0, bearing: 180 } }, false);
-  for (let dy = -CONSOLE_CLEAR; dy <= CONSOLE_CLEAR; dy++) for (let dx = -CONSOLE_CLEAR; dx <= CONSOLE_CLEAR; dx++) clear.add((layout.console.y + dy) * w + layout.console.x + dx);
   // the airlocks, each with a lever in a niche on both sides
   for (const lock of layout.locks) {
     const door = uid("airlock");
     actions.push({ uid: door, kind: "door", x: lock.door.x, y: lock.door.y, params: { locked: false, axis: lock.axis, airlock: true } });
     taken.add(lock.door.y * w + lock.door.x);
-    put({ uid: uid("lever"), kind: "lever", x: lock.a.x, y: lock.a.y, params: { item: LEVER, airlock: door, side: "a", target: "" } }, true);
+    // (the lever of the bridge's airlock stands at the end of a corridor, in the cell the document names, which no rule about passages may refuse)
+    put({ uid: uid("lever"), kind: "lever", x: lock.a.x, y: lock.a.y, params: { item: LEVER, airlock: door, side: "a", target: "" } }, lock.from !== BRIDGE);
     put({ uid: uid("lever"), kind: "lever", x: lock.b.x, y: lock.b.y, params: { item: LEVER, airlock: door, side: "b", target: "" } }, true);
+  }
+
+  // the fixed layout of the bridge (quest document 1.9, `interiors/bridge.ts`): every thing on the cell the document names
+  const bridge = layout.bridge;
+  for (const f of bridgeFeatures()) {
+    const x = bridge.x + f.x;
+    const y = bridge.y + f.y;
+    switch (f.thing) {
+      case "MT":
+      case "MA":
+        // (one robot in each cell, so that it stands exactly where the document puts it)
+        spawns.push({ uid: uid("spawn"), x, y, monsterIds: [f.thing === "MT" ? TERMINATOR : TITANIC_AUTOMATO], boss: false });
+        taken.add(y * w + x);
+        break;
+      case "SK":
+        put({ uid: uid("bones"), kind: "decor", x, y, params: { item: BONE_PILE, text: BRIDGE_BONES_TEXT } }, false);
+        break;
+      case "TE":
+        // the terminal and the generator face each other across the middle cell of the room's bottom row, where the party stands to read them
+        put({ uid: uid("computer"), kind: "lore", x, y, params: { item: COMPUTER_ITEM, pool: "dungeon", line: 0, text: BRIDGE_TERMINAL_TEXT, bearing: 270 } }, false);
+        break;
+      case "TG":
+        put({ uid: uid("generator"), kind: "lore", x, y, params: { item: TEMPORAL_ITEM, pool: "dungeon", line: 0, text: TEMPORAL_GENERATOR_TEXT, bearing: 90 } }, false);
+        break;
+      case "CD":
+        actions.push({ uid: uid("door"), kind: "door", x, y, params: { locked: false, axis: BRIDGE_DOOR_AXIS.CD, slide: true } });
+        taken.add(y * w + x);
+        break;
+      case "CL":
+        // the locked door to the generator room: a dialog says that it is locked and asks whether to break it open, the lock is the lightest there is; no robot opens it (no `slide`)
+        actions.push({ uid: uid("door"), kind: "door", x, y, params: { locked: true, ask: true, trivial: true, axis: BRIDGE_DOOR_AXIS.CL } });
+        taken.add(y * w + x);
+        break;
+      default:
+        // the console, the tube, the airlock and its lever are made above
+        break;
+    }
   }
 
   // the doors of the sections (6. 11. 2026): sliding doors like the airlocks, but they shut again behind the party. One in each corridor that leaves a room, two to four cells outside it,
   // in a straight piece of the corridor (walls on both sides of it and of the cells before and behind it, so that the frame stands in a wall and no rounded corner reaches into it)
   const isFloor = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < map.height && map.cells[y * w + x] === CELL.FLOOR;
   const keepsOff = (x: number, y: number): boolean =>
-    layout.locks.some((l) => Math.abs(l.door.x - x) <= 4 && Math.abs(l.door.y - y) <= 4) || layout.tubes.some((t) => Math.abs(t.x - x) <= 2 && Math.abs(t.y - y) <= 2) || (Math.abs(layout.console.x - x) <= CONSOLE_CLEAR + 1 && Math.abs(layout.console.y - y) <= CONSOLE_CLEAR + 1);
+    layout.locks.some((l) => Math.abs(l.door.x - x) <= 4 && Math.abs(l.door.y - y) <= 4) || layout.tubes.some((t) => Math.abs(t.x - x) <= 2 && Math.abs(t.y - y) <= 2);
   const straightFor = (x: number, y: number, axis: "x" | "y"): boolean => {
     const along = axis === "x" ? { dx: 1, dy: 0 } : { dx: 0, dy: 1 };
     const side = axis === "x" ? { dx: 0, dy: 1 } : { dx: 1, dy: 0 };
@@ -195,19 +233,18 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
   };
   /** The rooms of a section that take objects: not the hall of the bridge and not the room with the section's transporter tube (user, 6. 11. 2026), unless nothing else is left. */
   const roomsOf = (s: number): Room[] => {
-    const rooms = layout.rooms[s]!.filter((r) => !(s === BRIDGE && r === layout.hall));
+    const rooms = layout.rooms[s]!;
     const free = rooms.filter((r) => !holdsTube(r, s));
     return free.length > 0 ? free : rooms;
   };
 
-  // the bridge's guards, the other sections' robots, two orbs in each section but the bridge
+  // the other sections' robots, two orbs in each section but the bridge (the bridge's robots are fixed, above)
   // (the terminators have their own share: the other robots come first in the other sections, a terminator is rare there)
   // (every robot of the game turns up somewhere in the four sections, not only the ones of the place's look (user, 6. 11. 2026: there were only ED-409 and terminators):
   // the robots are dealt from a shuffled deck that is refilled when it is empty, so each of them comes before any is dealt twice)
   const robots = Object.keys(MONSTERS).map(Number).filter((id) => monsterGroup(id) === "robot" && id !== TERMINATOR);
   let deck: number[] = [];
-  const pickRobot = (s: number): number => {
-    if (s === BRIDGE) return TERMINATOR;
+  const pickRobot = (): number => {
     if (rng.int(100) < RARE_TERMINATOR_PERCENT || robots.length === 0) return TERMINATOR;
     if (deck.length === 0) deck = rng.shuffle([...robots]);
     return deck.pop()!;
@@ -216,23 +253,12 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
     const rooms = layout.rooms[s]!;
     rooms.forEach((room, i) => {
       if (holdsTube(room, s)) return;
-      const hall = room === layout.hall;
-      // the hall of the bridge: a group in each corner, around the console; the other rooms one group in the middle
-      const cells = hall
-        ? [
-            { x: room.x + 2, y: room.y + 2 },
-            { x: room.x + room.w - 3, y: room.y + 2 },
-            { x: room.x + 2, y: room.y + room.h - 3 },
-            { x: room.x + room.w - 3, y: room.y + room.h - 3 },
-          ]
-        : [{ x: room.x + (room.w >> 1), y: room.y + (room.h >> 1) }];
-      for (const c of cells) {
-        if (map.cells[c.y * w + c.x] !== CELL.FLOOR || taken.has(c.y * w + c.x)) continue;
-        const group = 2 + rng.int(2);
-        const ids = Array.from({ length: s === BRIDGE ? group + 1 : 1 + rng.int(3) }, () => pickRobot(s));
-        spawns.push({ uid: uid("spawn"), x: c.x, y: c.y, monsterIds: ids, boss: s !== BRIDGE && i === 0 });
-        taken.add(c.y * w + c.x);
-      }
+      // one group in the middle of the room
+      const c = { x: room.x + (room.w >> 1), y: room.y + (room.h >> 1) };
+      if (map.cells[c.y * w + c.x] !== CELL.FLOOR || taken.has(c.y * w + c.x)) return;
+      const ids = Array.from({ length: 1 + rng.int(3) }, () => pickRobot());
+      spawns.push({ uid: uid("spawn"), x: c.x, y: c.y, monsterIds: ids, boss: i === 0 });
+      taken.add(c.y * w + c.x);
     });
     if (s === BRIDGE) continue;
     // an orb of its own for every orb, not two in one (31st playtest, point 11), in different rooms
@@ -276,8 +302,8 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
       placeIn(control, (x, y) => ({ uid: uid("computer"), kind: "lore", x, y, params: { item: COMPUTER_ITEM, terminal: "codes", pool: "dungeon", line: 0, text } }));
     }
   }
-  // a computer with a line of the world's secret in the other sections, for the look of it
-  for (const s of [BRIDGE, LIFE_SUPPORT, STORAGE_BAY, ENGINE_ROOM]) {
+  // a computer with a line of the world's secret in the other sections, for the look of it (the bridge has its own terminal, above)
+  for (const s of [LIFE_SUPPORT, STORAGE_BAY, ENGINE_ROOM]) {
     const rooms = roomsOf(s);
     if (rooms.length > 0) placeIn(rooms, (x, y) => ({ uid: uid("computer"), kind: "lore", x, y, params: { item: COMPUTER_ITEM, pool: "dungeon", line: 0, text: COMPUTER_LINES[rng.int(COMPUTER_LINES.length)]! } }));
   }

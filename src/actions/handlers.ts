@@ -5,15 +5,13 @@ import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, emptyCont
 import { RAT_TRAP, SEARCHABLE_DECOR, dodgeChance, trapDamageFor, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
 import { isBookshelf } from "../data/spell-loot";
 import { ITEM_RULES } from "../data/item-rules";
-import { LOCK_FUMBLE_CHANCE, lockDifficulty, lockLevel } from "../data/locks";
+import { LOCK_FUMBLE_CHANCE, lockDifficulty } from "../data/locks";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
 import { attr, canAct, canBeHealed, gainAttribute, healHp, itemBonus, levelUp, thieveryRoll, thieverySkill } from "../sim/character";
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
 import { addCondition, removeCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
-import { journalEmit, type LockEvent, type LockKind, type TrapEvent } from "../sim/journal";
-import { lockEntry } from "../sim/journalBuild";
 import { activeCharacters, addXp, carriedItems, freeSlots, giveItem, grantTalent, hasEffect, protectionLevel, takeOne } from "../sim/party";
 import type { Attribute, Character, Condition, Item, Party } from "../sim/types";
 import type { ActionInstance, MapContent } from "./types";
@@ -185,11 +183,6 @@ export function lockRng(ctx: Pick<ActionContext, "rootSeed" | "attempt" | "retri
 const EMPTY: MapContent = { mapKey: "", tier: 1, actions: [], spawns: [] };
 const NONE: ReadonlySet<string> = new Set();
 
-/** TEMPORARY (balance journal, `sim/journal.ts`): notes one lock attempt of the heroes who were able to roll, with their numbers and their rolls. The entry is returned so that a fumble can be added. */
-function logLock(party: Party, uid: string, kind: LockKind, tier: number, difficulty: number, picked: PickedLock): LockEvent {
-  return journalEmit(lockEntry(party, { kind, tier, uid, level: lockPartyLevelExact(party), lockLevel: lockLevel(tier, lockPartyLevel(party)), difficulty }, picked.rolls, picked.best));
-}
-
 /** The gold and the items of a chest or a riddle's reward: `gold`, `items` generated at `level`. */
 function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Effect[]): void {
   const gold = Number(p.gold ?? 0);
@@ -252,43 +245,17 @@ function springChestTrap(action: ActionInstance, ctx: ActionContext, effects: Ef
   const dodgeP = dodgeChance(attr(victim, "lck"), level);
   if (rng.float() < dodgeP) {
     effects.push({ type: "text", text: trapMiss(element, hero, rng), tone: "good" });
-    logTrap(party, target, fumbled === undefined ? "chest" : "chest lock", action.uid, ctx.tier, { element, dodgeP, dodged: true, raw: 0, dmg: 0 });
     return false;
   }
   const raw = trapDamageFor(Number(p.trapDamage ?? 0), victim.level);
   const amount = elementalDamage(party, victim, element, raw);
   if (amount <= 0) {
     effects.push({ type: "text", text: raw > 0 && protectionLevel(party, element) > 0 ? trapProtected(hero) : trapShrugged(hero), tone: "good" });
-    logTrap(party, target, fumbled === undefined ? "chest" : "chest lock", action.uid, ctx.tier, { element, dodgeP, dodged: false, raw, dmg: 0 });
     return false;
   }
   const hit = applyHit(party, target, amount, null, rng);
   effects.push({ type: "text", text: trapHit(element, hero, amount, rng), tone: "bad" }, { type: "damage", character: target, amount, damageType: element, conditions: hit.conditions });
-  logTrap(party, target, fumbled === undefined ? "chest" : "chest lock", action.uid, ctx.tier, { element, dodgeP, dodged: false, raw, dmg: amount, down: wentDown(hit.conditions) });
   return hit.defeated;
-}
-
-/** TEMPORARY (balance journal): the condition that put a hero down in a hit, if any. */
-function wentDown(conditions: readonly string[]): boolean {
-  return conditions.includes("Dead") || conditions.includes("Unconscious");
-}
-
-/** TEMPORARY (balance journal, `sim/journal.ts`): notes a trap that went off at a hero. */
-function logTrap(party: Party, target: number, kind: string, uid: string, tier: number, o: { element?: string; dodgeP?: number; dodged: boolean; raw: number; dmg: number; down?: boolean }): void {
-  const v = party.characters[target]!;
-  journalEmit<TrapEvent>({
-    t: "trap",
-    kind,
-    ...(o.element !== undefined ? { element: o.element } : {}),
-    uid,
-    tier,
-    hero: { i: target, name: v.name, cls: v.classType, lvl: v.level, lck: attr(v, "lck") },
-    ...(o.dodgeP !== undefined ? { dodgeP: Math.round(o.dodgeP * 1000) / 1000 } : {}),
-    dodged: o.dodged,
-    raw: o.raw,
-    dmg: o.dmg,
-    ...(o.down ? { down: true } : {}),
-  });
 }
 
 /**
@@ -306,30 +273,23 @@ function springRatTrap(action: ActionInstance, ctx: ActionContext, effects: Effe
   const dodgeP = dodgeChance(attr(victim, "lck"), Number(action.params.trapLevel ?? ctx.tier));
   if (rng.float() < dodgeP) {
     effects.push({ type: "text", text: ratMiss(hero, rng), tone: "good" });
-    logTrap(party, target, "rat", action.uid, ctx.tier, { element: "physical", dodgeP, dodged: true, raw: 0, dmg: 0 });
     return false;
   }
   const amount = Math.max(1, trapDamageFor(Number(action.params.trapDamage ?? 1), victim.level));
   const hit = applyHit(party, target, amount, null, rng);
   effects.push({ type: "text", text: ratHit(hero, amount, rng), tone: "bad" }, { type: "damage", character: target, amount, damageType: "physical", conditions: hit.conditions });
-  logTrap(party, target, "rat", action.uid, ctx.tier, { element: "physical", dodgeP, dodged: false, raw: amount, dmg: amount, down: wentDown(hit.conditions) });
   return hit.defeated;
 }
 
 /** The level a lock is worked out for: the average level of the heroes who can act (`data/locks.ts`). */
 function lockPartyLevel(party: Party): number {
-  return Math.round(lockPartyLevelExact(party));
-}
-
-/** The same average, not rounded (the journal notes it). */
-function lockPartyLevelExact(party: Party): number {
   const active = activeCharacters(party);
-  return active.length === 0 ? 1 : active.reduce((sum, i) => sum + party.characters[i]!.level, 0) / active.length;
+  return Math.round(active.length === 0 ? 1 : active.reduce((sum, i) => sum + party.characters[i]!.level, 0) / active.length);
 }
 
 /**
  * The roll at a lock: only the best thief of the party picks it, the active hero with the highest thievery skill (a thief or a ninja when one is able to act; the first of equals),
- * not every hero with the best of the rolls counting (balance journal of 10 Nov 2026: the targets of `data/locks.ts` are for one ninja, four rolls gave the party 5 to 15 points more).
+ * not every hero with the best of the rolls counting (the targets of `data/locks.ts` are for one ninja, four rolls gave the party 5 to 15 points more).
  * -1 for nobody. The roll comes from `rng`, a stream of its own, never the one the loot is drawn from.
  */
 function pickLock(party: Party, rng: Rng): PickedLock {
@@ -342,22 +302,19 @@ function pickLock(party: Party, rng: Rng): PickedLock {
       picker = i;
     }
   }
-  if (picker < 0) return { best: -1, picker, rolls: [] };
-  const best = thieveryRoll(party.characters[picker]!, rng);
-  return { best, picker, rolls: [{ i: picker, roll: best }] };
+  if (picker < 0) return { best: -1, picker };
+  return { best: thieveryRoll(party.characters[picker]!, rng), picker };
 }
 
-/** What `pickLock` found: the roll, who made it, and the rolls (one; the journal notes them). */
+/** What `pickLock` found: the roll and who made it. */
 interface PickedLock {
   best: number;
   picker: number;
-  rolls: { i: number; roll: number }[];
 }
 
 /** A failed attempt at the lock of a chest that keeps a trap for it: one time in five (`LOCK_FUMBLE_CHANCE`) the one who tried sets it off. Returns true when it killed the last hero standing. */
-function fumbleLock(action: ActionInstance, ctx: ActionContext, effects: Effect[], rng: Rng, picker: number, entry?: LockEvent): boolean {
+function fumbleLock(action: ActionInstance, ctx: ActionContext, effects: Effect[], rng: Rng, picker: number): boolean {
   if (picker < 0 || typeof action.params.lockTrap !== "string" || !rng.chance(LOCK_FUMBLE_CHANCE)) return false;
-  if (entry) entry.fumble = picker;
   return springChestTrap(action, ctx, effects, picker);
 }
 
@@ -609,12 +566,10 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
         // the lock grows with the level of the party (`data/locks.ts`); the roll has a stream of its own, so the loot below stays what it was
         const lockStream = lockRng(ctx, `${action.uid}@lock`);
         const need = lockDifficulty("king chest", ctx.tier, lockPartyLevel(party));
-        const picked = pickLock(party, lockStream);
-        const { best, picker } = picked;
-        const logged = logLock(party, action.uid, "king chest", ctx.tier, need, picked);
+        const { best, picker } = pickLock(party, lockStream);
         if (best < need) {
           const holds: Effect[] = [{ type: "text", text: "The lock holds. Your thief cannot pick it yet." }];
-          if (fumbleLock(action, ctx, holds, lockStream, picker, logged)) holds.push({ type: "defeat" });
+          if (fumbleLock(action, ctx, holds, lockStream, picker)) holds.push({ type: "defeat" });
           return { effects: holds, consumed: false };
         }
       }
@@ -623,13 +578,10 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
       if (p.lock === undefined && Number(p.difficulty ?? 0) > 0) {
         const lockStream = lockRng(ctx, `${action.uid}@lock`);
         const need = lockDifficulty("chest", ctx.tier, lockPartyLevel(party));
-        const picked = pickLock(party, lockStream);
-        const { best, picker } = picked;
-        // an alarm chest asks first and is resolved a second time with the answer: the same roll, noted once
-        const logged = p.warn !== "alarm" || ctx.answer === undefined ? logLock(party, action.uid, "chest", ctx.tier, need, picked) : undefined;
+        const { best, picker } = pickLock(party, lockStream);
         if (best < need) {
           const locked: Effect[] = [{ type: "text", text: "The chest is locked, and nobody in your party can pick the lock yet. Try again in a few steps." }];
-          if (fumbleLock(action, ctx, locked, lockStream, picker, logged)) locked.push({ type: "defeat" });
+          if (fumbleLock(action, ctx, locked, lockStream, picker)) locked.push({ type: "defeat" });
           return { effects: locked, consumed: false };
         }
         effects.push({ type: "text", text: `${party.characters[picker]!.name} picks the lock.` });
@@ -885,10 +837,9 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
       }
       // the lock of a door grows with the level of the party like the lock of a chest, an easier one (`data/locks.ts`)
       // (a gate with `harder` is worked out for a place that many levels higher: the gates of a castle's side rooms, 55th playtest, point 11)
-      const difficulty = lockDifficulty("door", Math.min(5, ctx.tier + Number(p.harder ?? 0)), lockPartyLevel(party));
-      const picked = pickLock(party, lockRng(ctx, `${action.uid}@lock`));
-      const { best } = picked;
-      logLock(party, action.uid, "door", ctx.tier, difficulty, picked);
+      // (the locked door of the spaceship's bridge has the lightest lock there is: `trivial`, quest document 1.9)
+      const difficulty = p.trivial === true ? 1 : lockDifficulty("door", Math.min(5, ctx.tier + Number(p.harder ?? 0)), lockPartyLevel(party));
+      const { best } = pickLock(party, lockRng(ctx, `${action.uid}@lock`));
       if (best >= difficulty) {
         effects.push({ type: "door", state: "unlocked" });
         // the gate of a side room in a castle: the first one broken open (or the first alarm chest tried) calls the light guards, the flag is shared with the chests
@@ -932,7 +883,6 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
       const hit = applyHit(party, target, amount, null, rng);
       effects.push({ type: "text", text });
       effects.push({ type: "damage", character: target, amount, damageType, conditions: hit.conditions });
-      logTrap(party, target, kind, action.uid, ctx.tier, { element: damageType, dodged: amount <= 0, raw: trapDamageFor(Number(p.damage ?? 0), party.characters[target]!.level), dmg: amount, down: wentDown(hit.conditions) });
       if (hit.defeated) effects.push({ type: "defeat" });
       return { effects, consumed: true };
     }

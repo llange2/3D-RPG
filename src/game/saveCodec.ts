@@ -1,6 +1,6 @@
 /**
- * Saves in the browser's storage, packed (57th playtest, point 7). `localStorage` holds about five million characters for the whole game, and a save carries the balance journal (a few
- * hundred kilobytes in a long game) and exists once per slot and once per named save: after a handful of saves the browser refused the next one, and a save whose index entry did not fit
+ * Saves in the browser's storage, packed (57th playtest, point 7). `localStorage` holds about five million characters for the whole game, and a save (a long game's party, map and
+ * loot) exists once per slot and once per named save: after a handful of saves the browser refused the next one, and a save whose index entry did not fit
  * was stored but never listed. The text of a save is JSON, which packs to about a quarter: a plain LZW over the bytes with 15-bit codes, one code per character (so no pair of
  * characters is ever split, and no code lands on a control character or a surrogate half). A packed save starts with `lz1:`; older saves are plain JSON (they start with `{`) and are
  * still read. Pure and synchronous: the saves are read in a dozen places that do not wait.

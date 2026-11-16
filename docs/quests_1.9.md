@@ -6,9 +6,11 @@
 | 1.3 | 1.4 | **ue\_quest4 (Pirate Queen)** ergänzt. Nach der Begegnung taucht das Piratenschiff erst **eine Woche später** wieder auf; ist es außer Sichtweite, steht es wieder an seiner Ausgangsposition. Das Schiff fährt auf tiefem und flachem Wasser, die Begegnung gibt es nur, wenn die Party auf dem Floß steht. |
 | 1.4 | 1.5 | \- **spaceship\_1** aktualisiert (Power Crystal darf nur als Teil des Quests verwendet werden)<br>\- **quest\_7** eränzt<br>\- Generierungstabelle aktualisert (Spaceship hat immer quest\_7)<br>\- IDs der neuen Assets (Modelle, Quest-Item, Sounds) in quest\_7 ergänzt (Stand 5. 11. 2026, Version bleibt 1.5)<br>\- **Spaceship (Stand 5. 11. 2026, Version bleibt 1.5):** Die Konsole der Bridge braucht laufende Engines und Life Support UND die schwarze Key Card (statt der Transportröhre des Kontrolldecks); einheitliche Sektionsnamen (Storage Bay, Engine Room, Life Support, Control Room, Bridge); 2 Orbs je Sektion außer der Bridge (8 im Spaceship, 23 auf L5-Dungeons); Pyramide-zu-Sektion zufällig, die der Bridge auf einem L5-Territory; Licht, Sounds und Aktionen gelten für das ganze Schiff; Hinweistexte der Kisten; Terminatoren; Computer (ID68) pro Level mit ComputerScreen |
 | 1.5 | 1.6 | \- **dungeon\_3** Levelgrößen ergänzt |
-| 1.6 | 1.7 |  |
+| 1.6 | 1.7 | \- **dungeon\_6** ergänzt |
+| 1.7 | 1.8 | \- **Goldene Regel** ergänzt (Dungeons mit Keycards nur in Dungeons, die einen Key benötigen)<br>\- Sektion **Loot** überarbeitet |
+| 1.8 | 1.9 | \- **spaceship\_1**: Brückendesign standardisiert<br>\- **Legende** ergänzt |
 
-# Generierung
+- Generierung
 
 | Quest | Layouts | Level | Monstertyp |
 | --- | --- | --- | --- |
@@ -165,12 +167,20 @@ Soweit nicht explizit im Quest erwähnt, gelten diese Regeln immer
 | DW | Dungeon/Cave wall |
 | CO1-CO4 | Spaceship Wand mit Außenrundung. Rundung link&oben/oben&rechts/recht&unten/unten&links (Objekt ID85 oder direkt in der Engine rund dargestellt) |
 | CI1-CI4 | Spaceship Wand mit Innenrundung. Rundung linksoben/rechtsoben/rechtsunten/linksunten (Objekt ID84 oder direkt in der Engine rund dargestellt) |
+| CD | Spaceship door |
 | CF | Spaceship floor |
+| CL | Spaceship door (locked): Ein Dialog erscheint mit dem Hinweis, dass die Tür verschlossen ist. Der Spieler kann sich entscheiden diese zu knacken. Die Schlossprobe soll minimal sein. |
+| CO | Finales Terminal, wird mit der schwarzen Key Karte entsperrt |
 | CW | Spaceship wall |
 | FD | Fort/Castle door |
 | FF | Fort/Castle floor |
 | FW | Fort/Castle wall |
+| MA | Monster "Titanic Automato" (ID 88) |
+| MT | Monster "Terminator" (ID 69) |
+| TE | Computer Terminal |
+| TG | Temporal Field Generator |
 | TH | Throne (with king character in front of it) |
+| SK | Skeletton bone pile (ID 70) |
 | ST | Statue in castle, always facing in a 45° angle towards the inside |
 
 ## dungeon\_1 (ein langes Dungeon)
@@ -771,31 +781,53 @@ Soweit nicht explizit im Quest erwähnt, gelten diese Regeln immer
 - Dahinter kommt die "Storage Bay", die mit einer Schleuse mit dem "Control Room" verbunden ist
 - Am Ende der "Engine Room", der durch eine Schleuse mit der "Storage Bay" verbunden ist
 - Es gibt also 4 Schleusen: Bridge - Control Room, Control Room - Life Support, Control Room - Storage Bay, Storage Bay - Engine Room
+- Wichtig: die "Bridge" ist immer identisch im Aufbau und wird im nächsten Absatz beschrieben
 
 |  |  |  |  |
 | --- | --- | --- | --- |
 | Bridge | Control Room | Storage Bay | Engine Room |
 |  | Life Support |  |  |
 
-End-Räume
+### Bridge
+
+- Das Layout oben beinhaltet links auch ein Teil der alten Brücke. Diese wird durch dieses neue Layout ersetzt. Das Brückenlayout ist statisch und die Platzierung muss exakt wie beschrieben erfolgen
+- Der Temporal Field Generator zeigt den Text "Temporal field generator offline" als Screen GUI
+- Der Computer (TE) zeigt die Nachricht: "To whomever might find this. We came from a solar system far from here, because we detected that this planets constellation had an unknown energy signature. To study it, we designed an experiment to study the effects on organisms. We placed genetically created or enhances humanoids and creatures on the planet and enclosed the planet in a temporal field.
+
+  A second on this station equaled eons on the planet. Research was going well and we saw life flourishing. 3 days ago a still unknown anomaly of the planet occurred. It is still unclear what exactly happened and I can only describe it that it somehow caused a virus or made parts of our systems sentient. It shut down the temporal core, which meant that time on the planet and here is now the same. It also turned the machine against the crew.
+
+  Only two of us survived, but I got heavily injured. My partner exited towards the surface in order to plant an emergency beacon. Unfortunately the world's fauna has turned vile and he was killed almost immediately. I have no idea, if the ship's keycards he carried were destroyed or stolen. I managed to lock myself in this room and reset the ship's systems. It seems that the virus is flushed out, but the robots seem to have lost the connection and are still vicious.
+
+  Since my wounds are too severe, I am afraid that I do not have much longer."
+-  Die Bone Piles (SK) haben sind reine Deko und haben alle den Text: "Ordinary human remains, except that the clothing looks like something you have never seen before."
+
+| CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CW | CI3 | CF | CF | MT | CD | CF | CF | CF | CF | CF | CF | MA | CF | CF | CF | CW | CW | CI3 | LE | CI4 | CW |
+| CW | SK | MT | SK | CF | CW | CO2 | CF | SK | CF | CO1 | CW | CL | CW | CO2 | CF | CO4 | CW | CO3 | CF | CO4 | CW |
+| CW | MT | CO | MT | CF | CW | CW | CF | CF | CF | CW | CF | CF | CF | CW | CF | CF | CD | CF | CF | CF | LC |
+| CW | CF | MT | CF | CF | CW | CO3 | CF | MT | CF | CW | CF | CF | SK | CW | CF | CO1 | CW | CO2 | CF | CO1 | CW |
+| CW | CI2 | CF | SK | MT | CD | CF | CF | CF | CI1 | CW | TG | CF | TE | CW | MA | CW | CW | CI2 | DEN | CI1 | CW |
+| CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW | CW |
 
 ## Goldene Regeln
 
 - End-Räume von L1 & 2 haben, je nach Welt Größe, 0-3 Schlüssel, um in L3-5 Level zu kommen (alle in der Welt benötigten Schlüssel müssen in L1/2 End-Räumen (Dungeons & Caves) **offensichtlich** zu finden sein (z.B. rotierender Schlüssel ID17-25).
 - Dungeon End-Räume von L4 & 5 haben, je nach Welt Größe, 0-3 Key Card, um in die Spaceship Level zu kommen (alle in der Welt benötigten Schlüssel müssen in L4/5 End-Räumen **offensichtlich** zu finden sein (z.B. rotierender Keycards ID65-66, ID122-124).
+- Key Cards sind nur in Dungeons (Türmen) zu finden, die einen Schlüssel zum Öffnen benötigen
 - Cave End-Räume von L4 & 5 haben nur Loot (ohne Key Card)
 
 ## Loot
 
-Die fett geschriebenen Punkte müssen immer dabei sein. Wähle **zusätzlich** zufällig 2-4 Belohnungen aus. 
+Die fett geschriebenen Punkte müssen immer dabei sein. Wähle **zusätzlich** zufällig 2-4 Belohnungen aus. Die Schätze im Endraum sind immer 1 Level höher als das Level (z.B. Dungeon L3 > Treasure L4)
 
 | Level | Loot |
 | --- | --- |
-| \- 1 | \- 5-10k Gold<br>\- 1-2x 5 Attributspunkte (von zufälligem Typ)<br>\- 5-10 x Treasure L1<br>\- 0-2 L1 Spells<br>**\- Schlüssel (s. Goldene Regeln)** |
-| \- 2 | \- 10-50k Gold<br>\- 1-2x 10 Attributspunkte (von zufälligem Typ)<br>\- 5-10 x Treasure L2<br>\- 0-2 L2 Spells<br>**\- Schlüssel (s. Goldene Regeln)** |
-| 3 | \- 50 - 200 k Gold<br>\- 1-2x 20 Attributspunkte (von zufälligem Typ)<br>\- 5-10 x Treasure L3<br>\- 0-2 L3 Spells |
-| \- 4 | \- 200-1000 k Gold<br>\- 1-3 x Levelaufstieg um 1 Level<br>\- 5-10 x Treasure L4<br>\- 0-2 L4 Spells<br>**\- Key Card (s. Goldene Regeln)** |
-| 5 | \- 1-4 mio Gold<br>\- 5-10 x Treasure L5<br>\- 0-2 L5 Spells<br>**\- Key Card (s. Goldene Regeln)<br>\- Orb of ultimate power: 2 Orbs pro Sektion im Spaceship, außer in der Bridge (2x4 = 8). Die anderen 23 Orbs auf die L5 Dungeon möglichst gleichmäßig verteilen (hängt von der Kartengröße ab)** |
+| \- 1 | \- 5-10k Gold<br>\- 5 Attributspunkte (von zufälligem Typ)<br>\- 5-10 x Treasure L2<br>**\- Schlüssel (s. Goldene Regeln)** |
+| \- 2 | \- 10-50k Gold<br>\- 10 Attributspunkte (von zufälligem Typ), bzw. 5 Resistenzpunkte<br>\- 5-10 x Treasure L3<br>**\- Schlüssel (s. Goldene Regeln)** |
+| 3 | \- 50 - 200 k Gold<br>\- 15 Attributspunkte (von zufälligem Typ), bzw. 7 Resistenzpunkte<br>\- 5-10 x Treasure L4 |
+| \- 4 | \- 200-1000 k Gold (auf 100k gerundet)<br>\- 20 Attributspunkte (von zufälligem Typ), bzw. 10 Resistenzpunkte<br>\- 500k, 750k oder 1 mio XP<br>\- 5-10 x Treasure L5<br>**\- Key Card (s. Goldene Regeln)** |
+| 5 | \- 1-2 mio Gold (auf 250k gerundet)<br>\- Levelaufstieg (+1 Level)<br>\- Eine zufällige Resistenz beim schwächsten Charakter auf einen Basiswert von 20 bringen. Als Objekt den Kristall nutzen. Automatische Charakterwahl. Haben alle Charaktere den zufällig gewählten Resistenzwert schon bei >=20 passiert nichts ("The glowing crystal does not seem to have an effect on you.")<br>**\- Key Card (s. Goldene Regeln)<br>\- Orb of ultimate power: 2 Orbs pro Sektion im Spaceship, außer in der Bridge (2x4 = 8). Die anderen 23 Orbs auf die L5 Dungeon möglichst gleichmäßig verteilen (hängt von der Kartengröße ab -> daher kann es auch vorkommen, dass kein Orb in einem L5 Dungeon zu finden ist)** |
 
 # Referenzen
 

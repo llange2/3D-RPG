@@ -7,7 +7,6 @@ import { RIDDLES_WORLD } from "../../src/data/riddles";
 import { MASCOTS } from "../../src/ui/panels";
 import { World } from "../../src/world/world";
 import { createDefaultParty } from "../../src/sim/party";
-import { rollChance } from "../../src/sim/journal";
 import { questInterior } from "../helpers/quests";
 
 const of = (content: ReturnType<typeof questInterior>["content"], kind: string) => content.actions.filter((a) => a.kind === kind);
@@ -79,17 +78,6 @@ describe("40th playtest, point 6: the runes of quest 3 lie round the gong that s
       expect(out.effects.some((e) => e.type === "endroom"), r.uid).toBe(r.params.after === last.uid);
     }
   });
-});
-
-describe("40th playtest, point 7: the temporary thievery log", () => {
-  it("computes the exact chance of a roll and of the party", () => {
-    // a roll between a third of the skill and all of it: skill 30 gives 10 to 30, 21 values
-    expect(rollChance(30, 10)).toBe(1);
-    expect(rollChance(30, 31)).toBe(0);
-    expect(rollChance(30, 20)).toBeCloseTo(11 / 21, 6);
-  });
-
-  // the entries of the log (since the balance journal they are filed in the save) are tested in `journal.test.ts`
 });
 
 describe("40th playtest, point 11: no riddle of another age", () => {

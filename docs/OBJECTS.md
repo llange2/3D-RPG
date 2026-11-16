@@ -82,7 +82,7 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 | 67 | Power source crystal |  |  |  |  |  | x |  |  |
 | 68 | Computer terminal |  |  |  |  |  | x |  |  |
 | 69 | Grindstone |  | x |  | x | x |  |  |  |
-| 70 | Bone pile |  |  | x | x |  |  |  |  |
+| 70 | Bone pile |  |  | x | x |  | x |  |  |
 | 71 | Abandoned fireplace |  |  | x | x |  |  | x |  |
 | 72 | Noble chest | **ja** | x |  | x | x |  |  |  |
 | 73 | Magic runes | **ja** |  | x | x |  |  | x |  |

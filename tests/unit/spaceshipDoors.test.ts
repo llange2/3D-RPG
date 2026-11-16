@@ -24,10 +24,12 @@ describe("the sliding doors of the spaceship (6. 11. 2026)", () => {
       const { map, content } = shipOf(seed);
       const doors = content.actions.filter((a) => a.kind === "door");
       const locks = doors.filter((d) => d.params.airlock === true);
-      const plain = doors.filter((d) => d.params.airlock !== true);
+      // (the doors of the bridge are the document's, quest document 1.9: they stand where its grid puts them, `bridge.test.ts` has them)
+      const b = map.spaceship!.bridge;
+      const plain = doors.filter((d) => d.params.airlock !== true && !(d.x >= b.x && d.x < b.x + b.w && d.y >= b.y && d.y < b.y + b.h));
       expect(locks.length, seed).toBe(4);
       // (fewer than before the doors asked for two cells of straight wall either side, 6. 11. 2026)
-      expect(plain.length, seed).toBeGreaterThan(3);
+      expect(plain.length, seed).toBeGreaterThan(2);
       const floor = (x: number, y: number) => map.cells[y * map.width + x] === CELL.FLOOR;
       for (const d of plain) {
         expect(d.params.slide, `${seed} ${d.uid}`).toBe(true);

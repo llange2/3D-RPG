@@ -107,7 +107,11 @@ export function roundCornersIn(cells: ArrayLike<number>, width: number, height: 
 }
 
 export function roundCorners(map: InteriorMap): RoundCorner[] {
-  return hasRoundWalls(map) ? roundCornersIn(map.cells, map.width, map.height) : [];
+  if (!hasRoundWalls(map)) return [];
+  const corners = roundCornersIn(map.cells, map.width, map.height);
+  // the bridge's doors and its corner objects keep their square corner (`SpaceshipLayout.square`)
+  const square = new Set((map.spaceship?.square ?? []).map((p) => p.y * map.width + p.x));
+  return square.size === 0 ? corners : corners.filter((c) => !square.has(c.y * map.width + c.x));
 }
 
 /** The wall faces of floor cells that the models cover, as `x,y,N|E|S|W` (the cell the face belongs to and the side it looks away from). */

@@ -19,7 +19,7 @@ import { ALIGNMENTS, KING_GREETING, guardsOf, type Alignment } from "../data/cas
 import { ARTIFACT_TYPE, ARTIFACT_XP, KEEPERS } from "../data/keepers";
 import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
-import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, POWER_CRYSTAL, SKULL, SKULLS_FOR_RING, STORAGE_BAY } from "../data/quest-table";
+import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, TEMPORAL_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, POWER_CRYSTAL, SKULL, SKULLS_FOR_RING, STORAGE_BAY } from "../data/quest-table";
 import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, showcaseLabelAt, hasQuartermaster, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
@@ -50,8 +50,7 @@ import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landma
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
-import { addCondition, canAct, recalcValues, worstCondition, xpToNextLevel } from "../sim/character";
-import { journalEmit, pushJournal, setJournalSink, type FightEvent, type JournalEntry, type JournalEvent, type Stamp } from "../sim/journal";
+import { addCondition, canAct, recalcValues, xpToNextLevel } from "../sim/character";
 import { OLD_AGE, anyoneOld } from "../sim/aging";
 import { conditionEventText, type ConditionEvent } from "../sim/conditions";
 import { cellAt, centreOn, clampCells, fitMap, panBy, zoomStep, type MapViewport, type ZoomLimits } from "./mapView";
@@ -89,7 +88,7 @@ import { hutScene } from "../data/hut-texts";
 import { generateItem, generateRing, questItem } from "../sim/items";
 import { cheats } from "../sim/cheats";
 import { RANGE_TARGETS, readSettings, writeSettings, type Settings } from "./settings";
-import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, deleteNamedSave, findNamedSave, listNamedSaves, readNamedSave, writeNamedSave, takeJournalDropped, LISTED_KINDS, SAVE_SLOTS, MAX_SAVE_NAME, cleanSaveName, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
+import { Explored, fromSaveFile, spanOf, isCampaignPlace, kindOfState, newCampaignState, newGameState, readSave, describeSave, exportSaves, importSaves, writeSave, deleteNamedSave, findNamedSave, listNamedSaves, readNamedSave, writeNamedSave, LISTED_KINDS, SAVE_SLOTS, MAX_SAVE_NAME, cleanSaveName, type GameKind, type GameState, type LootPile, type PirateState, type SaveFile, type SaveSlot } from "./state";
 import { openQuartermaster } from "../ui/quartermaster";
 import { askSpellDetails, openInventory, pickCaster, pickHeroPortrait, pickSpell, type CharacterView, type SpellChoice } from "../ui/panels";
 import { openService, serviceMusic } from "../ui/services";
@@ -251,34 +250,6 @@ const capitalise = (text: string): string => text.charAt(0).toUpperCase() + text
 const CAMP_LURE = 4;
 const CAMP_RADIUS = MONSTER_ACTION_RADIUS + CAMP_LURE;
 
-/** TEMPORARY (balance journal): a fight with no blow for this many steps is over, the party has walked away (`Game.noteFight`). */
-const FIGHT_IDLE_STEPS = 30;
-/** TEMPORARY (balance journal): every so many steps a snapshot of the time line is filed. */
-const SNAP_EVERY_STEPS = 200;
-
-/** TEMPORARY (balance journal): what `Game.noteFight` has counted of the fight being fought. */
-interface FightTally {
-  hp0: number[];
-  /** The monsters met: uid to definition id. */
-  seen: Map<string, number>;
-  rounds: number;
-  dealt: { melee: number; ranged: number; magic: number };
-  pAtk: number;
-  pHit: number;
-  taken: Record<string, number>;
-  mAtk: number;
-  mHit: number;
-  killed: number;
-  wolf: number;
-  xp: number;
-  gold: number;
-  items: number;
-  lastStep: number;
-  tier: number;
-  mascot: string;
-  /** The stamp of the first blow. */
-  begin: Stamp;
-}
 const CAMP_TURNS = CAMP_RADIUS + 2;
 const RAFT_ITEM = 126;
 const RAFT_OWNER = "raft";
@@ -540,136 +511,6 @@ export class Game {
     return true;
   }
 
-  // ---------------------------------------------------------------- balance journal
-
-  /** TEMPORARY (balance journal, `sim/journal.ts`): the fight being counted, null between fights. */
-  private fight: FightTally | null = null;
-  /** The step of the last snapshot of the time line. */
-  private lastSnap = 0;
-
-  /**
-   * TEMPORARY (balance journal, `sim/journal.ts`): what the sim reports (locks, traps, level-ups, heroes who went down) is stamped with the step, the minute and the place and filed in the state,
-   * which every save carries. Nothing goes to the console or the log of the game; `tools/balance/read-journal.ts` reads it off an exported save.
-   */
-  private watchJournal(): void {
-    setJournalSink((event) => this.fileJournal(event));
-  }
-
-  private fileJournal(event: JournalEvent): void {
-    const s = this.state;
-    if (!s || this.mode === "title") return;
-    pushJournal(s.journal, Object.assign(event, this.journalStamp()) as JournalEntry);
-  }
-
-  /** Step, minute and place of this moment. */
-  private journalStamp(): Stamp {
-    const s = this.state;
-    const at = s.at;
-    return { s: s.steps, m: s.party.minutes, at: at.mode === "overworld" ? "ow" : at.poiId, x: this.player?.tx ?? at.x, y: this.player?.ty ?? at.y };
-  }
-
-  /** The tier of the place the party is in. */
-  private journalTier(): number {
-    if (this.interior) return this.interior.content.tier;
-    return this.player ? this.world.tierAt(this.player.tx, this.player.ty) : 1;
-  }
-
-  /** A snapshot of the time line: every 200 steps, and when the party goes between the overworld and a place or loads a game. */
-  private journalSnap(why: string): void {
-    const s = this.state;
-    const party = s.party;
-    this.lastSnap = s.steps;
-    journalEmit({ t: "snap", why, tier: this.journalTier(), heroes: party.characters.map((c) => ({ lvl: c.level, xp: c.xp, hp: c.hp, health: c.health, cond: worstCondition(c) })), gold: party.gold, bank: party.bankGold, food: party.food, kills: s.kills });
-  }
-
-  /**
-   * TEMPORARY (balance journal): counts a fight from the events of the sim, which `handleEvents` gets before it shows anything. The first batch starts the count (the hit points of that
-   * batch are added back to the heroes to get those from before it); the fight ends when no monster is left within the radius they act in ("won"), when the party defeats ("lost"),
-   * when the scene changes or the party walked away and nothing happened for a while ("left").
-   */
-  private noteFight(events: CombatEvent[]): void {
-    const party = this.state.party;
-    const blows = events.some((e) => e.type === "party_attack" || e.type === "monster_attack");
-    if (!blows && !events.some((e) => e.type === "monster_dead" || e.type === "defeat")) return;
-    if (this.fight && this.state.steps - this.fight.lastStep > FIGHT_IDLE_STEPS) this.endFight("left");
-    let f = this.fight;
-    if (!f) {
-      const hp0 = party.characters.map((c) => c.hp);
-      for (const e of events) if (e.type === "monster_attack") hp0[e.target] = (hp0[e.target] ?? 0) + e.damage;
-      f = this.fight = { hp0, seen: new Map(), rounds: 0, dealt: { melee: 0, ranged: 0, magic: 0 }, pAtk: 0, pHit: 0, taken: {}, mAtk: 0, mHit: 0, killed: 0, wolf: 0, xp: 0, gold: 0, items: 0, lastStep: this.state.steps, tier: this.journalTier(), mascot: party.mascot, begin: this.journalStamp() };
-    }
-    f.lastStep = this.state.steps;
-    if (blows) f.rounds++;
-    for (const e of events) {
-      switch (e.type) {
-        case "party_attack":
-          f.seen.set(e.uid, e.defId);
-          f.pAtk++;
-          if (e.damage > 0) f.pHit++;
-          f.dealt[e.kind] += e.damage;
-          break;
-        case "monster_attack": {
-          const defId = this.enc.monsters.find((m) => m.uid === e.uid)?.defId ?? f.seen.get(e.uid);
-          if (defId !== undefined) f.seen.set(e.uid, defId);
-          f.mAtk++;
-          if (e.damage > 0) f.mHit++;
-          const kind = e.ranged ? `${e.damageType}/ranged` : e.damageType;
-          f.taken[kind] = (f.taken[kind] ?? 0) + e.damage;
-          break;
-        }
-        case "wolf_kill":
-          f.wolf++;
-          break;
-        case "monster_dead":
-          f.seen.set(e.uid, e.defId);
-          f.killed++;
-          f.xp += e.xp;
-          f.gold += e.loot.gold;
-          if (e.loot.item) f.items++;
-          break;
-        default:
-          break;
-      }
-    }
-    if (events.some((e) => e.type === "defeat")) this.endFight("lost");
-    // won: every monster that took part is gone (one that stands about but never fought belongs to no fight yet)
-    else if (![...f.seen.keys()].some((uid) => this.enc.monsters.some((m) => m.uid === uid && m.hp > 0))) this.endFight("won");
-  }
-
-  /** Files the fight being counted. */
-  private endFight(out: FightEvent["out"]): void {
-    const f = this.fight;
-    this.fight = null;
-    if (!f || !this.state) return;
-    const counts = new Map<number, number>();
-    for (const defId of f.seen.values()) counts.set(defId, (counts.get(defId) ?? 0) + 1);
-    const s = this.state;
-    const entry = journalEmit({
-      t: "fight",
-      out,
-      endS: s.steps,
-      endM: s.party.minutes,
-      tier: f.tier,
-      rounds: f.rounds,
-      mon: [...counts].map(([id, n]) => ({ id, n })).sort((a, b) => a.id - b.id),
-      heroes: this.state.party.characters.map((c, i) => ({ name: c.name, cls: c.classType, lvl: c.level, hp0: f.hp0[i] ?? c.hp, hp1: c.hp, health: c.health })),
-      dealt: f.dealt,
-      pAtk: f.pAtk,
-      pHit: f.pHit,
-      taken: f.taken,
-      mAtk: f.mAtk,
-      mHit: f.mHit,
-      killed: f.killed,
-      wolf: f.wolf,
-      xp: f.xp,
-      gold: f.gold,
-      items: f.items,
-      mascot: f.mascot,
-    });
-    // the sink stamped the end; a fight is filed where and when it began
-    Object.assign(entry, f.begin);
-  }
-
   /** Shows the title screen and starts or continues a game. */
   async start(defaultSeed: string): Promise<void> {
     this.mode = "title";
@@ -808,12 +649,7 @@ export class Game {
 
   private async beginPlay(): Promise<void> {
     cheats.god = false; // the debug cheats are for one game
-    // TEMPORARY (balance journal): a fight of the game before is not this game's, and the time line goes on from the steps of this one
-    this.fight = null;
     this.askedPoi = null;
-    this.lastSnap = this.state.steps;
-    // every way into a game comes through here (title, load, `?autostart=1`, the resume after a reload), so the sink is set here and not in `start`
-    this.watchJournal();
     // bug_fix_59, point 7: the loading screen stands before the HUD shows and before the portraits load (a way in that does not come from the title: the resume after a reload, `?autostart=1`)
     await this.beginLoading();
     this.ui.setHudVisible(true);
@@ -962,7 +798,8 @@ export class Game {
     if (this.mode !== "interior" || !rt?.map.spaceship) return;
     let closed = false;
     for (const a of rt.content.actions) {
-      if (a.kind !== "door" || a.params.airlock === true || !this.state.opened.has(a.uid)) continue;
+      // (an airlock stays open once opened, and so does a door that had to be picked: the lock is not picked again after it shut)
+      if (a.kind !== "door" || a.params.airlock === true || a.params.locked === true || !this.state.opened.has(a.uid)) continue;
       if (Math.max(Math.abs(a.x - this.player.tx), Math.abs(a.y - this.player.ty)) < Game.DOOR_CLOSE_DISTANCE) continue;
       // a monster that is in the door stays; so does one that has noticed the party and stands next to it (it has opened the door and is on its way through: shutting it
       // before its next step would keep it from ever getting through); one that sleeps next to it does not hold it
@@ -1056,8 +893,6 @@ export class Game {
     await afterFrames(this.r.scene, 2);
     await loading.hide();
     this.player.locked = false;
-    // TEMPORARY (balance journal): the party has arrived in a new scene (the start of a game, a load, a place, the way out of it)
-    this.journalSnap("scene");
   }
 
   /** The loading screen must not outlive a map that could not be loaded (the party would be stuck behind it). */
@@ -1211,7 +1046,6 @@ export class Game {
     this.fxEpoch++;
     this.fallen.clear();
     this.viewed.clear();
-    this.endFight("left");
     this.lootHeld.clear();
     this.volleyUntil = 0;
     this.projectiles.clear();
@@ -1540,7 +1374,6 @@ export class Game {
     // the cell was reached in this scene: an action on it may leave it (the exit of a town, a portal, a ladder), and `x, y` mean nothing in the next one
     const epoch = this.fxEpoch;
     s.steps++;
-    if (s.steps - this.lastSnap >= SNAP_EVERY_STEPS) this.journalSnap("steps");
     cursorStepped();
     this.syncSurroundings();
     // a levitating party does not walk: the wind takes the place of the footsteps
@@ -2937,7 +2770,7 @@ export class Game {
       switch (e.type) {
         case "text":
           // a computer of the spaceship (item 68) shows its text on the ComputerScreen, everything else on the scroll
-          if (a.kind === "lore") await (Number(a.params.item) === COMPUTER_ITEM || Number(a.params.item) === CONSOLE_ITEM ? ui.computerMessage(e.text, this.placeTitle()) : ui.message(e.text, this.placeTitle()));
+          if (a.kind === "lore") await (Number(a.params.item) === COMPUTER_ITEM || Number(a.params.item) === CONSOLE_ITEM || Number(a.params.item) === TEMPORAL_ITEM ? ui.computerMessage(e.text, this.placeTitle()) : ui.message(e.text, this.placeTitle()));
           else ui.log(e.text, e.tone ?? (a.kind === "trap" ? "bad" : "info"));
           break;
         case "gold":
@@ -3838,7 +3671,6 @@ export class Game {
    */
   private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell, line = false): void {
     const party = this.state.party;
-    this.noteFight(events);
     const flights = this.launchPartyShots(events, spell, area, line);
     const landing = (uid: string) => flights.get(uid) ?? 0;
     // the monsters answer when the party's last shot has landed
@@ -5499,12 +5331,6 @@ export class Game {
     const ok = writeSave(this.state, slot);
     this.lastAutosave = this.state.steps;
     if (!ok) this.ui.log("Could not save (browser storage unavailable).", "bad");
-    this.noteJournalDropped();
-  }
-
-  /** TEMPORARY (balance journal): the browser had no room for a save with the journal; the save was made without it. */
-  private noteJournalDropped(): void {
-    if (takeJournalDropped()) this.ui.log("The browser storage is nearly full: this save was written without the balance journal. Export the saves (Esc > Debug) and delete old ones.", "bad");
   }
 
   /** Writes the game under a name of the player's choice; false (and a note in the log) when the browser refuses. */
@@ -5513,7 +5339,6 @@ export class Game {
     this.prepareSave();
     const ok = writeNamedSave(this.state, name);
     if (!ok) this.ui.log("Could not save (browser storage unavailable or full).", "bad");
-    this.noteJournalDropped();
     return ok;
   }
 

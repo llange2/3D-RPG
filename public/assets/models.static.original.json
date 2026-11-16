@@ -4339,7 +4339,7 @@
  "poi_castle_ruin": {
   "file": "models-original/poi_castle_ruin.glb",
   "tris": 18574,
-  "bytes": 1371012,
+  "bytes": 2235132,
   "bounds": [
    -0.9448660016059875,
    -0.7652111649513245,
@@ -4352,6 +4352,24 @@
   "groundTop": -0.75,
   "surface": -0.7475,
   "fromObj": false,
-  "mean": 0.161
+  "mean": 0.153
+ },
+ "obj_temporal_field_generator": {
+  "file": "models-original/obj_temporal_field_generator.glb",
+  "tris": 20472,
+  "bytes": 5597800,
+  "bounds": [
+   -0.5449299812316895,
+   -0.9517541527748108,
+   -0.5015171766281128,
+   0.5534539818763733,
+   0.9504191279411316,
+   0.5017039179801941
+  ],
+  "animations": [],
+  "groundTop": -0.95,
+  "surface": -0.8725,
+  "fromObj": false,
+  "mean": 0.31
  }
 }
