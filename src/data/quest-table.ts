@@ -143,8 +143,11 @@ export const BROKEN_CRYSTAL_ITEM = 302;
 export const CONSOLE_ITEM = 303;
 /** The temporal field generator in the generator room of the bridge (quest document 1.9): the user's model `obj_temporal_field_generator`, a pseudo item like the three above. */
 export const TEMPORAL_ITEM = 331;
-/** The file is 1.1 x 1.9 x 1.0 around its middle; 1.5 times that stands 2.85 high in the 4.5 high rooms of the ship and fills a cell (3 wide). */
-export const TEMPORAL_SCALE = 1.5;
+/**
+ * The file is 1.098 x 1.903 x 1.003 around its middle. The user wants its length and width to fill a cell (CELL_SIZE 3) with the proportions kept (16. 11. 2026), so the longer side is 3:
+ * 3 / 1.098 = 2.73, which makes it 2.74 wide and 5.2 high, a little taller than the 4.5 of the ship's walls (the top reaches into the ceiling).
+ */
+export const TEMPORAL_SCALE = 2.73;
 /**
  * The stairs of a tower (quest document 1.7): the user's straight wooden stairs (`obj_wooden_stairs`, a pseudo item like the ones above; they replaced the spiral staircase in the
  * 49th playtest) and, on the floor above, the Fort door of the castle (old item 100, the castle's gate) that leads down again. The stairs are stretched to fill their cell from the

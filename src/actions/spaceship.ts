@@ -39,6 +39,8 @@ const ORB_OBJECT = 109;
 const TERMINATOR = 69;
 const TITANIC_AUTOMATO = 88;
 const BONE_PILE = 70;
+/** The console faces east (user, 16. 11. 2026: a quarter turn against the clock from the south it faced before); the terminator on its east side is the one it looks at. */
+const CONSOLE_BEARING = 90;
 /** How rare a terminator is among the robots of the other sections: about one in twelve (percent). */
 const RARE_TERMINATOR_PERCENT = 8;
 
@@ -101,7 +103,7 @@ export function buildSpaceshipContent(map: InteriorMap, rootSeed: SeedState): Ma
   // the tubes: the way in from a pyramid and out again, one in every section
   layout.tubes.forEach((t, s) => put({ uid: uid("tube"), kind: "tube", x: t.x, y: t.y, params: { item: TUBE, section: s } }, false));
   // the console of the bridge, with a terminator on every side of it (the fixed layout of the bridge follows below)
-  put({ uid: uid("console"), kind: "lore", x: layout.console.x, y: layout.console.y, params: { item: CONSOLE_ITEM, terminal: "console", pool: "dungeon", line: 0, bearing: 180 } }, false);
+  put({ uid: uid("console"), kind: "lore", x: layout.console.x, y: layout.console.y, params: { item: CONSOLE_ITEM, terminal: "console", pool: "dungeon", line: 0, bearing: CONSOLE_BEARING } }, false);
   // the airlocks, each with a lever in a niche on both sides
   for (const lock of layout.locks) {
     const door = uid("airlock");
