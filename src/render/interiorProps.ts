@@ -10,7 +10,7 @@ import { CELL_SIZE, TOWER_STOREY } from "./interiorMesher";
 import type { PropInstance } from "./terrainMesher";
 
 /**
- * The objects of a themed cave or dungeon are old map items (docs/DUNGEON_THEMES.md): a chest is item 1, 74, 72 or 96, a shrine a
+ * The objects of a themed cave or dungeon are old map items (docs/OBJECTS.md says where each may stand): a chest is item 1, 74, 72 or 96, a shrine a
  * crystal, altar or well, and the style of the place adds barrels, bones, banners and the like. The chests, altars and wells have
  * models of their own in the interior view (`obj_*`); every other item is drawn from its old model (`ci_<id>`) in the pose of the
  * item table, the way the campaign draws it.

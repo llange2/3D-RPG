@@ -1,8 +1,8 @@
 /**
- * BALANCE v4 (25.10.2026): the combat, level and training rules of docs/KAMPF_BALANCE.md (proposal v4, report docs/KAMPF_BALANCE_V4.md).
+ * BALANCE v4 (25.10.2026): the combat, level and training rules of the proposal v4 (the formulas are listed in docs/FORMULAS_1.3.md, the derivation in its section 10).
  *
  * Every place that changed carries a comment starting with `BALANCE v4`; `grep -rn "BALANCE v4" src tools tests docs` lists them all, and
- * docs/BALANCE_V4_UMSETZUNG.md explains each one (old formula, new formula, why). The old formulas are still in the code as the `legacy`
+ * docs/FORMULAS_1.3.md (section 9) explains how to go back and what to delete. The old formulas are still in the code as the `legacy`
  * branch of the same functions, so the new system can be rolled back with ONE line: set `BALANCE.mode` below to "legacy"
  * (`tools/balance/verify.ts` follows the mode, and the tests that pin v4 numbers state which mode they expect).
  *

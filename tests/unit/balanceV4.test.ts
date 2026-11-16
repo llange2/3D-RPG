@@ -1,5 +1,5 @@
 /**
- * BALANCE v4 (25.10.2026): pins every rule that docs/BALANCE_V4_UMSETZUNG.md lists, in the new mode and (where it is cheap) in the
+ * BALANCE v4 (25.10.2026): pins every rule of balance v4 (docs/FORMULAS_1.3.md, section 9), in the new mode and (where it is cheap) in the
  * legacy mode, which is the rollback. `tools/balance/verify.ts` compares the same functions with the balance tool on random heroes.
  */
 import { describe, expect, it } from "vitest";

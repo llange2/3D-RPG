@@ -1,7 +1,7 @@
 import type { ActionInstance, MapContent } from "./types";
 
 /**
- * State of the quest objects of a themed place (docs/DUNGEON_THEMES.md, chapter 2). The save keeps one set of strings for every
+ * State of the quest objects of a themed place (docs/quests_1.10.md). The save keeps one set of strings for every
  * action that has been used (`opened`); the quests reuse it, so no new field in the save is needed:
  *  - a gong or riddle statue that is done: its uid
  *  - a lever that has been pulled an odd number of times: its uid (pulling again takes it out)

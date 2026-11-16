@@ -9,8 +9,7 @@ Two ways to play, both with the old game's rules and artwork:
 - **Campaign**: the 34 hand-built maps of the old game (plus its test map) with their quests, riddles and puzzles.
   Start it from the title screen (`New game`, then `New campaign`) or with `?campaign=1` (a map slug works too, e.g. `?campaign=outside`).
 
-Full plan: `C:\Users\spend\.claude\plans\based-on-the-game-sequential-scone.md`.
-Technical handover for the next developer or agent (architecture, determinism rules, pipelines, open points): `docs/HANDOVER.md`, working rules in `CLAUDE.md`.
+Technical handover for the next developer or agent (architecture, determinism rules, pipelines, open points, and a map of all documents in `docs/`): `docs/HANDOVER.md`, working rules in `CLAUDE.md`, all formulas in `docs/FORMULAS_1.3.md`.
 
 ## Play
 

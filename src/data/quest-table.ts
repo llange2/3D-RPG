@@ -1,5 +1,5 @@
 /**
- * The quests of the generated world as the user's quest document (`.ignore/quests_1.3.md`, table "Generierung") names them: which layouts a
+ * The quests of the generated world as the user's quest document (`docs/quests_1.10.md`, table "Generierung") names them: which layouts a
  * quest can be built in, at which levels and with which kind of monsters. A cave or dungeon of the world gets exactly one of them
  * (`world/questPlan.ts`); the castles and the spaceship are places of their own. Pure data: no DOM, no Babylon.
  */
