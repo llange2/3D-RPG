@@ -165,7 +165,9 @@ export function measureWorld(world: World): WorldRewards {
  */
 export const REWARD_TARGETS = {
   gold: 125_000_000,
-  xp: 950_000_000,
+  // 16. 11. 2026: was 950 million, the mean of ten default worlds before the wild monsters of every level shared the land evenly (GEN_VERSION 71): the Vulture Rocs and Dino Beetles gave
+  // most of the wild XP. Mean of `table-47` to `table-56` after it: 851.5 million (882.6 million with the same generator and the old monsters), rounded to 850.
+  xp: 850_000_000,
   attr: 190,
   res: 295,
 } as const;

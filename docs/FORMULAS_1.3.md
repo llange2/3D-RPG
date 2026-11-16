@@ -305,7 +305,7 @@ Jede Welt zahlt dieselben Summen wie die Default-Welt, gleich welche Größe und
 
 ```
 gold = (Ziel_Gold − Gold der Quests) / (Gold der Monster + Gold der Behälter, Endräume und Hütten)    Ziel_Gold = 125 000 000
-xp   = (Ziel_XP − XP der Quests)     / (XP der Monster, Hütten, Schreine und Kelche)                  Ziel_XP   = 950 000 000 je Held
+xp   = (Ziel_XP − XP der Quests)     / (XP der Monster, Hütten, Schreine und Kelche)                  Ziel_XP   = 850 000 000 je Held (seit 16. 11. 2026, vorher 950 Mio)
 attr = min(4, (Ziel_Attr − Münzpunkte) / Attributpunkte der Behälter)                                  Ziel_Attr = 190 je Held mit den Münzen
 coin = min(4, max(1, (Ziel_Attr − attr × Behälterpunkte) / Münzpunkte))                                (die Münze gibt 3 × coin Punkte, höchstens 12)
 res  = min(4, Ziel_Res / Resistenzpunkte der Behälter)                                                 Ziel_Res  = 295 Punkte (alle vier Elemente) je Held
