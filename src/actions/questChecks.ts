@@ -1,6 +1,7 @@
 import { RIDDLES_WORLD } from "../data/riddles";
-import { ORB } from "../data/quest-table";
-import type { InteriorMap } from "../interiors/types";
+import { CRYSTAL_HOLDER, ORB } from "../data/quest-table";
+import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
+import { simulateCrystals, staticBlockers, type WallNode } from "./crystals";
 import { isEndBoss } from "./quests";
 import type { ActionInstance, MapContent } from "./types";
 
@@ -10,6 +11,8 @@ import type { ActionInstance, MapContent } from "./types";
  * statue at the end, the letters of the hints spell the word that the last statue wants. Returns the problems found; empty means every quest
  * of the place can be solved.
  */
+const OPPOSITE_FACING: Record<Facing, Facing> = { N: "S", S: "N", E: "W", W: "E" };
+
 export function questIssues(map: InteriorMap, content: MapContent): string[] {
   const issues: string[] = [];
   const ref = map.dungeon;
@@ -122,6 +125,35 @@ export function questIssues(map: InteriorMap, content: MapContent): string[] {
       if (hints.length < 3 || hints.length > 8) issues.push(`${key}: ${hints.length} hint statues`);
       const riddle = RIDDLES_WORLD[String(last.params.riddle)];
       if (!riddle || riddle.answer !== last.params.answer) issues.push(`${last.uid}: the word is no answer of riddle ${String(last.params.riddle)}`);
+      break;
+    }
+
+    case "quest_8": {
+      const walls = of("crystal");
+      const nodes: WallNode[] = walls.map((a) => ({ uid: a.uid, x: a.x, y: a.y, dir: a.params.facing as Facing, role: a.params.role as "source" | "target", color: Number(a.params.color) }));
+      const targets = nodes.filter((n) => n.role === "target");
+      if (targets.length === 0 || nodes.length - targets.length === 0) {
+        issues.push(`${key}: the crystal paths have ${nodes.length - targets.length} sources and ${targets.length} targets`);
+        break;
+      }
+      for (const n of nodes) {
+        const back = FACING_DELTA[OPPOSITE_FACING[n.dir]];
+        if (map.cells[(n.y + back.dy) * map.width + n.x + back.dx] !== CELL.SOLID) issues.push(`${key}: the wall crystal at ${n.x}/${n.y} has no wall behind it`);
+      }
+      const first = walls.find((a) => typeof a.params.solution === "string");
+      const cells = String(first?.params.solution ?? "").split(";").filter((c) => c !== "").map((c, i) => {
+        const [x, y] = c.split(",").map(Number) as [number, number];
+        return { x, y, seq: i + 1 };
+      });
+      if (!first || cells.length !== Number(first.params.crystals)) {
+        issues.push(`${key}: the crystal paths know no solution`);
+        break;
+      }
+      if (!simulateCrystals(nodes, cells, staticBlockers(map, content.actions)).solved) issues.push(`${key}: the crystals of the solution do not light the targets`);
+      const held = content.actions.filter((a) => a.kind === "treasure" && typeof a.params.extra === "string").flatMap((a) => String(a.params.extra).split(",")).filter((t) => t === CRYSTAL_HOLDER).length;
+      if (held !== cells.length) issues.push(`${key}: ${held} crystals in the chests, the solution needs ${cells.length}`);
+      // the light of the solution must not be stopped by anything the rules put on its way
+      for (const c of cells) if (content.actions.some((a) => a.x === c.x && a.y === c.y)) issues.push(`${key}: an object stands where the crystal at ${c.x}/${c.y} goes`);
       break;
     }
   }

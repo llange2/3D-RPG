@@ -173,5 +173,6 @@
  * 68 = quest document 1.9: the bridge of the spaceship has a fixed layout (`interiors/bridge.ts`: terminators and Titanic Automatos, bone piles, the generator room with the computer terminal and
  * the temporal field generator behind a locked door, the airlock with its lever at the end of the tube's corridor), and the computers of the other sections have a new line.
  * 69 = the console of the bridge faces east (bearing 90, a quarter turn against the clock).
+ * 70 = quest document 1.10: quest_8, the crystal paths (`actions/crystalGen.ts`: wall crystals and crystals in the chests), a seventh quest in the decks of the dungeons and the caves.
  */
-export const GEN_VERSION = 69;
+export const GEN_VERSION = 70;

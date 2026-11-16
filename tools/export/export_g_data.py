@@ -22,7 +22,7 @@ TABLES = {
     "BASE_CLASS": 10,
     "BASE_RACE": 5,
     "MONSTER_DATA": 91,
-    "QUEST_ITEMS": 22 + 1,  # + EXTRA_QUEST_ITEMS
+    "QUEST_ITEMS": 22 + 2,  # + EXTRA_QUEST_ITEMS
     "RIDDLES_MASTER": 300,
     "SPELLS": 78,
     "TALENTS": 20,
@@ -36,6 +36,8 @@ TEXT_LISTS = {"texts": 485, "itexts": 95}
 # The picture `quest_power_crystal.png` is the user's (tools/assets/sources/items, built into the item sheet by build-item-icons.ts).
 EXTRA_QUEST_ITEMS = [
     {"name": "Power crystal", "type": "quest_power_crystal", "texture": "resources/textures/quest_power_crystal", "value": -1},
+    # quest_8 (quest document 1.10, the crystal paths): a crystal in its holder, the picture is the user's `quest_crystal_holder.png`
+    {"name": "Crystal inside Holder", "type": "quest_crystal_holder", "texture": "resources/textures/quest_crystal_holder", "value": -1},
 ]
 
 

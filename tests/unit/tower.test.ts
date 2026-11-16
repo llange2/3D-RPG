@@ -9,10 +9,10 @@ import { CELL } from "../../src/interiors/types";
 import { DUNGEON_LAYOUTS, QUESTS } from "../../src/data/quest-table";
 import { questInterior } from "../helpers/quests";
 
-const QUESTS_WITH_TOWERS = ["quest_2", "quest_4", "quest_5"] as const;
+const QUESTS_WITH_TOWERS = ["quest_2", "quest_4", "quest_5", "quest_8"] as const;
 
 describe("the tower, layout dungeon_5 (quest document 1.7)", () => {
-  it("is a layout of quests 2, 4 and 5 and of no other", () => {
+  it("is a layout of quests 2, 4, 5 and 8 (quest document 1.10) and of no other", () => {
     for (const [id, quest] of Object.entries(QUESTS)) expect(quest.layouts.includes("dungeon_5"), id).toBe(QUESTS_WITH_TOWERS.includes(id as never));
     expect(DUNGEON_LAYOUTS).toContain("dungeon_5");
   });

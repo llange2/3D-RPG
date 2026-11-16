@@ -380,9 +380,9 @@ describe("35th playtest, point 2 and 11: the quest log of the generated world", 
     const boss = w.allPois().find((p) => p.kind === "dungeon" && w.dungeonRef(p.id)?.quest === "quest_5");
     if (boss) {
       const open = worldQuestLog(input([], [boss.id])).open.find((q) => q.includes(boss.name))!;
-      expect(open).toMatch(/^(Defeat the mighty|Hunt down the vile|Put an end to the evil|Face the dangerous|Slay the dreaded) .* in /);
+      expect(open).toMatch(/^(Defeat the mighty|Hunt down the vile|Put an end to the evil|Face the dangerous|Slay the dreaded) .* (in|who rules) /);
       const done = worldQuestLog(input([reachedFlag(boss.id)], [boss.id])).done.find((q) => q.includes(boss.name))!;
-      expect(done).toMatch(/^(Defeated the (mighty|vile|evil|dangerous)|Slew the dreaded) .* in /);
+      expect(done).toMatch(/^(Defeated the (mighty|vile|evil|dangerous)|Slew the dreaded) .* (in|who ruled) /);
     }
   });
 

@@ -811,6 +811,11 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
       effects.push({ type: "text", text: "The floor flares under your feet. You are thrown back!" }, { type: "jump", x: Number(p.tx), y: Number(p.ty) });
       return { effects, consumed: false };
 
+    case "crystal":
+      // the hints of the wall crystals (quest document 1.10, settled with the user): a source shines strongly, a target waits
+      effects.push({ type: "text", text: p.role === "source" ? "There is a strong light emitted from the Crystal." : "There is a faint light as if the Crystal is waiting for something." });
+      return { effects, consumed: false };
+
     case "stairs":
       // up the spiral staircase or down the Fort door: the other floor of the tower, on the same map, without a loading screen and without the sound of a teleport
       effects.push({ type: "jump", x: Number(p.tx), y: Number(p.ty), silent: true, facing: p.facing as "N" | "E" | "S" | "W" });

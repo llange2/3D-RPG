@@ -14,7 +14,7 @@ import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
 import { QUARTERMASTER_GOODS, QUARTERMASTER_PERSONA, STORAGE_EQUIPMENT, sethHintText } from "../data/town-people";
 import { WALL_DECO_ITEMS, WALL_DECO_SPACING, pickWallDeco } from "../data/wall-deco";
-import { FORT_DOOR_ITEM, STAIRCASE_ITEM, type MonsterGroup } from "../data/quest-table";
+import { FORT_DOOR_ITEM, STAIRCASE_ITEM, WALL_CRYSTAL_ITEM, type MonsterGroup } from "../data/quest-table";
 import { monsterGroup } from "../data/tables";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
@@ -44,7 +44,7 @@ export interface ContentContext {
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** The banners (old items 103 to 105) and the wall decorations of the dungeons (the carving of the moose king, 125, and the reliefs of `data/wall-deco.ts`) hang on the wall: the cell in front of one stays as free as it was. */
-export const WALL_HUNG_ITEMS: readonly number[] = [103, 104, 105, ...WALL_DECO_ITEMS];
+export const WALL_HUNG_ITEMS: readonly number[] = [103, 104, 105, ...WALL_DECO_ITEMS, WALL_CRYSTAL_ITEM];
 /** Actions that stand on their cell as an object, blocking it or not (a lore message is one only when it shows a statue or a person). */
 const isObject = (a: { kind: ActionKind; params: Record<string, unknown> }): boolean =>
   a.kind === "lore" ? a.params.object !== undefined || a.params.persona !== undefined : a.kind === "decor" && WALL_HUNG_ITEMS.includes(Number(a.params.item)) ? false : ["decor", "treasure", "shrine", "fountain", "riddle", "gong", "lever", "head", "teleporter", "talent", "work", "portal"].includes(a.kind);
@@ -596,7 +596,7 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   if (questEnv) placeMachines(questEnv);
   // a place that has to hide a coin, a skull or a pearl has at least one ordinary chest for it: the rules may have set none (or only those in the end room and a treasure chamber), and the item,
   // which the quest of the world needs, would be lost (bug_fix_46: Undercroft of Kelvaa, world ue-a, a skull less)
-  if (dt && map.dungeon && map.dungeon.coins + map.dungeon.skulls + (map.dungeon.pearls ?? 0) > 0 && eligibleChests(map, actions).length === 0) {
+  if (dt && map.dungeon && map.dungeon.coins + map.dungeon.skulls + (map.dungeon.pearls ?? 0) + (map.dungeon.quest === "quest_8" ? 1 : 0) > 0 && eligibleChests(map, actions).length === 0) {
     const pool = [...anchors.byKind.roomEdge, ...anchors.byKind.deadEnd, ...anchors.byKind.corridor];
     const spot = new Rng(derive(mapSeed, "spare-chest")).shuffle(pool).find((a) => isFree(a, false) && map.cells[idx(a.x, a.y)] === CELL.FLOOR && !roomCentres.has(idx(a.x, a.y)) && !landings.has(idx(a.x, a.y)) && !wouldDisconnect(idx(a.x, a.y)) && !splitsPassage(a.x, a.y));
     if (spot) {

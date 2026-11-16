@@ -105,6 +105,10 @@ const QUEST_WORDS: Record<QuestId, readonly QuestWords[]> = {
     { open: (n, w) => `Find the word that the statues of ${n} (${w}) spell, and tell it to the last one.`, done: (n) => `Spelled the word of the statues of ${n}.` },
     { open: (n, w) => `Piece together the word that the statues of ${n} (${w}) hide.`, done: (n) => `Pieced together the word of the statues of ${n}.` },
   ],
+  quest_8: [
+    { open: (n, w) => `Carry the light of the wall crystals of ${n} (${w}) to the crystal that waits for it.`, done: (n) => `Carried the light of the wall crystals of ${n} to the crystal that waited for it.` },
+    { open: (n, w) => `Set the crystals you find in ${n} (${w}) so that their light reaches the waiting crystal.`, done: (n) => `Lit the waiting crystal of ${n} with the crystals found there.` },
+  ],
 };
 
 /** A cave whose quest is no puzzle of the statues has its own words for the walk through it (the old line said "scary" for every one of them). */

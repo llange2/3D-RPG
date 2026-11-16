@@ -13,6 +13,7 @@ import { plateButton, preloadButtonArt } from "./buttonArt";
 import { assetPath, clear, h } from "./dom";
 import { conditionClass, conditionLabel, conditionTitle } from "./conditionInfo";
 import { thousands } from "../core/format";
+import { CRYSTAL_HOLDER } from "../data/quest-table";
 import type { Option, UI } from "./ui";
 
 const EQUIP_LAYOUT: { slot: string; label: string }[] = [
@@ -53,6 +54,8 @@ const HANDS_LABEL: Record<Hands, string> = { one: "One-handed weapon", two: "Two
 function rightClickHint(c: Character, item: Item, worn: boolean, allowed: boolean): string | null {
   if (worn) return "Right-click to unequip";
   if (item.type === "spell") return learnBlock(c, item.spellId) === null ? "Right-click to use" : null;
+  // the crystal of quest_8 (quest document 1.10): set down on the cell in front of the party, where it carries light on
+  if (item.type === CRYSTAL_HOLDER) return "Right-click to set it down in front of you";
   if (!allowed || item.quest) return null;  return equipTarget(c.inventory, item) ? "Right-click to equip" : null;
 }
 
@@ -179,6 +182,8 @@ export interface InventoryHooks {
   useScroll?(character: number, slot: string, item: Item): Promise<void>;
   /** The mascots the party has found (the current one is among them). */
   mascots?(): string[];
+  /** Sets a crystal of quest_8 down on the cell in front of the party: true when it did (the item is then gone from the bag, the window closes so that the light can be seen). */
+  placeCrystal?(): boolean;
 }
 
 /** What the character screen shows: a hero by index, the party's talents and achievements, or the mascot. */
@@ -331,7 +336,8 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       const sel = selected ? bag.inventory[selected] : null;
       if (!sel || !selected) return buttons;
       const slot = selected;
-      if (bag.hero) {
+      if (sel.type === CRYSTAL_HOLDER && hooks.placeCrystal) buttons.append(h("button", { class: "btn", text: "Set down", onclick: () => dbl(slot) }));
+      else if (bag.hero) {
         buttons.append(h("button", { class: "btn", text: slot.startsWith("slot") ? "Equip" : "Unequip", onclick: () => dbl(slot) }));
         if (sel.type === "spell" && hooks.useScroll && typeof view === "number") {
           const hero = view;
@@ -466,6 +472,16 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       if (!bag) return;
       const item = bag.inventory[slot];
       if (!item) return;
+      // a crystal of quest_8 is set down on the cell in front of the party (right click or double click, quest document 1.10)
+      if (item.type === CRYSTAL_HOLDER) {
+        if (hooks.placeCrystal?.()) {
+          bag.inventory[slot] = null;
+          selected = null;
+          hooks.changed();
+          close();
+        }
+        return;
+      }
       if (!slot.startsWith("slot")) {
         const free = BAG_SLOTS.find((s) => bag.inventory[s] === null);
         if (!free) return hooks.log("The backpack is full.", "bad");

@@ -7,6 +7,7 @@ import { placeOf } from "../interiors/place";
 import { stairLinks, towerFloorAt } from "../interiors/stairs";
 import { CELL, type InteriorMap } from "../interiors/types";
 import type { AnchorSet } from "./anchors";
+import { crystalPaths } from "./crystalGen";
 import { doorCell, fillEndRoom } from "./endRoom";
 import { themeMonsters } from "./monsterPool";
 import type { ActionInstance, Anchor, ParamValue, SpawnPoint } from "./types";
@@ -152,6 +153,9 @@ export function placeQuest(env: QuestEnv): QuestResult {
       break;
     case "quest_6":
       result = riddleWord(env, rng);
+      break;
+    case "quest_8":
+      result = crystalPaths(env, rng);
       break;
   }
   placeMinis(env, new Rng(derive(env.mapSeed, "minis")));

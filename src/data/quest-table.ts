@@ -4,7 +4,7 @@
  * (`world/questPlan.ts`); the castles and the spaceship are places of their own. Pure data: no DOM, no Babylon.
  */
 
-export const QUEST_IDS = ["quest_1", "quest_2", "quest_3", "quest_4", "quest_5", "quest_6"] as const;
+export const QUEST_IDS = ["quest_1", "quest_2", "quest_3", "quest_4", "quest_5", "quest_6", "quest_8"] as const;
 export type QuestId = (typeof QUEST_IDS)[number];
 
 /**
@@ -37,6 +37,7 @@ export const QUESTS: Readonly<Record<QuestId, QuestDef>> = {
   quest_4: { id: "quest_4", name: "Calculations", layouts: ["dungeon_1", "dungeon_2", "dungeon_3", "dungeon_4", "dungeon_5"], groups: LAND_GROUPS },
   quest_5: { id: "quest_5", name: "The Final Boss", layouts: [...DUNGEON_LAYOUTS, ...CAVE_LAYOUTS], groups: LAND_GROUPS },
   quest_6: { id: "quest_6", name: "Riddle", layouts: [...PLAIN_DUNGEONS, ...CAVE_LAYOUTS], groups: LAND_GROUPS },
+  quest_8: { id: "quest_8", name: "Crystal Paths", layouts: ["dungeon_1", "dungeon_2", "dungeon_4", "dungeon_5", ...CAVE_LAYOUTS], groups: LAND_GROUPS }, // (quest document 1.10; there is no quest_7 among the places, the spaceship is)
 };
 
 /** Quest 6 is also built in a castle (levels 2 to 4) and in the spaceship (level 5, robots only). */
@@ -112,6 +113,16 @@ export const QUEST_PROP: Readonly<Record<string, number>> = {
   quest_purple_keycard: 123,
   quest_brown_keycard: 124,
 };
+
+/**
+ * quest_8, the crystal paths (quest document 1.10). The wall crystal (a holder in a wall with a crystal in its mouth, the sources and targets of the puzzle) is a pseudo item like the objects of
+ * the spaceship; the crystal inside its holder is a quest item (one picture in the inventory) that the party stands on the floor with a right click, and the floor holder and the crystal are the
+ * two models it is drawn with, so that the crystal can be tinted (`obj_crystal`, `obj_crystal_holder`, `obj_wall_crystal_holder`).
+ */
+export const WALL_CRYSTAL_ITEM = 332;
+export const CRYSTAL_HOLDER_ITEM = 333;
+/** The quest item: a crystal in its holder. Every one of them is bound to the place it was found in (`Game.bindCrystals`). */
+export const CRYSTAL_HOLDER = "quest_crystal_holder";
 
 /** The orbs of ultimate power (document "ue_quest_3"): 31 in the world, 2 for every section of the spaceship and the rest on the level 5 dungeons. */
 export const ORBS_IN_WORLD = 31;
