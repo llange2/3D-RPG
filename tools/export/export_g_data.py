@@ -36,8 +36,8 @@ TEXT_LISTS = {"texts": 485, "itexts": 95}
 # The picture `quest_power_crystal.png` is the user's (tools/assets/sources/items, built into the item sheet by build-item-icons.ts).
 EXTRA_QUEST_ITEMS = [
     {"name": "Power crystal", "type": "quest_power_crystal", "texture": "resources/textures/quest_power_crystal", "value": -1},
-    # quest_8 (quest document 1.10, the crystal paths): a crystal in its holder, the picture is the user's `quest_crystal_holder.png`
-    {"name": "Crystal inside Holder", "type": "quest_crystal_holder", "texture": "resources/textures/quest_crystal_holder", "value": -1},
+    # quest_8 (quest document 1.10, the crystal paths): the crystal (it is carried in its holder, the picture is the user's `quest_crystal_holder.png`; renamed from "Crystal inside Holder", 16. 11. 2026)
+    {"name": "Crystal", "type": "quest_crystal_holder", "texture": "resources/textures/quest_crystal_holder", "value": -1},
 ]
 
 

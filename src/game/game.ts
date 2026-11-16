@@ -40,7 +40,8 @@ import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/envi
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { ITEM_LAMPS, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, TOWER_TORCH_LAMP, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
+import { CRYSTAL_LAMP_REACH, CRYSTAL_PATH_LINE, CRYSTAL_PATH_LIT, CRYSTAL_PATH_WAITING, ITEM_LAMPS, LINE_LAMP_EVERY, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, TOWER_TORCH_LAMP, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
+import { cellsOfLine } from "../render/glowLineGeometry";
 import { cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, registryFile, takeResume } from "../render/modelSet";
@@ -2795,7 +2796,10 @@ export class Game {
           break;
         case "item":
           ui.log(e.stored ? `You find ${e.item.type === "spell" ? "the spell scroll " : ""}${e.item.name.trim()}.` : `You find ${e.item.name.trim()}, but every backpack is full. It stays behind.`, e.stored ? "loot" : "bad");
-          if (!e.stored) this.dropLoot(this.player.tx, this.player.ty, 0, [e.item]);
+          if (!e.stored) {
+            this.audio.play(9005);
+            this.dropLoot(this.player.tx, this.player.ty, 0, [e.item]);
+          }
           break;
         case "damage":
           // a trap of the elements shows that element's picture over the portrait, like a monster's spell
@@ -3004,7 +3008,10 @@ export class Game {
     if (!winner && total >= ORBS_FOR_KING) {
       opened.add(`king:winner=${alignment}`);
       const card = questItem(BLACK_CARD);
-      if (card && !giveItem(party, card) && this.interior) this.dropLoot(this.player.tx, this.player.ty, 0, [card]);
+      if (card && !giveItem(party, card) && this.interior) {
+        this.audio.play(9005);
+        this.dropLoot(this.player.tx, this.player.ty, 0, [card]);
+      }
       this.player.locked = true;
       await this.ui.message(`The king holds ${total} orbs. Power surges through his hall, and far away the walls of the other two castles crumble to dust. He hands you the black key card: "Take it. The console on the bridge of the mothership obeys no other."`, this.interior?.poi.name ?? "");
       this.player.locked = false;
@@ -3135,7 +3142,10 @@ export class Game {
     if (handed < SKULLS_FOR_RING && total >= SKULLS_FOR_RING && !opened.has("skulls:ring")) {
       opened.add("skulls:ring");
       const ring = generateRing(rngFor(this.world.rootSeed, LAYER.LOOT, "skull-ring"), 2);
-      if (!giveItem(party, ring)) this.dropLoot(this.player.tx, this.player.ty, 0, [ring]);
+      if (!giveItem(party, ring)) {
+        this.audio.play(9005);
+        this.dropLoot(this.player.tx, this.player.ty, 0, [ring]);
+      }
       this.player.locked = true;
       await this.ui.message(`"The fifth skull! My collection is complete. Here, a ring for your trouble: ${ring.name.trim()}."`, this.interior?.poi.name ?? "");
       this.player.locked = false;
@@ -3253,14 +3263,25 @@ export class Game {
       return [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
     };
     const lamps: LampSource[] = [];
+    // the light of the crystals is seen from far away and carries the colour of its line to the walls and the floor around it (the pool has two lights, so the lamps stand along the lines: the party's
+    // nearest two light their surroundings, 16. 11. 2026); a target that waits has only a faint light
+    const shine = (kind: LampKind, x: number, z: number, key: string): LampSource => ({ ...lampSource(kind, x, z, key), reach: CRYSTAL_LAMP_REACH });
     if (changed) for (const n of this.crystalWalls) {
       const got = n.role === "source" || result.targets.get(n.uid) === n.color;
-      lamps.push(lampSource({ y: CRYSTAL_MID, color: rgb(n.color), range: got ? 8 : 4, intensity: got ? 3.6 : 1.1 }, cellCenterX(n.x), cellCenterZ(n.y), `q8:${n.uid}:${got ? 1 : 0}`));
+      lamps.push(shine({ ...(got ? CRYSTAL_PATH_LIT : CRYSTAL_PATH_WAITING), y: CRYSTAL_MID, color: rgb(n.color) }, cellCenterX(n.x), cellCenterZ(n.y), `q8:${n.uid}:${got ? 1 : 0}`));
     }
     if (changed) for (const [cell, mask] of result.crystals) {
       if (mask === 0) continue;
       const [x, y] = cell.split(",").map(Number) as [number, number];
-      lamps.push(lampSource({ y: CRYSTAL_MID, color: rgb(mask), range: 5.5, intensity: 2.4 }, cellCenterX(x), cellCenterZ(y), `q8:c:${cell}:${mask}`));
+      lamps.push(shine({ ...CRYSTAL_PATH_LIT, y: CRYSTAL_MID, color: rgb(mask) }, cellCenterX(x), cellCenterZ(y), `q8:c:${cell}:${mask}`));
+    }
+    if (changed) for (const l of result.links) {
+      // one lamp in the middle of every second cell of the line, but not on the cells of its ends (their crystals shine there)
+      const cells = cellsOfLine([l.from, l.to]);
+      for (let k = 1; k < cells.length - 1; k += LINE_LAMP_EVERY) {
+        const c = cells[k]!;
+        lamps.push(shine({ ...CRYSTAL_PATH_LINE, y: CRYSTAL_MID, color: rgb(l.color) }, cellCenterX(c.x), cellCenterZ(c.y), `q8:l:${c.x},${c.y}:${l.color}`));
+      }
     }
     if (changed) {
       this.crystalLampList = lamps;
@@ -3296,7 +3317,8 @@ export class Game {
     this.state.opened.add(crystalFlag(rt.map.key, x, y, seq));
     this.crystalSet.push({ x, y, seq });
     rt.blocked.add(i);
-    this.audio.play(9020);
+    // the sound of something that is put in its place (the user's put_item)
+    this.audio.play(9004);
     this.ui.log("You set the crystal down.", "info");
     this.syncCrystals(true);
     return true;
@@ -3316,7 +3338,7 @@ export class Game {
     this.state.opened.delete(crystalFlag(rt.map.key, c.x, c.y, c.seq));
     this.crystalSet = this.crystalSet.filter((o) => o !== c);
     rt.blocked.delete(y * rt.map.width + x);
-    this.audio.play(9020);
+    this.audio.play(9013);
     this.ui.log(`You take ${item.name.trim()}.`, "loot");
     this.syncCrystals(true);
     this.refresh();
@@ -3342,6 +3364,7 @@ export class Game {
     }
     if (left.length === 0) return;
     await this.ui.message("The crystals are bound to this place by a strange magic. As you leave, they slip from your hands and stay behind.", "Crystals");
+    this.audio.play(9005);
     this.dropLoot(this.player.tx, this.player.ty, 0, left);
     this.refresh();
   }
@@ -4422,6 +4445,7 @@ export class Game {
         this.audio.play(9018);
         if (giveItem(party, outcome.item)) this.ui.log(`Out of the rift falls ${outcome.item.name.trim()}.`, "loot");
         else {
+          this.audio.play(9005);
           this.dropLoot(this.player.tx, this.player.ty, 0, [outcome.item]);
           this.ui.log(`Out of the rift falls ${outcome.item.name.trim()}, and it lies at your feet: the backpacks are full.`, "loot");
         }
@@ -5169,8 +5193,11 @@ export class Game {
       { label: "Showcase: all monsters and objects", value: SHOWCASE_ID, note: "Dungeon" },
       // (a pyramid names the section of the spaceship it leads to: "Pyramid: Name (Bridge)")
       ...teleportTargets(this.world.allPois()).map(({ poi, kind }) => {
-        const section = kind === "Pyramid" ? this.world.dungeonRef(poi.id)?.section : undefined;
-        return { label: `${kind}: ${poi.name}${section !== undefined ? ` (${SECTION_NAMES[section] ?? `section ${section}`})` : ""}`, value: poi.id, note: `Level ${poi.tier}` };
+        const ref = this.world.dungeonRef(poi.id);
+        const section = kind === "Pyramid" ? ref?.section : undefined;
+        // the quest and the layout of the place behind its name, for whoever looks for one of them: "(quest_8, dungeon_1)"
+        const plan = ref ? ` (${ref.quest}, ${ref.layout})` : "";
+        return { label: `${kind}: ${poi.name}${plan}${section !== undefined ? ` (${SECTION_NAMES[section] ?? `section ${section}`})` : ""}`, value: poi.id, note: `Level ${poi.tier}` };
       }),
     ];
     const id = await this.ui.choose("Teleport to Level", "The party appears at the entrance. Keys and key cards are not needed.", options);

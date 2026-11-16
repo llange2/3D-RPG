@@ -427,6 +427,8 @@ function actionSymbol(a: { kind: ActionKind; uid: string; params: Record<string,
     case "decor": return a.params.reactor !== undefined ? "event" : null;
     case "shrine": case "fountain": return "event";
     case "riddle": case "gong": case "lever": case "head": case "chalice": case "machine": return "event";
+    // the beginning and the end of a light path of quest_8: the wall crystal's cell is something to find (16. 11. 2026)
+    case "crystal": return "event";
     case "qportal": return "teleporter_city";
     // the stairs of a tower, up and down alike, are a way to another floor: the "Way out" symbol (49th playtest)
     case "stairs": return "exit";
@@ -627,7 +629,7 @@ const INTERIOR_LEGEND: (LegendEntry & { when: (map: InteriorMap, content: MapCon
   { color: "#4a4238", label: "Ground that cannot be entered", icon: { symbol: "unknown" }, when: (m) => m.cells.includes(CELL.LOW) },
   { color: "#7ed0ff", label: "Way out or way to another place", icon: { symbol: "exit" }, when: () => true },
   { color: "#7ed0ff", label: "Portal to the other towns", icon: { symbol: "teleporter_city" }, when: (_, c) => c.actions.some((a) => a.kind === "portal") },
-  { color: "#ffd54a", label: "Chest, fountain, statue or something to find", icon: { symbol: "event" }, when: (_, c) => c.actions.some((a) => a.kind === "treasure" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || a.kind === "head" || a.kind === "chalice" || a.kind === "machine" || (a.kind === "lore" && typeof a.params.item === "number" && typeof a.params.text === "string") || LEGACY_COLOR[a.legacy?.id ?? -1] === "#ffd54a") },
+  { color: "#ffd54a", label: "Chest, fountain, statue or something to find", icon: { symbol: "event" }, when: (_, c) => c.actions.some((a) => a.kind === "treasure" || a.kind === "fountain" || a.kind === "riddle" || a.kind === "gong" || a.kind === "lever" || a.kind === "head" || a.kind === "chalice" || a.kind === "machine" || a.kind === "crystal" || (a.kind === "lore" && typeof a.params.item === "number" && typeof a.params.text === "string") || LEGACY_COLOR[a.legacy?.id ?? -1] === "#ffd54a") },
   { color: "#c9884a", label: "Door or gate", icon: { symbol: "door" }, when: (_, c) => c.actions.some((a) => a.kind === "door" || LEGACY_COLOR[a.legacy?.id ?? -1] === "#c9884a") },
   ...(["inn", "training", "tavern", "smith", "temple", "bank", "guild"] as const).map((service, i) => ({
     color: "#ffb0ff",
@@ -763,6 +765,7 @@ export function describeInteriorCell(map: InteriorMap, content: MapContent, expl
         case "chalice": return `Chalice${used}`;
         case "rune": return "Magic runes";
         case "machine": return "Machine of the Quatloo coins";
+        case "crystal": return a.params.role === "target" ? "Wall crystal: the end of a light path" : "Wall crystal: the beginning of a light path";
         case "king": return "The king";
         case "skullmiser": return "The Skull Miser";
         case "quartermaster": return "The Quartermaster";

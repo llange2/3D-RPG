@@ -360,7 +360,7 @@ export class PropRenderer {
    * give `setInstances`, or `base` while the model is not loaded.
    */
   tinted(base: string, hex: string, glow = 0.8): string {
-    const key = `${base}@${hex}`;
+    const key = `${base}@${hex}@${glow}`;
     if (this.models.has(key)) return key;
     const source = this.models.get(base);
     if (!source) return base;
@@ -377,6 +377,8 @@ export class PropRenderer {
         mat.bumpTexture = std.bumpTexture;
         mat.diffuseColor = rgb;
         mat.emissiveColor = rgb.scale(glow);
+        // the glow is added to the picture, not multiplied by it: the crystal's texture is dark, and a glow multiplied by it came out as a dark olive instead of a shining colour (16. 11. 2026)
+        mat.useEmissiveAsIllumination = true;
         copy.material = mat;
       }
       copy.isPickable = false;

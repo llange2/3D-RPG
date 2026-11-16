@@ -3,6 +3,7 @@ import { COTTAGE_HEIGHT_FACTOR, COTTAGE_SCALE, tunedItemModels } from "../data/i
 import { PERSONAS } from "../data/personas";
 import { TEMPORAL_SCALE } from "../data/quest-table";
 import { DECO_MODELS, DECO_SCALE } from "../data/wall-deco";
+import { CRYSTAL_SCALE, FLOOR_HOLDER_SCALE } from "../render/crystalLook";
 import { MAP_ITEMS, MONSTERS } from "../data/tables";
 import { Builder } from "./builder";
 import type { InteriorMap, LightLine, ShowcaseLayout } from "./types";
@@ -48,9 +49,9 @@ export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: 
   { model: "obj_wooden_stairs", scale: 1.6 },
   { model: "poi_tower", scale: 1.5 },
   // the crystal paths of quest_8 (quest document 1.10), at the scale the places show them in (`render/crystalLook.ts`)
-  { model: "obj_crystal", scale: 0.9 },
-  { model: "obj_crystal_holder", scale: 0.9 },
-  { model: "obj_wall_crystal_holder", scale: 0.9 },
+  { model: "obj_crystal", scale: CRYSTAL_SCALE },
+  { model: "obj_crystal_holder", scale: FLOOR_HOLDER_SCALE },
+  { model: "obj_wall_crystal_holder", scale: CRYSTAL_SCALE },
   // the wall reliefs of the dungeons (45th playtest, point 4): they stand upright on their cell here, nothing hangs
   ...Object.values(DECO_MODELS).map((model) => ({ model, scale: DECO_SCALE })),
 ];

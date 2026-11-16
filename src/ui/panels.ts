@@ -519,6 +519,8 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       to[free] = item;
       bag.inventory[selected] = null;
       selected = null;
+      // the item changes hands (the user's hand_item)
+      hooks.sound?.(9013);
       if (bag.hero) recalcValues(bag.hero, party.talents, false, party.mascot);
       hooks.changed();
       render();

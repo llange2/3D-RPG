@@ -8,7 +8,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { Scene } from "@babylonjs/core/scene";
 import type { LightLine } from "../interiors/types";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
-import { glowPixels, PULSE_LENGTH, RIBBON_WIDTH, ribbonAlong, waypointsToPath } from "./glowLineGeometry";
+import { glowPixels, haloPixels, PULSE_LENGTH, RIBBON_WIDTH, ribbonAlong, waypointsToPath } from "./glowLineGeometry";
 
 /** Height above the floor (the floor model's cobbles stand a few hundredths up) and the depth offset that keeps the ribbon in front of the floor. */
 const LIFT = 0.06;
@@ -21,6 +21,19 @@ const rgbOf = (hex: string): [number, number, number] => {
   const c = Color3.FromHexString(hex);
   return [Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)];
 };
+
+/** A soft glow around a shining crystal that always faces the eye (`GlowLines.show`): `size` is its width in world units. */
+export interface Halo {
+  x: number;
+  y: number;
+  z: number;
+  color: string;
+  size: number;
+}
+
+/** Depth offset of a halo: it hangs in front of the wall the crystal sticks out of, and a plane that big would be cut by it. */
+const HALO_Z_OFFSET = -40;
+const HALO_TEXTURE = 128;
 
 interface Shown {
   mesh: Mesh;
@@ -37,6 +50,7 @@ interface Shown {
  */
 export class GlowLines {
   private shown: Shown[] = [];
+  private halos: { mesh: Mesh; material: StandardMaterial; texture: RawTexture }[] = [];
   private observer: Observer<Scene> | null = null;
   private started = 0;
 
@@ -46,9 +60,10 @@ export class GlowLines {
    * `lift`: the height of the lines over the floor (the showcase lies them on it, the crystals of quest_8 shine at the height of the crystals). `upright`: every line is a cross of a flat ribbon and
    * an upright sheet, so that it shows from the eye's height as well (a flat ribbon at the height of the eyes is seen edge-on).
    */
-  show(lines: readonly LightLine[], lift = LIFT, upright = false): void {
+  show(lines: readonly LightLine[], lift = LIFT, upright = false, halos: readonly Halo[] = []): void {
     this.dispose();
     this.shown = lines.map((line, i) => this.build(line, i, lift, upright));
+    this.buildHalos(halos);
     if (this.shown.length === 0) return;
     this.started = performance.now();
     this.observer = this.scene.onBeforeRenderObservable.add(() => {
@@ -56,6 +71,47 @@ export class GlowLines {
       const travelled = (((performance.now() - this.started) / 1000) * FLOW_SPEED) / PULSE_LENGTH;
       const offset = -(travelled % 1);
       for (const s of this.shown) s.texture.uOffset = offset;
+    });
+  }
+
+  /** One billboard per halo; the halos of one colour share a picture and a material. */
+  private buildHalos(halos: readonly Halo[]): void {
+    const byColor = new Map<string, { material: StandardMaterial; texture: RawTexture }>();
+    halos.forEach((halo, i) => {
+      let shared = byColor.get(halo.color);
+      if (!shared) {
+        const texture = RawTexture.CreateRGBATexture(haloPixels(HALO_TEXTURE, rgbOf(halo.color)), HALO_TEXTURE, HALO_TEXTURE, this.scene, true, false, Constants.TEXTURE_TRILINEAR_SAMPLINGMODE);
+        texture.name = `glow-halo:${halo.color}`;
+        texture.hasAlpha = true;
+        texture.wrapU = Constants.TEXTURE_CLAMP_ADDRESSMODE;
+        texture.wrapV = Constants.TEXTURE_CLAMP_ADDRESSMODE;
+        const material = new StandardMaterial(`glow-halo:${halo.color}`, this.scene);
+        material.disableLighting = true;
+        material.diffuseColor = Color3.Black();
+        material.specularColor = Color3.Black();
+        material.emissiveTexture = texture;
+        material.opacityTexture = texture;
+        material.alphaMode = Constants.ALPHA_ADD;
+        material.backFaceCulling = false;
+        material.disableDepthWrite = true;
+        material.zOffset = HALO_Z_OFFSET;
+        shared = { material, texture };
+        byColor.set(halo.color, shared);
+      }
+      const mesh = new Mesh(`glow-halo:${i}`, this.scene);
+      const data = new VertexData();
+      data.positions = [-0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0];
+      data.normals = [0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1];
+      data.uvs = [0, 1, 1, 1, 1, 0, 0, 0];
+      data.indices = [0, 1, 2, 0, 2, 3];
+      data.applyToMesh(mesh, false);
+      mesh.billboardMode = Mesh.BILLBOARDMODE_ALL;
+      mesh.position.set(halo.x, halo.y, halo.z);
+      mesh.scaling.setAll(halo.size);
+      mesh.material = shared.material;
+      mesh.isPickable = false;
+      mesh.alphaIndex = 10;
+      this.halos.push({ mesh, material: shared.material, texture: shared.texture });
     });
   }
 
@@ -112,5 +168,16 @@ export class GlowLines {
       s.texture.dispose();
     }
     this.shown = [];
+    const done = new Set<unknown>();
+    for (const h of this.halos) {
+      h.mesh.dispose(false, false);
+      // (material and picture are shared by the halos of one colour)
+      if (!done.has(h.material)) {
+        done.add(h.material);
+        h.material.dispose();
+        h.texture.dispose();
+      }
+    }
+    this.halos = [];
   }
 }
