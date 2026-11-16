@@ -1807,3 +1807,12 @@ Das Dokument ergänzt nur quest_8 (Layouts dungeon_1, 2, 4, 5 und cave_1 bis 3, 
 Prüfung: `npm run typecheck`, `npm test` (1 283), `golden:update`, `check:chrome` (OK), `check:render` (OK), `tools/dev/check-quest8.ts <Ordner> <Seed> <Ort> <flat|floor|full>` (Wandkristalle, Lösung Kristall für Kristall, Linien; `NO_MONSTERS=1` räumt die Monster weg, ein Monster in der Linie schneidet sie ab), `tools/dev/check-quest8-play.ts` (Rechtsklick, Zurücknehmen, Verlassen). Beispielorte (Seed `birch-reach-493`, Welt „default“): „Sepulchre of Dunora“ (dungeon_2, Stufe 2), „Maw of Xanimaa“ (cave_3, Stufe 1), „Tower of Osua“ (dungeon_5, Stufe 4).
 
 **Offen, bitte prüfen:** (a) L4/L5 sind als **zwei Ziele** gedeutet (das Dokument sagt „2x2 gemischte Farben … über 5-6 Kristalle ins Ziel“); (b) Lage und Größe von Kristall und Halter im Mund des Wandkristalls (`CRYSTAL_MOUTH`, `CRYSTAL_SCALE`, `STAND_LIFT` in `crystalLook.ts`) sind nach Screenshots gesetzt, nicht aus einer Vorgabe; (c) die Lichtlinien sind recht breit und hell (`RIBBON_WIDTH` 1,5 wie im Showcase); (d) Tod und Neuladen auf einem Spielstand ohne Verlassen legen keine Kristalle ab.
+
+
+## Wilde Monster der Stufe 5 gleichmäßig (16. 11. 2026, `GEN_VERSION` 71, `tests/unit/wildEvenL5.test.ts`, `tools/dev/wild-stats.ts`)
+
+Auftrag des Nutzers nach einer Zählung in `pearl-shore-794` (default, Dungeons `default`): 75 von 109 wilden Landmonstern der Stufe 5 waren Vulture Rocs (68,8 %). Ursache und Zahlen: `docs/WELT_BELOHNUNGEN.md` Abschnitt 3.
+
+- **Regel:** für die Stufen in `EVEN_TIERS` (`world/difficulty.ts`, nur 5) wählt `pickWildMonster` nach dem **Landanteil** des Ortes (`shareAt`: Anteil des Landes der Stufe, der näher an Starthaven liegt, 0 bis 1000) und die Monster des wilden Pools der Stufe stehen in der Mitte gleicher Teile der Skala (`evenPlaces`, nach XP). Jedes der fünf Monster (Black Knight, Werewolf, Vampire, Jouster, Vulture Roc) bekommt etwa ein Fünftel; `wayAt`, `levelAt` und die Hütten sind unverändert. Die Stufen 1 bis 4 laufen wie vorher (Stufe 2 Dino Beetle 70 %, Stufe 3 Gargoyle 59 %: schief, aber nicht angefasst).
+- **Messung:** `npx tsx tools/dev/wild-stats.ts [size] [seed ...]` (Dichte aus `DUNGEONS`, Standard `default`).
+- **Belohnungen:** gezahlte Summen unverändert (Weltfaktoren), die Faktoren steigen um 3 bis 5 %; das XP-Ziel 950 Mio blieb stehen (Entscheidung offen, siehe Abschnitt 3 der Belohnungsdoku). `GEN_VERSION` 71, `golden:update`, 1 296 Tests.
