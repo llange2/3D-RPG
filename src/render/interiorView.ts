@@ -5,8 +5,8 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import { hash2 } from "../core/noise";
-import { CRATE_ITEM, QUEST_PROP } from "../data/quest-table";
-import { CRYSTAL_MID, CRYSTAL_SCALE, STAND_LIFT } from "./crystalLook";
+import { CRATE_ITEM, QUEST_PROP, WALL_CRYSTAL_ITEM } from "../data/quest-table";
+import { CAVE_HOLDER_OUT, CRYSTAL_MID, CRYSTAL_SCALE, FLOOR_HOLDER_SCALE, GLOW_LIT, HALO_OUT, HALO_SIZE, HALO_SIZE_WAITING, STAND_LIFT, WALL_CRYSTAL_ALONG, WALL_CRYSTAL_SCALE, WALL_CRYSTAL_TIP } from "./crystalLook";
 import { headFacing } from "../actions/quests";
 import { heapGone } from "../actions/registry";
 import type { ActionInstance, MapContent } from "../actions/types";
@@ -19,10 +19,10 @@ import { InteriorDoors } from "./interiorDoors";
 import { BROKEN_PIECES, CEILING_RELIEF, floorModelOfTexture, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
 import { CELL_SIZE, ceilingDropOf, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type DoorFrame, type WallPanel } from "./interiorMesher";
 import { DECO_MODELS } from "../data/wall-deco";
-import { ALTAR_SCALE, decoSink, shownItem, themedProp, WALL_HUNG } from "./interiorProps";
+import { ALTAR_SCALE, decoSink, shownItem, themedProp, wallHolderDistance, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
 import { InteriorTraps } from "./interiorTraps";
-import { GlowLines } from "./glowLines";
+import { GlowLines, type Halo } from "./glowLines";
 import { FLAT_Z_OFFSET, flatTileMaterial } from "./materials";
 import type { PropRenderer } from "./props";
 import type { PropInstance } from "./terrainMesher";
@@ -34,13 +34,11 @@ const DECO_ITEMS: ReadonlySet<number> = new Set(Object.keys(DECO_MODELS).map(Num
 /** The light of a place with the crystal paths of quest_8, as the view draws it (`InteriorView.setCrystals`); colours are `#rrggbb`. */
 export interface CrystalScene {
   /** The crystals in the mouths of the wall holders: the cell in front of the wall, the way out of the wall and the colour of the crystal. */
-  walls: { x: number; y: number; dir: Facing; color: string }[];
+  walls: { x: number; y: number; dir: Facing; color: string; glow: number }[];
   /** The crystals the party has set down. */
-  stands: { x: number; y: number; color: string }[];
+  stands: { x: number; y: number; color: string; glow: number }[];
   lines: LightLine[];
 }
-/** How far from the middle of its cell, towards the wall, the middle of a wall crystal lies (its tip points into the room). */
-const CRYSTAL_MOUTH = 1.25;
 const BEARING_OF: Record<Facing, number> = { N: 0, E: 90, S: 180, W: 270 };
 
 /** The old game hung its shop signs at 0.55 of the model size. */
@@ -840,7 +838,12 @@ export class InteriorView {
       if (themed && shownItem(a) === SUPPORT_BEAM) this.setOnCellEdge(themed, a);
       if (themed) {
         // a banner or a carving hangs a hand's breadth from the flat wall: with the 3D wall pieces on it stands out of the wall by their depth too, or their stones cut through the cloth
-        if (this.panelList.length > 0 && WALL_HUNG.has(shownItem(a) ?? -1)) {
+        if (shownItem(a) === WALL_CRYSTAL_ITEM) {
+          // the wall holder of quest_8 stands out of whatever the wall is made of: the rock of a cave, the 3D pieces of a dungeon wall, or nothing at all on a flat wall (the crystal in its mouth moves along, `setCrystals`)
+          const out = this.holderOut();
+          themed.x += Math.sin(themed.rotY) * out;
+          themed.z += Math.cos(themed.rotY) * out;
+        } else if (this.panelList.length > 0 && WALL_HUNG.has(shownItem(a) ?? -1)) {
           themed.x += Math.sin(themed.rotY) * PANEL_DEPTH;
           themed.z += Math.cos(themed.rotY) * PANEL_DEPTH;
         } else if (DECO_ITEMS.has(shownItem(a) ?? -1)) {
@@ -1189,19 +1192,65 @@ export class InteriorView {
     const instances: PropInstance[] = [];
     const bounds = this.staticInfo["obj_crystal"]?.bounds;
     const half = bounds ? (bounds[4] - bounds[1]) / 2 : 0.95;
+    const out = this.holderOut();
+    const halos: Halo[] = [];
     for (const w of scene?.walls ?? []) {
-      const key = this.props.tinted("obj_crystal", w.color);
-      const d = FACING_DELTA[w.dir];
-      // the crystal lies in the mouth of the holder with its tip out of the wall: along the way the light leaves, its middle a little inside the wall
-      instances.push({ model: key, x: cellCenterX(w.x) - d.dx * CRYSTAL_MOUTH, y: CRYSTAL_MID - half * CRYSTAL_SCALE + 0.02, z: cellCenterZ(w.y) + d.dy * CRYSTAL_MOUTH, rotY: (BEARING_OF[w.dir] * Math.PI) / 180, rotX: Math.PI / 2, scale: CRYSTAL_SCALE });
+      const key = this.props.tinted("obj_crystal", w.color, w.glow);
+      // the crystal lies in the round mouth of the holder with its tip out of the wall (`WALL_CRYSTAL_ALONG` in front of the holder's middle, which stands `1.5 - CRYSTAL_BURY - back - out` from the cell's middle)
+      const rotY = (BEARING_OF[w.dir] * Math.PI) / 180;
+      const holder = wallHolderDistance(this.staticInfo, out);
+      const along = WALL_CRYSTAL_ALONG - holder;
+      instances.push({ model: key, x: cellCenterX(w.x) + Math.sin(rotY) * along, y: CRYSTAL_MID - half * WALL_CRYSTAL_SCALE, z: cellCenterZ(w.y) + Math.cos(rotY) * along, rotY, rotX: Math.PI / 2, scale: WALL_CRYSTAL_SCALE });
+      // the soft glow hangs at the tip: seen from across the room it is all there is of a crystal of this size
+      const tip = WALL_CRYSTAL_TIP - holder + HALO_OUT;
+      halos.push({ x: cellCenterX(w.x) + Math.sin(rotY) * tip, y: CRYSTAL_MID, z: cellCenterZ(w.y) + Math.cos(rotY) * tip, color: w.color, size: w.glow >= GLOW_LIT ? HALO_SIZE : HALO_SIZE_WAITING });
     }
     for (const s of scene?.stands ?? []) {
-      instances.push({ model: "obj_crystal_holder", x: cellCenterX(s.x), y: 0, z: cellCenterZ(s.y), rotY: 0, scale: CRYSTAL_SCALE });
-      instances.push({ model: this.props.tinted("obj_crystal", s.color), x: cellCenterX(s.x), y: STAND_LIFT, z: cellCenterZ(s.y), rotY: 0, scale: CRYSTAL_SCALE });
+      instances.push({ model: "obj_crystal_holder", x: cellCenterX(s.x), y: 0, z: cellCenterZ(s.y), rotY: 0, scale: FLOOR_HOLDER_SCALE });
+      instances.push({ model: this.props.tinted("obj_crystal", s.color, s.glow), x: cellCenterX(s.x), y: STAND_LIFT, z: cellCenterZ(s.y), rotY: 0, scale: CRYSTAL_SCALE });
+      if (s.glow >= GLOW_LIT) halos.push({ x: cellCenterX(s.x), y: CRYSTAL_MID, z: cellCenterZ(s.y), color: s.color, size: HALO_SIZE });
     }
     this.props.setInstances(owner, instances);
     this.props.flush();
-    this.glow.show(scene?.lines ?? [], CRYSTAL_MID, true);
+    this.glow.show(this.linesToTips(scene, out), CRYSTAL_MID, true, halos);
+  }
+
+  /**
+   * How far a wall holder of quest_8 stands out of the wall in front of the cell's edge: the rock of a cave is a bulge, the 3D pieces of a dungeon wall stand `PANEL_DEPTH` in front of it, a flat wall (the
+   * tower's, and every wall in the lower environments) is the edge itself.
+   */
+  private holderOut(): number {
+    if (this.map?.kind === "cave") return CAVE_HOLDER_OUT;
+    return this.panelList.length > 0 ? PANEL_DEPTH : 0;
+  }
+
+  /**
+   * The lines of light start at the tip of a wall crystal and end at it (a source or a target), not at the middle of the cell in front of the wall: the tip lies about half a cell in front of the wall, so a line
+   * from the cell's middle left a gap between the crystal and its light. Cells may be fractional here: the ribbon is laid between points.
+   */
+  private linesToTips(scene: CrystalScene | null, out: number): LightLine[] {
+    if (!scene) return [];
+    const tip = (WALL_CRYSTAL_TIP - wallHolderDistance(this.staticInfo, out)) / CELL_SIZE;
+    return scene.lines.map((line) => {
+      const points = line.points.map((p) => ({ ...p }));
+      const first = points[0]!;
+      const second = points[1];
+      const last = points[points.length - 1]!;
+      const before = points[points.length - 2];
+      for (const w of scene.walls) {
+        const d = FACING_DELTA[w.dir];
+        // a source: the line leaves the wall's cell the way out of the wall; a target: it arrives there coming from the room
+        if (second && w.x === first.x && w.y === first.y && Math.sign(second.x - first.x) === d.dx && Math.sign(second.y - first.y) === d.dy) {
+          first.x += d.dx * tip;
+          first.y += d.dy * tip;
+        }
+        if (before && w.x === last.x && w.y === last.y && Math.sign(before.x - last.x) === d.dx && Math.sign(before.y - last.y) === d.dy) {
+          last.x += d.dx * tip;
+          last.y += d.dy * tip;
+        }
+      }
+      return { ...line, points };
+    });
   }
 
   dispose(): void {

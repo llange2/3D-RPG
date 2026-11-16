@@ -52,7 +52,7 @@ try {
   await page.evaluate("__game.game.enc.monsters.splice(0)");
   await page.evaluate(`__game.teleport(${stand.x}, ${stand.y}, ${JSON.stringify(stand.f)})`);
   await sleep(1500);
-  const crystalItem = `{ id: "", name: "Crystal inside Holder", type: "quest_crystal_holder", material: 0, texture: "quest_crystal_holder", value: -1, quest: true, spellId: 0, bonus: {} }`;
+  const crystalItem = `{ id: "", name: "Crystal", type: "quest_crystal_holder", material: 0, texture: "quest_crystal_holder", value: -1, quest: true, spellId: 0, bonus: {} }`;
   const state = async (): Promise<string> => String(await page.evaluate("JSON.stringify({ flags: [...__game.state.opened].filter((k) => k.startsWith('crystal:')), bag: Object.values(__game.state.party.characters[0].inventory).filter((i) => i && i.type === 'quest_crystal_holder').length, loot: Object.values(__game.state.loot).flat().map((p) => p.items.length) })"));
   await page.evaluate(`(() => { const inv = __game.state.party.characters[0].inventory; inv.slot1 = ${crystalItem}; inv.slot2 = ${crystalItem}; __game.game.refresh(); })()`);
   console.log("start        ", await state());

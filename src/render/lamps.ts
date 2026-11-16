@@ -75,6 +75,18 @@ export const COMPUTER_LAMP: LampKind = { y: 1.3, color: [0.3, 0.55, 1], range: 5
  */
 export const TOWER_TORCH_LAMP: LampKind = { y: 2.5, color: [1, 0.62, 0.26], range: 10, intensity: 1.5 };
 
+/**
+ * The light of the crystal paths of quest_8 (quest document 1.10, 16. 11. 2026: it was too dark and too weak): a crystal that carries light and the lamps along its line shine far and strong in the colour
+ * of the line, so that the walls and the floor around it take the colour even with the Light spell on (its ring is 25 wide), and the glow is seen from across the room. A target that waits has a faint light.
+ */
+export const CRYSTAL_PATH_LIT: Omit<LampKind, "y" | "color"> = { range: 16, intensity: 7 };
+export const CRYSTAL_PATH_LINE: Omit<LampKind, "y" | "color"> = { range: 11, intensity: 5.5 };
+export const CRYSTAL_PATH_WAITING: Omit<LampKind, "y" | "color"> = { range: 7, intensity: 2 };
+/** How far from the party a lamp of the crystal paths still counts (the pool's usual 18 would let the glow of a far line go out before it is seen). */
+export const CRYSTAL_LAMP_REACH = 34;
+/** The lamps of a line stand on every second cell of it. */
+export const LINE_LAMP_EVERY = 2;
+
 /** The map objects that give light, by the number of the old item: the crystals, the traps' elements, the chalice, wells, altar, runes, portal, orb, fireplace and lantern. */
 export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
   117: CRYSTAL_LAMP,

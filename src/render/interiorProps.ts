@@ -2,7 +2,7 @@ import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
 import { DECO_MODELS, DECO_PLATE, DECO_SCALE } from "../data/wall-deco";
 import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM, TEMPORAL_ITEM, TEMPORAL_SCALE, WALL_CRYSTAL_ITEM } from "../data/quest-table";
-import { CRYSTAL_BURY, CRYSTAL_MID, CRYSTAL_SCALE } from "./crystalLook";
+import { CRYSTAL_BURY, CRYSTAL_SCALE, WALL_HOLDER_MID } from "./crystalLook";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
 import { isGlbItem, itemModelKey, itemProp } from "./itemProps";
@@ -58,7 +58,7 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?:
   // the wooden stairs of a tower (quest document 1.7, 49th playtest): the file (the user's second version of 8. 11. 2026, 50th playtest) is 0.97 x 1.26 x 1.9; `stairsScale` stretches them over a whole cell and one storey of the tower
   [STAIRCASE_ITEM]: { model: "obj_wooden_stairs", scale: 1 },
   // the wall holder of quest_8 (quest document 1.10): it hangs on the wall like a relief with its middle at the height of the crystals' light; the crystal in its mouth is drawn apart (`InteriorView.setCrystals`)
-  [WALL_CRYSTAL_ITEM]: { model: "obj_wall_crystal_holder", scale: CRYSTAL_SCALE, lift: CRYSTAL_MID - 0.95 * CRYSTAL_SCALE },
+  [WALL_CRYSTAL_ITEM]: { model: "obj_wall_crystal_holder", scale: CRYSTAL_SCALE, lift: WALL_HOLDER_MID - 0.95 * CRYSTAL_SCALE },
   // the wall reliefs of the dungeons (45th playtest, point 4): the files are 1.3 x 1.9 around their middle, as big as the moose king's carving (scale 1.2); the middle hangs at the height of the
   // moose's (2.0), so the lowest point is 2.0 - 0.95 * 1.2 above the floor
   ...Object.fromEntries(Object.entries(DECO_MODELS).map(([item, model]) => [item, { model, scale: DECO_SCALE, lift: DECO_LIFT }])),
@@ -140,6 +140,12 @@ export function decoSink(item: number, staticInfo: Record<string, StaticModelInf
   return Math.max(0, (front - (plate !== undefined ? plate * own.scale : back)) * (DECO_SINK_SHARE_OF[own.model] ?? DECO_SINK_SHARE));
 }
 
+/** How far the middle of a wall holder of quest_8 lies from the middle of its cell, towards the wall: its back plane on the wall, less `out` where the wall's face stands in front of the cell's edge. */
+export function wallHolderDistance(staticInfo: Record<string, StaticModelInfo>, out = 0): number {
+  const back = (staticInfo["obj_wall_crystal_holder"]?.bounds?.[2] ?? -0.33) * CRYSTAL_SCALE;
+  return WALL_AT + CRYSTAL_BURY + back - out;
+}
+
 /** The prop for a themed object, or null when the action shows nothing of the theme (then the view picks a chest or well by chance). `bearing` is degrees, 0 = north. */
 export function themedProp(a: ActionInstance, x: number, z: number, bearing: number, staticInfo: Record<string, StaticModelInfo>, opened: ReadonlySet<string> = new Set(), content?: MapContent): PropInstance | null {
   let item = shownItem(a);
@@ -176,10 +182,9 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
     return { model: own.model, x, y: 0, z, rotY: (bearing * Math.PI) / 180, scale: 1, scaleXYZ: stairsScale(staticInfo[own.model]?.bounds) };
   }
   if (own && item === WALL_CRYSTAL_ITEM) {
-    // like a relief: the file is centred on its middle with its back at the lowest z, so it is pushed back until that plane lies a hair inside the wall
-    const back = (staticInfo[own.model]?.bounds?.[2] ?? -0.33) * own.scale;
+    // like a relief: the file is centred on its middle with its back at the lowest z, so it is pushed back until that plane lies on the wall (the view moves it out of rock or wall pieces, `InteriorView.holderOut`)
     const rotY = (bearing * Math.PI) / 180;
-    const push = WALL_AT + CRYSTAL_BURY + back;
+    const push = wallHolderDistance(staticInfo);
     return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
   }
   if (own && item in DECO_MODELS) {

@@ -103,6 +103,32 @@ export function glowAt(u: number, across: number): number {
 }
 
 /**
+ * Brightness of the picture of a halo at `r` from its middle (0 in the middle, 1 at the edge, where it is zero so that the square has no rim): a small bright core and a wide soft glow, the way
+ * a crystal that shines looks from far away.
+ */
+export function haloAt(r: number): number {
+  const core = 1 - smooth(0.04, 0.16, r);
+  const glow = Math.pow(1 - smooth(0.02, 1, r), 2.4) * 0.85;
+  return Math.max(core, glow);
+}
+
+/** The pixels (RGBA) of a square picture of a halo in the colour `rgb`: the colour everywhere, the alpha is `haloAt` (as for `glowPixels`). */
+export function haloPixels(size: number, rgb: readonly [number, number, number]): Uint8Array {
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const r = Math.hypot((x + 0.5) / size - 0.5, (y + 0.5) / size - 0.5) * 2;
+      data[i] = rgb[0];
+      data[i + 1] = rgb[1];
+      data[i + 2] = rgb[2];
+      data[i + 3] = Math.round(255 * haloAt(r));
+    }
+  }
+  return data;
+}
+
+/**
  * The pixels (RGBA, row after row) of the picture of a line of the colour `rgb` (0 to 255 each): every pixel has the full colour, the alpha is the brightness, and
  * additive blending multiplies the two. (A canvas would premultiply the colour and lose the hue of the faint halo, so the picture is a raw texture.)
  */

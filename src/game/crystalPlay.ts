@@ -1,6 +1,6 @@
 import { colorHex, type CrystalResult, type PlacedCrystal, type WallNode } from "../actions/crystals";
 import type { ActionInstance } from "../actions/types";
-import { DARK_CRYSTAL, faint } from "../render/crystalLook";
+import { DARK_CRYSTAL, faint, GLOW_DARK, GLOW_LIT, GLOW_WAITING } from "../render/crystalLook";
 import type { CrystalScene } from "../render/interiorView";
 import type { Facing, LightLine } from "../interiors/types";
 
@@ -56,11 +56,11 @@ export function sceneOf(nodes: readonly WallNode[], placed: readonly PlacedCryst
   const walls = nodes.map((n) => {
     const own = colorHex(n.color);
     const got = n.role === "target" ? result.targets.get(n.uid) === n.color : true;
-    return { x: n.x, y: n.y, dir: n.dir, color: got ? own : faint(own) };
+    return { x: n.x, y: n.y, dir: n.dir, color: got ? own : faint(own), glow: got ? GLOW_LIT : GLOW_WAITING };
   });
   const stands = placed.map((c) => {
     const mask = result.crystals.get(`${c.x},${c.y}`) ?? 0;
-    return { x: c.x, y: c.y, color: mask === 0 ? DARK_CRYSTAL : colorHex(mask) };
+    return { x: c.x, y: c.y, color: mask === 0 ? DARK_CRYSTAL : colorHex(mask), glow: mask === 0 ? GLOW_DARK : GLOW_LIT };
   });
   const lines: LightLine[] = result.links.map((l) => ({ color: colorHex(l.color), points: [l.from, l.to] }));
   return { walls, stands, lines };
