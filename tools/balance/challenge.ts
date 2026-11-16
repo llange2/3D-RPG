@@ -6,7 +6,7 @@
  * Usage: tsx tools/balance/challenge.ts [--formulas=current,v4] [--runs=150] [--share=0.5] [--parties=0,1,3,4,2] [--groups=class|world|pool]
  *                                       [--path=xp|bands] [--gear=typical|best] [--mascot=none|Wolf|Fairy|Orb] [--iso=0.12,0.25,0.4]
  *   path=xp    levels from the XP table: a party that cleared `share` of every tier below meets tier t at the entry level, tier t+1 at the exit level
- *   path=bands the fixed design bands of docs/KAMPF_BALANCE.md (1, 5, 11, 19, 33; end 50)
+ *   path=bands the fixed design bands of docs/FORMULAS_1.3.md section 10.2 (1, 5, 11, 19, 33; end 50)
  * Output: per tier, four levels from entry to exit with the hit point loss, the dead per fight and the win rate (mean over the parties),
  * then the "iso levels": the lowest level at which a tier costs no more than x of the hit points (the same tier-to-tier spacing as the XP curve = even challenge).
  */

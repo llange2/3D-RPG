@@ -1,6 +1,6 @@
 /**
  * The 56th playtest (11. 11. 2026): the quartermaster on the map and his scrolling lists, two cobblestone tiles in front of every castle, the lever's base, Seth Squirm's statues, the lion relief,
- * no pits in towers, the castle's side-room gates wired to the alarm, the henchman on the map, and the formulas 1.1 (`docs/FORMULAS_1.1.md`).
+ * no pits in towers, the castle's side-room gates wired to the alarm, the henchman on the map, and the formulas 1.1 (now `docs/FORMULAS_1.3.md`).
  */
 import { describe, expect, it } from "vitest";
 import { buildMapContent } from "../../src/actions";

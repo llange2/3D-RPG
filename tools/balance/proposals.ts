@@ -1,6 +1,6 @@
 /**
  * Formula proposals. Every entry is `{ ...CURRENT, ...overrides }`: what is not listed stays as the game has it today.
- * The reasoning and the measurements behind them are in docs/KAMPF_BALANCE.md.
+ * The reasoning behind them is in docs/FORMULAS_1.3.md section 10 (the old reports are in the git history).
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -49,7 +49,7 @@ export const PROPOSALS: Record<string, Formulas> = {
 };
 
 /**
- * The combat proposal of docs/KAMPF_BALANCE.md (v3): health with a floor, melee that is no longer swallowed by armor, a bow that no longer beats the
+ * The combat proposal v3 (docs/KAMPF_BALANCE.md in the git history): health with a floor, melee that is no longer swallowed by armor, a bow that no longer beats the
  * sword and armor that always lets half a blow through. (The missed shot that really misses and the lethal special attacks at half the chance
  * were part of v3; the game has them since the fixes of docs section 3.5, so they are the defaults now.)
  */
@@ -76,7 +76,7 @@ PROPOSALS.v3x = { ...PROPOSALS.v3!, id: "v3x", title: "Vorschlag komplett: Kampf
 PROPOSALS.v3u = { ...PROPOSALS.v3!, id: "v3u", title: "Kampf v3 mit XP-Vorschlag des Nutzers (+10 % ab Stufe 10)", xpStep: xpGrowth(1.1) };
 
 /**
- * The revised proposal of the user (docs/KAMPF_BALANCE.md, summary table, state of 24.10.2026), called v4:
+ * The revised proposal of the user (state of 24.10.2026), called v4:
  *  health `(END/4 + class + race) * level + 10` (55th playtest: END/2 before); melee `(weapon * (STR*0.1 + class) / 3 * level - armor) * (1 - res_physical)`;
  *  bow hit chance `ACC / (speed * distance)`, bow damage as v3; monsters hit as today; Wolf kills below 10 %, Fairy -30, Orb +20 % spell damage
  *  (no extra mana any more); XP and training as v3x.
@@ -131,7 +131,7 @@ PROPOSALS.v4b = makeV4("v4b", "add1");
 
 
 /**
- * Levers for the bow and for the ranged attacks of monsters, on top of v4 (docs/KAMPF_BALANCE.md, section "Fernkampf"). Everything defaults to
+ * Levers for the bow and for the ranged attacks of monsters, on top of v4 (the ranged package, docs/FORMULAS_1.3.md 2.3 and 2.5). Everything defaults to
  * what the game does with v4, so `v5:` with no option is v4. Use as a formula name: `v5:bowRes=1,bowDiv=3,eShots=...` (see `formulasByName`).
  *   bowRes     1 = the monster's physical resistance (sheet column) also holds back the bow, as it does for the sword
  *   bowDiv     the bow's level term `(ACC × 0.1 + 0.8 × class) × level` is divided by this (the sword's is divided by 3)
@@ -212,7 +212,7 @@ export function makeV5(id: string, given: Partial<V5Options>): Formulas {
   };
 }
 
-/** The ranged package of docs/KAMPF_BALANCE.md section 8, in the game since then: the formulas of `v4` (this name is what `verify.ts` compares with the game). */
+/** The ranged package, in the game since 25.10.2026 (docs/FORMULAS_1.3.md 2.3 and 2.5): the formulas of `v4` (this name is what `verify.ts` compares with the game). */
 export const V4_RANGED: Partial<V5Options> = { bowRes: 1, bowDiv: 1.5, bowAdj: 0.5, eArmor: 0.5, eFloor: 0.25, eShots: 2, mK: 30, miss1: 0.5, miss2: 0.3, miss3: 0.15 };
 PROPOSALS.v4 = makeV5("v4", V4_RANGED);
 PROPOSALS.v4.title = "Spiel: Vorschlag v4 mit dem Fernkampf-Paket (Bogen: Resistenz, Stufenanteil / 1,5, Nahschuss halb; Gegnerschuesse: halbe Ruestung, Mindestschaden 25 %, bis 2 Schuesse)";

@@ -2,7 +2,7 @@
 
 Rechnet große Mengen Kämpfe und Aufstiege durch, ohne das Spiel zu starten oder zu verändern. Es liest nur die Datentabellen und
 `src/sim` des Spiels (Monster, Zauber, Klassen, Gegenstandsgenerator); geschrieben wird ausschließlich nach `tools/balance/out/`
-(Zwischenstände, jederzeit neu erzeugbar). Die Ergebnisse und Vorschläge stehen in `docs/KAMPF_BALANCE.md`.
+(Zwischenstände, jederzeit neu erzeugbar). Die Herleitung der Zahlen steht in `docs/FORMULAS_1.3.md` Abschnitt 10 (die ausführlichen Berichte vom Oktober und November 2026 liegen in der Git-Historie: `docs/KAMPF_BALANCE*.md`).
 
 Alle Befehle laufen im Ordner `game/` mit `npx tsx tools/balance/<datei> ...`. Das Werkzeug ist absichtlich **nicht** in `package.json`
 eingetragen (das Spiel bleibt unberührt).
@@ -24,12 +24,12 @@ eingetragen (das Spiel bleibt unberührt).
 
 ## Stand der Formeln
 
-**BALANCE v4 (25.10.2026): das Spiel rechnet seit dem mit den Formeln des Vorschlags `v4`** (`PROPOSALS.v4`, `makeV4` in `proposals.ts`; Schalter und Zahlen in `src/sim/balance.ts`, Umsetzung in `docs/BALANCE_V4_UMSETZUNG.md`). `CURRENT` ist damit der **alte** Stand (Modus `legacy` des Spiels) und die Vergleichsbasis aller Berichte („heute“). `verify.ts` folgt dem Modus des Spiels: `npx tsx tools/balance/verify.ts 5000` prüft `v4`, `… 5000 legacy` prüft `CURRENT`. Neu: `challenge.ts` (Herausforderung je Tier und Stufe, Paare mit `--cells=`), `weapons.ts`, `xpneed.ts`, `worldmix.ts`, `monlist.ts`; `BALANCE_EXCLUDE=Terminator` nimmt Monster aus den Klassenpools, `BALANCE_WEAPON=t5:57` setzt den mittleren Waffenschaden eines Ausrüstungsstands.
+**BALANCE v4 (25.10.2026): das Spiel rechnet seit dem mit den Formeln des Vorschlags `v4`** (`PROPOSALS.v4`, `makeV4` in `proposals.ts`; Schalter und Zahlen in `src/sim/balance.ts`, Rückweg und Löschliste in `docs/FORMULAS_1.3.md` Abschnitt 9). `CURRENT` ist damit der **alte** Stand (Modus `legacy` des Spiels) und die Vergleichsbasis aller Berichte („heute“). `verify.ts` folgt dem Modus des Spiels: `npx tsx tools/balance/verify.ts 5000` prüft `v4`, `… 5000 legacy` prüft `CURRENT`. Neu: `challenge.ts` (Herausforderung je Tier und Stufe, Paare mit `--cells=`), `weapons.ts`, `xpneed.ts`, `worldmix.ts`, `monlist.ts`; `BALANCE_EXCLUDE=Terminator` nimmt Monster aus den Klassenpools, `BALANCE_WEAPON=t5:57` setzt den mittleren Waffenschaden eines Ausrüstungsstands.
 
-`CURRENT` bildet das Spiel **nach den Korrekturen aus `docs/KAMPF_BALANCE.md` 3.5** ab (Attribute und Resistenzen mit Ausrüstung, kein negativer Schlag, Fehlschuss ohne Schaden, Ringschaden auch im Fernkampf, halbe Chance für „Dead“/„Eradication“).
+`CURRENT` bildet das Spiel **nach den vier Korrekturen aus `docs/FORMULAS_1.3.md` 10.4** ab (Attribute und Resistenzen mit Ausrüstung, kein negativer Schlag, Fehlschuss ohne Schaden, Ringschaden auch im Fernkampf, halbe Chance für „Dead“/„Eradication“).
 Die Berichte vor den Korrekturen liegen unverändert in `out/report-vor-korrektur/`; `out/report/` ist der neue Stand.
 
-## Fernkampf (Nachtrag nach v4, `docs/KAMPF_BALANCE.md` Abschnitt 8)
+## Fernkampf (Nachtrag nach v4, Formeln in `docs/FORMULAS_1.3.md` 2.3 und 2.5)
 
 * `save.ts`: die Gruppe eines Saves (`.ignore/quicksave.json`, aus `localStorage` exportiert; `SAVE_FILE=` ändert die Datei) gegen Monster, in der **echten** Engine (`save.ts Zombie 2 400 5`), als Tabelle Bogen gegen Schwert (`save.ts damage`), im Simulator mit Formelvarianten (`save.ts sim "v4;v5:bowRes=1" Zombie 2 800 5`, `SPELLS=1` mit Zaubern) und für alle Monster eines Tiers (`save.ts battery`, `BRIEF=1` nur die Mittelzeile).
 * `bowgrid.ts`: Bogen gegen Schwert über Tiers und Stufen und fünf Gruppen (Verlust, Bogen-Anteil am Schaden, Verlust durch Fernschüsse der Gegner); `--only-ranged`/`--only-melee`/`--type=physical` für Gruppen aus Schützen. `shots.ts`: Schaden eines Fernschusses gegen den Nahkampf je Schütze.
