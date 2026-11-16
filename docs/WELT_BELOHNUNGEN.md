@@ -232,40 +232,53 @@ Das Land allein glättet den Rest nicht (die Zahl der Orte, Berge und die Wahl d
 
 ## 2. Faktoren je Welt
 
-Beim Anlegen eines Spiels vom Titel aus misst das Spiel die Welt (2 bis 9 Sekunden, hinter dem Ladebild), rechnet Gold-, XP-, Attribut-, Münz- und Resistenzfaktor aus und legt sie im Spielstand ab (`GameState.scale`; fehlt er, zahlt ein alter Stand nach den Tabellen). Ziele: **Gold 125 Mio mit den Quests** (Spanne 120 bis 130), **XP 950 Mio je Held**, **Attribute 190 Punkte je Held** (mit den Münzen), **Resistenzen 295 Punkte je Held** (alle vier Elemente); die drei letzten sind der Mittelwert von zehn Default-Welten (Seeds `table-47` bis `-56`).
+Beim Anlegen eines Spiels vom Titel aus misst das Spiel die Welt (2 bis 9 Sekunden, hinter dem Ladebild), rechnet Gold-, XP-, Attribut-, Münz- und Resistenzfaktor aus und legt sie im Spielstand ab (`GameState.scale`; fehlt er, zahlt ein alter Stand nach den Tabellen). Ziele: **Gold 125 Mio mit den Quests** (Spanne 120 bis 130), **XP 850 Mio je Held** (seit 16. 11. 2026, vorher 950 Mio, siehe Abschnitt 3), **Attribute 190 Punkte je Held** (mit den Münzen), **Resistenzen 295 Punkte je Held** (alle vier Elemente); die drei letzten sind der Mittelwert von zehn Default-Welten (Seeds `table-47` bis `-56`).
 
-Drei Seeds je Größe (`npx tsx tools/dev/reward-survey.ts table-47|48|49 small,default,large,huge default <Datei>`), Faktoren und danach gezahlte Summen. **Stand 16. 11. 2026, `GEN_VERSION` 71** (neu gemessen nach Abschnitt 3; die Zahlen vom 14. 11. 2026 lagen für XP und Gold etwas niedriger, siehe dort den Vergleich):
+Drei Seeds je Größe (`npx tsx tools/dev/reward-survey.ts table-47|48|49 small,default,large,huge default <Datei>`), Faktoren und danach gezahlte Summen. **Stand 16. 11. 2026, `GEN_VERSION` 71, XP-Ziel 850 Mio** (neu gemessen nach Abschnitt 3; die Zahlen vom 14. 11. 2026 hatten XP 950 Mio und die alte Verteilung der wilden Monster):
 
 | Welt (Dungeons `default`) | Orte | Faktor Gold | Faktor XP | Faktor Attribut | Münze | Faktor Resistenz | Gold gezahlt (Mio) | XP je Held (Mio) | Attribute je Held | Resistenzen je Held |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| small | 26 bis 28 | 2,00 bis 2,79 | 5,7 bis 13,4 | 4 (Grenze) | 2,9 bis 4 (bis 12 Punkte) | 4 (Grenze) | 125,0 | 950 | 188 bis 190 | 168 bis 237 |
-| default | 120 bis 123 | 0,75 bis 0,82 | 1,01 bis 1,25 | 0,95 bis 1,29 | 1 | 0,91 bis 1,36 | 125,0 bis 125,1 | 950 | 190 | 295 |
-| large | 238 bis 257 | 0,34 bis 0,36 | 0,35 bis 0,40 | 0,40 bis 0,54 | 1 | 0,39 bis 0,45 | 124,9 bis 125,1 | 950 bis 951 | 190 | 295 |
-| huge | 388 bis 403 | 0,20 bis 0,23 | 0,21 bis 0,24 | 0,30 bis 0,36 | 1 | 0,24 bis 0,26 | 124,8 bis 125,2 | 948 bis 951 | 190 | 295 |
+| small | 26 bis 28 | 2,00 bis 2,78 | 5,1 bis 11,8 | 4 (Grenze) | 2,9 bis 4 (bis 12 Punkte) | 4 (Grenze) | 125,0 | 850 | 188 bis 190 | 168 bis 237 |
+| default | 120 bis 123 | 0,75 bis 0,82 | 0,91 bis 1,11 | 0,95 bis 1,29 | 1 | 0,91 bis 1,36 | 125,0 bis 125,1 | 850 | 190 | 295 |
+| large | 238 bis 257 | 0,34 bis 0,36 | 0,31 bis 0,36 | 0,40 bis 0,54 | 1 | 0,39 bis 0,45 | 124,9 bis 125,1 | 850 bis 851 | 190 | 295 |
+| huge | 388 bis 403 | 0,20 bis 0,23 | 0,19 bis 0,21 | 0,30 bis 0,36 | 1 | 0,24 bis 0,26 | 124,9 bis 125,2 | 850 bis 851 | 190 | 295 |
 
 - **Gold** liegt in jedem gemessenen Seed (zehn Default-Welten, drei je andere Größe) bei 125 Mio ± 0,2; die Spanne 120 bis 130 ist eingehalten (im Spiel kommen kleine Rundungen dazu, außerdem Gold aus Verkäufen, Arbeitsvermittlern und Monsterbeute, das hier nicht gezählt ist).
 - **Kleine Welten:** wenige Quellen, darum greifen die Grenzen: ein einzelnes Geschenk wächst höchstens auf das Vierfache (`MAX_POINT_FACTOR`), die Münze auf 12 Punkte statt 3 (`MAX_COIN_FACTOR`), die 25 Münzen tragen den Rest. Die Resistenzen erreichen das Ziel in kleinen Welten nur zum Teil (60 % bis 100 %), die Attribute fast ganz.
-- **XP auf kleinen Welten:** ein Kill gibt das Vier- bis Zehnfache der Tabelle; das Stufenfenster in `docs/KAMPF_BALANCE_L1.md` ist dafür **nicht** nachgerechnet (offen).
+- **XP auf kleinen Welten:** ein Kill gibt das Fünf- bis Zwölffache der Tabelle (Stand 16. 11. 2026); das Stufenfenster in `docs/KAMPF_BALANCE_L1.md` ist dafür **nicht** nachgerechnet (offen).
 - **Nicht skaliert:** was die Quest-Geber zahlen (Orbs, Schädel, Perlen), der Heilbrunnen, die Stufenaufstiege der Kelche, die Zauberrollen (146 je Welt).
 - Hütten: `hutXpPercent` (150 / 100 / 75 / 60 %) bleibt; der Weltfaktor kommt darauf, die Summe stimmt trotzdem.
 - Training: 33,33 Mio je Held von L1 auf L100, **133,32 Mio für vier Helden** ohne Rabatt (`100 × L × (L + 1)`) gegen 125 Mio Gold: gewollt knapp, die Bank mit Zinsen und „Work for a week“ gleichen es aus.
 
-## 3. Wilde Monster der Stufe 5 gleichmäßig (16. 11. 2026, `GEN_VERSION` 71)
+## 3. Wilde Monster aller Stufen gleichmäßig (16. 11. 2026, `GEN_VERSION` 71)
 
-**Anlass:** in `pearl-shore-794` (default, Dungeons `default`) waren 75 von 109 wilden Landmonstern der Stufe 5 Vulture Rocs (68,8 %), dazu 30 Jouster (27,5 %), die übrigen drei Monster zusammen 4 Stück. Der Roc hat 1 054 500 XP (Jouster 221 700, Black Knight 148 900). Ursache: `wayAt` ist die **Entfernung** zu Starthaven, und 69 % des L5-Landes liegen in der äußeren Hälfte dieser Entfernung; dort war der Roc (Skalenplatz 5710 unter allen Monstern der Stufe, auch denen ohne wilden Platz) das einzige Monster in Reichweite oder, jenseits seines Fensters, das nächste. Die Hütten sind unbeteiligt (es gibt keine auf Stufe 5).
+**Anlass:** in `pearl-shore-794` (default, Dungeons `default`) waren 75 von 109 wilden Landmonstern der Stufe 5 Vulture Rocs (68,8 %), dazu 30 Jouster (27,5 %), die übrigen drei Monster zusammen 4 Stück. Der Roc hat 1 054 500 XP (Jouster 221 700, Black Knight 148 900). Ursache: `wayAt` ist die **Entfernung** zu Starthaven, und 69 % des L5-Landes liegen in der äußeren Hälfte dieser Entfernung; dort war der Roc (Skalenplatz 5710 unter allen Monstern der Stufe, auch denen ohne wilden Platz) das einzige Monster in Reichweite oder, jenseits seines Fensters, das nächste. Die Hütten sind unbeteiligt (es gibt keine auf Stufe 5). Auf den anderen Stufen war es ähnlich (acht Seeds, Land ohne Seemonster): Stufe 2 Dino Beetle 70 %, Stufe 3 Gargoyle 59 %, Stufe 1 und 4 zwischen 8 und 26 %. Auftrag des Nutzers: alle Stufen ausgleichen.
 
-**Änderung** (`src/world/difficulty.ts`, `EVEN_TIERS` = nur Stufe 5): ein Ort der Stufe 5 hat als Platz auf der Skala den **Landanteil** (`shareAt`: welcher Teil des L5-Landes liegt näher an Starthaven als er, 0 bis 1000) statt der Entfernung, und die fünf wilden Monster der Stufe (Black Knight, Werewolf, Vampire, Jouster, Vulture Roc, nach XP) stehen in der Mitte von fünf gleichen Teilen (100, 300, 500, 700, 900). Jedes bekommt so ein Fünftel des Landes; „je stärker, desto weiter von Starthaven“ bleibt (der Black Knight nahe, der Roc am weitesten). Die Fenster, Gruppengrößen, Orte und alle anderen Stufen sind unverändert; die Änderung betrifft den Generator (`GEN_VERSION` 71, `golden:update`).
+**Änderung** (`src/world/difficulty.ts` `pickWildMonster`, `spotShares`, `src/world/spawns.ts` `planOf`; gilt für alle fünf Stufen): `planOf` setzt zuerst alle Gruppen der Welt (Platz und Größe), dann ordnet `spotShares` die Gruppen **jeder Stufe nach ihrer Entfernung zu Starthaven** und gibt ihnen als Platz auf der Skala ihren **Rang** (0 bis 1000 in gleichen Schritten), und erst danach werden die Monster gewählt (eigener Zufallsstrom `wild-monsters`). Die wilden Monster der Stufe (nach XP, nur die mit „x“ im Blatt) stehen in der Mitte von n gleichen Teilen der Skala (`evenPlaces`; bei Stufe 5: 100, 300, 500, 700, 900). Jedes Monster bekommt so etwa 1/n der Gruppen; „je stärker, desto weiter von Starthaven“ bleibt (das schwächste am nächsten, das stärkste am weitesten). Ein Landanteil über alle Kacheln wurde zuerst probiert und verworfen: die Gruppen stehen nur auf offenem Boden, Berge und Wälder zählten mit, und Stufe 2 blieb bei 42 % Dino Beetle. Fenster (`WILD_WINDOW`), Gruppengrößen, Orte, Hütten und Seemonster sind unverändert; die Änderung betrifft den Generator (`GEN_VERSION` 71, `golden:update`).
 
-**Messung** (Werkzeug `tools/dev/wild-stats.ts`, acht Seeds, Default-Welt, Land ohne Seemonster, Stufe 5, 849 Monster): Black Knight 24,4 %, Vulture Roc 20,1 %, Vampire 19,9 %, Werewolf 18,4 %, Jouster 17,2 %. `pearl-shore-794` allein: Black Knight 32, Vampire 24, Jouster 23, Vulture Roc 19, Werewolf 17 von 115. Test: `tests/unit/wildEvenL5.test.ts`.
+**Messung** (Werkzeug `tools/dev/wild-stats.ts`, acht Seeds, Default-Welt, Land ohne Seemonster; Erwartung je Monster 1/n):
 
-**Was das für die Belohnungen heißt:** der Roc gab fast die ganze wilde XP der Stufe 5. Die wilden Monster der Default-Welt zahlen nach der Änderung **49 statt 77 Mio XP je Held** (small 9 statt 16, large 125 statt 217, huge 225 statt 372), die Rohsumme der Welt sinkt um 3 bis 5 % (default 815 statt 843 Mio ohne Quests). Das Gold der Monster sinkt um 2 %. Weil jede Welt auf die Summen der Default-Welt skaliert wird (Abschnitt 2), **bleiben die gezahlten Summen gleich** (Gold 125 Mio, XP 950 Mio je Held); es steigen nur die Faktoren, und ein Kill in Stufe 5 gibt weniger, in Stufe 1 bis 4 etwas mehr als vorher. Mittel aus `table-47` bis `-49`, Dungeons `default`:
+| Stufe | Monster (Anteil nachher) | vorher (größter Anteil) |
+|---|---|---|
+| 1 (n = 6, 232) | Cryo Spore 19,4 %, Candle Creep 18,1 %, Scorpia 17,7 %, Skeleton 15,1 %, Zombie 15,1 %, Wicked Witch 14,7 % | Cryo Spore 22,8 % bis Candle Creep 8,5 % |
+| 2 (n = 3, 256) | Plasmoid 35,2 %, Mad Dwarf 32,8 %, Dino Beetle 32,0 % | Dino Beetle 70,3 % |
+| 3 (n = 4, 354) | Fire Stalker 26,0 %, Gargoyle 25,1 %, Fire Lizard 24,9 %, Tree golem 24,0 % | Gargoyle 59,2 %, Tree golem 2,1 % |
+| 4 (n = 6, 656) | Toxic worm 18,6 %, Death Snake 17,7 %, Paladin 16,6 %, Dinosaur 16,3 %, Cyclops 16,2 %, Major Demon 14,6 % | Toxic worm 26,1 %, Death Snake 8,2 % |
+| 5 (n = 5, 789) | Vulture Roc 21,2 %, Vampire 20,8 %, Jouster 20,0 %, Werewolf 19,1 %, Black Knight 18,9 % | Vulture Roc 68,8 % (`pearl-shore-794`) |
 
-| Welt | Faktor XP vorher | Faktor XP nachher | Faktor Gold vorher | Faktor Gold nachher | XP roh ohne Quests (Mio) vorher → nachher | davon wilde Monster (Mio) vorher → nachher |
-|---|--:|--:|--:|--:|--:|--:|
-| small | 5,3 bis 13,2 | 5,7 bis 13,4 | 1,99 bis 2,78 | 2,00 bis 2,79 | 134 → 127 | 16 → 9 |
-| default | 0,98 bis 1,21 | 1,01 bis 1,25 | 0,74 bis 0,81 | 0,75 bis 0,82 | 843 → 815 | 77 → 49 |
-| large | 0,34 bis 0,39 | 0,35 bis 0,40 | 0,34 bis 0,35 | 0,34 bis 0,36 | 2 521 → 2 430 | 217 → 125 |
-| huge | 0,21 bis 0,23 | 0,21 bis 0,24 | 0,20 bis 0,22 | 0,20 bis 0,23 | 4 233 → 4 086 | 372 → 225 |
+Test: `tests/unit/wildEvenL5.test.ts` (alle Stufen, jedes Monster zwischen 0,6/n und 1,4/n), `playtest25.test.ts` (Stufen 1 und 2 auf den Rang umgestellt).
 
-- **Ziele unverändert:** XP 950 Mio je Held, Gold 125 Mio, Attribute 190, Resistenzen 295 (`rewardScale.ts`). Die 950 Mio waren der Mittelwert von zehn Default-Welten **vor** dieser Änderung; mit dem Roc-Anteil weniger läge dieser Mittelwert etwa 3 % tiefer (rund 920 Mio). Ich habe das Ziel nicht angefasst: es bleibt eine Entscheidung des Nutzers, ob die 950 bleiben oder auf den neuen Mittelwert gehen.
-- **Nicht angepasst:** die anderen Stufen sind ähnlich schief, nach der Messung der acht Seeds (Land ohne Seemonster): Stufe 2 Dino Beetle 70 %, Stufe 3 Gargoyle 59 %, Stufe 1 und 4 sind ausgeglichen (Stufe 1 8,5 bis 22,8 %, Stufe 4 8,2 bis 26,1 %). Dieselbe Regel ließe sich über `EVEN_TIERS` für sie einschalten, ändert aber die frühen Stufen und die Tests `playtest25` (Fenster der Stufen 1 und 2), darum nur auf Wunsch.
+**Was das für die Belohnungen heißt:** der Roc gab fast die ganze wilde XP der Stufe 5, der Dino Beetle die der Stufe 2; ausgeglichen verteilt sich die XP auf die Monster nach ihrem Wert, und die starken sind seltener. Mittel aus `table-47` bis `-49`, Dungeons `default`, derselbe Generator vorher und nachher (Mio je Held):
+
+| Welt | XP der wilden Monster vorher → nachher | XP roh ohne Quests vorher → nachher | Gold der Monster vorher → nachher |
+|---|--:|--:|--:|
+| small | 15,8 → 9,2 | 134 → 127 | 4,9 → 4,7 |
+| default | 76,7 → 43,7 | 843 → 810 | 33,9 → 33,2 |
+| large | 216,5 → 127,0 | 2 521 → 2 432 | 99,6 → 97,6 |
+| huge | 372,4 → 226,0 | 4 233 → 4 087 | 167,3 → 163,8 |
+
+Zehn Default-Welten (`table-47` bis `-56`, Dungeons `default`, XP roh mit den Quests): Mittel **851,5 Mio** (Spanne 674 bis 1 033) gegen **882,6 Mio** (692 bis 1 076) mit den alten Monstern bei demselben Generator; wilde XP 45,7 statt 76,8 Mio. Das Gold roh (151,6 gegen 152,3 Mio), die Attribute (185,8) und die Resistenzen (280,3) ändern sich durch die Monster nicht.
+
+- **Neues XP-Ziel: 850 Mio je Held** (Entscheidung des Nutzers vom 16. 11. 2026, `REWARD_TARGETS.xp` in `rewardMeasure.ts`, vorher 950 Mio): der neue Mittelwert der zehn Default-Welten ist 851,5 Mio, gerundet 850. Gold 125 Mio, Attribute 190 und Resistenzen 295 sind unverändert (die Mittel der zehn Welten liegen heute bei 185,8 und 280,3, ohne dass die Monster etwas daran ändern: die Generatoränderungen seit `GEN_VERSION` 67 haben sie bewegt; nicht nachgezogen, nur XP war aufgetragen).
+- **Was der Spieler merkt:** jeder Kill gibt mit dem Faktor etwas mehr als vorher (die Faktoren der Tabelle in Abschnitt 2 liegen bei Default 0,91 bis 1,11 statt 1,01 bis 1,25), die Summe der Welt ist um 100 Mio kleiner (850 statt 950). Ein Vulture Roc ist jetzt selten (20 % statt 69 % der wilden Gruppen auf Stufe 5), ein Black Knight oder Vampire häufiger; auf Stufe 2 und 3 stehen die schwächeren Monster (Plasmoid, Mad Dwarf, Fire Stalker) öfter.
+- **Offen:** die Stufenkurve in `docs/KAMPF_BALANCE_L1.md` (`tools/balance/l1curve.ts`) ist für die XP der Tabelle gebaut; mit dem neuen Ziel und der neuen Verteilung der Stufe 1 nicht nachgerechnet.
