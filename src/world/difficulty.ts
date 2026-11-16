@@ -31,16 +31,17 @@ export function townsOfLevel(world: World, level: number): Poi[] {
   return byLevel.get(level) ?? [];
 }
 
-/** The distance from Starthaven of every land tile of a level, over all its islands, sorted (in tiles). */
-const distances = new WeakMap<World, Map<number, number[]>>();
+/** How far the land of a level lies from Starthaven: the nearest and the farthest tile of it, over all its islands, in tiles. */
+const spans = new WeakMap<World, Map<number, { min: number; max: number }>>();
 
-function levelDistances(world: World, tier: number): number[] {
-  let byTier = distances.get(world);
-  if (!byTier) distances.set(world, (byTier = new Map()));
+function levelSpan(world: World, tier: number): { min: number; max: number } {
+  let byTier = spans.get(world);
+  if (!byTier) spans.set(world, (byTier = new Map()));
   const known = byTier.get(tier);
   if (known) return known;
   const home = world.anchorOf(0, 0);
-  const list: number[] = [];
+  let min = Infinity;
+  let max = 0;
   for (const isl of world.islands) {
     if (!isl.tiers.includes(tier)) continue;
     for (let dy = isl.box.y0; dy <= isl.box.y1; dy++) {
@@ -48,19 +49,15 @@ function levelDistances(world: World, tier: number): number[] {
         const x = world.wrapX(isl.x + dx);
         const y = world.wrapY(isl.y + dy);
         if (world.islandAt(x, y) !== isl || world.tierAt(x, y) !== tier) continue;
-        list.push(isqrt(wrapDist2(x, y, home.x, home.y, world.width, world.height)));
+        const d = isqrt(wrapDist2(x, y, home.x, home.y, world.width, world.height));
+        min = Math.min(min, d);
+        max = Math.max(max, d);
       }
     }
   }
-  list.sort((a, b) => a - b);
-  byTier.set(tier, list);
-  return list;
-}
-
-/** How far the land of a level lies from Starthaven: the nearest and the farthest tile of it, over all its islands, in tiles. */
-function levelSpan(world: World, tier: number): { min: number; max: number } {
-  const list = levelDistances(world, tier);
-  return { min: list[0] ?? 0, max: list[list.length - 1] ?? 0 };
+  const span = { min: min === Infinity ? 0 : min, max };
+  byTier.set(tier, span);
+  return span;
 }
 
 /**
@@ -76,31 +73,21 @@ export function wayAt(world: World, x: number, y: number, level: number): number
 }
 
 /**
- * The position of a spot in its level by land, not by distance (0 to 1000): the share of the land of the level that lies nearer to Starthaven, so that every
- * tenth of the scale is a tenth of the land. `wayAt` is the distance and most of a level lies in its outer half (L5 of `pearl-shore-794`: 69 % of the land beyond
- * the middle of the distance), which gave the strongest wild monster that much of the level.
+ * The position of every wild group of the land in its level by rank, not by distance (0 to 1000, in the order of `spots`): the groups of a level, ordered by their
+ * distance from Starthaven, stand in the middle of equal parts of the scale. `wayAt` is the distance, and most of a level lies in its outer half (L5 of
+ * `pearl-shore-794`: 69 % of the land beyond the middle), and the groups only stand on open ground, so a share of the land would not be a share of the groups either.
  */
-export function shareAt(world: World, x: number, y: number, level: number): number {
-  const list = levelDistances(world, level);
-  if (list.length === 0) return 500;
+export function spotShares(world: World, spots: readonly { x: number; y: number; tier: number }[]): number[] {
   const home = world.anchorOf(0, 0);
-  const d = isqrt(wrapDist2(x, y, home.x, home.y, world.width, world.height));
-  // the tiles nearer than this one and the tiles as near: a tie takes the middle of its run
-  let lo = 0;
-  let hi = list.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (list[mid]! < d) lo = mid + 1;
-    else hi = mid;
+  const shares = spots.map(() => 500);
+  for (let tier = 1; tier <= 5; tier++) {
+    const mine = spots
+      .map((s, i) => ({ i, d: isqrt(wrapDist2(s.x, s.y, home.x, home.y, world.width, world.height)), x: s.x, y: s.y, tier: s.tier }))
+      .filter((s) => s.tier === tier)
+      .sort((a, b) => a.d - b.d || a.y - b.y || a.x - b.x);
+    mine.forEach((s, rank) => (shares[s.i] = Math.floor((1000 * (2 * rank + 1)) / (2 * mine.length))));
   }
-  const below = lo;
-  hi = list.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (list[mid]! <= d) lo = mid + 1;
-    else hi = mid;
-  }
-  return Math.max(0, Math.min(1000, Math.floor((1000 * (below + lo)) / (2 * list.length))));
+  return shares;
 }
 
 /** The level of the spot in thousandths: the level of the island (`World.tierAt`) and the position in it (`wayAt`). */
@@ -137,17 +124,20 @@ function wildPool(water: boolean): MonsterDef[] {
 const pools = { land: wildPool(false), water: wildPool(true) };
 
 /**
- * A wild monster of the land for a spot: of the monsters of the sheet's "x" that belong to the level of the island (the hardest of level 1 do not stand at the
- * border of level 2), those whose place on the scale lies within `WILD_WINDOW` of the position of the spot, the nearer the more likely.
+ * A wild monster of the land for a group: of the monsters of the sheet's "x" that belong to the level of the island (the hardest of level 1 do not stand at the
+ * border of level 2), those whose place on the scale lies within `WILD_WINDOW` of the position of the group, the nearer the more likely.
+ *
+ * **The groups of a level share the wild monsters of it evenly** (user request, 16. 11. 2026): `share` is the rank of the group among the groups of its level by
+ * distance from Starthaven (`spotShares`), not the distance (most of a level lies in its outer half, so the strongest monster had most of it: 69 % Vulture Rocs
+ * on level 5 of `pearl-shore-794`, 70 % Dino Beetles on level 2), and the wild monsters of the level stand at equal places among their own pool (`evenPlaces`, by
+ * XP: the Vulture Roc stood at 5710 among all monsters of the level, with those that have a hut or live in dungeons). Each of n monsters gets about 1/n of the
+ * groups, the weakest the nearest to Starthaven, the strongest the farthest.
  */
-export function pickWildMonster(rng: Rng, world: World, x: number, y: number): MonsterDef {
-  const tier = world.tierAt(x, y);
+export function pickWildMonster(rng: Rng, tier: number, share: number): MonsterDef {
   const own = pools.land.filter((m) => m.treasure_level === tier);
   const pool = own.length > 0 ? own : pools.land;
-  const even = own.length > 0 && EVEN_TIERS.has(tier);
-  // level 5: by the share of the land and among its own wild monsters (both evenly), see `EVEN_TIERS`
-  const here = tier * 1000 + (even ? shareAt(world, x, y, tier) : wayAt(world, x, y, tier));
-  const place = even ? evenPlaces(tier, pool) : monsterLevel;
+  const here = tier * 1000 + share;
+  const place = own.length > 0 ? evenPlaces(tier, pool) : monsterLevel;
   const weights = pool.map((m) => Math.max(0, 1000 - Math.floor((Math.abs(place(m.id) - here) * 1000) / WILD_WINDOW)));
   if (weights.every((w) => w === 0)) {
     // nothing within reach: the one nearest on the scale
@@ -156,26 +146,11 @@ export function pickWildMonster(rng: Rng, world: World, x: number, y: number): M
   return pool[rng.weightedIndex(weights)]!;
 }
 
-/**
- * The levels whose wild monsters share the land evenly (user request, 16. 11. 2026). Level 5 has five wild monsters, ranked among all monsters of the level (the
- * others have a hut or live in dungeons) the Vulture Roc stands at 5710 with a window of 150, and the land of the level lies mostly far from Starthaven: 69 % of
- * the wild monsters of `pearl-shore-794` were Vulture Rocs (XP 1 054 500, five times the next). For these levels the position of a spot is the share of the
- * land (`shareAt`) and the monsters stand at equal places among their own pool (`evenPlaces`), so each gets a fifth of the land, the weakest nearest to Starthaven.
- */
-const EVEN_TIERS: ReadonlySet<number> = new Set([5]);
-
-const places = new Map<number, (id: number) => number>();
-
 /** The monsters of a level's wild pool in the middle of equal parts of the scale, by XP like `monsterLevel`. */
 function evenPlaces(tier: number, pool: readonly MonsterDef[]): (id: number) => number {
-  let known = places.get(tier);
-  if (!known) {
-    const at = new Map<number, number>();
-    [...pool].sort((a, b) => a.xp - b.xp || a.id - b.id).forEach((m, i) => at.set(m.id, tier * 1000 + Math.floor(((2 * i + 1) * 500) / pool.length)));
-    known = (id: number) => at.get(id) ?? tier * 1000;
-    places.set(tier, known);
-  }
-  return known;
+  const at = new Map<number, number>();
+  [...pool].sort((a, b) => a.xp - b.xp || a.id - b.id).forEach((m, i) => at.set(m.id, tier * 1000 + Math.floor(((2 * i + 1) * 500) / pool.length)));
+  return (id: number) => at.get(id) ?? tier * 1000;
 }
 
 /**

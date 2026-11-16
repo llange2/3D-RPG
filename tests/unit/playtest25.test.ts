@@ -5,7 +5,7 @@ import { MONSTER_IDS, MONSTERS } from "../../src/data/tables";
 import { createEncounter, createMonster, monsterTurn, monsterXp, partyAttack, updateBattleMode, type GridView } from "../../src/sim/encounter";
 import { createDefaultParty } from "../../src/sim/party";
 import { castSpell, movesParty } from "../../src/sim/spells";
-import { WILD_WINDOW, monsterLevel, wayAt } from "../../src/world/difficulty";
+import { WILD_WINDOW, spotShares } from "../../src/world/difficulty";
 import { wrapDist2 } from "../../src/world/islands";
 import { HUT_RADIUS, hutMonsters, hutsOf, hutXpPercent } from "../../src/world/huts";
 import { SAFE_RADIUS, chunkSpawns, inSafeZone } from "../../src/world/spawns";
@@ -91,28 +91,31 @@ describe("the Monster Huts by world size (25th playtest, 3 and 7)", () => {
     }
   });
 
-  it("gives the wild groups of levels 1 and 2 no monster much harder than their place on the scale (onyx-peak-873: no Wicked Witch near Starthaven)", () => {
+  it("gives the wild groups of levels 1 and 2 no monster much harder than their rank among the groups of the level (onyx-peak-873: no Wicked Witch near Starthaven)", () => {
+    // since GEN_VERSION 71 the groups of a level share its wild monsters evenly by their rank from Starthaven (`spotShares`), not by their distance
     let groups = 0;
     for (const [seed, size] of [["onyx-peak-873", "small"], ["kelp-peak-430", "small"], ["p25-a", "default"], ["p25-b", "default"]] as const) {
       const world = new World(seed, size);
       const home = world.anchorOf(0, 0);
+      const land: { x: number; y: number; tier: number; monsterIds: number[]; uid: string }[] = [];
       for (let cy = 0; cy < world.height / CHUNK_SIZE; cy++) {
         for (let cx = 0; cx < world.width / CHUNK_SIZE; cx++) {
-          for (const g of chunkSpawns(world, cx, cy)) {
-            const tier = world.tierAt(g.x, g.y);
-            if (tier > 2 || g.monsterIds.some((m) => MONSTERS[m]!.terrain === "water")) continue;
-            groups++;
-            const here = tier * 1000 + wayAt(world, g.x, g.y, tier);
-            // the easiest wild monster of a level is the one chosen where nothing lies within reach (right next to the town)
-            const easiest = MONSTER_IDS.filter((x) => MONSTERS[x]!.outside === "wild" && MONSTERS[x]!.treasure_level === tier && MONSTERS[x]!.terrain !== "water").sort((a, b) => monsterLevel(a) - monsterLevel(b))[0]!;
-            for (const m of g.monsterIds) {
-              expect(MONSTERS[m]!.treasure_level, `${seed} ${g.uid}`).toBe(tier);
-              if (m === easiest) continue;
-              expect(monsterLevel(m) - here, `${seed} ${g.uid} ${MONSTERS[m]!.name} at ${Math.round(Math.hypot(g.x - home.x, g.y - home.y))} tiles`).toBeLessThanOrEqual(WILD_WINDOW);
-            }
-          }
+          for (const g of chunkSpawns(world, cx, cy)) if (!g.monsterIds.some((m) => MONSTERS[m]!.terrain === "water")) land.push({ ...g, tier: world.tierAt(g.x, g.y) });
         }
       }
+      const shares = spotShares(world, land);
+      land.forEach((g, n) => {
+        if (g.tier > 2) return;
+        groups++;
+        const pool = MONSTER_IDS.filter((x) => MONSTERS[x]!.outside === "wild" && MONSTERS[x]!.treasure_level === g.tier && MONSTERS[x]!.terrain !== "water").sort((a, b) => MONSTERS[a]!.xp - MONSTERS[b]!.xp || a - b);
+        const here = g.tier * 1000 + shares[n]!;
+        for (const m of g.monsterIds) {
+          expect(MONSTERS[m]!.treasure_level, `${seed} ${g.uid}`).toBe(g.tier);
+          const place = g.tier * 1000 + Math.floor(((2 * pool.indexOf(m) + 1) * 500) / pool.length);
+          // within the window, or (where nothing lies within it) the nearest, which is never farther than half a part of the scale
+          expect(Math.abs(place - here), `${seed} ${g.uid} ${MONSTERS[m]!.name} at ${Math.round(Math.hypot(g.x - home.x, g.y - home.y))} tiles`).toBeLessThanOrEqual(Math.max(WILD_WINDOW, Math.ceil(500 / pool.length)));
+        }
+      });
     }
     expect(groups).toBeGreaterThan(40);
   });
