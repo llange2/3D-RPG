@@ -22,7 +22,8 @@ ENVIRONMENTS = {"Castle": "castle", "Cave": "cave", "Dungeon": "dungeon", "Town"
 # 3 Portal: "every town must have a portal" (2026-10-20, nineteenth playtest, point 8).
 # 3 Portal also in dungeons (quest document 1.2, answer to open point 1: "kann auch in Dungeons eingesetzt werden", it links two cells A>B>A and is
 # separate from the town portals). 17..25 the keys also in caves: the end rooms of level 1 and 2 caves hold keys (document 1.2, "End-Raeume").
-ADD_PLACES = {118: ["cave"], 86: ["cave"], 3: ["town", "dungeon"], **{k: ["cave"] for k in range(17, 26)}}
+# 70 Bone pile also in the spaceship: the bridge's fixed layout (quest document 1.9, `SK`) is strewn with them, decoration only.
+ADD_PLACES = {118: ["cave"], 86: ["cave"], 3: ["town", "dungeon"], 70: ["spaceship"], **{k: ["cave"] for k in range(17, 26)}}
 # 73 Magic runes: a quest object (the way into the end room of quest_3, the barriers of dungeon_3), never plain decoration (open point 4).
 # 75 / 97 Book shelf, Book shelf (old): containers since the 34th playtest ("Spells can be found in chests, barrels, heaps of treasure or bookshelves"): searched once,
 # they may hold a spell scroll, so they are never plain decoration (`BOOKSHELVES` in src/data/spell-loot.ts).

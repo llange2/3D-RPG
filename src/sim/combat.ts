@@ -4,7 +4,6 @@ import { earlyMissChance, fairyReduction, isV4, RULES, specialWithoutDamage } fr
 import { addMagicAge } from "./aging";
 import { addCondition, anyoneLeft, armor, attr, canAct, equippedItems, fightSpeed, getBaseValue, isRifted, itemBonus, pyRound, removeCondition, resistanceShare } from "./character";
 import { cheats } from "./cheats";
-import { journalEmit } from "./journal";
 import { sumBonus } from "./items";
 import { hasEffect, protectionLevel } from "./party";
 import type { BonusKey, Character, Condition, Item, Party } from "./types";
@@ -281,8 +280,6 @@ export function applyHit(party: Party, index: number, damage: number, monster: M
     const cond: Condition = killed ? "Dead" : "Unconscious";
     addCondition(c, cond, party.minutes);
     added.push(cond);
-    // TEMPORARY (balance journal, `sim/journal.ts`): a hero went down; the monster is the cause, no monster means a trap, a spell, lava and the like
-    journalEmit({ t: "down", name: c.name, cls: c.classType, lvl: c.level, cond, by: monster?.name ?? "other", dmg: damage });
   }
 
   return { damage, conditions: added, defeated: !anyoneLeft(party.characters), ...(drained > 0 ? { drained } : {}), ...(aged > 0 ? { aged } : {}), ...(agedToDeath ? { agedToDeath } : {}) };

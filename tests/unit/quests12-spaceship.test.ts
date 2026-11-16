@@ -74,7 +74,7 @@ describe("the spaceship (quest document 1.5, quest_7)", () => {
     }
   });
 
-  it("holds 8 orbs, 2 in every section but the bridge, and puts robots only in them: terminators on the bridge, rare in the others", () => {
+  it("holds 8 orbs, 2 in every section but the bridge, and puts robots only in them: the fixed ones on the bridge (document 1.9), terminators rare in the others", () => {
     const { content, layout } = shipOf();
     // one chest for every orb (31st playtest, point 11)
     const chests = content.actions.filter((a) => a.params.quest === "quest_orb");
@@ -82,9 +82,11 @@ describe("the spaceship (quest document 1.5, quest_7)", () => {
     expect(chests.every((a) => a.params.count === undefined)).toBe(true);
     expect(chests.some((a) => sectionAt(layout, a.x, a.y) === BRIDGE)).toBe(false);
     expect(content.spawns.length).toBeGreaterThan(5);
+    // (seven terminators and two Titanic Automatos, one to a cell: the bridge's grid is the document's, `bridge.test.ts`)
     const onBridge = content.spawns.filter((s) => sectionAt(layout, s.x, s.y) === BRIDGE);
-    expect(onBridge.length).toBeGreaterThan(3);
-    expect(onBridge.every((s) => s.monsterIds.every((id) => id === 69))).toBe(true);
+    expect(onBridge.length).toBe(9);
+    expect(onBridge.filter((s) => s.monsterIds.length === 1 && s.monsterIds[0] === 69).length).toBe(7);
+    expect(onBridge.filter((s) => s.monsterIds.length === 1 && s.monsterIds[0] === 88).length).toBe(2);
     const others = content.spawns.filter((s) => sectionAt(layout, s.x, s.y) !== BRIDGE).flatMap((s) => s.monsterIds);
     expect(others.filter((id) => id === 69).length / others.length).toBeLessThan(0.3);
   });
@@ -143,10 +145,10 @@ describe("the spaceship (quest document 1.5, quest_7)", () => {
     expect(heapGone(crystal, opened)).toBe(false);
   });
 
-  it("leaves the cells round the console free, keeps the tube rooms empty of finds, spreads the crystals over rooms and never lets an object shut a passage", { timeout: 120_000 }, () => {
+  it("keeps the tube rooms empty of finds, spreads the crystals over rooms and never lets an object shut a passage", { timeout: 120_000 }, () => {
     for (const seed of ["ship-a", "ship-b", "ship-c", "ship-d"]) {
       const { content, map, layout } = shipOf(seed);
-      // (the validation checks the console's free cells, the tube rooms and the spread of the crystals)
+      // (the validation checks the bridge's grid, the tube rooms and the spread of the crystals)
       expect(validateContent(map, content), seed).toEqual([]);
       const w = map.width;
       const holds = new Set(content.actions.filter((a) => a.kind !== "tube" && a.kind !== "door").map((a) => a.y * w + a.x));

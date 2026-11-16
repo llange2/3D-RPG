@@ -3,7 +3,8 @@ import { FORBIDDEN_PROPS } from "../data/dungeon-themes";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
 import { questIssues } from "./questChecks";
-import { BRIDGE, CONSOLE_CLEAR, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPPORT, ORBS_PER_SECTION, POWER_CRYSTAL, STORAGE_BAY, type MonsterGroup } from "../data/quest-table";
+import { BRIDGE, COMPUTER_ITEM, CONTROL_ROOM, CRATE_ITEM, ENGINE_ROOM, LIFE_SUPPORT, ORBS_PER_SECTION, POWER_CRYSTAL, STORAGE_BAY, TEMPORAL_ITEM, type MonsterGroup } from "../data/quest-table";
+import { bridgeFeatures } from "../interiors/bridge";
 import { WALL_DECO_ITEMS, wallDecoChoices } from "../data/wall-deco";
 import { MONSTERS, monsterGroup } from "../data/tables";
 import { sectionAt } from "../interiors/spaceship";
@@ -162,10 +163,29 @@ export function spaceshipIssues(map: InteriorMap, content: MapContent): string[]
   const consoles = content.actions.filter((a) => a.params.terminal === "console");
   if (consoles.length !== 1 || sec(consoles[0]!) !== BRIDGE) issues.push(`${map.key}: not one console on the bridge`);
   for (const sp of content.spawns) for (const id of sp.monsterIds) if (monsterGroup(id) !== "robot") issues.push(`${sp.uid}: ${MONSTERS[id]?.name ?? id} is no robot`);
-  // two cells all round the console stay free of objects and monsters
-  const near = (o: { x: number; y: number }) => Math.abs(o.x - layout.console.x) <= CONSOLE_CLEAR && Math.abs(o.y - layout.console.y) <= CONSOLE_CLEAR;
-  for (const a of content.actions) if (!consoles.includes(a) && near(a)) issues.push(`${a.uid}: stands within ${CONSOLE_CLEAR} cells of the console`);
-  for (const sp of content.spawns) if (near(sp)) issues.push(`${sp.uid}: stands within ${CONSOLE_CLEAR} cells of the console`);
+  // the fixed layout of the bridge (quest document 1.9): every thing of the document stands on its cell, the robots one to a cell
+  for (const f of bridgeFeatures()) {
+    const x = layout.bridge.x + f.x;
+    const y = layout.bridge.y + f.y;
+    const here = (o: { x: number; y: number }) => o.x === x && o.y === y;
+    const found =
+      f.thing === "MT" || f.thing === "MA"
+        ? content.spawns.some((s) => here(s) && s.monsterIds.length === 1 && s.monsterIds[0] === (f.thing === "MT" ? 69 : 88))
+        : f.thing === "SK"
+          ? content.actions.some((a) => here(a) && a.kind === "decor" && a.params.item === 70)
+          : f.thing === "TE"
+            ? content.actions.some((a) => here(a) && a.kind === "lore" && a.params.item === COMPUTER_ITEM)
+            : f.thing === "TG"
+              ? content.actions.some((a) => here(a) && a.kind === "lore" && a.params.item === TEMPORAL_ITEM)
+              : f.thing === "CO"
+                ? consoles.some(here)
+                : f.thing === "DEN"
+                  ? tubes.some(here)
+                  : f.thing === "LE"
+                    ? of("lever").some(here)
+                    : of("door").some(here);
+    if (!found) issues.push(`${map.key}: the bridge has no ${f.thing} at ${x}, ${y}`);
+  }
   // the things the party looks for (orbs, crates, crystals) stand in no room with a transporter tube and are spread over the rooms of their section
   const roomOf = (a: { x: number; y: number }) => layout.rooms.flat().find((r) => a.x >= r.x && a.x < r.x + r.w && a.y >= r.y && a.y < r.y + r.h);
   const tubeRooms = new Set(tubes.map(roomOf));

@@ -1,7 +1,7 @@
 import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
 import { DECO_MODELS, DECO_PLATE, DECO_SCALE } from "../data/wall-deco";
-import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM } from "../data/quest-table";
+import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM, TEMPORAL_ITEM, TEMPORAL_SCALE } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
 import { isGlbItem, itemModelKey, itemProp } from "./itemProps";
@@ -53,6 +53,7 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?:
   // the broken crystal is as big as the intact one it turns into (item 67, 0.87 x 2.0 x 0.86 in the original set; the file is 0.43 x 0.95 x 0.43), and it rests on the floor the same way
   [BROKEN_CRYSTAL_ITEM]: { model: "obj_power_crystal_broken", scale: 2.03, scale3: [2.03, 2.1, 2.0] },
   [CONSOLE_ITEM]: { model: "obj_spaceship_console", scale: CONSOLE_SCALE },
+  [TEMPORAL_ITEM]: { model: "obj_temporal_field_generator", scale: TEMPORAL_SCALE },
   // the wooden stairs of a tower (quest document 1.7, 49th playtest): the file (the user's second version of 8. 11. 2026, 50th playtest) is 0.97 x 1.26 x 1.9; `stairsScale` stretches them over a whole cell and one storey of the tower
   [STAIRCASE_ITEM]: { model: "obj_wooden_stairs", scale: 1 },
   // the wall reliefs of the dungeons (45th playtest, point 4): the files are 1.3 x 1.9 around their middle, as big as the moose king's carving (scale 1.2); the middle hangs at the height of the

@@ -83,7 +83,7 @@ export const ITEM_RULES: Readonly<Record<number, ItemRule>> = {
   67: { name: "Power source crystal", functional: false, places: ["spaceship"] },
   68: { name: "Computer terminal", functional: false, places: ["spaceship"] },
   69: { name: "Grindstone", functional: false, places: ["castle", "dungeon", "town"] },
-  70: { name: "Bone pile", functional: false, places: ["cave", "dungeon"] },
+  70: { name: "Bone pile", functional: false, places: ["cave", "dungeon", "spaceship"] },
   71: { name: "Abandoned fireplace", functional: false, places: ["cave", "dungeon", "outside"] },
   72: { name: "Noble chest", functional: true, places: ["castle", "dungeon", "town"] },
   73: { name: "Magic runes", functional: true, places: ["cave", "dungeon", "outside"] },

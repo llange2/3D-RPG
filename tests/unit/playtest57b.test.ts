@@ -27,10 +27,10 @@ describe("the saves of the old format are packed at start-up", () => {
     delete (globalThis as { localStorage?: unknown }).localStorage;
   });
 
-  /** A save with a journal of some size, written the way the game wrote it before the packing: plain JSON under the keys of a slot and of named saves. */
+  /** A save of some size, written the way the game wrote it before the packing: plain JSON under the keys of a slot and of named saves. */
   const plainWorld = (seed: string) => {
     const state = newGameState(seed, { x: 5, y: 6, facing: "S" });
-    for (let i = 0; i < 300; i++) state.journal.push({ t: "level", name: "Aa", cls: "Knight", from: i, to: i + 1, xp: i * 31, s: i, m: i * 7, at: "ow", x: i % 9, y: i % 5 } as never);
+    for (let i = 0; i < 300; i++) state.opened.add(`padding:the-same-long-prefix-of-every-flag-in-this-save:${i}`);
     return toSaveFile(state);
   };
   const putPlain = () => {
@@ -52,7 +52,7 @@ describe("the saves of the old format are packed at start-up", () => {
     expect(used()).toBe(before - freed);
     for (const [k, v] of store) if (k.includes("save") || k.includes("quick")) expect(v.startsWith(PACKED_PREFIX), k).toBe(true);
     expect(readSave("world", "auto")?.seed).toBe("auto");
-    expect(readSave("world", "quick")?.state.journal).toHaveLength(300);
+    expect(readSave("world", "quick")?.state.opened).toHaveLength(300);
     expect(readNamedSave("n3")?.seed).toBe("named-3");
     expect(listNamedSaves("world")).toHaveLength(6);
     // a second run has nothing left to do
@@ -62,7 +62,7 @@ describe("the saves of the old format are packed at start-up", () => {
   it("makes room for the next save where the full storage refused it", () => {
     putPlain();
     const next = newGameState("next", { x: 1, y: 1, facing: "N" });
-    for (let i = 0; i < 300; i++) next.journal.push({ t: "level", name: "Aa", cls: "Knight", from: i, to: i + 1, xp: i * 31, s: i, m: i * 7, at: "ow", x: i % 9, y: i % 5 } as never);
+    for (let i = 0; i < 300; i++) next.opened.add(`padding:the-same-long-prefix-of-every-flag-in-this-save:${i}`);
     // the storage is as full as it was: no room for one more big save
     limit = used() + 2000;
     expect(writeNamedSave(next, "newest")).toBe(false);
