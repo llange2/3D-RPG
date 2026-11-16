@@ -5107,7 +5107,7 @@ export class Game {
     for (;;) {
       const choice = await this.ui.choose("Debug", "Cheats for testing. God mode ends with the game, the rest stays.", [
         { label: `God mode: ${cheats.god ? "on" : "off"}`, value: "god", note: "no damage, endless food" },
-        { label: `+${DEBUG_LEVELS} Levels`, value: "levels", note: "each hero" },
+        { label: `+${DEBUG_LEVELS} Levels`, value: "levels", note: "each hero, with attributes and resistances" },
         { label: "+100k Gold", value: "gold", note: "for the party" },
         { label: "All spells", value: "spells", note: "of each hero's school" },
         { label: "All talents", value: "talents", note: "for each hero" },
@@ -5127,7 +5127,7 @@ export class Game {
           break;
         case "levels":
           debugLevels(party);
-          this.ui.toast(`+${DEBUG_LEVELS} levels for each hero`);
+          this.ui.toast(`+${DEBUG_LEVELS} levels, attributes and resistances for each hero`);
           break;
         case "gold":
           debugGold(party);

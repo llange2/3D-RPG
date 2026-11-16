@@ -1,11 +1,11 @@
 import { BLACK_CARD, CARD_COLORS, KEY_COLORS, cardType, keyType } from "../data/quest-table";
 import { TALENTS, SPELLS } from "../data/tables";
-import { isAlive, levelUp, recalcValues, removeCondition } from "../sim/character";
+import { RESISTANCE_CAP, isAlive, levelUp, recalcValues, removeCondition } from "../sim/character";
 import { cheats } from "../sim/cheats";
 import { questItem } from "../sim/items";
 import { carriedItems, giveItem } from "../sim/party";
 import { SPELL_SCHOOL, isSpellImplemented } from "../sim/spells";
-import type { Party } from "../sim/types";
+import { ATTRIBUTES, type Party } from "../sim/types";
 import type { Poi, PoiKind } from "../world/types";
 
 /**
@@ -38,9 +38,24 @@ export function setGodMode(party: Party, on: boolean): void {
 export const DEBUG_LEVELS = 10;
 export const DEBUG_GOLD = 100_000;
 
-/** Ten levels for every hero who lives, each with the XP of the level it reaches (the way the training hall raises one), not only the points. */
+/** Points every attribute and percent every resistance gains with each debug level, so the test hero keeps up with the level it is given. */
+export const DEBUG_POINTS_PER_LEVEL = 1;
+
+const RESISTANCE_FIELDS = ["resFire", "resIce", "resAcid", "resMagic"] as const;
+
+/**
+ * Ten levels for every hero who lives, each with the XP of the level it reaches (the way the training hall raises one), not only the points. The seven
+ * attributes and the four resistances grow with them; a resistance stops at `RESISTANCE_CAP` (one that is already above it, from a shrine, stays as it is).
+ */
 export function debugLevels(party: Party): void {
-  for (const c of party.characters) if (isAlive(c)) levelUp(c, party.talents, DEBUG_LEVELS, party.mascot);
+  const gain = DEBUG_LEVELS * DEBUG_POINTS_PER_LEVEL;
+  for (const c of party.characters) {
+    if (!isAlive(c)) continue;
+    // before `levelUp`, whose `recalcValues` then takes Endurance, Intelligence and Personality into health and mana
+    for (const a of ATTRIBUTES) c[a] += gain;
+    for (const field of RESISTANCE_FIELDS) c[field] = Math.max(c[field], Math.min(RESISTANCE_CAP, c[field] + gain));
+    levelUp(c, party.talents, DEBUG_LEVELS, party.mascot);
+  }
 }
 
 export function debugGold(party: Party): void {
