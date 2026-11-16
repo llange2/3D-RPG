@@ -104,6 +104,9 @@ const PANEL_YAW = 0;
 const CAVE_WALL = "blk_cave_wall";
 const CAVE_EXIT = "blk_cave_exit";
 const CAVE_WALL_RADIUS = 12;
+/** Half the height of the rock piece in the file (`bounds` of `blk_cave_wall`, 0.938) and the margin by which the stretched piece reaches into the ceiling's back. */
+const CAVE_WALL_HALF = 0.938;
+const CAVE_WALL_OVERLAP = 0.05;
 /** Yaw of the exit model so that it faces north, towards the party. The first reading of the old maps (opening towards the floor, glTF turned by half a circle) had it the wrong way round: the user saw it turned by 180 degrees. */
 const CAVE_EXIT_YAW = 0;
 
@@ -230,6 +233,8 @@ export class InteriorView {
   private caveWalls: number[] = [];
   private caveShown: { x: number; y: number } | null = null;
   private caveModels = false;
+  /** Height factor of the cave's rock pieces: with the 3D ceiling the flat ceiling lies above the hanging relief, and the walls have to reach it (screen3: a gap of sky colour between wall and ceiling). 1 in the flat environment. */
+  private caveWallStretch = 1;
   private roundList: RoundCorner[] = [];
   private roundShown = false;
   private roundModels = false;
@@ -437,6 +442,17 @@ export class InteriorView {
     this.props.flush();
   }
 
+  /**
+   * One rock piece of the cave wall (`drop` = how far it has sunk). The piece keeps its foot where the old game has it (origin 1.5 up, half height 0.938 * 1.75)
+   * and is stretched upwards by `caveWallStretch`, so the top moves and the foot stays under the floor.
+   */
+  private caveWallPiece(x: number, drop: number, z: number, rotY: number): PropInstance {
+    const k = this.caveWallStretch;
+    const foot = 1.5 - CAVE_WALL_HALF * 1.75;
+    const piece: PropInstance = { model: CAVE_WALL, x, y: foot + CAVE_WALL_HALF * 1.75 * k - drop, z, rotY, scale: 1.75, atOrigin: true };
+    return k === 1 ? { ...piece, y: 1.5 - drop } : { ...piece, scaleXYZ: [1.75, 1.75 * k, 1.75] };
+  }
+
   /** The cave's rock pieces within `CAVE_WALL_RADIUS` cells of the party, and the way out. */
   private pushCaveWalls(cx: number, cy: number): void {
     const map = this.map;
@@ -456,7 +472,7 @@ export class InteriorView {
       const y = (i - x) / map.width;
       if (Math.abs(x - cx) > wallRadius || Math.abs(y - cy) > wallRadius) continue;
       // the rock is the same on every side: turned in steps of 90 degrees by the cell, so neighbours do not repeat
-      list.push({ model: CAVE_WALL, x: cellCenterX(x), y: 1.5, z: cellCenterZ(y), rotY: (((hash2(0x3a, x, y) >>> 8) % 4) * Math.PI) / 2, scale: 1.75, atOrigin: true });
+      list.push(this.caveWallPiece(cellCenterX(x), 0, cellCenterZ(y), (((hash2(0x3a, x, y) >>> 8) % 4) * Math.PI) / 2));
     }
     list.push({ model: CAVE_EXIT, x: cellCenterX(map.exit.x + dx), y: 1.6, z: cellCenterZ(map.exit.y + dy), rotY: CAVE_EXIT_YAW, scale: 2.6, atOrigin: true });
     this.props.setInstances(owner, list);
@@ -658,7 +674,11 @@ export class InteriorView {
     }
     // the doorways of a tower are three boxes with the wall's texture (48th playtest), not the frame model of the old dungeon
     const doorFrames: DoorFrame[] | undefined = map.dungeon?.tower && this.content ? this.content.actions.filter((a) => a.kind === "door").map((a) => ({ x: a.x, y: a.y, axis: a.params.axis === "x" ? "x" : "y" })) : undefined;
-    const geo = meshInterior(map, new Set(), { models, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined, ceilingLift: this.ceilingLifts(models), ...(doorFrames ? { doorFrames } : {}) });
+    const ceilingLift = this.ceilingLifts(models);
+    // the cave's flat ceiling lies `lift` above the wall height when the 3D ceiling hangs under it: the rock reaches up to it
+    const lift = map.kind === "cave" ? Math.max(0, ...Object.values(ceilingLift)) : 0;
+    this.caveWallStretch = lift > 0 ? (wallHeightOf(map) - ceilingDropOf(map) + lift + CAVE_WALL_OVERLAP - (1.5 - CAVE_WALL_HALF * 1.75)) / (2 * CAVE_WALL_HALF * 1.75) : 1;
+    const geo = meshInterior(map, new Set(), { models, holes, modelWalls: this.caveModels, roundWalls: this.roundModels, flatTiles: this.flatTiles ?? undefined, ceilingLift, ...(doorFrames ? { doorFrames } : {}) });
     const mesh = new Mesh(`interior:${map.key}`, this.r.scene);
     const vd = new VertexData();
     vd.positions = geo.positions;
@@ -1173,7 +1193,7 @@ export class InteriorView {
       const drop = h * (t * t * (3 - 2 * t));
       if (box) box.position.y = -drop;
       else {
-        this.props.setInstances(owner, [{ model: CAVE_WALL, x: cx, y: 1.5 - drop, z: cz, rotY, scale: 1.75, atOrigin: true }]);
+        this.props.setInstances(owner, [this.caveWallPiece(cx, drop, cz, rotY)]);
         this.props.flush();
       }
       if (t >= 1) stop();
