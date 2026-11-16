@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { buildMapContent } from "../../src/actions";
 import { WALL_HUNG_ITEMS } from "../../src/actions/rules";
 import { SUPPORT_BEAM } from "../../src/actions/registry";
-import { DEBUG_LEVELS, debugLevels } from "../../src/game/debug";
+import { DEBUG_LEVELS, DEBUG_POINTS_PER_LEVEL, debugLevels } from "../../src/game/debug";
+import { RESISTANCE_CAP } from "../../src/sim/character";
+import { ATTRIBUTES, type Character } from "../../src/sim/types";
 import { MAP_OPEN_CELLS } from "../../src/game/minimap";
 import { Builder } from "../../src/interiors/builder";
 import { generateInterior } from "../../src/interiors";
@@ -115,6 +117,24 @@ describe("the 21st playtest: map, debug menu and banners", () => {
         expect(c.xp).toBeGreaterThan(before[i]!.xp);
       }
     });
+  });
+
+  it("raises the attributes and the resistances with the levels, the resistances up to the cap and no further", () => {
+    const party = createDefaultParty();
+    const [first, second] = party.characters as [Character, Character];
+    first.resFire = RESISTANCE_CAP - 4; // would pass the cap with +10
+    second.resIce = RESISTANCE_CAP + 5; // above it already (a shrine): stays as it is
+    const before = party.characters.map((c) => ({ ...c }));
+    debugLevels(party);
+    const gain = DEBUG_LEVELS * DEBUG_POINTS_PER_LEVEL;
+    party.characters.forEach((c, i) => {
+      for (const a of ATTRIBUTES) expect(c[a], `${c.name} ${a}`).toBe(before[i]![a] + gain);
+      expect(c.hp).toBe(c.health);
+    });
+    expect(first.resFire).toBe(RESISTANCE_CAP);
+    expect(second.resIce).toBe(RESISTANCE_CAP + 5);
+    expect(first.resIce).toBe(Math.min(RESISTANCE_CAP, before[0]!.resIce + gain));
+    expect(first.resMagic).toBe(Math.min(RESISTANCE_CAP, before[0]!.resMagic + gain));
   });
 
   it("hangs the banners on the wall: they are not turned by the half circle the standing glTF objects get", () => {
