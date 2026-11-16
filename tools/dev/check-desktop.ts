@@ -89,6 +89,19 @@ const title = await page.evaluate(`document.title`);
 expect(title === "MM3 Seed RPG", `the window shows the title screen (${title})`);
 expect((await page.evaluate(`!!document.querySelector(".title")`)) as boolean, "the title menu is on screen");
 
+// full screen from the start, and no system pointer before the game's own one is there (the loading phase: `html.custom-cursor` is not set yet)
+const screenInfo = (await page.evaluate(`({ w: innerWidth, sw: screen.width, h: innerHeight, sh: screen.height })`)) as { w: number; sw: number; h: number; sh: number };
+expect(screenInfo.w === screenInfo.sw && screenInfo.h === screenInfo.sh, `the window starts in full screen (${screenInfo.w}x${screenInfo.h} of ${screenInfo.sw}x${screenInfo.sh})`);
+const pointer = (await page.evaluate(`(() => {
+  const root = document.documentElement;
+  const had = root.classList.contains("custom-cursor");
+  root.classList.remove("custom-cursor", "loading-on", "ending-on");
+  const seen = getComputedStyle(document.body).cursor + "/" + getComputedStyle(document.querySelector(".title .btn") ?? document.body).cursor;
+  if (had) root.classList.add("custom-cursor");
+  return seen;
+})()`)) as string;
+expect(pointer === "none/none", `the system pointer is hidden while the game's own is not there yet (${pointer})`);
+
 // ---- 3. types and ranges
 const net = (await page.evaluate(`(async () => {
   const range = await fetch("/assets/ui/outro.mp4", { headers: { Range: "bytes=0-99" } });

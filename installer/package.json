@@ -2,7 +2,7 @@
   "name": "mm3-seed-rpg-desktop",
   "productName": "MM3 Seed RPG",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "MM3 Seed RPG",
   "description": "Desktop shell and Windows installer of MM3 Seed RPG",
   "type": "module",

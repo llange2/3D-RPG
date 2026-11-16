@@ -106,6 +106,8 @@ function createWindow() {
     minWidth: 960,
     minHeight: 540,
     show: false,
+    // always starts in full screen; F11 and Alt+Enter leave and enter it again
+    fullscreen: true,
     backgroundColor: "#0b0b10",
     title: "MM3 Seed RPG",
     autoHideMenuBar: true,
@@ -119,9 +121,11 @@ function createWindow() {
     },
   });
   win.setMenu(null);
-  win.once("ready-to-show", () => {
-    win.maximize();
-    win.show();
+  win.once("ready-to-show", () => win.show());
+  // the system pointer is hidden while the game loads: the game takes it away itself only once its own pointer's picture has arrived (`html.custom-cursor`,
+  // src/ui/cursor.ts), and until then the page showed the arrow. From then on the game's rule holds, and this one no longer matches.
+  win.webContents.on("dom-ready", () => {
+    void win.webContents.insertCSS("html:not(.custom-cursor), html:not(.custom-cursor) * { cursor: none !important; }");
   });
   win.on("closed", () => {
     win = null;
