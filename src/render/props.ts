@@ -7,7 +7,8 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Scene } from "@babylonjs/core/scene";
@@ -351,6 +352,41 @@ export class PropRenderer {
 
   has(key: string): boolean {
     return this.models.has(key);
+  }
+
+  /**
+   * A copy of a loaded model with its colour multiplied by `hex` and a glow of its own (quest_8's crystals: the file is white and the game tints it, quest document 1.10). One copy
+   * per colour, shared by every instance of it: the materials of a model belong to all its instances, so nothing is ever tinted per instance. Returns the key of the copy to
+   * give `setInstances`, or `base` while the model is not loaded.
+   */
+  tinted(base: string, hex: string, glow = 0.8): string {
+    const key = `${base}@${hex}`;
+    if (this.models.has(key)) return key;
+    const source = this.models.get(base);
+    if (!source) return base;
+    const rgb = new Color3(parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255);
+    const meshes = source.meshes.map((m, i) => {
+      // its own geometry, not a clone of the mesh: copies that share one geometry draw each other's thin instances (only one of them showed, the others were never drawn)
+      const copy = new Mesh(`${key}:${i}`, this.scene);
+      VertexData.ExtractFromMesh(m).applyToMesh(copy);
+      const std = m.material as StandardMaterial | null;
+      if (std) {
+        const mat = std.clone(`${key}:${i}`) as StandardMaterial;
+        // the pictures are the model's own (their day and night levels are kept for the model, `exposed`)
+        mat.diffuseTexture = std.diffuseTexture;
+        mat.bumpTexture = std.bumpTexture;
+        mat.diffuseColor = rgb;
+        mat.emissiveColor = rgb.scale(glow);
+        copy.material = mat;
+      }
+      copy.isPickable = false;
+      copy.alwaysSelectAsActiveMesh = false;
+      copy.thinInstanceSetBuffer("matrix", new Float32Array(0), 16, true);
+      copy.setEnabled(false);
+      return copy;
+    });
+    this.models.set(key, { ...source, meshes, buffers: new Map(), dirty: false });
+    return key;
   }
 
   /** Replaces the instances of one owner (a chunk). */

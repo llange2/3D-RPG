@@ -4371,5 +4371,59 @@
   "surface": -0.875,
   "fromObj": false,
   "mean": 0.31
+ },
+ "obj_crystal_holder": {
+  "file": "models/obj_crystal_holder.glb",
+  "tris": 3000,
+  "bytes": 281688,
+  "bounds": [
+   -0.9519460201263428,
+   -0.7043470144271851,
+   -0.9509471654891968,
+   0.9499729871749878,
+   0.7045890092849731,
+   0.9497780799865723
+  ],
+  "animations": [],
+  "groundTop": -0.1,
+  "surface": -0.0725,
+  "fromObj": false,
+  "mean": 0.23
+ },
+ "obj_crystal": {
+  "file": "models/obj_crystal.glb",
+  "tris": 3000,
+  "bytes": 410512,
+  "bounds": [
+   -0.34429600834846497,
+   -0.951906144618988,
+   -0.3385370969772339,
+   0.3413580060005188,
+   0.9508700966835022,
+   0.3394719958305359
+  ],
+  "animations": [],
+  "groundTop": 0.65,
+  "surface": 0.9475,
+  "fromObj": false,
+  "mean": 0.649
+ },
+ "obj_wall_crystal_holder": {
+  "file": "models/obj_wall_crystal_holder.glb",
+  "tris": 4500,
+  "bytes": 456876,
+  "bounds": [
+   -0.683480978012085,
+   -0.9516510367393494,
+   -0.3311079144477844,
+   0.6822649836540222,
+   0.9508371949195862,
+   0.3265630304813385
+  ],
+  "animations": [],
+  "groundTop": -0.85,
+  "surface": 0.945,
+  "fromObj": false,
+  "mean": 0.342
  }
 }

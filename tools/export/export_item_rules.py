@@ -38,6 +38,8 @@ EXTRA_ROWS = [
     (307, "Decoration: Demon 1", False, ["castle", "dungeon"], "Wandrelief. Dungeon mit Monstern der Gruppe beast: genau eine der Dekos Demon 1 / Demon 2 (+ Löwe, Elch), ca. alle 10 Felder."),
     (308, "Decoration: Demon 2", False, ["castle", "dungeon"], "Wandrelief, siehe Demon 1."),
     (309, "Decoration: Lion", False, ["castle", "dungeon"], "Wandrelief. Löwe und Elch (125) passen zu jedem Monstertyp."),
+    # quest_8, the crystal paths (quest document 1.10): the wall holder with its crystal, source or target of the puzzle; never plain decoration, it is how the quest is solved
+    (332, "Wall Crystal Holder", True, ["cave", "dungeon"], "Quest 8 (Crystal paths): Wandhalter mit Kristall im Mund (`obj_wall_crystal_holder`), Quelle oder Ziel des Lichträtsels; steht auf der Zelle vor einer echten Wand, nur in Orten mit quest_8, blockiert die Zelle nicht."),
 ]
 # 125 Moose King: now one of the wall decorations (a dungeon hangs ONE kind regularly), not a prop picked by chance.
 NOTES = {125: "Wandrelief. Gehört zu den Wanddekos: ein Dungeon hängt genau eine Art regelmäßig (ca. alle 10 Felder) an die Wand, Elch und Löwe passen zu jedem Monstertyp, Wizard/Witch/Barbarian zu humanoiden, Demon 1/2 zu beast-Monstern (`src/data/wall-deco.ts`)."}

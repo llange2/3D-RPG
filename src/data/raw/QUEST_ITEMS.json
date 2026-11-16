@@ -136,5 +136,11 @@
   "type": "quest_power_crystal",
   "texture": "resources/textures/quest_power_crystal",
   "value": -1
+ },
+ {
+  "name": "Crystal inside Holder",
+  "type": "quest_crystal_holder",
+  "texture": "resources/textures/quest_crystal_holder",
+  "value": -1
  }
 ]

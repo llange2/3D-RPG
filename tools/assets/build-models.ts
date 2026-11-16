@@ -761,6 +761,11 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_futuristic_box", "new:Futuristic_Box.glb", 3000, 1024),
   S("obj_power_crystal_broken", "new:Power_crystal_broken.glb", 3000, 1024),
   S("obj_spaceship_console", "new:Spaceship_Console.glb", 3000, 1024),
+  // quest_8, the crystal paths (quest document 1.10, the user's models of 16. 11. 2026: 6 932, 3 136 and 10 092 triangles with three 2048 px textures each): the crystal (0.69 x 1.9 x 0.68, white so that the
+  // game tints it), the holder it stands in on the floor (1.9 x 1.4 x 1.9, a hollow ring) and the wall holder with its mouth (1.4 x 1.9 x 0.66, the back plate at the lowest z; it holds no crystal)
+  S("obj_crystal", "new:Crystal.glb", 3000, 1024),
+  S("obj_crystal_holder", "new:Crystal_Holder.glb", 3000, 1024),
+  S("obj_wall_crystal_holder", "new:Wall_Crystal_Holder.glb", 4500, 1024),
   // the temporal field generator in the generator room of the bridge (quest document 1.9, the user's model of 15. 11. 2026: 20 472 triangles, 1.1 x 1.9 x 1.0 around its middle)
   S("obj_temporal_field_generator", "new:Temporal_field_generator.glb", 4800, 1024),
   // the sliding doors of the spaceship (6. 11. 2026): the user's lock (10 202 triangles, the doorway always there) and the two leaves, boxes with the halves of the user's picture

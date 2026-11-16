@@ -54,7 +54,7 @@ describe("the quest plan of a world (quest document 1.2)", () => {
   it("shows every quest in a default world", () => {
     const world = new World("variety", "default");
     const quests = new Set(places(world).map((p) => planDungeon(world, p)!.quest));
-    for (const q of ["quest_1", "quest_2", "quest_3", "quest_4", "quest_5", "quest_6"]) expect(quests.has(q as never), q).toBe(true);
+    for (const q of ["quest_1", "quest_2", "quest_3", "quest_4", "quest_5", "quest_6", "quest_8"]) expect(quests.has(q as never), q).toBe(true);
   });
 
   it("makes valid interiors with their quest and end room for every cave and dungeon of a default world", { timeout: 240_000 }, () => {

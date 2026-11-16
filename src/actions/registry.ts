@@ -279,6 +279,15 @@ export const ACTION_DEFS: Record<ActionKind, ActionDef> = {
     minimap: "tex_mm_event",
     params: loose({}),
   },
+  crystal: {
+    kind: "crystal",
+    legacyIds: [],
+    // a wall crystal of quest_8 (quest document 1.10): a source shines, a target waits for one colour. Stepping on the cell in front of it reads its hint; it does not block the cell
+    trigger: "enter",
+    persistence: "repeat",
+    minimap: "tex_mm_event",
+    params: loose({ item: z.number().int().min(1), role: z.enum(["source", "target"]), color: z.number().int().min(1).max(7) }),
+  },
   breakable_wall: {
     kind: "breakable_wall",
     legacyIds: [8],

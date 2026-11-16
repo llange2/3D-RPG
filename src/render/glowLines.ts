@@ -24,6 +24,8 @@ const rgbOf = (hex: string): [number, number, number] => {
 
 interface Shown {
   mesh: Mesh;
+  /** The upright sheet that crosses the flat ribbon (`show` with `upright`): it shares the material and the picture. */
+  sheet?: Mesh;
   texture: RawTexture;
 }
 
@@ -40,9 +42,13 @@ export class GlowLines {
 
   constructor(private readonly scene: Scene) {}
 
-  show(lines: readonly LightLine[]): void {
+  /**
+   * `lift`: the height of the lines over the floor (the showcase lies them on it, the crystals of quest_8 shine at the height of the crystals). `upright`: every line is a cross of a flat ribbon and
+   * an upright sheet, so that it shows from the eye's height as well (a flat ribbon at the height of the eyes is seen edge-on).
+   */
+  show(lines: readonly LightLine[], lift = LIFT, upright = false): void {
     this.dispose();
-    this.shown = lines.map((line, i) => this.build(line, i));
+    this.shown = lines.map((line, i) => this.build(line, i, lift, upright));
     if (this.shown.length === 0) return;
     this.started = performance.now();
     this.observer = this.scene.onBeforeRenderObservable.add(() => {
@@ -53,17 +59,21 @@ export class GlowLines {
     });
   }
 
-  private build(line: LightLine, index: number): Shown {
+  private build(line: LightLine, index: number, lift: number, upright: boolean): Shown {
     const path = waypointsToPath(line.points, cellCenterX, cellCenterZ);
-    const ribbon = ribbonAlong(path, RIBBON_WIDTH, LIFT);
-    const mesh = new Mesh(`glow-line:${index}`, this.scene);
-    const data = new VertexData();
-    data.positions = ribbon.positions;
-    data.normals = ribbon.normals;
-    data.uvs = ribbon.uvs;
-    data.indices = ribbon.indices;
-    data.applyToMesh(mesh, false);
-    mesh.isPickable = false;
+    const meshOf = (ribbon: ReturnType<typeof ribbonAlong>, name: string): Mesh => {
+      const mesh = new Mesh(name, this.scene);
+      const data = new VertexData();
+      data.positions = ribbon.positions;
+      data.normals = ribbon.normals;
+      data.uvs = ribbon.uvs;
+      data.indices = ribbon.indices;
+      data.applyToMesh(mesh, false);
+      mesh.isPickable = false;
+      return mesh;
+    };
+    const mesh = meshOf(ribbonAlong(path, RIBBON_WIDTH, lift), `glow-line:${index}`);
+    const sheet = upright ? meshOf(ribbonAlong(path, RIBBON_WIDTH, lift, PULSE_LENGTH, true), `glow-line:${index}:sheet`) : undefined;
 
     const texture = RawTexture.CreateRGBATexture(glowPixels(TEXTURE.width, TEXTURE.height, rgbOf(line.color)), TEXTURE.width, TEXTURE.height, this.scene, true, false, Constants.TEXTURE_TRILINEAR_SAMPLINGMODE);
     texture.name = `glow-line:${index}`;
@@ -85,7 +95,11 @@ export class GlowLines {
     mesh.material = m;
     // drawn after the opaque things, so that nothing hides the glow it lies on
     mesh.alphaIndex = 10;
-    return { mesh, texture };
+    if (sheet) {
+      sheet.material = m;
+      sheet.alphaIndex = 10;
+    }
+    return { mesh, ...(sheet ? { sheet } : {}), texture };
   }
 
   dispose(): void {
@@ -93,6 +107,7 @@ export class GlowLines {
     this.observer = null;
     for (const s of this.shown) {
       // material and picture are the line's own: dispose them with it
+      s.sheet?.dispose(false, false);
       s.mesh.dispose(false, true);
       s.texture.dispose();
     }

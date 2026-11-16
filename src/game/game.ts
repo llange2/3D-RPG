@@ -15,6 +15,10 @@ import { LAYER, Rng, rngFor, seedFromString } from "../core/rng";
 import { GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
+import { colorHex, simulateCrystals, type PlacedCrystal, type WallNode } from "../actions/crystals";
+import { crystalFlag, crystalsIn, nextCrystalSeq, sceneOf, wallNodesOf } from "./crystalPlay";
+import { CRYSTAL_HOLDER } from "../data/quest-table";
+import { CRYSTAL_MID } from "../render/crystalLook";
 import { ALIGNMENTS, KING_GREETING, guardsOf, type Alignment } from "../data/castles";
 import { ARTIFACT_TYPE, ARTIFACT_XP, KEEPERS } from "../data/keepers";
 import { sectionAt } from "../interiors/spaceship";
@@ -376,6 +380,12 @@ export class Game {
   private lamps: LampSource[] = [];
   /** The gold light of every pile of loot on the map (`renderLoot`). */
   private lootLamps: LampSource[] = [];
+  /** quest_8, the crystal paths (quest document 1.10): the wall crystals of the place, the crystals the party has set down, what the light looked like last time it was worked out, and its lamps. */
+  private crystalWalls: WallNode[] = [];
+  private crystalSet: PlacedCrystal[] = [];
+  private crystalSignature = "";
+  private crystalSceneKey = "";
+  private crystalLampList: LampSource[] = [];
   /** The gold light of the wild Magical Orbs of the generated world (`syncMascots`); the campaign's come with `collectLamps`. */
   private mascotLamps: LampSource[] = [];
   /** The torches of the towers near the party on the open land, and the chunk they were taken for. */
@@ -903,6 +913,7 @@ export class Game {
   }
 
   private async enterOverworld(x: number, y: number, facing: Facing): Promise<void> {
+    await this.bindCrystals();
     await this.beginLoading();
     try {
       await this.ui.loading.step(LOAD_DATA);
@@ -948,6 +959,7 @@ export class Game {
   private async openInterior(poi: Poi, at?: { x: number; y: number; facing: Facing }, ret?: { x: number; y: number; facing: Facing }): Promise<void> {
     // the step counts of an earlier game (a load) would keep traps reloading for good
     this.trapFired.clear();
+    await this.bindCrystals();
     await this.beginLoading();
     let map: InteriorMap;
     try {
@@ -999,6 +1011,7 @@ export class Game {
       }
       this.interiorView.show(map, content, this.state.opened, this.state.broken);
       this.setLamps(crystalLamps(content, this.state.opened), true);
+      this.loadCrystals();
       this.syncShip(true);
       this.sky.setVisible(map.theme.open);
       this.spawnInteriorMonsters();
@@ -1552,6 +1565,10 @@ export class Game {
     const m = this.monsterAt(x, y);
     if (m) {
       await this.attackMonster(m);
+      return;
+    }
+    if (this.crystalAt(x, y)) {
+      await this.takeCrystalBack(x, y);
       return;
     }
     // the pirate ship: on the raft the party is pulled aboard, anywhere else it is only a ship in the way
@@ -3181,6 +3198,154 @@ export class Game {
     this.refresh();
   }
 
+  /** The place has the crystal paths of quest_8 (quest document 1.10). */
+  private inCrystalPlace(): boolean {
+    return this.mode === "interior" && this.interior?.map.dungeon?.quest === "quest_8";
+  }
+
+  /** The party has come into a place: its wall crystals and the crystals set down in it earlier (they keep their cells and block them). */
+  private loadCrystals(): void {
+    const rt = this.interior;
+    this.crystalWalls = [];
+    this.crystalSet = [];
+    this.crystalSignature = "";
+    this.crystalSceneKey = "";
+    this.crystalLampList = [];
+    if (!rt || rt.map.dungeon?.quest !== "quest_8") return;
+    this.crystalWalls = wallNodesOf(rt.content.actions);
+    this.crystalSet = crystalsIn(this.state.opened, rt.map.key);
+    for (const c of this.crystalSet) rt.blocked.add(c.y * rt.map.width + c.x);
+    // (drawn once the loading screen is gone: the first `refresh` after it works the light out; a copy of a model made while the place loads was never drawn)
+  }
+
+  private crystalAt(x: number, y: number): PlacedCrystal | undefined {
+    return this.crystalSet.find((c) => c.x === x && c.y === y);
+  }
+
+  /**
+   * Works the light of the place out again (whenever the party, a monster, a door or a crystal has changed something that matters) and shows it: the colours of the crystals, the lines
+   * between them and the lamps. A path that is cut loses all the light behind it, since it is all worked out from the sources on. When every target has its colour, the end room opens.
+   */
+  private syncCrystals(force = false): void {
+    const rt = this.interior;
+    if (!rt || this.mode !== "interior" || this.crystalWalls.length === 0) return;
+    const monsters = this.enc.monsters.filter((m) => m.hp > 0).map((m) => `${m.x},${m.y}`).join(";");
+    const signature = `${this.player.tx},${this.player.ty}|${monsters}|${this.crystalSet.map((c) => `${c.x},${c.y}#${c.seq}`).join(";")}|${this.state.opened.size}`;
+    if (!force && signature === this.crystalSignature) return;
+    this.crystalSignature = signature;
+    const map = rt.map;
+    // what stops the light: walls, objects, shut doors, monsters, the party and the mascot on its perch
+    const stops = (x: number, y: number): boolean => {
+      if (x < 0 || y < 0 || x >= map.width || y >= map.height) return true;
+      const i = y * map.width + x;
+      return map.cells[i] !== CELL.FLOOR || rt.blocked.has(i) || this.isClosedDoor(x, y, true) || !!this.monsterAt(x, y) || (this.player.tx === x && this.player.ty === y) || !!this.mascotSpotAt(x, y);
+    };
+    const result = simulateCrystals(this.crystalWalls, this.crystalSet, stops);
+    // (only a change of what is drawn redraws it: the party's every step works the light out again, but the picture is mostly the same)
+    const scene = sceneOf(this.crystalWalls, this.crystalSet, result);
+    const sceneKey = JSON.stringify(scene);
+    const changed = sceneKey !== this.crystalSceneKey;
+    this.crystalSceneKey = sceneKey;
+    if (changed) this.interiorView.setCrystals(scene);
+    // a source shines strongly in its colour, a target that has its colour like it, one that waits only a little; a crystal that carries light a little as well
+    const rgb = (mask: number): [number, number, number] => {
+      const hex = colorHex(mask);
+      return [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
+    };
+    const lamps: LampSource[] = [];
+    if (changed) for (const n of this.crystalWalls) {
+      const got = n.role === "source" || result.targets.get(n.uid) === n.color;
+      lamps.push(lampSource({ y: CRYSTAL_MID, color: rgb(n.color), range: got ? 8 : 4, intensity: got ? 3.6 : 1.1 }, cellCenterX(n.x), cellCenterZ(n.y), `q8:${n.uid}:${got ? 1 : 0}`));
+    }
+    if (changed) for (const [cell, mask] of result.crystals) {
+      if (mask === 0) continue;
+      const [x, y] = cell.split(",").map(Number) as [number, number];
+      lamps.push(lampSource({ y: CRYSTAL_MID, color: rgb(mask), range: 5.5, intensity: 2.4 }, cellCenterX(x), cellCenterZ(y), `q8:c:${cell}:${mask}`));
+    }
+    if (changed) {
+      this.crystalLampList = lamps;
+      this.enableLampLights();
+    }
+    if (result.solved && !this.state.opened.has(endFlag(map.key))) {
+      this.audio.play(9018);
+      this.ui.log("Every crystal that waited has its light. Something in the walls answers.", "good");
+      this.openEndRoom();
+    }
+  }
+
+  /** Sets the crystal in its holder down on the cell in front of the party (quest document 1.10): true when it stands there now. */
+  private placeCrystal(): boolean {
+    const rt = this.interior;
+    if (!this.inCrystalPlace() || !rt) {
+      this.audio.play(9014, 0.5);
+      this.ui.log("The crystal is bound to the place it was found in. There is nothing here for it to shine at.", "bad");
+      return false;
+    }
+    const { tx, ty, facing } = this.player;
+    const d = FACING_DELTA[facing];
+    const x = tx + d.dx;
+    const y = ty + d.dy;
+    const i = y * rt.map.width + x;
+    const inside = x >= 0 && y >= 0 && x < rt.map.width && y < rt.map.height;
+    if (!inside || rt.map.cells[i] !== CELL.FLOOR || rt.blocked.has(i) || rt.actionAt.has(i) || this.monsterAt(x, y) || this.mascotSpotAt(x, y) || this.isClosedDoor(x, y, true)) {
+      this.audio.play(9014, 0.5);
+      this.ui.log("There is no room for the crystal in front of you.", "bad");
+      return false;
+    }
+    const seq = nextCrystalSeq(this.state.opened);
+    this.state.opened.add(crystalFlag(rt.map.key, x, y, seq));
+    this.crystalSet.push({ x, y, seq });
+    rt.blocked.add(i);
+    this.audio.play(9020);
+    this.ui.log("You set the crystal down.", "info");
+    this.syncCrystals(true);
+    return true;
+  }
+
+  /** The party bumped into a crystal it set down: it may take it back (if a backpack has room). */
+  private async takeCrystalBack(x: number, y: number): Promise<void> {
+    const rt = this.interior;
+    const c = this.crystalAt(x, y);
+    if (!rt || !c) return;
+    if (!(await this.ui.confirm("Crystal", "Take the crystal back?", "Take it", "Leave it"))) return;
+    const item = questItem(CRYSTAL_HOLDER);
+    if (!item || !giveItem(this.state.party, item)) {
+      this.ui.log("Your backpacks are full.", "bad");
+      return;
+    }
+    this.state.opened.delete(crystalFlag(rt.map.key, c.x, c.y, c.seq));
+    this.crystalSet = this.crystalSet.filter((o) => o !== c);
+    rt.blocked.delete(y * rt.map.width + x);
+    this.audio.play(9020);
+    this.ui.log(`You take ${item.name.trim()}.`, "loot");
+    this.syncCrystals(true);
+    this.refresh();
+  }
+
+  /**
+   * The crystals cannot leave the place they were found in (quest document 1.10): whoever goes, by the exit, a portal or a spell, is told so, and every crystal in the backpacks is
+   * left on the floor where the party stood. The ones that were set down stay where they are.
+   */
+  private async bindCrystals(): Promise<void> {
+    if (!this.inCrystalPlace()) return;
+    const party = this.state.party;
+    const left: LootPile["items"] = [];
+    const bags = [...party.characters.map((c) => c.inventory), party.mascotBag];
+    for (const bag of bags) {
+      for (const slot of Object.keys(bag)) {
+        const item = bag[slot];
+        if (item && item.type === CRYSTAL_HOLDER) {
+          left.push(item);
+          bag[slot] = null;
+        }
+      }
+    }
+    if (left.length === 0) return;
+    await this.ui.message("The crystals are bound to this place by a strange magic. As you leave, they slip from your hands and stay behind.", "Crystals");
+    this.dropLoot(this.player.tx, this.player.ty, 0, left);
+    this.refresh();
+  }
+
   /**
    * The quest of the place is done: its end room opens. A sealed one loses the wall cell in front of it, one in a pocket of the rock (quest 1 and 3
    * and any place without room for a sealed one) takes the party in by teleport. The flag stays in the save, so the room is open when the party
@@ -4572,6 +4737,7 @@ export class Game {
       mascots: () => this.state.campaign?.progress.mascots ?? this.state.party.mascots,
       log: (t, k) => this.ui.log(t, k ?? "info"),
       sound: (id) => this.audio.play(id),
+      placeCrystal: () => this.placeCrystal(),
       useScroll: async (character, slot, item) => {
         const c = this.state.party.characters[character]!;
         const spell = item.spellId;
@@ -5507,6 +5673,7 @@ export class Game {
     this.checkOldAge();
     this.ui.updateHud(this.state.party, this.hudInfo());
     this.syncMonsterEffects();
+    this.syncCrystals();
     this.minimapDirty = true;
     if (!activeCharacters(this.state.party).length && !this.over) void this.gameOver();
   }
@@ -5808,7 +5975,7 @@ export class Game {
   private spellLights = false;
 
   private enableLampLights(): void {
-    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.mascotLamps.length > 0 || this.towerLamps.length > 0 || this.spellLights;
+    const on = this.lamps.length > 0 || this.glowMonsters || this.lootLamps.length > 0 || this.crystalLampList.length > 0 || this.mascotLamps.length > 0 || this.towerLamps.length > 0 || this.spellLights;
     for (const light of this.r.lamps) light.setEnabled(on);
   }
 
@@ -5827,7 +5994,7 @@ export class Game {
     }
     this.syncTowerLamps();
     // (a light of the pool that still holds a lamp goes on until it has faded out: a shot's light was left shining where the last shot ended in a scene without any other lamp, 50th bug fix)
-    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.mascotLamps.length === 0 && this.towerLamps.length === 0 && beams.length === 0 && !this.lampSlots.some((s) => s.lamp)) return;
+    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.crystalLampList.length === 0 && this.mascotLamps.length === 0 && this.towerLamps.length === 0 && beams.length === 0 && !this.lampSlots.some((s) => s.lamp)) return;
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
     const { x, z } = this.player;
@@ -5839,7 +6006,7 @@ export class Game {
     for (const b of beams) carried.push({ ...b.lamp, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE, reach: PROJECTILE_REACH, priority: true });
     // the Orb in the party is no longer at its place: its lamp goes out with it
     const orbAway = this.state.party.mascot === "Orb";
-    const near = [...this.lamps, ...this.lootLamps, ...this.mascotLamps, ...this.towerLamps, ...carried]
+    const near = [...this.lamps, ...this.lootLamps, ...this.crystalLampList, ...this.mascotLamps, ...this.towerLamps, ...carried]
       .filter((lamp) => !(orbAway && lamp.key.startsWith(MASCOT_ORB_KEY)))
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
       .filter((e) => e.d < (e.lamp.reach ?? LAMP_REACH))

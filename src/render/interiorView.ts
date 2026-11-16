@@ -6,11 +6,12 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import { hash2 } from "../core/noise";
 import { CRATE_ITEM, QUEST_PROP } from "../data/quest-table";
+import { CRYSTAL_MID, CRYSTAL_SCALE, STAND_LIFT } from "./crystalLook";
 import { headFacing } from "../actions/quests";
 import { heapGone } from "../actions/registry";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { hasRoundWalls, roundCorners, ROUND_ITEM, type RoundCorner } from "../interiors/roundCorners";
-import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
+import { CELL, FACING_DELTA, type Facing, type InteriorMap, type LightLine } from "../interiors/types";
 import type { StaticModelInfo, TextureCache } from "./assets";
 import { faceOpenYaw } from "./facing";
 import { groundTexture, type FlatTileSet } from "./flatGround";
@@ -29,6 +30,18 @@ import type { Renderer } from "./engine";
 
 /** The reliefs the user made (not the moose king's carving): the wall decorations that are sunk into a wall of 3D pieces (`decoSink`). */
 const DECO_ITEMS: ReadonlySet<number> = new Set(Object.keys(DECO_MODELS).map(Number));
+
+/** The light of a place with the crystal paths of quest_8, as the view draws it (`InteriorView.setCrystals`); colours are `#rrggbb`. */
+export interface CrystalScene {
+  /** The crystals in the mouths of the wall holders: the cell in front of the wall, the way out of the wall and the colour of the crystal. */
+  walls: { x: number; y: number; dir: Facing; color: string }[];
+  /** The crystals the party has set down. */
+  stands: { x: number; y: number; color: string }[];
+  lines: LightLine[];
+}
+/** How far from the middle of its cell, towards the wall, the middle of a wall crystal lies (its tip points into the room). */
+const CRYSTAL_MOUTH = 1.25;
+const BEARING_OF: Record<Facing, number> = { N: 0, E: 90, S: 180, W: 270 };
 
 /** The old game hung its shop signs at 0.55 of the model size. */
 const SIGN_SCALE = 0.55;
@@ -1165,6 +1178,32 @@ export class InteriorView {
     this.sinking.add(stop);
   }
 
+  /**
+   * quest_8, the crystal paths (quest document 1.10): what the light of the place looks like now. The crystal in the mouth of each wall holder and the crystals the party has set down
+   * (a holder with a crystal in it) are tinted by the colour of their light (`PropRenderer.tinted`), and the lines of light shine at the height of the crystals' middles. `null`
+   * takes it all away. Called whenever the light is worked out again, so the owner is replaced as a whole.
+   */
+  setCrystals(scene: CrystalScene | null): void {
+    if (!this.owner) return;
+    const owner = `${this.owner}:crystals`;
+    const instances: PropInstance[] = [];
+    const bounds = this.staticInfo["obj_crystal"]?.bounds;
+    const half = bounds ? (bounds[4] - bounds[1]) / 2 : 0.95;
+    for (const w of scene?.walls ?? []) {
+      const key = this.props.tinted("obj_crystal", w.color);
+      const d = FACING_DELTA[w.dir];
+      // the crystal lies in the mouth of the holder with its tip out of the wall: along the way the light leaves, its middle a little inside the wall
+      instances.push({ model: key, x: cellCenterX(w.x) - d.dx * CRYSTAL_MOUTH, y: CRYSTAL_MID - half * CRYSTAL_SCALE + 0.02, z: cellCenterZ(w.y) + d.dy * CRYSTAL_MOUTH, rotY: (BEARING_OF[w.dir] * Math.PI) / 180, rotX: Math.PI / 2, scale: CRYSTAL_SCALE });
+    }
+    for (const s of scene?.stands ?? []) {
+      instances.push({ model: "obj_crystal_holder", x: cellCenterX(s.x), y: 0, z: cellCenterZ(s.y), rotY: 0, scale: CRYSTAL_SCALE });
+      instances.push({ model: this.props.tinted("obj_crystal", s.color), x: cellCenterX(s.x), y: STAND_LIFT, z: cellCenterZ(s.y), rotY: 0, scale: CRYSTAL_SCALE });
+    }
+    this.props.setInstances(owner, instances);
+    this.props.flush();
+    this.glow.show(scene?.lines ?? [], CRYSTAL_MID, true);
+  }
+
   dispose(): void {
     for (const stop of [...this.sinking]) stop();
     this.props.setReference(null);
@@ -1182,6 +1221,7 @@ export class InteriorView {
       this.props.removeOwner(`${this.owner}:turn`);
       this.props.removeOwner(`${this.owner}:gate`);
       this.props.removeOwner(`${this.owner}:stairdoor`);
+      this.props.removeOwner(`${this.owner}:crystals`);
     }
     this.headFacings.clear();
     this.turnPending.clear();

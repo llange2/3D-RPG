@@ -1,3 +1,4 @@
+import { COLOR_NAMES } from "../actions/crystals";
 import { FACING_NAMES } from "../actions/quests";
 import type { ActionInstance } from "../actions/types";
 import { QUESTS } from "../data/quest-table";
@@ -92,6 +93,16 @@ export function solutionLines(quest: string | undefined, actions: readonly Actio
     }
     case "quest_5":
       return ["Solution: defeat the end boss"];
+    case "quest_8": {
+      const walls = actions.filter((a) => a.kind === "crystal");
+      const first = walls.find((a) => typeof a.params.solution === "string");
+      if (!first) return [];
+      const colour = (a: ActionInstance): string => COLOR_NAMES[Number(a.params.color)] ?? "?";
+      return [
+        `Solution: set ${String(first.params.crystals)} crystals at ${String(first.params.solution).split(";").map((c) => c.replace(",", "/")).join(", ")} (the order of the light is the order of the list)`,
+        `Sources: ${walls.filter((a) => a.params.role === "source").map((a) => `${colour(a)} at ${cell(a)}`).join(", ")}; targets: ${walls.filter((a) => a.params.role === "target").map((a) => `${colour(a)} at ${cell(a)}`).join(", ")}`,
+      ];
+    }
     default:
       // quest 6, and the king's word in a castle
       return answerLine();

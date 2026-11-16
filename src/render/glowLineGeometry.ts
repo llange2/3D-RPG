@@ -25,7 +25,7 @@ export const RIBBON_WIDTH = 1.5;
  * A flat ribbon of `width` along the polyline `path` (world x/z) at height `y`. Corners are mitred, so that a bend has no gap and no overlap. U runs along the
  * line in pulses (`PULSE_LENGTH` units each), V across it from 0 to 1 (the middle of the line is 0.5).
  */
-export function ribbonAlong(path: readonly Point2[], width: number, y: number, pulse = PULSE_LENGTH): Ribbon {
+export function ribbonAlong(path: readonly Point2[], width: number, y: number, pulse = PULSE_LENGTH, upright = false): Ribbon {
   const out: Ribbon = { positions: [], normals: [], uvs: [], indices: [] };
   // consecutive points that coincide would have no direction
   const pts = path.filter((p, i) => i === 0 || p.x !== path[i - 1]!.x || p.z !== path[i - 1]!.z);
@@ -50,7 +50,9 @@ export function ribbonAlong(path: readonly Point2[], width: number, y: number, p
     const mx = (n1.x + n2.x) * k * half;
     const mz = (n1.z + n2.z) * k * half;
     const base = out.positions.length / 3;
-    out.positions.push(p.x + mx, y, p.z + mz, p.x - mx, y, p.z - mz);
+    // an upright ribbon stands on its line like a sheet (its width up and down): seen from the side it is as wide as a flat one is seen from above
+    if (upright) out.positions.push(p.x, y + half, p.z, p.x, y - half, p.z);
+    else out.positions.push(p.x + mx, y, p.z + mz, p.x - mx, y, p.z - mz);
     out.normals.push(0, 1, 0, 0, 1, 0);
     out.uvs.push(along / pulse, 1, along / pulse, 0);
     if (i > 0) out.indices.push(base - 2, base - 1, base, base - 1, base + 1, base);

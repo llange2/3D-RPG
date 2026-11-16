@@ -148,6 +148,7 @@ export const ITEM_RULES: Readonly<Record<number, ItemRule>> = {
   307: { name: "Decoration: Demon 1", functional: false, places: ["castle", "dungeon"] },
   308: { name: "Decoration: Demon 2", functional: false, places: ["castle", "dungeon"] },
   309: { name: "Decoration: Lion", functional: false, places: ["castle", "dungeon"] },
+  332: { name: "Wall Crystal Holder", functional: true, places: ["cave", "dungeon"] },
 };
 
 /** May this object stand in this kind of place at all? Objects the list does not know are not restricted. */

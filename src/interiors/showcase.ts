@@ -28,6 +28,8 @@ export const OVERWORLD_EXTRAS = ["obj_cottage", "obj_pirate_ship", "poi_castle_r
 export const SPACESHIP_EXTRAS = ["obj_futuristic_box", "obj_power_crystal_broken", "obj_spaceship_console", "obj_temporal_field_generator"] as const;
 /** The user's models of the tower (quest document 1.7): the spiral staircase inside, and the building the tower is on the overworld (the Fort door the stairs down use is item 100, shown as an item). */
 export const TOWER_EXTRAS = ["obj_wooden_stairs", "poi_tower"] as const;
+/** The user's models of quest_8, the crystal paths (quest document 1.10): the crystal, the holder it stands in on the floor and the wall holder (a source or a target). */
+export const CRYSTAL_EXTRAS = ["obj_crystal", "obj_crystal_holder", "obj_wall_crystal_holder"] as const;
 /** `lift`: how far a model's lowest point stands above the floor (none of these needs it: the prop renderer rests the lowest point on the floor). */
 export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: number; lift?: number }[] = [
   { model: "obj_fountain", scale: 1.3 },
@@ -45,6 +47,10 @@ export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: 
   // the tower (quest document 1.7): the staircase as it stands in the tower, and the building small enough for a cell
   { model: "obj_wooden_stairs", scale: 1.6 },
   { model: "poi_tower", scale: 1.5 },
+  // the crystal paths of quest_8 (quest document 1.10), at the scale the places show them in (`render/crystalLook.ts`)
+  { model: "obj_crystal", scale: 0.9 },
+  { model: "obj_crystal_holder", scale: 0.9 },
+  { model: "obj_wall_crystal_holder", scale: 0.9 },
   // the wall reliefs of the dungeons (45th playtest, point 4): they stand upright on their cell here, nothing hangs
   ...Object.values(DECO_MODELS).map((model) => ({ model, scale: DECO_SCALE })),
 ];

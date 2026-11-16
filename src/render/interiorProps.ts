@@ -1,7 +1,8 @@
 import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
 import { DECO_MODELS, DECO_PLATE, DECO_SCALE } from "../data/wall-deco";
-import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM, TEMPORAL_ITEM, TEMPORAL_SCALE } from "../data/quest-table";
+import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM, TEMPORAL_ITEM, TEMPORAL_SCALE, WALL_CRYSTAL_ITEM } from "../data/quest-table";
+import { CRYSTAL_BURY, CRYSTAL_MID, CRYSTAL_SCALE } from "./crystalLook";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
 import { isGlbItem, itemModelKey, itemProp } from "./itemProps";
@@ -56,6 +57,8 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?:
   [TEMPORAL_ITEM]: { model: "obj_temporal_field_generator", scale: TEMPORAL_SCALE },
   // the wooden stairs of a tower (quest document 1.7, 49th playtest): the file (the user's second version of 8. 11. 2026, 50th playtest) is 0.97 x 1.26 x 1.9; `stairsScale` stretches them over a whole cell and one storey of the tower
   [STAIRCASE_ITEM]: { model: "obj_wooden_stairs", scale: 1 },
+  // the wall holder of quest_8 (quest document 1.10): it hangs on the wall like a relief with its middle at the height of the crystals' light; the crystal in its mouth is drawn apart (`InteriorView.setCrystals`)
+  [WALL_CRYSTAL_ITEM]: { model: "obj_wall_crystal_holder", scale: CRYSTAL_SCALE, lift: CRYSTAL_MID - 0.95 * CRYSTAL_SCALE },
   // the wall reliefs of the dungeons (45th playtest, point 4): the files are 1.3 x 1.9 around their middle, as big as the moose king's carving (scale 1.2); the middle hangs at the height of the
   // moose's (2.0), so the lowest point is 2.0 - 0.95 * 1.2 above the floor
   ...Object.fromEntries(Object.entries(DECO_MODELS).map(([item, model]) => [item, { model, scale: DECO_SCALE, lift: DECO_LIFT }])),
@@ -76,7 +79,7 @@ const SARCOPHAGI: ReadonlySet<number> = new Set([127, 128]);
 const SARCOPHAGUS_TURNS: readonly number[] = [90, 135, -90, -135];
 
 /** The kinds of action whose `item` param is an old item they stand on their cell as (a statue, a gong, a lever, a head, a rune on the floor, a machine statue of Seth Squirm: it showed nothing before the 56th playtest). */
-const SHOWS_ITEM: ReadonlySet<string> = new Set(["shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal", "rune", "qportal", "chalice", "tube", "stairs", "machine"]);
+const SHOWS_ITEM: ReadonlySet<string> = new Set(["crystal", "shrine", "decor", "riddle", "gong", "lever", "head", "lore", "teleporter", "talent", "portal", "rune", "qportal", "chalice", "tube", "stairs", "machine"]);
 
 /** The old item an action shows on its cell, or null (plain chests and shrines of a place without a theme, and every other kind of action). */
 export function shownItem(a: Pick<ActionInstance, "kind" | "params">): number | null {
@@ -105,6 +108,11 @@ export function themeModelKeys(content: MapContent): string[] {
       const whole = itemModelKey(POWER_CRYSTAL_ITEM);
       if (whole) keys.add(whole);
     }
+  }
+  // quest_8: the crystal in a wall holder's mouth and the crystals and holders the party sets down are drawn apart from the wall holder (`InteriorView.setCrystals`)
+  if (content.actions.some((a) => a.kind === "crystal")) {
+    keys.add("obj_crystal");
+    keys.add("obj_crystal_holder");
   }
   return [...keys];
 }
@@ -166,6 +174,13 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
   if (own && item === STAIRCASE_ITEM) {
     // the stairs fill their cell from the front edge to the back edge and rise a storey, whatever the file's size (the bounds are in the register)
     return { model: own.model, x, y: 0, z, rotY: (bearing * Math.PI) / 180, scale: 1, scaleXYZ: stairsScale(staticInfo[own.model]?.bounds) };
+  }
+  if (own && item === WALL_CRYSTAL_ITEM) {
+    // like a relief: the file is centred on its middle with its back at the lowest z, so it is pushed back until that plane lies a hair inside the wall
+    const back = (staticInfo[own.model]?.bounds?.[2] ?? -0.33) * own.scale;
+    const rotY = (bearing * Math.PI) / 180;
+    const push = WALL_AT + CRYSTAL_BURY + back;
+    return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
   }
   if (own && item in DECO_MODELS) {
     // the files are centred on their middle: the relief is pushed back so that its back plane lies in the wall (the moose's carving has its origin in front of it)

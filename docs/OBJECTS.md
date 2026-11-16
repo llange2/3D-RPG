@@ -147,3 +147,4 @@ Vor jeder Änderung an der Generierung (Regeln `src/data/rules/*.json`, Themes `
 | 307 | Decoration: Demon 1 |  | x |  | x |  |  |  | Wandrelief. Dungeon mit Monstern der Gruppe beast: genau eine der Dekos Demon 1 / Demon 2 (+ Löwe, Elch), ca. alle 10 Felder. |
 | 308 | Decoration: Demon 2 |  | x |  | x |  |  |  | Wandrelief, siehe Demon 1. |
 | 309 | Decoration: Lion |  | x |  | x |  |  |  | Wandrelief. Löwe und Elch (125) passen zu jedem Monstertyp. |
+| 332 | Wall Crystal Holder | **ja** |  | x | x |  |  |  | Quest 8 (Crystal paths): Wandhalter mit Kristall im Mund (`obj_wall_crystal_holder`), Quelle oder Ziel des Lichträtsels; steht auf der Zelle vor einer echten Wand, nur in Orten mit quest_8, blockiert die Zelle nicht. |
