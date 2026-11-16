@@ -174,5 +174,6 @@
  * the temporal field generator behind a locked door, the airlock with its lever at the end of the tube's corridor), and the computers of the other sections have a new line.
  * 69 = the console of the bridge faces east (bearing 90, a quarter turn against the clock).
  * 70 = quest document 1.10: quest_8, the crystal paths (`actions/crystalGen.ts`: wall crystals and crystals in the chests), a seventh quest in the decks of the dungeons and the caves.
+ * 71 = the wild monsters of level 5 share the land evenly (`difficulty.ts` `EVEN_TIERS`, `shareAt`): each of the five gets about a fifth of it instead of 69 % Vulture Rocs.
  */
-export const GEN_VERSION = 70;
+export const GEN_VERSION = 71;
