@@ -70,6 +70,11 @@ into the backpack when they are put on (one free place more is needed when weapo
 `tools/dev/play.ts` drives the game in Chrome from a list of steps (keys, clicks, evals, screenshots); `GAME_QUERY="&campaign=1"`
 adds URL parameters.
 
+## Windows release
+
+`cd installer && npm install && npm run build` packs the game into an Electron app with an NSIS installer (optional Start menu and desktop shortcuts)
+in `../release/dist/` (or `RELEASE_DIR`). Details: `docs/RELEASE.md`.
+
 ## Rules for generator code (`src/core`, `world`, `interiors`, `actions`, `sim`, `campaign`)
 
 - All randomness comes from `src/core/rng.ts`. No `Math.random`, `Math.sin`, `Math.cos`, `Math.pow`, `Math.exp`.

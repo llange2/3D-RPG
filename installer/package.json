@@ -1,0 +1,18 @@
+{
+  "name": "mm3-seed-rpg-desktop",
+  "productName": "MM3 Seed RPG",
+  "private": true,
+  "version": "1.0.0",
+  "author": "MM3 Seed RPG",
+  "description": "Desktop shell and Windows installer of MM3 Seed RPG",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:dir": "node build.mjs --dir"
+  },
+  "devDependencies": {
+    "electron": "45.3.2",
+    "electron-builder": "26.18.0"
+  }
+}
