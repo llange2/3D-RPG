@@ -34,6 +34,11 @@ export const FX_FILES = {
 export type ImpactKind = keyof typeof FX_FILES.impact;
 export const IMPACT_KINDS = Object.keys(FX_FILES.impact) as ImpactKind[];
 
+/** The impact picture of a damage type (poison is acid; the types without a picture of their own show magic): the lines of Prismatic Light end in it. */
+export function impactOfElement(element: string): ImpactKind {
+  return element === "fire" ? "fire" : element === "ice" ? "ice" : element === "acid" || element === "poison" ? "acid" : "magic";
+}
+
 /** The particle sheet: 8 x 8 cells of 128 px. */
 export const PARTICLE_GRID = 8;
 /** The cells of the particle sheet by name (the order of `fx_particles.json`). */
@@ -67,11 +72,13 @@ export function cellUv(cell: number, grid: number): CellUv {
 
 /**
  * The fountains the effects know: the model of the town square (`obj_fountain`) and of the landmark in the open country (item 2, the same file). Heights are in model units over the
- * lowest point (the instance's scale makes them world units), measured on the file (`node tools/dev/model-profile.mjs public/assets/models-original/obj_fountain.glb`): the lower basin holds its water at 0.70, the column
- * carries a small upper bowl whose rim is at 1.5, the finial on top ends at 1.91 (the drops leave it and fly in an arc into the basin, a blue sheet of water runs down from the rim).
+ * lowest point (the instance's scale makes them world units), measured on the file (`node tools/dev/model-silhouette.mjs public/assets/models-original/obj_fountain.glb <out.png>`, `node tools/dev/model-jet.mjs <file> 0 0 0.7`):
+ * the lower basin holds its water at 0.70, three faces stand on the column (widest at 1.5, 0.35 from the axis), and the urn on top of them has its rim at 1.91 (0.23 from the axis):
+ * the drops leave the rim and fly in an arc into the basin, a sheet of water runs down from the rim over the faces into the basin (`flow`: height and distance from the axis, outside the stone everywhere).
  *
- * The user's Mermaid fountain (item 89, `Mermaid_Fountain.glb`, bug_fix_68) is a horn that pours a stream into the basin: the model has its thin column of water in it (axis x -0.097, z 0.141, from the water
- * at y -0.20 to the mouth at about 0.25; `node tools/dev/model-silhouette.mjs`), the effects put a visible blue stream on it and throw drops from the mouth over the water. Its numbers are in file
+ * The user's Mermaid fountain (item 89, `Mermaid_Fountain.glb`, bug_fix_68) pours a stream from a jug into the basin: the model has its thin column of water in it (axis x -0.097, z 0.141, from the water
+ * at 0.184 up to 0.61; 0.024 across at the top, 0.017 at the bottom, a light turquoise of (160, 210, 216), `node tools/dev/model-jet.mjs public/assets/models-original/ci_89.glb -0.097 0.141`), the effects wrap a
+ * thin sheet of water round it (a little below the top, narrowing downwards, in the colour of the model's water) and let drops fall from the jug. Its numbers are in file
  * coordinates (x is mirrored by the engine, `fountainPoint` in `fx.ts` does that), heights over the lowest point.
  */
 export interface TieredFountain {
@@ -79,11 +86,14 @@ export interface TieredFountain {
   /** Water level and inner radius of the lower basin. */
   basinY: number;
   basinR: number;
-  /** Rim height and radius of the upper bowl, where the water runs over. */
-  upperY: number;
-  upperR: number;
-  /** Where the drops leave (the top of the finial). */
+  /** Where the drops leave (the rim of the urn on top). */
   topY: number;
+  /** The sheet of water that runs down from the rim: pairs of height and distance from the axis, from the top to the water. */
+  flow: readonly (readonly [number, number])[];
+  /** Where the sheet enters the basin (distance from the axis). */
+  footR: number;
+  /** The colour of the water (what it looks like in full light). */
+  water: readonly [number, number, number];
 }
 
 export interface HornFountain {
@@ -91,19 +101,32 @@ export interface HornFountain {
   /** Water level and radius of the basin round the middle of the model. */
   basinY: number;
   basinR: number;
-  /** The axis of the stream (file x and z) and the height of the mouth it comes from; `streamR` is its radius at the mouth. */
+  /** The axis of the stream (file x and z), the height of the jug's mouth the drops come from, and the stream's top, radius there and at the water (the model's own column is 0.024 and 0.017 across). */
   spoutX: number;
   spoutZ: number;
   mouthY: number;
-  streamR: number;
-  /** The way the drops are thrown (file x and z, a unit vector) and how far they fly (model units). */
+  streamTopY: number;
+  streamTopR: number;
+  streamFootR: number;
+  /** The way the drops drift from the stream (file x and z, a unit vector) and how far they land from it (model units). */
   throwX: number;
   throwZ: number;
   throwR: number;
+  water: readonly [number, number, number];
 }
 
 export type FountainShape = TieredFountain | HornFountain;
 
-const BASIN: FountainShape = { kind: "tiered", basinY: 0.7, basinR: 0.6, upperY: 1.5, upperR: 0.31, topY: 1.9 };
-const MERMAID: FountainShape = { kind: "horn", basinY: 0.184, basinR: 0.44, spoutX: -0.097, spoutZ: 0.141, mouthY: 0.62, streamR: 0.026, throwX: -Math.SQRT1_2, throwZ: Math.SQRT1_2, throwR: 0.2 };
+const BASIN: FountainShape = {
+  kind: "tiered", basinY: 0.7, basinR: 0.6, topY: 1.9,
+  flow: [[1.9, 0.26], [1.75, 0.34], [1.5, 0.4], [1.15, 0.44], [0.7, 0.5]], footR: 0.5,
+  // (a little towards turquoise)
+  water: [0.3, 0.74, 0.88],
+};
+const MERMAID: FountainShape = {
+  kind: "horn", basinY: 0.184, basinR: 0.44, spoutX: -0.097, spoutZ: 0.141, mouthY: 0.62, streamTopY: 0.595, streamTopR: 0.028, streamFootR: 0.021,
+  throwX: -Math.SQRT1_2, throwZ: Math.SQRT1_2, throwR: 0.12,
+  // the colour of the model's own column of water
+  water: [0.63, 0.82, 0.85],
+};
 export const FOUNTAIN_SHAPES: Readonly<Record<string, FountainShape>> = { obj_fountain: BASIN, ci_2: BASIN, ci_89: MERMAID };

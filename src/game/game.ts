@@ -3789,7 +3789,7 @@ export class Game {
         if (!at) return;
         if (area === "prismatic_light") {
           // a line from the party to every monster in range at once, in the colour of the damage type it got; they fade within 0.7 s
-          this.projectiles.beam(e.element ?? "magic", from, at);
+          this.projectiles.beam(e.element ?? "magic", from, at, true);
           flights.set(e.uid, 0);
           return;
         }
@@ -6086,8 +6086,8 @@ export class Game {
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
       .filter((e) => e.d < (e.lamp.reach ?? LAMP_REACH));
     // the effects put a halo round every lamp in reach, not only the few that get a light of the pool (a shot in flight has its burst, not a halo), and the lava glows over its tiles
-    // (the light of a tower torch hangs beside the flame: its halo is the flame's, `towerFlames`)
-    this.effects.setLamps([...inReach.filter((e) => !e.lamp.priority && !e.lamp.key.startsWith("tt:")).map((e) => e.lamp), ...this.lavaGlow, ...this.towerFlames], 1 - need);
+    // (the light of a tower torch hangs beside the flame: its halo is the flame's, `towerFlames`; loot has no halo, only its light, the user, 17. 11. 2026)
+    this.effects.setLamps([...inReach.filter((e) => !e.lamp.priority && !e.lamp.key.startsWith("tt:") && !e.lamp.key.startsWith("l:")).map((e) => e.lamp), ...this.lavaGlow, ...this.towerFlames], 1 - need);
     const near = inReach
       .sort((a, b) => Number(b.lamp.priority ?? false) - Number(a.lamp.priority ?? false) || a.d - b.d)
       .slice(0, this.lampSlots.length);

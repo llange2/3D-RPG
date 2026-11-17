@@ -1,6 +1,6 @@
 import type { Scene } from "@babylonjs/core/scene";
 import type { Effects } from "./fx";
-import type { ImpactKind } from "./fxSheets";
+import { type ImpactKind, impactOfElement } from "./fxSheets";
 import { GlowBeams } from "./glowBeams";
 import { LASER_LAMP, LaserFactory, type LaserBolt } from "./lasers";
 import type { LampKind } from "./lamps";
@@ -105,6 +105,9 @@ export const PROJECTILE_LAMPS: Readonly<Partial<Record<ProjectileKind, Omit<Lamp
   magic: { color: [0.88, 0.35, 1], range: 9, intensity: 3.2, daylight: SPELL_DAYLIGHT },
 };
 
+/** How big the burst is where a line of Prismatic Light ends (a shot's is `IMPACT_SIZE` in `fx.ts`: there are many lines at once, so a little smaller). */
+const BEAM_IMPACT_SIZE = 2.8;
+
 /** The colour of a damage type's light and beams (`PROJECTILE_LAMPS`), also for the types that fly as another picture (poison is acid, physical has none: white). */
 export function elementColor(element: string): [number, number, number] {
   const kind: ProjectileKind = element === "ice" ? "ice" : element === "fire" ? "fire" : element === "acid" || element === "poison" ? "acid" : "magic";
@@ -200,10 +203,12 @@ export class Projectiles {
    * Prismatic Light: a line of light from `from` to `to` in the colour of `element`, there at once and gone after `BEAM_SECONDS`. The monster's end also shines for as long
    * (a light of the pool, so only the two nearest ones show).
    */
-  beam(element: string, from: Point, to: Point): void {
+  beam(element: string, from: Point, to: Point, impact = false): void {
     const color = elementColor(element);
     this.beams ??= this.scene ? new GlowBeams(this.scene) : null;
     this.beams?.add(color, from, to, BEAM_SECONDS);
+    // (Prismatic Light: where a line ends, the element strikes like a shot that lands; physical has no picture of its own and shows the magic one)
+    if (impact) this.effects?.impact(impactOfElement(element), to, BEAM_IMPACT_SIZE);
     this.burst(to, { from: color, to: color, peak: 3.4, range: 6.5, seconds: BEAM_SECONDS, daylight: SPELL_DAYLIGHT });
   }
 
