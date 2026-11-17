@@ -252,24 +252,42 @@ function discData(): VertexData {
   return data;
 }
 
+/** What the flow picture looks like on average (alpha-weighted, 0 to 1): a vertex colour of `water / FLOW_PICTURE` turns it into the colour of the water. */
+const FLOW_PICTURE: readonly [number, number, number] = [0.37, 0.62, 0.94];
+/** The drops are see-through, and a fifth of what they were (the user, 17. 11. 2026). */
+const DROP_ALPHA = 0.55;
+const DROP_SHRINK = 0.2;
+
 /**
- * The open cone of the water that runs down: height 1 (from y = 0 down to y = -1), radius 1 at the top and `spread` at the bottom, the streaks of the flow picture around it
- * (`wraps` times round, the picture runs once down it). The colour is 1 at the top and a little darker at the bottom, where the water is thinner.
+ * The open sheet of water that runs down, a surface of revolution: `profile` gives height and distance from the axis (model units) from the top to the bottom, the mesh is made for
+ * `topY` to `bottomY` (height 1 from y = 0 down to y = -1, the radii as they are, so the instance's scale makes world units of both) with the streaks of the flow picture around it
+ * (`wraps` times round, the picture runs once down it). The colour is that of `water`, a little darker at the bottom, where the water is thinner.
  */
-function coneData(spread: number, segments = 24, wraps = 2): VertexData {
+function sheetData(profile: readonly (readonly [number, number])[], topY: number, bottomY: number, water: readonly [number, number, number], segments = 24, wraps = 2): VertexData {
   const pos: number[] = [];
   const col: number[] = [];
   const uv: number[] = [];
   const idx: number[] = [];
+  const rows = profile.length;
   for (let i = 0; i <= segments; i++) {
     const a = (i / segments) * Math.PI * 2;
     const c = Math.cos(a);
     const s = Math.sin(a);
-    pos.push(c, 0, s, c * spread, -1, s * spread);
-    col.push(1, 1, 1, 1, 0.86, 0.86, 0.86, 1);
-    uv.push((i / segments) * wraps, 1, (i / segments) * wraps, 0);
+    for (const [y, r] of profile) {
+      const t = (topY - y) / (topY - bottomY);
+      const shade = 1 - 0.14 * t;
+      pos.push(c * r, -t, s * r);
+      col.push((water[0] / FLOW_PICTURE[0]) * shade, (water[1] / FLOW_PICTURE[1]) * shade, (water[2] / FLOW_PICTURE[2]) * shade, 1);
+      uv.push((i / segments) * wraps, 1 - t);
+    }
   }
-  for (let i = 0; i < segments; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 3, i * 2, i * 2 + 3, i * 2 + 2);
+  for (let i = 0; i < segments; i++) {
+    for (let k = 0; k < rows - 1; k++) {
+      const a = i * rows + k;
+      const b = (i + 1) * rows + k;
+      idx.push(a, a + 1, b + 1, a, b + 1, b);
+    }
+  }
   const data = new VertexData();
   data.positions = pos;
   data.colors = col;
@@ -409,7 +427,7 @@ export class Effects implements PropWatcher {
     if (this.ready) return;
     this.ready = true;
     this.main = new QuadBatch(this.scene, "fx:particles", sheetTexture(this.scene, FX_FILES.particles, false), 420);
-    this.drops = new QuadBatch(this.scene, "fx:drops", sheetTexture(this.scene, FX_FILES.drop, false), 200, "combine");
+    this.drops = new QuadBatch(this.scene, "fx:drops", sheetTexture(this.scene, FX_FILES.drop, false), 200, "combine", true);
     this.smoke = new QuadBatch(this.scene, "fx:smoke", sheetTexture(this.scene, FX_FILES.smoke, false), 80, "combine", true);
     for (const kind of IMPACT_KINDS) this.impactBatches.set(kind, new QuadBatch(this.scene, `fx:impact:${kind}`, sheetTexture(this.scene, FX_FILES.impact[kind], false), 12, "combine"));
     this.rippleTexture = sheetTexture(this.scene, FX_FILES.ripple, true);
@@ -510,24 +528,24 @@ export class Effects implements PropWatcher {
     const shape = site.shape;
     site.disc = this.makeMesh(`fx:disc:${site.owner}`, discData(), this.waterMaterial!);
     if (shape.kind === "tiered") {
-      // the lit water of the basin, and the sheet of blue water from the rim of the upper bowl down to the basin: it flares from just outside the rim to nearly the width of the
-      // water the drops fall into
+      // the lit water of the basin, and the sheet of water from the rim of the urn over the faces down into the basin (`flow`: nowhere inside the stone)
       const water = fountainPoint(site, 0, shape.basinY, 0);
       site.disc.mesh.position.set(water[0], water[1] + 0.03, water[2]);
       site.disc.mesh.scaling.set(shape.basinR * site.sx, 1, shape.basinR * site.sz);
-      site.sheet = this.makeMesh(`fx:sheet:${site.owner}`, coneData(1.38), this.flowMaterial!);
-      const rim = fountainPoint(site, 0, shape.upperY, 0);
+      site.sheet = this.makeMesh(`fx:sheet:${site.owner}`, sheetData(shape.flow, shape.topY, shape.basinY, shape.water), this.flowMaterial!);
+      const rim = fountainPoint(site, 0, shape.topY, 0);
       site.sheet.mesh.position.set(rim[0], rim[1], rim[2]);
-      site.sheet.mesh.scaling.set(shape.upperR * 1.12 * site.sx, (shape.upperY - shape.basinY) * site.sy, shape.upperR * 1.12 * site.sz);
+      site.sheet.mesh.scaling.set(site.sx, (shape.topY - shape.basinY) * site.sy, site.sz);
     } else {
-      // the glow where the stream falls into the water, and the stream itself: a thin cone that widens a little towards the water
+      // the glow where the stream falls into the water, and the stream itself: a thin sheet round the model's own column, from a little below its top, narrowing towards the water
       const foot = fountainPoint(site, shape.spoutX, shape.basinY, shape.spoutZ);
       site.disc.mesh.position.set(foot[0], foot[1] + 0.03, foot[2]);
-      site.disc.mesh.scaling.set(0.17 * site.sx, 1, 0.17 * site.sz);
-      site.sheet = this.makeMesh(`fx:sheet:${site.owner}`, coneData(2.2, 12, 1), this.flowMaterial!);
-      const mouth = fountainPoint(site, shape.spoutX, shape.mouthY, shape.spoutZ);
-      site.sheet.mesh.position.set(mouth[0], mouth[1], mouth[2]);
-      site.sheet.mesh.scaling.set(shape.streamR * site.sx, (shape.mouthY - shape.basinY) * site.sy, shape.streamR * site.sz);
+      site.disc.mesh.scaling.set(0.11 * site.sx, 1, 0.11 * site.sz);
+      const profile = [[shape.streamTopY, shape.streamTopR], [shape.basinY, shape.streamFootR]] as const;
+      site.sheet = this.makeMesh(`fx:sheet:${site.owner}`, sheetData(profile, shape.streamTopY, shape.basinY, shape.water, 12, 1), this.flowMaterial!);
+      const top = fountainPoint(site, shape.spoutX, shape.streamTopY, shape.spoutZ);
+      site.sheet.mesh.position.set(top[0], top[1], top[2]);
+      site.sheet.mesh.scaling.set(site.sx, (shape.streamTopY - shape.basinY) * site.sy, site.sz);
     }
   }
 
@@ -543,9 +561,16 @@ export class Effects implements PropWatcher {
 
   /** A ring that spreads over the water where something falls into it. */
   private ring(site: Site, x: number, y: number, z: number, big: boolean): void {
+    // (flat on the water, so the width of the model counts, not its height; the ring of the small mermaid fountain is smaller)
+    const across = (site.sx + site.sz) / 2;
+    const unit = across * (site.shape.kind === "horn" ? 0.35 : 1);
+    // a ring never spreads beyond the water: its outer edge stops at the wall of the basin
+    const centre = fountainPoint(site, 0, 0, 0);
+    const room = Math.max(0.02, site.shape.basinR * across * 0.96 - Math.hypot(x - centre[0], z - centre[2]));
+    const size1 = Math.min((big ? 0.6 : 0.3) * unit, room * 2);
     this.particles.push({
       kind: "ring", cell: PARTICLE_CELLS.ripple_ring, x, y: y + 0.04, z, vx: 0, vy: 0, vz: 0, age: 0, life: big ? 1.1 : 0.7,
-      size0: (big ? 0.12 : 0.08) * site.sy, size1: (big ? 0.6 : 0.3) * site.sy, peak: big ? 0.55 : 0.4, floor: -1e9, lands: "none", scale: site.sy, site,
+      size0: Math.min((big ? 0.12 : 0.08) * unit, size1), size1, peak: big ? 0.55 : 0.4, floor: -1e9, lands: "none", scale: site.sy, site,
     });
   }
 
@@ -553,22 +578,22 @@ export class Effects implements PropWatcher {
     const { shape, sy, clock } = site;
     const r = this.random;
     if (shape.kind === "tiered") {
-      // the drops leave the tip of the finial and fly in an arc, over the rim of the upper bowl, into the basin
+      // the drops leave the rim of the urn and fly in an arc, over the faces, into the basin
       clock.arc += dt * (full ? 13 : 6);
       while (clock.arc >= 1) {
         clock.arc -= 1;
         const a = r() * Math.PI * 2;
-        const reach = 0.44 + 0.12 * r();
+        const reach = 0.4 + 0.1 * r();
         const from = fountainPoint(site, Math.cos(a) * 0.02, shape.topY, Math.sin(a) * 0.02);
         const to = fountainPoint(site, Math.cos(a) * reach, shape.basinY, Math.sin(a) * reach);
-        this.throwDrop(site, from, to, (1.1 + 0.5 * r()) * Math.sqrt(sy), 0.17 * sy, full ? "ripple" : "none");
+        this.throwDrop(site, from, to, (1.1 + 0.5 * r()) * Math.sqrt(sy), 0.17 * sy * DROP_SHRINK, full ? "ripple" : "none");
       }
       // where the sheet of water enters the basin: rings round the foot of it
       clock.foot += dt * (full ? 9 : 4);
       while (clock.foot >= 1) {
         clock.foot -= 1;
         const a = r() * Math.PI * 2;
-        const at = fountainPoint(site, Math.cos(a) * shape.upperR * 1.5, shape.basinY, Math.sin(a) * shape.upperR * 1.5);
+        const at = fountainPoint(site, Math.cos(a) * shape.footR, shape.basinY, Math.sin(a) * shape.footR);
         this.ring(site, at[0], at[1], at[2], true);
       }
       if (full) {
@@ -577,7 +602,7 @@ export class Effects implements PropWatcher {
         while (clock.mist >= 1) {
           clock.mist -= 1;
           const a = r() * Math.PI * 2;
-          const rad = shape.upperR * 1.5 + r() * 0.15;
+          const rad = shape.footR - 0.04 + r() * 0.08;
           const cell = [PARTICLE_CELLS.mist_a, PARTICLE_CELLS.mist_b, PARTICLE_CELLS.mist_c][Math.floor(r() * 3)]!;
           const at = fountainPoint(site, Math.cos(a) * rad, shape.basinY + 0.12, Math.sin(a) * rad);
           this.particles.push({
@@ -588,15 +613,15 @@ export class Effects implements PropWatcher {
       }
       return;
     }
-    // the horn: drops thrown from its mouth over the water, and rings where the stream and the drops fall in
+    // the jug: drops fall from its mouth (no upward throw: they drip and fall, drifting a little to the side) into the water beside the stream, and rings where the stream and the drops fall in
     clock.arc += dt * (full ? 11 : 5);
     while (clock.arc >= 1) {
       clock.arc -= 1;
-      const along = shape.throwR * (0.55 + 0.75 * r());
-      const side = (r() - 0.5) * 0.1;
-      const from = fountainPoint(site, shape.spoutX, shape.mouthY, shape.spoutZ);
+      const along = shape.throwR * (0.3 + 0.9 * r());
+      const side = (r() - 0.5) * 0.06;
+      const from = fountainPoint(site, shape.spoutX + (r() - 0.5) * 0.02, shape.mouthY, shape.spoutZ + (r() - 0.5) * 0.02);
       const to = fountainPoint(site, shape.spoutX + shape.throwX * along - shape.throwZ * side, shape.basinY, shape.spoutZ + shape.throwZ * along + shape.throwX * side);
-      this.throwDrop(site, from, to, (0.5 + 0.5 * r()) * Math.sqrt(sy), 0.075 * sy, full ? "ripple" : "none");
+      this.throwDrop(site, from, to, 0, 0.075 * sy * DROP_SHRINK, full ? "ripple" : "none");
     }
     clock.foot += dt * (full ? 8 : 4);
     while (clock.foot >= 1) {
@@ -613,7 +638,7 @@ export class Effects implements PropWatcher {
         const cell = [PARTICLE_CELLS.mist_a, PARTICLE_CELLS.mist_b, PARTICLE_CELLS.mist_c][Math.floor(r() * 3)]!;
         const at = fountainPoint(site, shape.spoutX + Math.cos(a) * 0.06, shape.basinY + 0.06, shape.spoutZ + Math.sin(a) * 0.06);
         this.particles.push({
-          kind: "puff", cell, x: at[0], y: at[1], z: at[2], vx: Math.cos(a) * 0.05, vy: 0.18, vz: Math.sin(a) * 0.05, age: 0, life: 2 + r(), size0: 0.25 * sy, size1: 0.7 * sy, peak: 0.14,
+          kind: "puff", cell, x: at[0], y: at[1], z: at[2], vx: Math.cos(a) * 0.05, vy: 0.18, vz: Math.sin(a) * 0.05, age: 0, life: 2 + r(), size0: 0.12 * sy, size1: 0.3 * sy, peak: 0.14,
           floor: -1e9, lands: "none", scale: sy, site,
         });
       }
@@ -766,7 +791,7 @@ export class Effects implements PropWatcher {
           p.x, p.y, p.z,
           (view.rx * dy - view.ux * dx) * hw, (view.ry * dy - view.uy * dx) * hw, (view.rz * dy - view.uz * dx) * hw,
           (view.rx * dx + view.ux * dy) * hh, (view.ry * dx + view.uy * dy) * hh, (view.rz * dx + view.uz * dy) * hh,
-          FULL_PICTURE, lit, lit, lit,
+          FULL_PICTURE, lit, lit, lit, DROP_ALPHA,
         );
         continue;
       }
@@ -797,7 +822,7 @@ export class Effects implements PropWatcher {
       // a spray: one small drop thrown up that falls back
       this.particles.push({
         kind: "drop", cell: PARTICLE_CELLS.drop_round, x: p.x, y: p.floor + 0.02, z: p.z, vx: (this.random() - 0.5) * 0.5, vy: 1.3 + this.random() * 0.9, vz: (this.random() - 0.5) * 0.5, age: 0, life: 1.5,
-        size0: 0.1 * p.scale, size1: 0.1 * p.scale, peak: 1, floor: p.floor, lands: "none", scale: p.scale, site: p.site,
+        size0: 0.1 * p.scale * DROP_SHRINK, size1: 0.1 * p.scale * DROP_SHRINK, peak: 1, floor: p.floor, lands: "none", scale: p.scale, site: p.site,
       });
     }
   }

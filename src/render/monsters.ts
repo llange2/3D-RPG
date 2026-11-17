@@ -126,6 +126,8 @@ interface View {
   phased: boolean;
   /** Seconds the current move takes when it is not a walk (Gravity); null for a step. */
   slide: number | null;
+  /** The height of the middle of the drawn body over the holder's origin, measured once (`bodyMiddle`); null until a shot asks. */
+  aim: number | null;
 }
 
 /** How a person of a campaign map stands: `yaw` in degrees (Babylon), `idle` the clip it loops. */
@@ -326,6 +328,7 @@ export class MonsterRenderer {
       fade: fadeSeconds > 0 ? { t: 0, seconds: fadeSeconds } : null,
       phased: false,
       slide: null,
+      aim: null,
     };
     if (view.fade) this.setVisibility(view, 0);
     this.views.set(uid, view);
@@ -423,11 +426,30 @@ export class MonsterRenderer {
   anchor(uid: string): { x: number; y: number; z: number } | null {
     const v = this.views.get(uid);
     if (!v) return null;
-    const [, minY, , , maxY] = v.info.bounds;
-    // `to.y` is the height of the model's origin; the old game aimed at a fixed height, a bat and a dragon need different ones
-    const mid = ((minY + maxY) / 2) * v.holder.scaling.y;
-    // a flyer's origin is already the middle of its body, so a shot goes there and not half a metre above
-    return { x: v.to.x, y: v.to.y + (v.hovers ? mid : Math.min(2.2, Math.max(0.5, mid))), z: v.to.z };
+    // `to.y` is the height of the model's origin (the feet of an animated model, the middle of a static one): the shot goes to the middle of the body that is drawn, whatever its origin is
+    v.aim ??= this.bodyMiddle(v);
+    return { x: v.to.x, y: v.to.y + v.aim, z: v.to.z };
+  }
+
+  /**
+   * How high the middle of a monster's body is over its holder's origin, from the meshes that are drawn (not the weapon and shield in its hands, not the bow that is hidden). The old formula took the
+   * middle of the model's bounds but at least half a metre, which put every animated monster's shots at its knees (the goblin, 17. 11. 2026) and the static ones' at two thirds of their height.
+   */
+  private bodyMiddle(v: View): number {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const mesh of v.holder.getChildMeshes(false)) {
+      if (!mesh.isEnabled() || mesh.getTotalVertices() === 0 || /:(right|left):/.test(mesh.name)) continue;
+      mesh.computeWorldMatrix(true);
+      const box = mesh.getBoundingInfo().boundingBox;
+      lo = Math.min(lo, box.minimumWorld.y);
+      hi = Math.max(hi, box.maximumWorld.y);
+    }
+    if (!Number.isFinite(lo)) {
+      const [, minY, , , maxY] = v.info.bounds;
+      return Math.max(0.5, ((minY + maxY) / 2) * v.holder.scaling.y);
+    }
+    return (lo + hi) / 2 - v.holder.position.y;
   }
 
   /** Where the light of every living monster of these models hangs now: the middle of its body, over the cell it stands on (the glowing monsters, `MONSTER_LAMPS`). */

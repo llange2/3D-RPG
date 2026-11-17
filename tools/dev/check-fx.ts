@@ -146,6 +146,14 @@ try {
       await sleep(700);
     }
   }
+  if (what === "beams") {
+    // Prismatic Light: a line of every damage type to a point six metres ahead, with the burst of the element where it ends (17. 11. 2026)
+    for (const element of ["fire", "ice", "acid", "magic"]) {
+      await page.evaluate(`(() => { const g = __game; const c = g.camera; const f = { x: Math.sin(c.rotation.y), z: Math.cos(c.rotation.y) }; g.game.internals.projectiles.beam(${JSON.stringify(element)}, { x: c.position.x + f.x * 0.9, y: c.position.y - 0.5, z: c.position.z + f.z * 0.9 }, { x: c.position.x + f.x * 6, y: c.position.y - 0.4, z: c.position.z + f.z * 6 }, true); })()`);
+      for (let n = 1; n <= 2; n++) await page.screenshot({ path: join(outDir, `beam-${element}-${n}.png`), optimizeForSpeed: true });
+      await sleep(900);
+    }
+  }
   if (what === "night") {
     // the same square at night: the water must be as dark as the stone (bug_fix_68), shots with and without the party's torch far from the fountains
     await page.evaluate(`(() => { const p = __game.state.party; p.minutes = ${24 * 60 + 23 * 60}; __game.game.refresh(); })()`);
@@ -169,8 +177,11 @@ try {
       const dist = Number(process.env.DIST ?? 3);
       await page.evaluate(`__game.teleport(${spot.x + 1}, ${spot.y + dist}, "N")`);
       await sleep(2500);
-      for (let n = 1; n <= 2; n++) {
-        await page.screenshot({ path: join(outDir, `dark-${spot.name}-${n}.png`) });
+      // BRIGHT=1 lights the hall as by day (the water follows the light of the scene), CLIP=x,y,w,h cuts a part out and shows it three times larger
+      if (process.env.BRIGHT) await page.evaluate(`__game.scene.lights.forEach((l) => { l.intensity = Math.max(l.intensity, 1.6); })`);
+      const clip = process.env.CLIP?.split(",").map(Number);
+      for (let n = 1; n <= (Number(process.env.SHOTS) || 2); n++) {
+        await page.screenshot({ path: join(outDir, `dark-${spot.name}-${n}.png`), ...(clip && clip.length === 4 ? { clip: { x: clip[0]!, y: clip[1]!, width: clip[2]!, height: clip[3]!, scale: 3 } } : {}) });
         await sleep(450);
       }
       console.log(`light at ${spot.name}:`, await page.evaluate(`JSON.stringify([...__game.game.internals.effects.sites.values()].filter((s) => Math.abs(s.x - ${spot.x * 3 + 1.5}) < 2).map((s) => +s.light.toFixed(3)))`));
