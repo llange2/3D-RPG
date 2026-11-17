@@ -1,9 +1,9 @@
-Quellgrafiken für Partikel und Wassereffekte (noch nicht in der Pipeline eingebunden)
-=====================================================================================
+Quellgrafiken für Partikel und Wassereffekte (gebaut von tools/assets/build-fx.ts nach public/assets/fx/*.webp)
+================================================================================================================
 
-Konvention aller additiven Bilder: RGB = Farbe x Intensität (vormultipliziert, Schwarz = unsichtbar), Alpha = Intensität.
-Sie funktionieren so mit additiver Mischung unverändert; die grauen lassen sich im Code einfärben.
-Ausnahme fx_smoke.png: gerader Alpha (normale Mischung).
+Konvention aller additiven Bilder: gerader Alpha, Alpha = Intensität, RGB = die Farbe (die grauen Sprites sind weiß und lassen sich im Code einfärben).
+Das Spiel mischt sie mit SRC_ALPHA + ONE; die Farbe unter Alpha 0 zählt nie (ein verlustbehafteter Encoder lässt dort Farbe hineinsickern).
+fx_smoke.png: dasselbe, gedacht für normale Mischung.
 
 Dateien
 -------
@@ -13,15 +13,15 @@ fx_impact_fire.png  1024x1024, Raster 4x4, 16 Bilder à 256x256, einmalig (zeile
 fx_impact_ice.png   dito
 fx_impact_acid.png  dito
 fx_impact_magic.png dito
-fx_impact_water.png dito (optional)
+fx_impact_water.png dito
 fx_water_ripple.png 512x512, nahtlos in x und y (Lichtnetz eines Beckenbodens), hellblau-weiß, additiv.
 fx_water_jet.png    128x512 (Breite x Höhe), nahtlos in der Höhe, senkrechte Wasserstreifen, an den Seiten weich auslaufend, additiv.
 
 Herkunft
 --------
-- Graue Partikel (Punkt, Ringe, Sterne, Funken, Rauch, Flammen, Magie, Wirbel, Blitze): Paket des Nutzers aus .ignore/PNG
-  (512 px, grau; es sieht aus wie das "Particle Pack" von Kenney, das als CC0 gilt: bitte bestätigen).
-- Tropfen, Spritzerkrone, Blase, Eissplitter, Schneeflocke, Säureklecks, Säureblase und die Einschlagbilder (Feuer, Eis, Säure, Magie, Wasser):
-  erzeugt mit dem AI Governor (Image Generator, Modell Z-Image Turbo, 1024x1024, schwarzer Hintergrund), danach per Skript auf Zellen gefittet;
-  die Flipbooks sind aus je einem Einschlagbild berechnet (wachsen, aufleuchten, vom Rand her ausbrennen, leichte Drehung).
+- Graue Partikel (Punkt, Ringe, Sterne, Funken, Rauch, Flammen, Magie, Wirbel, Blitze): Paket des Nutzers (Kenney "Particle Pack", CC0, vom Nutzer bestätigt).
+- Tropfen, Blase, Eissplitter, Säureblase und die Einschlagbilder für Feuer und Eis: erzeugt mit dem AI Governor (Image Generator, Z-Image Turbo, 1024x1024,
+  schwarzer Hintergrund). Einschlag Säure/Magie/Wasser, Säureklecks, Wasserkrone (Spritzerkrone) und Eiskristall (Schneeflocke): vom Nutzer neu erstellt.
+  Die Flipbooks sind aus je einem Einschlagbild berechnet (wachsen, aufleuchten, vom Rand her ausbrennen, leichte Drehung).
 - Runder Tropfen (fx_particles Zelle 4) und die beiden Wassertexturen: prozedural (periodisches Rauschen bzw. iterierte Sinusverzerrung), daher nahtlos.
+- Neu bauen: tools/assets/fx/README.md.

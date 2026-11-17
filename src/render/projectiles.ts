@@ -1,4 +1,6 @@
 import type { Scene } from "@babylonjs/core/scene";
+import type { Effects } from "./fx";
+import type { ImpactKind } from "./fxSheets";
 import { GlowBeams } from "./glowBeams";
 import { LASER_LAMP, LaserFactory, type LaserBolt } from "./lasers";
 import type { LampKind } from "./lamps";
@@ -76,7 +78,12 @@ interface Flight {
   yaw: number;
   t: number;
   duration: number;
+  /** The element strikes where the flight ends (`Effects.impact`): not for the shots of monsters, which end at the party's eyes. */
+  impact: boolean;
 }
+
+/** The kinds of projectile that leave an impact where they land, and the element it shows. */
+const IMPACT_OF: Readonly<Partial<Record<ProjectileKind, ImpactKind>>> = { fire: "fire", ice: "ice", acid: "acid", magic: "magic" };
 
 /** An element that appears where it strikes and fades out (Elemental Storm): standing upright, not flying. */
 interface Flash {
@@ -146,13 +153,14 @@ export class Projectiles {
   constructor(
     private readonly props: PropRenderer,
     private readonly scene: Scene | null = null,
+    private readonly effects: Effects | null = null,
   ) {}
 
   /**
    * Starts `count` projectiles (several fan out around the line and meet in the target, like a volley of arrows).
    * Returns the seconds until they arrive. `seconds` replaces the flight time that follows from the distance (Meteor Shower: the fireballs fall a long way down in a short way along).
    */
-  launch(kind: ProjectileKind, from: Point, to: Point, count = 1, seconds?: number): number {
+  launch(kind: ProjectileKind, from: Point, to: Point, count = 1, seconds?: number, impact = true): number {
     const dx = to.x - from.x;
     const dz = to.z - from.z;
     const duration = seconds ?? flightSeconds(Math.hypot(dx, dz) / TILE);
@@ -167,8 +175,8 @@ export class Projectiles {
         const laser = this.lasers?.create() ?? null;
         // (already in place: the bolt must not show at the origin for the frame before the first update)
         laser?.place(start.x, start.y, start.z, yaw, Math.atan2(start.y - to.y, Math.hypot(dx, dz)));
-        this.flights.push({ id: Projectiles.flights++, kind, pose: null, laser, from: start, to, yaw, t: 0, duration });
-      } else this.flights.push({ id: Projectiles.flights++, kind, pose: POSES[kind], laser: null, from: start, to, yaw, t: 0, duration });
+        this.flights.push({ id: Projectiles.flights++, kind, pose: null, laser, from: start, to, yaw, t: 0, duration, impact: false });
+      } else this.flights.push({ id: Projectiles.flights++, kind, pose: POSES[kind], laser: null, from: start, to, yaw, t: 0, duration, impact });
     }
     return duration;
   }
@@ -229,7 +237,13 @@ export class Projectiles {
     if (this.flights.length === 0 && this.flashes.length === 0 && !this.drawn) return;
     for (const f of this.flights) f.t += dt;
     for (const f of this.flashes) f.t += dt;
-    for (const f of this.flights) if (f.t >= f.duration) f.laser?.dispose();
+    for (const f of this.flights) {
+      if (f.t < f.duration) continue;
+      f.laser?.dispose();
+      // where it lands, the element strikes: a few frames of fire, frost, acid or magic (a volley of arrows or a laser leaves nothing)
+      const struck = IMPACT_OF[f.kind];
+      if (f.impact && struck) this.effects?.impact(struck, f.to);
+    }
     this.flights = this.flights.filter((f) => f.t < f.duration);
     const finished = this.flashes.filter((f) => f.t >= FLASH_SECONDS);
     this.flashes = this.flashes.filter((f) => f.t < FLASH_SECONDS);
@@ -261,6 +275,7 @@ export class Projectiles {
   }
 
   clear(): void {
+    this.effects?.clear();
     this.bursts = [];
     this.beams?.clear();
     for (const f of this.flights) f.laser?.dispose();
