@@ -1,0 +1,210 @@
+{
+ "file": "fx_particles.png",
+ "grid": [
+  8,
+  8
+ ],
+ "cell": 128,
+ "cells": [
+  {
+   "name": "dot",
+   "cell": 0,
+   "source": "circle_05"
+  },
+  {
+   "name": "spark",
+   "cell": 1,
+   "source": "star_04"
+  },
+  {
+   "name": "flame_tongue",
+   "cell": 2,
+   "source": "flame_05"
+  },
+  {
+   "name": "drop_teardrop",
+   "cell": 3,
+   "source": "spr_droplet"
+  },
+  {
+   "name": "drop_round",
+   "cell": 4,
+   "source": "drop"
+  },
+  {
+   "name": "splash_crown",
+   "cell": 5,
+   "source": "spr_splash"
+  },
+  {
+   "name": "ripple_ring",
+   "cell": 6,
+   "source": "circle_02"
+  },
+  {
+   "name": "bubble",
+   "cell": 7,
+   "source": "spr_bubble"
+  },
+  {
+   "name": "mist_a",
+   "cell": 8,
+   "source": "smoke_04"
+  },
+  {
+   "name": "mist_b",
+   "cell": 9,
+   "source": "smoke_05"
+  },
+  {
+   "name": "mist_c",
+   "cell": 10,
+   "source": "smoke_07"
+  },
+  {
+   "name": "steam_wisp",
+   "cell": 11,
+   "source": "trace_05"
+  },
+  {
+   "name": "dust",
+   "cell": 12,
+   "source": "dirt_01"
+  },
+  {
+   "name": "light_ring",
+   "cell": 13,
+   "source": "light_02"
+  },
+  {
+   "name": "snowflake",
+   "cell": 14,
+   "source": "spr_snowflake"
+  },
+  {
+   "name": "flare",
+   "cell": 15,
+   "source": "flare_01"
+  },
+  {
+   "name": "ice_shard_a",
+   "cell": 16,
+   "source": "spr_ice_shard_a"
+  },
+  {
+   "name": "ice_shard_b",
+   "cell": 17,
+   "source": "spr_ice_shard_b"
+  },
+  {
+   "name": "frost_glint",
+   "cell": 18,
+   "source": "star_07"
+  },
+  {
+   "name": "acid_blob",
+   "cell": 19,
+   "source": "spr_acid_blob"
+  },
+  {
+   "name": "acid_bubble",
+   "cell": 20,
+   "source": "spr_acid_bubble"
+  },
+  {
+   "name": "magic_spark_8",
+   "cell": 21,
+   "source": "star_08"
+  },
+  {
+   "name": "magic_wisp",
+   "cell": 22,
+   "source": "twirl_01"
+  },
+  {
+   "name": "cross_glint",
+   "cell": 23,
+   "source": "star_06"
+  },
+  {
+   "name": "magic_compass",
+   "cell": 24,
+   "source": "magic_03"
+  },
+  {
+   "name": "magic_cross_glow",
+   "cell": 25,
+   "source": "magic_05"
+  },
+  {
+   "name": "soft_star",
+   "cell": 26,
+   "source": "star_05"
+  },
+  {
+   "name": "lightning_bolt",
+   "cell": 27,
+   "source": "spark_05"
+  },
+  {
+   "name": "lightning_arc",
+   "cell": 28,
+   "source": "spark_07"
+  },
+  {
+   "name": "flame_jet",
+   "cell": 29,
+   "source": "muzzle_03"
+  },
+  {
+   "name": "slash_crescent",
+   "cell": 30,
+   "source": "slash_01"
+  },
+  {
+   "name": "burst_sparks",
+   "cell": 31,
+   "source": "scorch_01"
+  },
+  {
+   "name": "fire_puff_a",
+   "cell": 32,
+   "source": "fire_01"
+  },
+  {
+   "name": "fire_puff_b",
+   "cell": 33,
+   "source": "fire_02"
+  },
+  {
+   "name": "flame_cloud_a",
+   "cell": 34,
+   "source": "flame_01"
+  },
+  {
+   "name": "flame_cloud_b",
+   "cell": 35,
+   "source": "flame_02"
+  },
+  {
+   "name": "glow_rings",
+   "cell": 36,
+   "source": "light_01"
+  },
+  {
+   "name": "ring_soft",
+   "cell": 37,
+   "source": "circle_01"
+  },
+  {
+   "name": "ring_double",
+   "cell": 38,
+   "source": "circle_03"
+  },
+  {
+   "name": "swirl",
+   "cell": 39,
+   "source": "twirl_02"
+  }
+ ]
+}
