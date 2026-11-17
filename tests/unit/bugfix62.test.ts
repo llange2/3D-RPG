@@ -29,7 +29,7 @@ describe("the Evil Paladin and the Evil Wizard (points 1 and 2)", () => {
 
   it("both models are the user's files, built into both registries as animated models", () => {
     expect(Object.keys(USER_MONSTER_MODELS).map(Number).sort((a, b) => a - b)).toEqual([PALADIN, WIZARD]);
-    for (const file of ["models.monsters.json", "models.monsters.original.json"]) {
+    for (const file of ["models.monsters.original.json"]) {
       const registry = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "assets", file), "utf-8")) as Record<string, { animated: boolean; file: string; animations: string[]; scale: number }>;
       for (const id of [PALADIN, WIZARD]) {
         const info = registry[String(id)]!;

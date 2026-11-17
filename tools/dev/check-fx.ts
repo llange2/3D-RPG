@@ -2,8 +2,8 @@
  * Looks at the effects (`render/fx.ts`): the water of a town fountain, the impacts of the four elements, and the same with the effects off.
  * Needs a dev server (`VITE_FROZEN=1 VITE_PORT=<free port> npx vite --port <free port> --strictPort`).
  *
- * Usage: GAME_URL=http://localhost:<port>/ npx tsx tools/dev/check-fx.ts <folder> [seed] [what]    what = fountain | impacts | off | perf | leave | all (default)
- * The shots are `<folder>/fountain-<n>.png`, `impact-<element>-<n>.png`, `fountain-off.png`. Prints what the page logged (errors, warnings).
+ * Usage: GAME_URL=http://localhost:<port>/ npx tsx tools/dev/check-fx.ts <folder> [seed] [what]    what = fountain | impacts | night | dark | mermaid | world | shore | off | perf | leave | all (default; night, dark and mermaid are not part of it)
+ * The shots are `<folder>/fountain-<n>.png`, `impact-<element>-<n>.png`, `fountain-off.png`, `night-<n>.png`, `dark-<item>-<n>.png`. Prints what the page logged (errors, warnings).
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -11,6 +11,8 @@ import puppeteer from "puppeteer-core";
 import { buildMapContent } from "../../src/actions";
 import { generateInterior } from "../../src/interiors";
 import { CELL } from "../../src/interiors/types";
+import { landmarkItemAt } from "../../src/render/terrainMesher";
+import { DECO, GROUND } from "../../src/world/types";
 import { World } from "../../src/world/world";
 
 const base = process.env.GAME_URL ?? "http://localhost:5191/";
@@ -43,6 +45,38 @@ for (const poi of world.allPois().filter((p) => p.kind === "town")) {
 if (!target) throw new Error("no town with a reachable fountain");
 console.log("fountain in", target.name, target.id, "at", target.fx, target.fy, "party at", target.x, target.y, target.facing);
 
+/** A land field on the coast near the start with water two fields to the east: the party stands on it and looks east over the foam. */
+function shoreSpot(w: World): { x: number; y: number } {
+  const start = w.startPosition();
+  let best: { x: number; y: number; d: number } | null = null;
+  for (let y = start.y - 60; y <= start.y + 60; y++) {
+    for (let x = start.x - 60; x <= start.x + 60; x++) {
+      const here = w.tile(x, y).ground;
+      if (here !== GROUND.LAND || !w.isOpenGround(x, y)) continue;
+      const wet = (dx: number) => [GROUND.WATER, GROUND.SHALLOW].includes(w.tile(x + dx, y).ground as never);
+      if (!wet(2) || !wet(3) || !wet(4)) continue;
+      const d = Math.hypot(x - start.x, y - start.y);
+      if (!best || d < best.d) best = { x, y, d };
+    }
+  }
+  if (!best) throw new Error("no shore near the start of this world");
+  return best;
+}
+
+/** The landmark fountain (old item 2) with open ground four tiles south of it that lies nearest to the middle of the world. */
+function fountainLandmark(w: World): { x: number; y: number } {
+  let best: { x: number; y: number; d: number } | null = null;
+  for (let y = 4; y < w.height - 6; y++) {
+    for (let x = 4; x < w.width - 4; x++) {
+      if (w.tile(x, y).deco !== DECO.LANDMARK || landmarkItemAt(x, y) !== 2 || !w.isOpenGround(x, y + 4)) continue;
+      const d = Math.hypot(x - w.width / 2, y - w.height / 2);
+      if (!best || d < best.d) best = { x, y, d };
+    }
+  }
+  if (!best) throw new Error("no landmark fountain in this world");
+  return best;
+}
+
 const browser = await puppeteer.launch({
   executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   headless: true,
@@ -60,10 +94,40 @@ try {
   await page.goto(`${base}?autostart=1&seed=${seed}&size=default&dungeons=default&outside=1`, { waitUntil: "load", timeout: 60000 });
   await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
   await sleep(5000);
-  await page.evaluate(`(async () => { await __game.enter(${JSON.stringify(target.id)}); })()`);
-  await sleep(4000);
-  await page.evaluate(`__game.teleport(${target.x}, ${target.y}, ${JSON.stringify(target.facing)})`);
-  await sleep(1500);
+  // BLOOM=1 looks at the glow of the High quality (the shots of the other modes are taken with it on)
+  if (process.env.BLOOM) await page.evaluate(`__game.game.internals.r.setBloom(true)`);
+  if (what === "shore") {
+    // the foam of the shore (bug_fix_68): by day, at night, and with the effects off
+    const spot = shoreSpot(world);
+    console.log("shore at", JSON.stringify(spot));
+    await page.evaluate(`__game.teleport(${spot.x}, ${spot.y}, "E")`);
+    await sleep(4000);
+    for (const [label, minutes] of [["day", 24 * 60 + 12 * 60], ["night", 24 * 60 + 23 * 60]] as const) {
+      await page.evaluate(`(() => { const p = __game.state.party; p.minutes = ${minutes}; __game.game.refresh(); })()`);
+      await sleep(2500);
+      await page.screenshot({ path: join(outDir, `shore-${label}.png`) });
+      console.log(`${label}: foam meshes`, await page.evaluate(`__game.scene.meshes.filter((m) => m.name.startsWith("fx:foam") && m.isEnabled()).length`), "alpha", await page.evaluate(`(__game.scene.getMaterialByName("fx:foam") || {}).alpha`));
+    }
+    await page.evaluate(`__game.game.internals.effects.setLevel("off")`);
+    await sleep(500);
+  } else if (what === "world") {
+    // the fountain of the open land (item 2): three tiles south of the nearest one with open ground there, looking north, by day and at night
+    const spot = fountainLandmark(world);
+    console.log("landmark fountain at", JSON.stringify(spot));
+    await page.evaluate(`__game.teleport(${spot.x}, ${spot.y + 4}, "N")`);
+    await sleep(3500);
+    for (const [label, minutes] of [["day", 24 * 60 + 12 * 60], ["night", 24 * 60 + 23 * 60]] as const) {
+      await page.evaluate(`(() => { const p = __game.state.party; p.minutes = ${minutes}; __game.game.refresh(); })()`);
+      await sleep(2500);
+      await page.screenshot({ path: join(outDir, `world-${label}.png`) });
+      console.log(`${label}: fountain light`, await page.evaluate(`JSON.stringify([...__game.game.internals.effects.sites.values()].map((s) => +s.light.toFixed(3)))`));
+    }
+  } else {
+    await page.evaluate(`(async () => { await __game.enter(${JSON.stringify(target.id)}); })()`);
+    await sleep(4000);
+    await page.evaluate(`__game.teleport(${target.x}, ${target.y}, ${JSON.stringify(target.facing)})`);
+    await sleep(1500);
+  }
 
   if (what === "fountain" || what === "all") {
     for (let n = 1; n <= 4; n++) {
@@ -80,6 +144,36 @@ try {
       // (a shot takes a while in a headless browser and the whole burst lasts 0.6 s: take them back to back, as fast as possible)
       for (let n = 1; n <= 3; n++) await page.screenshot({ path: join(outDir, `impact-${element}-${n}.png`), optimizeForSpeed: true });
       await sleep(700);
+    }
+  }
+  if (what === "night") {
+    // the same square at night: the water must be as dark as the stone (bug_fix_68), shots with and without the party's torch far from the fountains
+    await page.evaluate(`(() => { const p = __game.state.party; p.minutes = ${24 * 60 + 23 * 60}; __game.game.refresh(); })()`);
+    await sleep(2500);
+    for (let n = 1; n <= 2; n++) {
+      await page.screenshot({ path: join(outDir, `night-${n}.png`) });
+      await sleep(450);
+    }
+    console.log("fountain light at night:", await page.evaluate(`JSON.stringify([...__game.game.internals.effects.sites.values()].map((s) => +s.light.toFixed(3)))`));
+  }
+  if (what === "dark" || what === "mermaid" || what === "lamps") {
+    // the debug showcase is a dark dungeon in which every object stands on its own cell: the town's fountain, the landmark's and the mermaid's (or, with `lamps`, the objects named in
+    // ITEMS, by default the ones that give light), seen from three cells away
+    await page.evaluate(`(async () => { await __game.leave(); await __game.enter("showcase"); })()`);
+    await sleep(6000);
+    const wanted = (process.env.ITEMS ?? (what === "lamps" ? "117,120,92,121,3,71,4,86" : "2,89")).split(",").map(Number);
+    const spots = JSON.parse((await page.evaluate(`JSON.stringify(__game.game.internals.interior.map.showcase.items.filter((i) => ${JSON.stringify(wanted)}.includes(i.item)).concat(${what === "lamps" ? "[]" : `__game.game.internals.interior.map.showcase.extras.filter((e) => e.model === "obj_fountain")`}).map((i) => ({ name: i.item ?? i.model, x: i.x, y: i.y })))`)) as string) as { name: string | number; x: number; y: number }[];
+    console.log("showcase fountains:", JSON.stringify(spots));
+    for (const spot of spots) {
+      if (what === "mermaid" && spot.name !== 89) continue;
+      const dist = Number(process.env.DIST ?? 3);
+      await page.evaluate(`__game.teleport(${spot.x + 1}, ${spot.y + dist}, "N")`);
+      await sleep(2500);
+      for (let n = 1; n <= 2; n++) {
+        await page.screenshot({ path: join(outDir, `dark-${spot.name}-${n}.png`) });
+        await sleep(450);
+      }
+      console.log(`light at ${spot.name}:`, await page.evaluate(`JSON.stringify([...__game.game.internals.effects.sites.values()].filter((s) => Math.abs(s.x - ${spot.x * 3 + 1.5}) < 2).map((s) => +s.light.toFixed(3)))`));
     }
   }
   if (what === "off" || what === "all") {

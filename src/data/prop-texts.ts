@@ -109,9 +109,6 @@ export function propLine(item: number, pick: number | string = 0): string {
   return `You see ${/^[aeiou]/.test(label) ? "an" : "a"} ${label}.`;
 }
 
-/** Items with a line of their own (for the test that every object that stands anywhere says something). */
-export const ITEMS_WITH_LINES: readonly number[] = Object.keys(PROP_LINES).map(Number);
-
 /** What a barrel gives away when the party opens it and finds nothing or a few coins (barrels are containers: they must be of use). */
 export const BARREL_EMPTY: readonly string[] = [
   "Somebody is fermenting fish in the barrel, so you quickly close the lid.",

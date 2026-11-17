@@ -4,8 +4,8 @@
  * OBJ files are converted by a small parser here because their .mtl files in the old project are broken;
  * the texture is the image with the same name next to the OBJ.
  *
- * Two profiles: `reduced` (default, the low-poly set the game ships with) and `original` (`--original`: the same pipeline
- * without triangle budget and texture downscale, ~470 MB, written beside the reduced set for the menu's model switch).
+ * One profile, `original`: no triangle budget and no texture downscale (~470 MB, `public/assets/models-original`). The low-poly set and the profile that
+ * wrote it are gone (bug_fix_68).
  */
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
@@ -83,14 +83,13 @@ export interface ModelSpec {
   heightfield?: { cells: number; uvSpan: number };
 }
 
-export type ModelProfile = "reduced" | "original";
+export type ModelProfile = "original";
 
 /**
  * Where a profile writes. The registry names must match `registryFile` in src/render/modelSet.ts (tests/unit/assets.test.ts
  * compares them); `file` in the registries is relative to the asset root, so the game needs nothing else to tell the sets apart.
  */
 export const PROFILES: Record<ModelProfile, { dir: string; staticRegistry: string; monsterRegistry: string; webpQuality: number }> = {
-  reduced: { dir: "models", staticRegistry: "models.static.json", monsterRegistry: "models.monsters.json", webpQuality: 80 },
   original: { dir: "models-original", staticRegistry: "models.static.original.json", monsterRegistry: "models.monsters.original.json", webpQuality: 90 },
 };
 
@@ -639,7 +638,7 @@ function computeNormals(doc: Document, mode: "flat" | "smooth" | "crease"): void
   }
 }
 
-export async function buildModel(spec: ModelSpec, profile: ModelProfile = "reduced"): Promise<ModelInfo | null> {
+export async function buildModel(spec: ModelSpec, profile: ModelProfile = "original"): Promise<ModelInfo | null> {
   const src = sourcePath(spec.source);
   if (!existsSync(src)) {
     console.warn(`  missing source: ${spec.source}`);
@@ -661,7 +660,7 @@ export async function buildModel(spec: ModelSpec, profile: ModelProfile = "reduc
 
   const doc = extname(src).toLowerCase() === ".obj" ? await docFromObj(src, spec.texture) : await io.readBinary(new Uint8Array(readFileSync(src)));
   // the originals ignore the budgets of the table below: Infinity switches every simplify step off, 4096 never shrinks a 2048 texture
-  await processDoc(doc, profile === "original" ? { ...spec, maxTris: spec.capped ? spec.maxTris : Infinity, texSize: 4096 } : spec, profile);
+  await processDoc(doc, { ...spec, maxTris: spec.capped ? spec.maxTris : Infinity, texSize: 4096 }, profile);
   ensureDir(out);
   await io.write(out, doc);
   const scene = doc.getRoot().getDefaultScene() ?? doc.getRoot().listScenes()[0]!;
@@ -950,7 +949,7 @@ export interface MonsterModel extends ModelInfo {
 }
 
 /** One model per monster: the animated glb where the old game had one, else the static obj. */
-export async function buildMonsters(profile: ModelProfile = "reduced", only?: ReadonlySet<number>): Promise<Record<number, MonsterModel>> {
+export async function buildMonsters(profile: ModelProfile = "original", only?: ReadonlySet<number>): Promise<Record<number, MonsterModel>> {
   const monsters = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "src", "data", "raw", "MONSTER_DATA.json"), "utf-8")) as Record<string, { name: string; anim_path?: string; anim_scale?: number }>;
   const staticMap = readStaticMonsterMap();
   const result: Record<number, MonsterModel> = {};
@@ -996,7 +995,7 @@ export async function buildMonsters(profile: ModelProfile = "reduced", only?: Re
   return result;
 }
 
-export async function buildAllModels(only?: string, profile: ModelProfile = "reduced"): Promise<Record<string, ModelInfo>> {
+export async function buildAllModels(only?: string, profile: ModelProfile = "original"): Promise<Record<string, ModelInfo>> {
   const registry: Record<string, ModelInfo> = {};
   const specs = STATIC_MODELS.filter((s) => !only || s.key.startsWith(only));
   await pool(specs, 3, async (spec) => {
@@ -1008,7 +1007,7 @@ export async function buildAllModels(only?: string, profile: ModelProfile = "red
 
 if (process.argv[1]?.endsWith("build-models.ts")) {
   const only = process.argv.find((a) => a.startsWith("--only="))?.slice(7);
-  const profile: ModelProfile = process.argv.includes("--original") ? "original" : "reduced";
+  const profile: ModelProfile = "original"; // (`--original`, as `npm run assets:originals` passes it, changes nothing any more)
   // `--monster=54,79` builds only these monster models (ids of the monster registry) and keeps the rest of both registries
   const monsterArg = process.argv.find((a) => a.startsWith("--monster="))?.slice(10);
   if (monsterArg !== undefined) {

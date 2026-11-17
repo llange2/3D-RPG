@@ -32,7 +32,7 @@ try {
     await new Promise((r) => setTimeout(r, 1200));
     g.game.internals.monsters.clear();
   });
-  const info = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "public", "assets", "models.monsters.json"), "utf-8")) as Record<string, unknown>;
+  const info = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "public", "assets", "models.monsters.original.json"), "utf-8")) as Record<string, unknown>;
   const ids = Object.keys(info).map(Number).sort((a, b) => a - b);
   const tiles: { id: number; png: Buffer }[] = [];
   for (const id of ids) {

@@ -48,7 +48,7 @@ describe("the sliding doors of the spaceship (6. 11. 2026)", () => {
   it("loads the frame and the two leaves, they are in the registry, and the sound is in the table and on disk", () => {
     const { map, content } = shipOf("ship-a");
     expect(doorModelKeys(map, content).sort()).toEqual(["obj_space_door_left", "obj_space_door_right", "obj_space_lock"]);
-    for (const file of ["models.static.json", "models.static.original.json"]) {
+    for (const file of ["models.static.original.json"]) {
       if (!existsSync(join(ASSETS, file))) continue;
       const registry = JSON.parse(readFileSync(join(ASSETS, file), "utf-8")) as Record<string, { bounds: number[] }>;
       for (const k of ["obj_space_lock", "obj_space_door_left", "obj_space_door_right"]) expect(registry[k], `${file} ${k}`).toBeDefined();

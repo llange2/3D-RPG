@@ -1,5 +1,4 @@
 /** Typed access to the tables exported from old_code/g.py (see tools/export/export_g_data.py). */
-import ACTIONS_RAW from "./raw/ACTIONS.json";
 import BASE_CLASS_RAW from "./raw/BASE_CLASS.json";
 import BASE_RACE_RAW from "./raw/BASE_RACE.json";
 import BLOCKS_RAW from "./raw/BLOCKS.json";
@@ -331,7 +330,6 @@ export const RIDDLES_MASTER = RIDDLES_RAW as unknown as Record<number, { questio
 export const BASE_CLASS = BASE_CLASS_RAW as unknown as Record<string, ClassDef>;
 export const BASE_RACE = BASE_RACE_RAW as unknown as Record<string, RaceDef>;
 export const BLOCKS = BLOCKS_RAW as unknown as Record<string, BlockDef>;
-export const LEGACY_ACTIONS = ACTIONS_RAW as unknown as Record<string, { name: string; action_id: number; minimap_texture?: string }>;
 /** Decorations of the old maps (chests, statues, levers, signs), by id. Not to be confused with equipment. */
 export const MAP_ITEMS = MAP_ITEMS_RAW as unknown as Record<number, { name: string; obstacle: boolean; view_blocking: boolean; rotating: boolean }>;
 export const QUEST_ITEMS = QUEST_ITEMS_RAW as unknown as { name: string; type: string; texture: string; value: number }[];

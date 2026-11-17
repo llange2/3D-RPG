@@ -1,21 +1,26 @@
 import type { Camera } from "@babylonjs/core/Cameras/camera";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
-import { Constants } from "@babylonjs/core/Engines/constants";
-import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { Texture } from "@babylonjs/core/Materials/Textures/texture";
+import type { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import type { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { Scene } from "@babylonjs/core/scene";
-import { assetUrl } from "./assets";
+import { ShoreFoam } from "./foam";
+import { type Blend, additiveMaterial, sheetTexture } from "./fxMaterials";
+import { lightAt } from "./fxLight";
+import type { LampFx } from "./lamps";
 import { type CellUv, EFFECT_LEVELS, type EffectsLevel, FOUNTAIN_SHAPES, FX_FILES, IMPACT_FRAMES, IMPACT_GRID, IMPACT_KINDS, type ImpactKind, PARTICLE_CELLS, PARTICLE_GRID, type FountainShape, cellUv } from "./fxSheets";
 import type { PropInstance } from "./terrainMesher";
+import type { World } from "../world/world";
 
 /**
- * The cheap effects: the water of the town fountains, and what a spell does where it lands. Everything is drawn as quads of additive pictures (`fxSheets.ts`): ONE mesh for all
- * particles, one per impact element, and per fountain a disc (the lit water of the basin) and a cone (the water that runs over the rim). No particle system, no render pass,
- * no light of the lamp pool: the glow lives in the pictures. Quads are rebuilt on the CPU every frame (some hundred at the most), the meshes are never culled and never sorted
- * (additive blending does not care for the order).
+ * The cheap effects: the water of the fountains, and what a spell does where it lands. Everything is drawn as quads of pictures (`fxSheets.ts`): ONE mesh for all
+ * the pale additive particles, one for the drops (the user's blue drop, drawn by its alpha), one per impact element, and per fountain a disc (the lit water), a sheet of
+ * blue water (an open cone, or the thin stream of the mermaid's horn). No particle system, no render pass, no light of the lamp pool.
+ *
+ * The water follows the light of the scene like the stone of the fountain does (`lightAt`): in the sun it is as bright as it was, in a dark place only the party's torch or a lamp shows it,
+ * and far from them it is dark (the first version shone in the dark, bug_fix_68). Quads are rebuilt on the CPU every frame (some hundred at the most), the meshes are never culled
+ * and never sorted (the additive ones do not care for the order).
  */
 
 const RANGE = 42;
@@ -24,9 +29,21 @@ const MAX_DT = 0.1;
 const IMPACT_TOWARDS_EYE = 0.7;
 const IMPACT_SIZE = 3.4;
 const IMPACT_SECONDS = 0.6;
-/** Pale blue of water; the grey sprites are multiplied by it. */
+/** Pale blue of the pale water particles (mist, rings); the grey sprites are multiplied by it. */
 const WATER: readonly [number, number, number] = [0.72, 0.9, 1];
 const GRAVITY = 9;
+/** How fast the light of a fountain follows the light of the scene (per second): a torch that goes out or a lamp that comes close does not make the water jump. */
+const LIGHT_FOLLOW = 7;
+/** How far from the party a lamp still shows a halo (it fades out over the last 45 %), and how near it must be to throw off sparks, smoke and the like. */
+const LAMP_FX_REACH = 30;
+const LAMP_FX_EMIT = 20;
+
+/** A number from a lamp's key, so that two lamps do not flicker in step. */
+function keyPhase(key: string): number {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 6283;
+  return h / 1000;
+}
 
 /** A tiny deterministic generator: the effects are only to look at, but a screenshot should come out the same twice. */
 function rng(seed: number): () => number {
@@ -45,38 +62,6 @@ const smooth = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
-/**
- * `add`: the picture is added to what is behind it (glows, water: they shine in the dark and in the sun, but add up to white on a bright sky). `combine`: it covers what is behind it by
- * its alpha (the impacts of the spells: in daylight the burst keeps its colour, acid stays green).
- */
-type Blend = "add" | "combine";
-
-function additiveMaterial(scene: Scene, name: string, texture: Texture, blend: Blend = "add"): StandardMaterial {
-  const m = new StandardMaterial(name, scene);
-  m.disableLighting = true;
-  m.diffuseColor = Color3.Black();
-  m.specularColor = Color3.Black();
-  // the colour is in the picture and the alpha is its intensity: SRC_ALPHA + ONE adds colour x alpha (as the glow lines do), the vertex colour tints and fades
-  m.emissiveTexture = texture;
-  m.opacityTexture = texture;
-  m.alphaMode = blend === "add" ? Constants.ALPHA_ADD : Constants.ALPHA_COMBINE;
-  m.backFaceCulling = false;
-  m.disableDepthWrite = true;
-  m.fogEnabled = false;
-  m.zOffset = -2;
-  return m;
-}
-
-function sheetTexture(scene: Scene, file: string, wrap: boolean): Texture {
-  const t = new Texture(assetUrl(file), scene, false, true, Constants.TEXTURE_TRILINEAR_SAMPLINGMODE);
-  t.hasAlpha = true;
-  const mode = wrap ? Constants.TEXTURE_WRAP_ADDRESSMODE : Constants.TEXTURE_CLAMP_ADDRESSMODE;
-  t.wrapU = mode;
-  t.wrapV = mode;
-  t.anisotropicFilteringLevel = 2;
-  return t;
-}
-
 /** Quads of one picture in one dynamic mesh. The colour of a quad (vertex colour) multiplies the picture: that is the tint and the fade. */
 class QuadBatch {
   readonly mesh: Mesh;
@@ -86,7 +71,7 @@ class QuadBatch {
   private count = 0;
   private drawn = 0;
 
-  constructor(scene: Scene, name: string, texture: Texture, readonly capacity: number, blend: Blend = "add") {
+  constructor(scene: Scene, name: string, texture: Texture, readonly capacity: number, blend: Blend = "add", vertexAlpha = false) {
     this.positions = new Float32Array(capacity * 12);
     this.uvs = new Float32Array(capacity * 8);
     this.colours = new Float32Array(capacity * 16).fill(1);
@@ -100,6 +85,8 @@ class QuadBatch {
     this.mesh = new Mesh(name, scene);
     data.applyToMesh(this.mesh, true);
     this.mesh.material = additiveMaterial(scene, name, texture, blend);
+    // (smoke fades by the alpha of its quad, the others by their colour)
+    this.mesh.hasVertexAlpha = vertexAlpha;
     this.mesh.isPickable = false;
     this.mesh.alwaysSelectAsActiveMesh = true;
     this.mesh.doNotSyncBoundingInfo = true;
@@ -115,7 +102,7 @@ class QuadBatch {
   }
 
   /** A quad around (x, y, z): (ax, ay, az) is the half-extent to the right, (bx, by, bz) the one upwards, both as world vectors; the colour multiplies the picture (tint and fade). */
-  quad(x: number, y: number, z: number, ax: number, ay: number, az: number, bx: number, by: number, bz: number, uv: CellUv, r: number, g: number, bl: number): void {
+  quad(x: number, y: number, z: number, ax: number, ay: number, az: number, bx: number, by: number, bz: number, uv: CellUv, r: number, g: number, bl: number, alpha = 1): void {
     if (this.count >= this.capacity) return;
     const p = this.positions;
     const o = this.count * 12;
@@ -132,6 +119,7 @@ class QuadBatch {
       c[k + i * 4] = r;
       c[k + i * 4 + 1] = g;
       c[k + i * 4 + 2] = bl;
+      c[k + i * 4 + 3] = alpha;
     }
     this.count++;
   }
@@ -154,8 +142,42 @@ class QuadBatch {
   }
 }
 
+/** A fountain on the map: its water is drawn while the party is near. */
+interface Site {
+  owner: string;
+  shape: FountainShape;
+  /** Where the model stands: its lowest point is at (x, y, z). */
+  x: number;
+  y: number;
+  z: number;
+  /** The size of a model unit along each axis, and the turn about the vertical (the instance's). */
+  sx: number;
+  sy: number;
+  sz: number;
+  rotY: number;
+  clock: { arc: number; foot: number; mist: number };
+  /** How bright the scene is where the water is (0 to 1, `lightAt`), followed smoothly. */
+  light: number;
+  /** The lit water of the basin (tiered) or of the foot of the stream (horn), and the sheet of blue water. Each has geometry of its own (the colours are changed to follow the light). */
+  disc: { mesh: Mesh; base: Float32Array; shown: number } | null;
+  sheet: { mesh: Mesh; base: Float32Array; shown: number } | null;
+}
+
+/** A lamp as the effects see it (`Game.updateLamps` hands over every lamp in reach, not only the two that get a light): the halo round it, and what rises from it. */
+export interface FxLamp {
+  key: string;
+  x: number;
+  y: number;
+  z: number;
+  color: readonly [number, number, number];
+  range?: number;
+  fx?: LampFx;
+  /** The size of the halo (world units across) instead of the one the range gives: lava glows over a whole tile. */
+  glow?: number;
+}
+
 interface Particle {
-  kind: "drop" | "puff" | "ring";
+  kind: "drop" | "puff" | "ring" | "smoke";
   cell: number;
   x: number;
   y: number;
@@ -165,7 +187,7 @@ interface Particle {
   vz: number;
   age: number;
   life: number;
-  /** Size at the start and at the end (world units across). */
+  /** Size at the start and at the end (world units across; for a drop its height). */
   size0: number;
   size1: number;
   /** Peak brightness. */
@@ -174,6 +196,11 @@ interface Particle {
   floor: number;
   lands: "ripple" | "small" | "none";
   scale: number;
+  /** The fountain it belongs to: its light is the particle's (a particle of a lamp has none: it shines with its own colour, `tint`, and `lit` is the light of the place for the smoke). */
+  site: Site | null;
+  /** The colour of a particle that is not pale water, and the light that smoke takes at its place. */
+  tint?: readonly [number, number, number];
+  lit?: number;
 }
 
 interface Impact {
@@ -182,20 +209,17 @@ interface Impact {
   y: number;
   z: number;
   t: number;
+  /** World units across (the burst of a spell, a smaller splash for the water the party wades into). */
+  size: number;
 }
 
-/** A fountain on the map: its water is drawn while the party is near. */
-interface Site {
-  owner: string;
-  shape: FountainShape;
-  x: number;
-  y: number;
-  z: number;
-  /** World units of a model unit (the instance's scale). */
-  s: number;
-  clock: { jet: number; rim: number; mist: number };
-  disc: Mesh | null;
-  cone: Mesh | null;
+/** A point of a fountain model, in the world: `mx`, `mz` in the file's coordinates (the engine mirrors glTF in x), `my` in model units over the lowest point. */
+function fountainPoint(site: Site, mx: number, my: number, mz: number): [number, number, number] {
+  const lx = -mx * site.sx;
+  const lz = mz * site.sz;
+  const c = Math.cos(site.rotY);
+  const s = Math.sin(site.rotY);
+  return [site.x + lx * c + lz * s, site.y + my * site.sy, site.z - lx * s + lz * c];
 }
 
 /** The unit disc of the basin water: colour 1 in the middle, falling to 0 at the rim, so that the lit water has no edge. UVs are the plan position. */
@@ -228,9 +252,11 @@ function discData(): VertexData {
   return data;
 }
 
-/** The open cone of the water that runs over the rim of the upper bowl: height 1, radius 1 at the top and `spread` at the bottom, the streaks of the jet picture around it. */
-function coneData(spread: number): VertexData {
-  const segments = 24;
+/**
+ * The open cone of the water that runs down: height 1 (from y = 0 down to y = -1), radius 1 at the top and `spread` at the bottom, the streaks of the flow picture around it
+ * (`wraps` times round, the picture runs once down it). The colour is 1 at the top and a little darker at the bottom, where the water is thinner.
+ */
+function coneData(spread: number, segments = 24, wraps = 2): VertexData {
   const pos: number[] = [];
   const col: number[] = [];
   const uv: number[] = [];
@@ -240,8 +266,8 @@ function coneData(spread: number): VertexData {
     const c = Math.cos(a);
     const s = Math.sin(a);
     pos.push(c, 0, s, c * spread, -1, s * spread);
-    col.push(0.34, 0.34, 0.34, 1, 0.16, 0.16, 0.16, 1);
-    uv.push((i / segments) * 2, 1, (i / segments) * 2, 0);
+    col.push(1, 1, 1, 1, 0.86, 0.86, 0.86, 1);
+    uv.push((i / segments) * wraps, 1, (i / segments) * wraps, 0);
   }
   for (let i = 0; i < segments; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 3, i * 2, i * 2 + 3, i * 2 + 2);
   const data = new VertexData();
@@ -262,26 +288,44 @@ export class Effects implements PropWatcher {
   private level: EffectsLevel;
   private ready = false;
   private main: QuadBatch | null = null;
+  private drops: QuadBatch | null = null;
+  private smoke: QuadBatch | null = null;
+  private lamps: readonly FxLamp[] = [];
+  /** How bright the sky is (0 night, 1 day): by day the halos of the lamps are faint. */
+  private day = 0;
   private impactBatches = new Map<ImpactKind, QuadBatch>();
   private rippleTexture: Texture | null = null;
-  private jetTexture: Texture | null = null;
-  private discSource: Mesh | null = null;
-  private coneSource: Mesh | null = null;
+  private flowTexture: Texture | null = null;
+  private waterMaterial: StandardMaterial | null = null;
+  private flowMaterial: StandardMaterial | null = null;
   private readonly sites = new Map<string, Site>();
   private particles: Particle[] = [];
   private impacts: Impact[] = [];
   private clock = 0;
   private readonly random = rng(0x5eed);
+  private readonly foam: ShoreFoam;
 
   constructor(
     private readonly scene: Scene,
     level: EffectsLevel,
   ) {
     this.level = level;
+    this.foam = new ShoreFoam(scene);
   }
 
   get active(): boolean {
     return this.level !== "off";
+  }
+
+  // ---- the foam of the shore: the chunks of the overworld ask for theirs (`ChunkManager`) and give it back
+
+  /** The foam of one overworld chunk, or null (the effects are off, or no water of the chunk touches land). */
+  shoreFoam(world: World, cx: number, cy: number): Mesh | null {
+    return this.level === "off" ? null : this.foam.build(world, cx, cy);
+  }
+
+  releaseFoam(mesh: Mesh): void {
+    this.foam.release(mesh);
   }
 
   setLevel(level: EffectsLevel): void {
@@ -304,7 +348,8 @@ export class Effects implements PropWatcher {
         found.push(old);
         continue;
       }
-      const site: Site = { owner, shape, x: p.x, y: p.y, z: p.z, s: p.scaleXYZ?.[1] ?? p.scale, clock: { jet: 0, rim: 0, mist: 0 }, disc: null, cone: null };
+      const [sx, sy, sz] = p.scaleXYZ ?? [p.scale, p.scale, p.scale];
+      const site: Site = { owner, shape, x: p.x, y: p.y, z: p.z, sx, sy, sz, rotY: p.rotY, clock: { arc: 0, foot: 0, mist: 0 }, light: -1, disc: null, sheet: null };
       this.sites.set(key, site);
       found.push(site);
     }
@@ -319,18 +364,18 @@ export class Effects implements PropWatcher {
   }
 
   private dropSite(key: string, site: Site): void {
-    site.disc?.dispose(false, false);
-    site.cone?.dispose(false, false);
+    site.disc?.mesh.dispose(false, false);
+    site.sheet?.mesh.dispose(false, false);
     this.sites.delete(key);
   }
 
   // ---- spells
 
   /** The element of a spell strikes at `at`: a burst of 16 frames in the middle of the point of impact. */
-  impact(kind: ImpactKind, at: { x: number; y: number; z: number }): void {
+  impact(kind: ImpactKind, at: { x: number; y: number; z: number }, size = IMPACT_SIZE): void {
     if (this.level === "off") return;
     this.ensure();
-    if (this.impacts.length < 24) this.impacts.push({ kind, x: at.x, y: at.y, z: at.z, t: 0 });
+    if (this.impacts.length < 24) this.impacts.push({ kind, x: at.x, y: at.y, z: at.z, t: 0, size });
   }
 
   /** Forgets what is in the air (a scene change). The fountains belong to their owners and go with them. */
@@ -338,14 +383,24 @@ export class Effects implements PropWatcher {
     this.particles = [];
     this.impacts = [];
     this.main?.clear();
+    this.drops?.clear();
+    this.smoke?.clear();
     for (const b of this.impactBatches.values()) b.clear();
+  }
+
+  // ---- lamps: a halo round every lamp in reach, and what rises from it
+
+  /** The lamps in reach of the party (every frame, from `Game.updateLamps`) and how bright the sky is. */
+  setLamps(lamps: readonly FxLamp[], day: number): void {
+    this.lamps = lamps;
+    this.day = day;
   }
 
   private hideAll(): void {
     this.clear();
     for (const s of this.sites.values()) {
-      s.disc?.setEnabled(false);
-      s.cone?.setEnabled(false);
+      s.disc?.mesh.setEnabled(false);
+      s.sheet?.mesh.setEnabled(false);
     }
   }
 
@@ -353,31 +408,47 @@ export class Effects implements PropWatcher {
   private ensure(): void {
     if (this.ready) return;
     this.ready = true;
-    this.main = new QuadBatch(this.scene, "fx:particles", sheetTexture(this.scene, FX_FILES.particles, false), 360);
+    this.main = new QuadBatch(this.scene, "fx:particles", sheetTexture(this.scene, FX_FILES.particles, false), 420);
+    this.drops = new QuadBatch(this.scene, "fx:drops", sheetTexture(this.scene, FX_FILES.drop, false), 200, "combine");
+    this.smoke = new QuadBatch(this.scene, "fx:smoke", sheetTexture(this.scene, FX_FILES.smoke, false), 80, "combine", true);
     for (const kind of IMPACT_KINDS) this.impactBatches.set(kind, new QuadBatch(this.scene, `fx:impact:${kind}`, sheetTexture(this.scene, FX_FILES.impact[kind], false), 12, "combine"));
     this.rippleTexture = sheetTexture(this.scene, FX_FILES.ripple, true);
-    this.jetTexture = sheetTexture(this.scene, FX_FILES.jet, true);
-    const disc = new Mesh("fx:water-disc", this.scene);
-    discData().applyToMesh(disc);
-    disc.material = additiveMaterial(this.scene, "fx:water-disc", this.rippleTexture);
-    const cone = new Mesh("fx:water-cone", this.scene);
-    coneData(1.18).applyToMesh(cone);
-    cone.material = additiveMaterial(this.scene, "fx:water-cone", this.jetTexture);
-    for (const m of [disc, cone]) {
-      m.isPickable = false;
-      m.alwaysSelectAsActiveMesh = true;
-      m.doNotSyncBoundingInfo = true;
-      m.setEnabled(false);
+    this.flowTexture = sheetTexture(this.scene, FX_FILES.flow, true);
+    this.waterMaterial = additiveMaterial(this.scene, "fx:water-disc", this.rippleTexture);
+    this.flowMaterial = additiveMaterial(this.scene, "fx:water-flow", this.flowTexture, "combine");
+  }
+
+  /** The mesh of a fountain's disc or sheet: its own geometry (the colours change with the light), the material shared. */
+  private makeMesh(name: string, data: VertexData, material: StandardMaterial): { mesh: Mesh; base: Float32Array; shown: number } {
+    const mesh = new Mesh(name, this.scene);
+    data.applyToMesh(mesh, true);
+    mesh.material = material;
+    mesh.isPickable = false;
+    mesh.alwaysSelectAsActiveMesh = true;
+    mesh.doNotSyncBoundingInfo = true;
+    return { mesh, base: Float32Array.from(data.colors as number[]), shown: -1 };
+  }
+
+  /** Sets the colours of a disc or sheet to its own colours times the light (only when the light has changed visibly). */
+  private tint(part: { mesh: Mesh; base: Float32Array; shown: number }, light: number): void {
+    if (Math.abs(part.shown - light) < 0.012) return;
+    part.shown = light;
+    const colours = new Float32Array(part.base.length);
+    for (let i = 0; i < colours.length; i += 4) {
+      colours[i] = part.base[i]! * light;
+      colours[i + 1] = part.base[i + 1]! * light;
+      colours[i + 2] = part.base[i + 2]! * light;
+      colours[i + 3] = 1;
     }
-    this.discSource = disc;
-    this.coneSource = cone;
+    part.mesh.updateVerticesData(VertexBuffer.ColorKind, colours, false, false);
   }
 
   update(dtSeconds: number): void {
     const dt = Math.min(MAX_DT, dtSeconds);
     if (this.level === "off") return;
     const camera = this.scene.activeCamera;
-    const idle = this.sites.size === 0 && this.particles.length === 0 && this.impacts.length === 0;
+    if (camera) this.foam.animate(dt, camera.globalPosition);
+    const idle = this.sites.size === 0 && this.particles.length === 0 && this.impacts.length === 0 && this.lamps.length === 0;
     if (!camera || idle) {
       if (this.ready && this.main && this.main.mesh.isEnabled()) this.clear();
       return;
@@ -385,20 +456,27 @@ export class Effects implements PropWatcher {
     this.ensure();
     this.clock += dt;
     const main = this.main!;
+    const drops = this.drops!;
+    const smoke = this.smoke!;
     main.start();
+    drops.start();
+    smoke.start();
     for (const b of this.impactBatches.values()) b.start();
     const view = viewAxes(camera);
     this.updateSites(dt, camera);
+    this.updateLamps(dt, camera, view);
     this.updateParticles(dt, view);
     this.updateImpacts(dt, camera, view);
     main.finish();
+    drops.finish();
+    smoke.finish();
     for (const b of this.impactBatches.values()) b.finish();
-    // the water of the basin shines with its own picture, which slides over it; the streaks run down
+    // the water of the basin shines with its own picture, which slides over it; the sheet of water runs down
     if (this.rippleTexture) {
       this.rippleTexture.uOffset = this.clock * 0.035;
       this.rippleTexture.vOffset = this.clock * 0.022;
     }
-    if (this.jetTexture) this.jetTexture.vOffset = this.clock * 1.5;
+    if (this.flowTexture) this.flowTexture.vOffset = this.clock * 1.1;
   }
 
   // ---- fountains
@@ -409,64 +487,229 @@ export class Effects implements PropWatcher {
     for (const site of this.sites.values()) {
       const near = (site.x - cam.x) ** 2 + (site.z - cam.z) ** 2 < RANGE * RANGE;
       if (!near) {
-        site.disc?.setEnabled(false);
-        site.cone?.setEnabled(false);
+        site.disc?.mesh.setEnabled(false);
+        site.sheet?.mesh.setEnabled(false);
         continue;
       }
-      const { shape, s } = site;
-      if (!site.disc) {
-        site.disc = this.discSource!.clone(`fx:disc:${site.owner}`);
-        site.cone = this.coneSource!.clone(`fx:cone:${site.owner}`);
-        site.disc.position.set(site.x, site.y + shape.basinY * s + 0.03, site.z);
-        site.disc.scaling.set(shape.basinR * s, 1, shape.basinR * s);
-        site.cone.position.set(site.x, site.y + shape.upperY * s, site.z);
-        site.cone.scaling.set(shape.upperR * 1.15 * s, (shape.upperY - shape.basinY) * s, shape.upperR * 1.15 * s);
-      }
-      site.disc.setEnabled(true);
-      site.cone!.setEnabled(true);
+      if (!site.sheet) this.buildSite(site);
+      site.disc!.mesh.setEnabled(true);
+      site.sheet!.mesh.setEnabled(true);
+      // the light where the water is, followed smoothly (the first time: at once)
+      const at = fountainPoint(site, site.shape.kind === "horn" ? site.shape.spoutX : 0, site.shape.basinY + 0.35, site.shape.kind === "horn" ? site.shape.spoutZ : 0);
+      // (to the power of 1.5: the stone of the fountain is lit at a slant and has a colour of its own, so it is darker than the light on it, and the water must not stand out from it in a dim place)
+      const target = lightAt(this.scene, at[0], at[1], at[2]) ** 1.5;
+      site.light = site.light < 0 ? target : site.light + (target - site.light) * Math.min(1, dt * LIGHT_FOLLOW);
+      this.tint(site.disc!, site.light);
+      this.tint(site.sheet!, site.light);
       this.emit(site, dt, full);
     }
   }
 
-  private emit(site: Site, dt: number, full: boolean): void {
-    const { shape, s, clock } = site;
-    const r = this.random;
-    // the jet from the finial: drops that go up a little and fall back into the upper bowl
-    clock.jet += dt * (full ? 16 : 7);
-    while (clock.jet >= 1) {
-      clock.jet -= 1;
-      const a = r() * Math.PI * 2;
-      const out = r() * 0.35 * s;
-      this.particles.push({
-        kind: "drop", cell: PARTICLE_CELLS.drop_teardrop, x: site.x + Math.cos(a) * 0.04 * s, y: site.y + shape.topY * s, z: site.z + Math.sin(a) * 0.04 * s,
-        vx: Math.cos(a) * out, vy: (2.2 + r() * 1.1) * Math.sqrt(s), vz: Math.sin(a) * out, age: 0, life: 2, size0: 0.12 * s, size1: 0.12 * s, peak: 0.95,
-        floor: site.y + (shape.upperY - 0.04) * s, lands: full ? "small" : "none", scale: s,
-      });
+  /** Builds the meshes of a fountain and puts them where its water is. */
+  private buildSite(site: Site): void {
+    const shape = site.shape;
+    site.disc = this.makeMesh(`fx:disc:${site.owner}`, discData(), this.waterMaterial!);
+    if (shape.kind === "tiered") {
+      // the lit water of the basin, and the sheet of blue water from the rim of the upper bowl down to the basin: it flares from just outside the rim to nearly the width of the
+      // water the drops fall into
+      const water = fountainPoint(site, 0, shape.basinY, 0);
+      site.disc.mesh.position.set(water[0], water[1] + 0.03, water[2]);
+      site.disc.mesh.scaling.set(shape.basinR * site.sx, 1, shape.basinR * site.sz);
+      site.sheet = this.makeMesh(`fx:sheet:${site.owner}`, coneData(1.38), this.flowMaterial!);
+      const rim = fountainPoint(site, 0, shape.upperY, 0);
+      site.sheet.mesh.position.set(rim[0], rim[1], rim[2]);
+      site.sheet.mesh.scaling.set(shape.upperR * 1.12 * site.sx, (shape.upperY - shape.basinY) * site.sy, shape.upperR * 1.12 * site.sz);
+    } else {
+      // the glow where the stream falls into the water, and the stream itself: a thin cone that widens a little towards the water
+      const foot = fountainPoint(site, shape.spoutX, shape.basinY, shape.spoutZ);
+      site.disc.mesh.position.set(foot[0], foot[1] + 0.03, foot[2]);
+      site.disc.mesh.scaling.set(0.17 * site.sx, 1, 0.17 * site.sz);
+      site.sheet = this.makeMesh(`fx:sheet:${site.owner}`, coneData(2.2, 12, 1), this.flowMaterial!);
+      const mouth = fountainPoint(site, shape.spoutX, shape.mouthY, shape.spoutZ);
+      site.sheet.mesh.position.set(mouth[0], mouth[1], mouth[2]);
+      site.sheet.mesh.scaling.set(shape.streamR * site.sx, (shape.mouthY - shape.basinY) * site.sy, shape.streamR * site.sz);
     }
-    // the water over the rim of the upper bowl: drops that fall into the basin and ring it
-    clock.rim += dt * (full ? 15 : 6);
-    while (clock.rim >= 1) {
-      clock.rim -= 1;
+  }
+
+  /** A drop leaves `from` and lands on `to`: the parabola with the given upward speed that meets it. */
+  private throwDrop(site: Site, from: readonly [number, number, number], to: readonly [number, number, number], up: number, size: number, lands: Particle["lands"]): void {
+    const fall = Math.max(0.05, from[1] - to[1]);
+    const time = (up + Math.sqrt(up * up + 2 * GRAVITY * fall)) / GRAVITY;
+    this.particles.push({
+      kind: "drop", cell: PARTICLE_CELLS.drop_teardrop, x: from[0], y: from[1], z: from[2], vx: (to[0] - from[0]) / time, vy: up, vz: (to[2] - from[2]) / time,
+      age: 0, life: time + 0.8, size0: size, size1: size, peak: 1, floor: to[1], lands, scale: site.sy, site,
+    });
+  }
+
+  /** A ring that spreads over the water where something falls into it. */
+  private ring(site: Site, x: number, y: number, z: number, big: boolean): void {
+    this.particles.push({
+      kind: "ring", cell: PARTICLE_CELLS.ripple_ring, x, y: y + 0.04, z, vx: 0, vy: 0, vz: 0, age: 0, life: big ? 1.1 : 0.7,
+      size0: (big ? 0.12 : 0.08) * site.sy, size1: (big ? 0.6 : 0.3) * site.sy, peak: big ? 0.55 : 0.4, floor: -1e9, lands: "none", scale: site.sy, site,
+    });
+  }
+
+  private emit(site: Site, dt: number, full: boolean): void {
+    const { shape, sy, clock } = site;
+    const r = this.random;
+    if (shape.kind === "tiered") {
+      // the drops leave the tip of the finial and fly in an arc, over the rim of the upper bowl, into the basin
+      clock.arc += dt * (full ? 13 : 6);
+      while (clock.arc >= 1) {
+        clock.arc -= 1;
+        const a = r() * Math.PI * 2;
+        const reach = 0.44 + 0.12 * r();
+        const from = fountainPoint(site, Math.cos(a) * 0.02, shape.topY, Math.sin(a) * 0.02);
+        const to = fountainPoint(site, Math.cos(a) * reach, shape.basinY, Math.sin(a) * reach);
+        this.throwDrop(site, from, to, (1.1 + 0.5 * r()) * Math.sqrt(sy), 0.17 * sy, full ? "ripple" : "none");
+      }
+      // where the sheet of water enters the basin: rings round the foot of it
+      clock.foot += dt * (full ? 9 : 4);
+      while (clock.foot >= 1) {
+        clock.foot -= 1;
+        const a = r() * Math.PI * 2;
+        const at = fountainPoint(site, Math.cos(a) * shape.upperR * 1.5, shape.basinY, Math.sin(a) * shape.upperR * 1.5);
+        this.ring(site, at[0], at[1], at[2], true);
+      }
+      if (full) {
+        // mist over the basin where the water lands
+        clock.mist += dt * 3.2;
+        while (clock.mist >= 1) {
+          clock.mist -= 1;
+          const a = r() * Math.PI * 2;
+          const rad = shape.upperR * 1.5 + r() * 0.15;
+          const cell = [PARTICLE_CELLS.mist_a, PARTICLE_CELLS.mist_b, PARTICLE_CELLS.mist_c][Math.floor(r() * 3)]!;
+          const at = fountainPoint(site, Math.cos(a) * rad, shape.basinY + 0.12, Math.sin(a) * rad);
+          this.particles.push({
+            kind: "puff", cell, x: at[0], y: at[1], z: at[2], vx: Math.cos(a) * 0.08, vy: 0.22, vz: Math.sin(a) * 0.08, age: 0, life: 2.4 + r(), size0: 0.4 * sy, size1: 1.1 * sy, peak: 0.16,
+            floor: -1e9, lands: "none", scale: sy, site,
+          });
+        }
+      }
+      return;
+    }
+    // the horn: drops thrown from its mouth over the water, and rings where the stream and the drops fall in
+    clock.arc += dt * (full ? 11 : 5);
+    while (clock.arc >= 1) {
+      clock.arc -= 1;
+      const along = shape.throwR * (0.55 + 0.75 * r());
+      const side = (r() - 0.5) * 0.1;
+      const from = fountainPoint(site, shape.spoutX, shape.mouthY, shape.spoutZ);
+      const to = fountainPoint(site, shape.spoutX + shape.throwX * along - shape.throwZ * side, shape.basinY, shape.spoutZ + shape.throwZ * along + shape.throwX * side);
+      this.throwDrop(site, from, to, (0.5 + 0.5 * r()) * Math.sqrt(sy), 0.075 * sy, full ? "ripple" : "none");
+    }
+    clock.foot += dt * (full ? 8 : 4);
+    while (clock.foot >= 1) {
+      clock.foot -= 1;
       const a = r() * Math.PI * 2;
-      const ring = shape.upperR * 1.2 * s;
-      this.particles.push({
-        kind: "drop", cell: PARTICLE_CELLS.drop_teardrop, x: site.x + Math.cos(a) * ring, y: site.y + shape.upperY * s, z: site.z + Math.sin(a) * ring,
-        vx: Math.cos(a) * 0.25, vy: 0, vz: Math.sin(a) * 0.25, age: 0, life: 2, size0: 0.17 * s, size1: 0.17 * s, peak: 0.9,
-        floor: site.y + shape.basinY * s + 0.04, lands: full ? "ripple" : "none", scale: s,
-      });
+      const at = fountainPoint(site, shape.spoutX + Math.cos(a) * 0.05, shape.basinY, shape.spoutZ + Math.sin(a) * 0.05);
+      this.ring(site, at[0], at[1], at[2], false);
     }
     if (full) {
-      // mist over the basin where the water lands
-      clock.mist += dt * 3.2;
+      clock.mist += dt * 1.6;
       while (clock.mist >= 1) {
         clock.mist -= 1;
         const a = r() * Math.PI * 2;
-        const rad = shape.upperR * 1.3 * s + r() * 0.15 * s;
         const cell = [PARTICLE_CELLS.mist_a, PARTICLE_CELLS.mist_b, PARTICLE_CELLS.mist_c][Math.floor(r() * 3)]!;
+        const at = fountainPoint(site, shape.spoutX + Math.cos(a) * 0.06, shape.basinY + 0.06, shape.spoutZ + Math.sin(a) * 0.06);
         this.particles.push({
-          kind: "puff", cell, x: site.x + Math.cos(a) * rad, y: site.y + (shape.basinY + 0.12) * s, z: site.z + Math.sin(a) * rad,
-          vx: Math.cos(a) * 0.08, vy: 0.22, vz: Math.sin(a) * 0.08, age: 0, life: 2.4 + r(), size0: 0.4 * s, size1: 1.1 * s, peak: 0.16, floor: -1e9, lands: "none", scale: s,
+          kind: "puff", cell, x: at[0], y: at[1], z: at[2], vx: Math.cos(a) * 0.05, vy: 0.18, vz: Math.sin(a) * 0.05, age: 0, life: 2 + r(), size0: 0.25 * sy, size1: 0.7 * sy, peak: 0.14,
+          floor: -1e9, lands: "none", scale: sy, site,
         });
+      }
+    }
+  }
+
+  // ---- the halos and what rises from the lamps
+
+  private updateLamps(dt: number, camera: Camera, view: ViewAxes): void {
+    if (this.lamps.length === 0) return;
+    const main = this.main!;
+    const cam = camera.globalPosition;
+    const full = this.level === "full";
+    // by day a halo is faint (the sky outshines it), at night and underground it is the whole of it
+    const strength = 1 - 0.72 * this.day;
+    for (const l of this.lamps) {
+      const d = Math.hypot(l.x - cam.x, l.z - cam.z);
+      if (d > LAMP_FX_REACH) continue;
+      const near = 1 - smooth(LAMP_FX_REACH * 0.55, LAMP_FX_REACH, d);
+      // a flame breathes
+      const flicker = l.fx === "torch" || l.fx === "lava" ? 0.86 + 0.14 * Math.sin(this.clock * 13 + keyPhase(l.key)) * Math.sin(this.clock * 4.3 + keyPhase(l.key) * 0.7) : 1;
+      const k = 0.5 * strength * near * flicker;
+      const size = l.glow ?? Math.min(2.6, Math.max(0.6, (l.range ?? 5) * 0.16));
+      const cell = l.fx === "crystal" || l.fx === "magic" || l.fx === "portal" ? PARTICLE_CELLS.soft_star : PARTICLE_CELLS.dot;
+      const h = size / 2;
+      if (!main.full) main.quad(l.x, l.y, l.z, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, cellUv(cell, PARTICLE_GRID), l.color[0] * k, l.color[1] * k, l.color[2] * k);
+      if (full && l.fx && d < LAMP_FX_EMIT) this.emitLamp(l, dt, strength);
+    }
+  }
+
+  /** What a lamp throws off: sparks and smoke of a flame, embers of lava, bubbles of acid, wisps of magic, glints of a crystal, motes of a portal, twinkles of gold. */
+  private emitLamp(l: FxLamp, dt: number, strength: number): void {
+    const r = this.random;
+    const roll = (perSecond: number): boolean => r() < perSecond * dt;
+    const add = (cell: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size0: number, size1: number, peak: number, tint: readonly [number, number, number]): void => {
+      this.particles.push({ kind: "puff", cell, x, y, z, vx, vy, vz, age: 0, life, size0, size1, peak, floor: -1e9, lands: "none", scale: 1, site: null, tint: [tint[0] * strength, tint[1] * strength, tint[2] * strength] });
+    };
+    const around = (radius: number): [number, number] => {
+      const a = r() * Math.PI * 2;
+      const rad = Math.sqrt(r()) * radius;
+      return [Math.cos(a) * rad, Math.sin(a) * rad];
+    };
+    switch (l.fx) {
+      case "torch": {
+        if (roll(2.4)) add(PARTICLE_CELLS.spark, l.x + (r() - 0.5) * 0.12, l.y, l.z + (r() - 0.5) * 0.12, (r() - 0.5) * 0.3, 0.8 + r() * 0.9, (r() - 0.5) * 0.3, 0.7 + r() * 0.7, 0.14, 0.04, 0.95, [1, 0.72, 0.36]);
+        if (roll(0.55) && !this.smoke!.full) {
+          const lit = lightAt(this.scene, l.x, l.y + 0.4, l.z);
+          this.particles.push({
+            kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: l.x + (r() - 0.5) * 0.1, y: l.y + 0.2, z: l.z + (r() - 0.5) * 0.1, vx: (r() - 0.5) * 0.25, vy: 0.5 + r() * 0.3, vz: (r() - 0.5) * 0.25,
+            age: 0, life: 2.6 + r() * 1.2, size0: 0.22, size1: 1.1, peak: 0.34, floor: -1e9, lands: "none", scale: 1, site: null, lit,
+          });
+        }
+        break;
+      }
+      case "lava": {
+        if (roll(1.6)) {
+          const [ox, oz] = around(0.5);
+          add(PARTICLE_CELLS.dot, l.x + ox, l.y, l.z + oz, (r() - 0.5) * 0.2, 0.6 + r() * 0.8, (r() - 0.5) * 0.2, 1 + r() * 1.1, 0.12, 0.03, 1, [1, 0.5, 0.16]);
+        }
+        break;
+      }
+      case "acid": {
+        if (roll(1.1)) {
+          const [ox, oz] = around(0.45);
+          add(PARTICLE_CELLS.acid_bubble, l.x + ox, l.y, l.z + oz, 0, 0.4 + r() * 0.4, 0, 1.6 + r(), 0.12, 0.2, 0.7, [0.55, 1, 0.25]);
+        }
+        break;
+      }
+      case "magic": {
+        if (roll(1.3)) {
+          const [ox, oz] = around(0.35);
+          add(PARTICLE_CELLS.magic_wisp, l.x + ox, l.y, l.z + oz, (r() - 0.5) * 0.2, 0.4 + r() * 0.4, (r() - 0.5) * 0.2, 1.4 + r() * 0.8, 0.22, 0.12, 0.7, [0.78, 0.5, 1]);
+        }
+        break;
+      }
+      case "crystal": {
+        if (roll(0.9)) {
+          const [ox, oz] = around(0.35);
+          add(PARTICLE_CELLS.frost_glint, l.x + ox, l.y + (r() - 0.5) * 0.7, l.z + oz, 0, 0, 0, 0.9, 0.3, 0.3, 1, [0.5, 0.95, 1]);
+        }
+        break;
+      }
+      case "portal": {
+        if (roll(3)) {
+          // a mote that leaves the rim of the portal and drifts up, turning round it
+          const a = r() * Math.PI * 2;
+          add(PARTICLE_CELLS.soft_star, l.x + Math.cos(a) * 0.55, l.y - 0.6 + r() * 1.2, l.z + Math.sin(a) * 0.55, -Math.sin(a) * 0.35, 0.3 + r() * 0.3, Math.cos(a) * 0.35, 1.4, 0.16, 0.05, 0.8, [0.6, 0.72, 1]);
+        }
+        break;
+      }
+      case "gold": {
+        if (roll(1)) {
+          const [ox, oz] = around(0.4);
+          add(PARTICLE_CELLS.cross_glint, l.x + ox, l.y + (r() - 0.3) * 0.6, l.z + oz, 0, 0.1, 0, 1, 0.26, 0.26, 1, [1, 0.86, 0.42]);
+        }
+        break;
       }
     }
   }
@@ -475,6 +718,7 @@ export class Effects implements PropWatcher {
 
   private updateParticles(dt: number, view: ViewAxes): void {
     const main = this.main!;
+    const drops = this.drops!;
     const live: Particle[] = [];
     for (const p of this.particles) {
       p.age += dt;
@@ -488,39 +732,56 @@ export class Effects implements PropWatcher {
           this.land(p);
           continue;
         }
-      } else if (p.kind === "puff") {
+      } else if (p.kind === "puff" || p.kind === "smoke") {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.z += p.vz * dt;
       }
       live.push(p);
-      if (main.full) continue;
       const t = p.age / p.life;
-      const fade = p.kind === "drop" ? 1 : smooth(0, 0.18, t) * (1 - smooth(0.45, 1, t));
-      const k = p.peak * fade;
-      const size = p.size0 + (p.size1 - p.size0) * t;
-      const uv = cellUv(p.cell, PARTICLE_GRID);
-      if (p.kind === "ring") {
-        // flat on the water: the axes are the world's x and z
-        main.quad(p.x, p.y, p.z, size / 2, 0, 0, 0, 0, size / 2, uv, WATER[0] * k, WATER[1] * k, WATER[2] * k);
-      } else if (p.kind === "drop") {
+      // (a particle of a fountain is as bright as the scene is where the fountain stands: no glowing water in the dark; what a lamp throws off shines in the colour of the lamp)
+      const lit = p.site ? Math.max(0, p.site.light) : (p.lit ?? 1);
+      if (p.kind === "smoke") {
+        // grey smoke, drawn by its alpha: darker where the place is dark, it thins out as it rises
+        if (this.smoke!.full) continue;
+        const a = p.peak * smooth(0, 0.2, t) * (1 - smooth(0.4, 1, t));
+        const size = p.size0 + (p.size1 - p.size0) * t;
+        const h = size / 2;
+        const grey = 0.62 * lit;
+        this.smoke!.quad(p.x, p.y, p.z, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, smokeUv(p.cell), grey, grey, grey * 1.04, a);
+        continue;
+      }
+      if (p.kind === "drop") {
+        if (drops.full) continue;
         // the tip trails: the picture is turned so that its point faces against the motion on the screen
         const sr = p.vx * view.rx + p.vy * view.ry + p.vz * view.rz;
         const su = p.vx * view.ux + p.vy * view.uy + p.vz * view.uz;
         const len = Math.hypot(sr, su) || 1;
         const dx = -sr / len;
         const dy = -su / len;
-        const hw = size * 0.32;
-        const hh = size * 0.55;
-        main.quad(
+        // (the user's drop is 148 x 256: a little more than half as wide as it is high)
+        const hw = p.size0 * 0.29;
+        const hh = p.size0 * 0.5;
+        drops.quad(
           p.x, p.y, p.z,
           (view.rx * dy - view.ux * dx) * hw, (view.ry * dy - view.uy * dx) * hw, (view.rz * dy - view.uz * dx) * hw,
           (view.rx * dx + view.ux * dy) * hh, (view.ry * dx + view.uy * dy) * hh, (view.rz * dx + view.uz * dy) * hh,
-          uv, WATER[0] * k, WATER[1] * k, WATER[2] * k,
+          FULL_PICTURE, lit, lit, lit,
         );
+        continue;
+      }
+      if (main.full) continue;
+      const fade = smooth(0, 0.18, t) * (1 - smooth(0.45, 1, t));
+      const k = p.peak * fade * (p.site ? lit : 1);
+      const size = p.size0 + (p.size1 - p.size0) * t;
+      const uv = cellUv(p.cell, PARTICLE_GRID);
+      const [cr, cg, cb] = p.tint ?? WATER;
+      if (p.kind === "ring") {
+        // flat on the water: the axes are the world's x and z
+        main.quad(p.x, p.y, p.z, size / 2, 0, 0, 0, 0, size / 2, uv, cr * k, cg * k, cb * k);
       } else {
         const h = size / 2;
-        main.quad(p.x, p.y, p.z, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, uv, WATER[0] * k, WATER[1] * k, WATER[2] * k);
+        main.quad(p.x, p.y, p.z, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, uv, cr * k, cg * k, cb * k);
       }
     }
     this.particles = live;
@@ -530,15 +791,13 @@ export class Effects implements PropWatcher {
   private land(p: Particle): void {
     if (p.lands === "none") return;
     const big = p.lands === "ripple";
-    this.particles.push({
-      kind: "ring", cell: PARTICLE_CELLS.ripple_ring, x: p.x, y: p.floor + 0.01, z: p.z, vx: 0, vy: 0, vz: 0, age: 0, life: big ? 1.1 : 0.7,
-      size0: (big ? 0.12 : 0.08) * p.scale, size1: (big ? 0.6 : 0.3) * p.scale, peak: big ? 0.55 : 0.4, floor: -1e9, lands: "none", scale: p.scale,
-    });
+    if (!p.site) return;
+    this.ring(p.site, p.x, p.floor, p.z, big);
     if (big && this.random() < 0.45) {
       // a spray: one small drop thrown up that falls back
       this.particles.push({
         kind: "drop", cell: PARTICLE_CELLS.drop_round, x: p.x, y: p.floor + 0.02, z: p.z, vx: (this.random() - 0.5) * 0.5, vy: 1.3 + this.random() * 0.9, vz: (this.random() - 0.5) * 0.5, age: 0, life: 1.5,
-        size0: 0.08 * p.scale, size1: 0.08 * p.scale, peak: 0.8, floor: p.floor, lands: "none", scale: p.scale,
+        size0: 0.1 * p.scale, size1: 0.1 * p.scale, peak: 1, floor: p.floor, lands: "none", scale: p.scale, site: p.site,
       });
     }
   }
@@ -560,26 +819,38 @@ export class Effects implements PropWatcher {
       const dz = cam.z - i.z;
       const d = Math.hypot(dx, dz) || 1;
       const move = Math.min(IMPACT_TOWARDS_EYE, d * 0.4);
-      const h = IMPACT_SIZE / 2;
+      const h = i.size / 2;
       batch.quad(i.x + (dx / d) * move, i.y, i.z + (dz / d) * move, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, cellUv(frame, IMPACT_GRID), 1, 1, 1);
     }
     this.impacts = live;
   }
 
   dispose(): void {
+    this.foam.dispose();
     this.hideAll();
     for (const [key, site] of this.sites) this.dropSite(key, site);
     this.main?.mesh.dispose(false, true);
+    this.drops?.mesh.dispose(false, true);
+    this.smoke?.mesh.dispose(false, true);
+    this.smoke = null;
     for (const b of this.impactBatches.values()) b.mesh.dispose(false, true);
-    this.discSource?.dispose(false, true);
-    this.coneSource?.dispose(false, true);
+    this.waterMaterial?.dispose(false, true);
+    this.flowMaterial?.dispose(false, true);
     this.rippleTexture?.dispose();
-    this.jetTexture?.dispose();
+    this.flowTexture?.dispose();
     this.impactBatches.clear();
     this.main = null;
+    this.drops = null;
     this.ready = false;
   }
 }
+
+/** The whole of a single picture. */
+const FULL_PICTURE: CellUv = { u0: 0, u1: 1, v0: 0, v1: 1 };
+
+/** The four puffs of the smoke picture lie side by side. */
+const SMOKE_PUFFS = 3;
+const smokeUv = (puff: number): CellUv => ({ u0: puff / 4, u1: (puff + 1) / 4, v0: 0, v1: 1 });
 
 /** The camera's right and up directions in the world. */
 interface ViewAxes {

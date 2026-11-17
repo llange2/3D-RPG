@@ -91,7 +91,7 @@ describe("doors of generated interiors", () => {
   });
 
   it("every model it asks for is in the asset registry", () => {
-    const file = join(import.meta.dirname, "..", "..", "public", "assets", "models.static.json");
+    const file = join(import.meta.dirname, "..", "..", "public", "assets", "models.static.original.json");
     if (!existsSync(file)) return;
     const registry = JSON.parse(readFileSync(file, "utf-8")) as Record<string, unknown>;
     for (const k of ["blk_dungeon_door", "frame_dungeon", "frame_fortress", "ci_80", "ci_81"]) expect(registry[k], k).toBeDefined();

@@ -184,6 +184,8 @@ export class Projectiles {
   /** An element appears at `at` and fades out over `FLASH_SECONDS` (Elemental Storm). Only the three elements have a picture. */
   flash(kind: "fire" | "ice" | "acid", at: Point): void {
     this.flashes.push({ pose: POSES[kind], at, t: 0 });
+    // (the element bursts where it appears, like a shot that lands: the picture of its impact, bug_fix_68)
+    this.effects?.impact(kind, at);
     // the element shines for as long as it stands there (48th playtest, point 6: the storm had no light)
     const color = PROJECTILE_LAMPS[kind]!.color;
     this.burst(at, { from: color, to: color, peak: 4, range: 8, seconds: FLASH_SECONDS, daylight: SPELL_DAYLIGHT });

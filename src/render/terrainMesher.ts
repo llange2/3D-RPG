@@ -249,7 +249,6 @@ export const groundPropLift = (): number => (flatTiles === null && usesTileModel
 export function setFlatGround(tiles: FlatTileSet | null): void {
   flatTiles = tiles;
 }
-export const usesFlatGround = (): boolean => flatTiles !== null;
 
 let ultraGround = false;
 
@@ -557,6 +556,25 @@ export function towerTorchSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { 
   const fz = -d.dy;
   const ahead = (poi.size * TILE_SIZE) / 2 + TORCH_AHEAD;
   return [-1, 1].map((k) => ({ x: cx + fx * ahead - fz * TORCH_ASIDE * k, z: cz + fz * ahead + fx * TORCH_ASIDE * k }));
+}
+
+/**
+ * Where the flames of the two wall torches really are (bug_fix_68: the halo, the sparks and the smoke of the effects sit on the flame, not at the light): measured on the model in a
+ * screenshot, a little to either side of the door, at the wall, about a metre and a half up. The light itself hangs further out and higher (`towerTorchSpots`).
+ */
+const FLAME_AHEAD = 0.15;
+const FLAME_ASIDE = 1.05;
+export const TORCH_FLAME_HEIGHT = 1.45;
+
+export function towerFlameSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { x: number; z: number }[] {
+  const b = poiBounds(poi);
+  const cx = tileToWorldX(b.x0) + (poi.size * TILE_SIZE) / 2;
+  const cz = tileToWorldZ(b.y0) - (poi.size * TILE_SIZE) / 2;
+  const d = SIDE_DELTA[poi.side];
+  const fx = d.dx;
+  const fz = -d.dy;
+  const ahead = (poi.size * TILE_SIZE) / 2 + FLAME_AHEAD;
+  return [-1, 1].map((k) => ({ x: cx + fx * ahead - fz * FLAME_ASIDE * k, z: cz + fz * ahead + fx * FLAME_ASIDE * k }));
 }
 
 /** Yaw that turns a model whose front is +z (north) towards a side; grid y grows south, which is -z. */

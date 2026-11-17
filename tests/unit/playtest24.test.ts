@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import monsterModels from "../../public/assets/models.monsters.json";
-import staticModels from "../../public/assets/models.static.json";
+import monsterModels from "../../public/assets/models.monsters.original.json";
+import staticModels from "../../public/assets/models.static.original.json";
 import { GROUNDED_ITEMS, HEIGHT_FACTOR, WIDTH_FACTOR, tunedItemModels } from "../../src/data/item-tuning";
 import { itemProp } from "../../src/render/itemProps";
 import { EYES_AT } from "../../src/render/monsters";

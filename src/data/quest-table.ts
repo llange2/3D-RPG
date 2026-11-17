@@ -166,9 +166,8 @@ export const TEMPORAL_SCALE = 2.73;
  */
 export const STAIRCASE_ITEM = 330;
 export const FORT_DOOR_ITEM = 100;
-/** The console is 3 times its file (1.5 times the first size, 3 units wide: a cell) and may reach into the cells around it; this many cells around it stay free of objects (user, 6. 11. 2026). */
+/** The console is 3 times its file (1.5 times the first size, 3 units wide: a cell). */
 export const CONSOLE_SCALE = 3;
-export const CONSOLE_CLEAR = 2;
 /** The intact power crystal is old item 67. */
 export const POWER_CRYSTAL_ITEM = 67;
 export const ORBS_FOR_KING = 11;

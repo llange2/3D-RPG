@@ -468,7 +468,3 @@ export function replacedItems(inv: Inventory, item: Item, offHand = false): Item
   if (slot === "left_hand" && isTwoHanded(item) && inv.right_hand) out.push(inv.right_hand);
   return out;
 }
-
-export function freeBagSlot(c: Character): string | null {
-  return BAG_SLOTS.find((s) => c.inventory[s] === null) ?? null;
-}

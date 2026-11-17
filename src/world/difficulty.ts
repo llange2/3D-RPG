@@ -1,7 +1,6 @@
 import type { Rng } from "../core/rng";
 import { MONSTER_IDS, MONSTERS, walksOnLand, type MonsterDef } from "../data/tables";
 import { isqrt, wrapDist2 } from "./islands";
-import type { Poi } from "./types";
 import type { World } from "./world";
 
 /**
@@ -12,24 +11,6 @@ import type { World } from "./world";
  * Both are numbers in thousandths of a level: `levelAt` = level of the island * 1000 + how far from Starthaven the spot lies in that level (`wayAt`),
  * `monsterLevel` = treasure level * 1000 + the rank of the monster by XP among the monsters of its level. Integers only (no float in the generator).
  */
-
-const townCache = new WeakMap<World, Map<number, Poi[]>>();
-
-/** The towns of one level. */
-export function townsOfLevel(world: World, level: number): Poi[] {
-  let byLevel = townCache.get(world);
-  if (!byLevel) {
-    byLevel = new Map();
-    for (const p of world.allPois()) {
-      if (p.kind !== "town") continue;
-      const list = byLevel.get(p.tier);
-      if (list) list.push(p);
-      else byLevel.set(p.tier, [p]);
-    }
-    townCache.set(world, byLevel);
-  }
-  return byLevel.get(level) ?? [];
-}
 
 /** How far the land of a level lies from Starthaven: the nearest and the farthest tile of it, over all its islands, in tiles. */
 const spans = new WeakMap<World, Map<number, { min: number; max: number }>>();

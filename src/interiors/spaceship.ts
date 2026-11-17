@@ -126,13 +126,23 @@ export function generateSpaceship(rng: Rng, ctx: BuildContext, section: number, 
     // along the row of `here` and then up or down in `there` (or the other way round): the airlock stands on the border cell of the two sections on that line
     b.carveL(a.x, a.y, c.x, c.y, side);
     const border = side ? originOf(link.to).x : originOf(link.to).y;
-    // the lever niches: one cell beside the corridor, two cells before and after the lock
-    const niche = (n: number) => {
-      const cell = side ? { x: n, y: a.y - 1 } : { x: a.x - 1, y: n };
+    // the lever niches: one cell beside the corridor, two cells before and after the lock. A niche must be a real one (a wall cell with wall on its other three sides): where the
+    // corridor runs into a room two cells from the lock, the cell beside it is room floor and the lever was refused (seed pearl-shore-794, life support had one lever only), so the
+    // search goes on along the corridor, up to five cells from the lock, on both sides of it
+    const door = side ? { x: border, y: a.y } : { x: a.x, y: border };
+    const wall = (x: number, y: number): boolean => b.get(x, y) === CELL.SOLID;
+    const isNiche = (cell: { x: number; y: number }, off: { x: number; y: number }): boolean =>
+      wall(cell.x, cell.y) && wall(cell.x + off.x, cell.y + off.y) && (side ? wall(cell.x - 1, cell.y) && wall(cell.x + 1, cell.y) : wall(cell.x, cell.y - 1) && wall(cell.x, cell.y + 1)) && b.isFloor(cell.x - off.x, cell.y - off.y);
+    const niche = (dir: -1 | 1): { x: number; y: number } => {
+      const at = (d: number, s: -1 | 1) => ({ cell: side ? { x: border + dir * d, y: a.y + s } : { x: a.x + s, y: border + dir * d }, off: side ? { x: 0, y: s } : { x: s, y: 0 } });
+      const order: [number, -1 | 1][] = [[2, -1]];
+      for (let d = 2; d <= 5; d++) for (const s of [-1, 1] as const) if (d !== 2 || s !== -1) order.push([d, s]);
+      const found = order.map(([d, s]) => at(d, s)).find((p) => isNiche(p.cell, p.off));
+      const cell = (found ?? at(2, -1)).cell;
       b.carveCorridorCell(cell.x, cell.y);
       return cell;
     };
-    locks.push({ door: side ? { x: border, y: a.y } : { x: a.x, y: border }, a: niche(border - 2), b: niche(border + 2), from: link.from, to: link.to, axis: link.axis });
+    locks.push({ door, a: niche(-1), b: niche(1), from: link.from, to: link.to, axis: link.axis });
   }
 
   // the transporter tubes: one in each section, on the north wall of the room nearest the middle of the section (the bridge's is the end of its corridor, on the south wall: DEN)

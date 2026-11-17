@@ -48,12 +48,12 @@ import { markResume, registryFile, takeResume } from "../render/modelSet";
 import { MENU_KEY, actionOf, assignKey, defaultKeys, primaryKey, GAME_ACTIONS } from "./keybindings";
 import { QUALITY_LEVELS, QUALITY_NAMES, applyQuality, qualityOf } from "./quality";
 import { PropRenderer } from "../render/props";
-import { Effects } from "../render/fx";
+import { Effects, type FxLamp } from "../render/fx";
 import { EFFECT_LEVELS, EFFECT_NAMES } from "../render/fxSheets";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
-import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setRuinedCastleKinds, setUltraGround, tileModelKeys, towerTorchSpots, type PropInstance } from "../render/terrainMesher";
+import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setRuinedCastleKinds, setUltraGround, tileModelKeys, towerFlameSpots, towerTorchSpots, TORCH_FLAME_HEIGHT, type PropInstance } from "../render/terrainMesher";
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
@@ -299,6 +299,9 @@ const LAMPS: Readonly<Record<number, LampKind>> = ITEM_LAMPS;
 const MONSTER_GLOW: ReadonlyMap<number, MonsterLamp> = new Map(Object.values(MONSTERS).flatMap((m) => (MONSTER_LAMPS[m.name] ? [[m.id, MONSTER_LAMPS[m.name]!] as [number, MonsterLamp]] : [])));
 /** Lamps farther from the party than this are ignored (units); the pool serves the nearest ones. */
 const LAMP_REACH = 18;
+/** The lava fields round the party that glow and throw embers: how far (in fields) they are looked for and how many at the most (bug_fix_68). */
+const LAVA_GLOW_RADIUS = 7;
+const LAVA_GLOW_MAX = 12;
 /**
  * How far a shot's light still counts: as far as the monsters act. Their radius is a square of `MONSTER_ACTION_RADIUS` tiles (3 units each), so a monster at its corner is
  * `√2` times as far; three units more let the light fade out behind the farthest one (52nd playtest, point 3: with the 18 units of the lamps a shot dimmed from 14 and was gone
@@ -384,6 +387,11 @@ export class Game {
   private lamps: LampSource[] = [];
   /** The gold light of every pile of loot on the map (`renderLoot`). */
   private lootLamps: LampSource[] = [];
+  /** The lava tiles near the party that glow and throw embers (`syncLavaGlow`): lamps for the effects only, they give no light of the pool. */
+  private lavaGlow: FxLamp[] = [];
+  private lavaGlowIn = 0;
+  /** Whether the party stood in water on its last step in the overworld (`splashStep`: only the step into it splashes). */
+  private wasWet = false;
   /** quest_8, the crystal paths (quest document 1.10): the wall crystals of the place, the crystals the party has set down, what the light looked like last time it was worked out, and its lamps. */
   private crystalWalls: WallNode[] = [];
   private crystalSet: PlacedCrystal[] = [];
@@ -394,6 +402,8 @@ export class Game {
   private mascotLamps: LampSource[] = [];
   /** The torches of the towers near the party on the open land, and the chunk they were taken for. */
   private towerLamps: LampSource[] = [];
+  /** The flames of the tower torches for the effects (`syncTowerLamps`): where the fire really is, not where the light hangs. */
+  private towerFlames: FxLamp[] = [];
   private towerLampsFor = "";
   /** The lights of the pool (`Renderer.lamps`) and the lamp each one holds now, with how bright it is (0 to 1). */
   private lampSlots: { lamp: LampSource | null; level: number }[] = [];
@@ -441,6 +451,7 @@ export class Game {
     this.props = new PropRenderer(this.r.scene);
     // the water of the fountains and what a spell does where it lands (Options > Graphics > Effects); the props tell it where the fountains stand
     this.effects = new Effects(this.r.scene, this.settings.effects);
+    this.r.setBloom(this.settings.bloom);
     this.props.watch(this.effects);
     this.projectiles = new Projectiles(this.props, this.r.scene, this.effects);
     const [staticInfo, monsterInfo] = await Promise.all([fetchJson<Record<string, StaticModelInfo>>(registryFile("static")), fetchJson<Record<string, MonsterModelInfo>>(registryFile("monsters"))]);
@@ -938,7 +949,7 @@ export class Game {
       // bug_fix_64, point 4: the castles of the kings that lost stand as ruins (every entry builds the chunks anew, so the kinds are set here)
       const winner = [...this.state.opened].find((k) => k.startsWith("king:winner="))?.split("=")[1];
       setRuinedCastleKinds(winner ? ALIGNMENTS.filter((k) => k !== winner) : []);
-      this.chunks = new ChunkManager(this.world, this.r, this.terrain, this.props, chunkRadius(this.viewDistance));
+      this.chunks = new ChunkManager(this.world, this.r, this.terrain, this.props, chunkRadius(this.viewDistance), this.effects);
       this.state.at = { mode: "overworld", x, y, facing };
       const p = this.worldPos(x, y);
       this.player.place(x, y, facing, p.x, p.z);
@@ -1412,6 +1423,7 @@ export class Game {
       this.chunks?.update(x, y);
       this.syncOverworldMonsters();
       this.lavaStep(x, y);
+      this.splashStep(x, y);
     } else if (this.interior) {
       const a = this.interior.actionAt.get(this.cellIndex(x, y));
       if (this.interior.campaign) {
@@ -3473,6 +3485,17 @@ export class Game {
     return CONSTANTS.CHARACTER_FEMALE.includes(avatar) ? 9021 : 9022;
   }
 
+  /** Wading into water throws up a splash in front of the party (the picture of the water burst, bug_fix_68): only the step from dry ground into it, not every step in it. */
+  private splashStep(x: number, y: number): void {
+    const ground = this.world.tile(x, y).ground;
+    const wet = ground === GROUND.WATER || ground === GROUND.SHALLOW;
+    const was = this.wasWet;
+    this.wasWet = wet;
+    if (!wet || was || hasEffect(this.state.party, "levitate")) return;
+    const c = this.r.camera;
+    this.effects.impact("water", { x: c.position.x + Math.sin(c.rotation.y) * 2, y: 0.7, z: c.position.z + Math.cos(c.rotation.y) * 2 }, 2.6);
+  }
+
   /** A step on lava burns every hero (`walkOnLava`); a hovering party and a party in a place are not touched. */
   private lavaStep(x: number, y: number): void {
     if (this.over || this.world.tile(x, y).ground !== GROUND.LAVA_POOL) return;
@@ -3781,7 +3804,10 @@ export class Game {
           const delay = (i % 8) * 0.06;
           const start = { x: at.x, y: at.y + METEOR_HEIGHT, z: at.z };
           this.later(delay, () => this.projectiles.launch("fire", start, at, 1, METEOR_FALL_SECONDS));
-          this.later(delay + METEOR_FALL_SECONDS, () => this.projectiles.burst(at, METEOR_IMPACT_LIGHT));
+          this.later(delay + METEOR_FALL_SECONDS, () => {
+            this.projectiles.burst(at, METEOR_IMPACT_LIGHT);
+            this.effects.impact("fire", at);
+          });
           flights.set(e.uid, delay + METEOR_FALL_SECONDS);
           return;
         }
@@ -5341,6 +5367,7 @@ export class Game {
       { type: "toggle", label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
       { type: "toggle", label: () => `Animated town scenes: ${onOff(draft.animatedTown)}`, flip: () => (draft.animatedTown = !draft.animatedTown) },
       { type: "toggle", label: () => `Effects: ${EFFECT_NAMES[draft.effects]}`, flip: () => (draft.effects = EFFECT_LEVELS[(EFFECT_LEVELS.indexOf(draft.effects) + 1) % EFFECT_LEVELS.length]!) },
+      { type: "toggle", label: () => `Bloom: ${onOff(draft.bloom)}`, flip: () => (draft.bloom = !draft.bloom) },
       { type: "toggle", label: () => `Show FPS: ${onOff(draft.showFps)}`, flip: () => (draft.showFps = !draft.showFps) },
     ]);
     return picked === "apply" ? this.applyOptions(draft) : false;
@@ -5417,6 +5444,13 @@ export class Game {
     if (next.resolution !== before.resolution) this.r.setResolution(next.resolution);
     setAnimatedTown(next.animatedTown);
     this.effects.setLevel(next.effects);
+    this.r.setBloom(next.bloom);
+    // (the chunks carry the foam of the shore: it comes and goes with the effects)
+    if ((before.effects === "off") !== (next.effects === "off") && this.chunks && this.mode === "overworld") {
+      this.chunks.rebuild();
+      this.chunks.update(this.player.tx, this.player.ty);
+      this.chunks.loadAll();
+    }
     setCursorFade(next.fadeCursor);
     if (!next.showFps) this.ui.setFps(null);
     this.audio.setMusicVolume(musicGain(next));
@@ -6031,7 +6065,11 @@ export class Game {
     }
     this.syncTowerLamps();
     // (a light of the pool that still holds a lamp goes on until it has faded out: a shot's light was left shining where the last shot ended in a scene without any other lamp, 50th bug fix)
-    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.crystalLampList.length === 0 && this.mascotLamps.length === 0 && this.towerLamps.length === 0 && beams.length === 0 && !this.lampSlots.some((s) => s.lamp)) return;
+    this.syncLavaGlow(dt);
+    if (this.lamps.length === 0 && !this.glowMonsters && this.lootLamps.length === 0 && this.crystalLampList.length === 0 && this.mascotLamps.length === 0 && this.towerLamps.length === 0 && beams.length === 0 && !this.lampSlots.some((s) => s.lamp)) {
+      this.effects.setLamps([...this.lavaGlow, ...this.towerFlames], 0);
+      return;
+    }
     const open = this.interior ? this.interior.map.theme.open : true;
     const need = open ? 1 - this.lightLevel : 1;
     const { x, z } = this.player;
@@ -6043,10 +6081,14 @@ export class Game {
     for (const b of beams) carried.push({ ...b.lamp, x: b.x, y: b.y, z: b.z, key: b.key, fade: LASER_LAMP_FADE, reach: PROJECTILE_REACH, priority: true });
     // the Orb in the party is no longer at its place: its lamp goes out with it
     const orbAway = this.state.party.mascot === "Orb";
-    const near = [...this.lamps, ...this.lootLamps, ...this.crystalLampList, ...this.mascotLamps, ...this.towerLamps, ...carried]
+    const inReach = [...this.lamps, ...this.lootLamps, ...this.crystalLampList, ...this.mascotLamps, ...this.towerLamps, ...carried]
       .filter((lamp) => !(orbAway && lamp.key.startsWith(MASCOT_ORB_KEY)))
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
-      .filter((e) => e.d < (e.lamp.reach ?? LAMP_REACH))
+      .filter((e) => e.d < (e.lamp.reach ?? LAMP_REACH));
+    // the effects put a halo round every lamp in reach, not only the few that get a light of the pool (a shot in flight has its burst, not a halo), and the lava glows over its tiles
+    // (the light of a tower torch hangs beside the flame: its halo is the flame's, `towerFlames`)
+    this.effects.setLamps([...inReach.filter((e) => !e.lamp.priority && !e.lamp.key.startsWith("tt:")).map((e) => e.lamp), ...this.lavaGlow, ...this.towerFlames], 1 - need);
+    const near = inReach
       .sort((a, b) => Number(b.lamp.priority ?? false) - Number(a.lamp.priority ?? false) || a.d - b.d)
       .slice(0, this.lampSlots.length);
     // a shot that finds no free light takes one from the lamps of the map at once: it must shine from the muzzle on, not after their slow fade
@@ -6090,6 +6132,32 @@ export class Game {
   }
 
   /**
+   * The lava of the overworld glows and throws off embers (bug_fix_68): the lava fields round the party, the nearest few, as lamps for the effects. Looked at twice a second, only in the overworld
+   * (an island of lava is nothing but lava, so a few hundred fields are looked at, not a lamp each).
+   */
+  private syncLavaGlow(dt: number): void {
+    this.lavaGlowIn -= dt;
+    if (this.lavaGlowIn > 0) return;
+    this.lavaGlowIn = 0.5;
+    if (this.mode !== "overworld" || !this.state || !this.effects.active) {
+      if (this.lavaGlow.length > 0) this.lavaGlow = [];
+      return;
+    }
+    const { tx, ty } = this.player;
+    const found: { lamp: FxLamp; d: number }[] = [];
+    for (let dy = -LAVA_GLOW_RADIUS; dy <= LAVA_GLOW_RADIUS; dy++) {
+      for (let dx = -LAVA_GLOW_RADIUS; dx <= LAVA_GLOW_RADIUS; dx++) {
+        const t = this.world.tile(tx + dx, ty + dy);
+        if (t.ground !== GROUND.LAVA_POOL) continue;
+        const x = tileCenterX(tx + dx);
+        const z = tileCenterZ(ty + dy);
+        found.push({ lamp: { key: `lava:${tx + dx},${ty + dy}`, x, y: 0.3, z, color: [1, 0.42, 0.12], range: 5, fx: "lava", glow: 3.2 }, d: dx * dx + dy * dy });
+      }
+    }
+    this.lavaGlow = found.sort((a, b) => a.d - b.d).slice(0, LAVA_GLOW_MAX).map((e) => e.lamp);
+  }
+
+  /**
    * The torches in front of the towers near the party (49th playtest): two lamps each, taken for the chunk the party stands in and handed to the pool like every other lamp. The
    * towers stand in the open, so only the overworld has them; a tower seen across the seam is lit at the place of its copy (`poisInRect`).
    */
@@ -6099,12 +6167,15 @@ export class Game {
     this.towerLampsFor = key;
     const had = this.towerLamps.length;
     this.towerLamps = [];
+    this.towerFlames = [];
     if (key !== "") {
       const reach = LAMP_REACH + 2 * CHUNK_SIZE;
       const { tx, ty } = this.player;
       for (const poi of this.world.poisInRect(tx - reach, ty - reach, tx + reach, ty + reach)) {
         if (!isTower(poi)) continue;
         towerTorchSpots(poi).forEach((s, k) => this.towerLamps.push(lampSource(TOWER_TORCH_LAMP, s.x, s.z, `tt:${poi.id}:${k}@${poi.x},${poi.y}`)));
+        // the flames of the wall torches themselves (not where their light hangs): a small halo, sparks and smoke
+        towerFlameSpots(poi).forEach((s, k) => this.towerFlames.push({ key: `tf:${poi.id}:${k}@${poi.x},${poi.y}`, x: s.x, y: TORCH_FLAME_HEIGHT, z: s.z, color: TOWER_TORCH_LAMP.color, range: 5, fx: "torch", glow: 1.8 }));
       }
     }
     if ((had === 0) !== (this.towerLamps.length === 0)) this.enableLampLights();

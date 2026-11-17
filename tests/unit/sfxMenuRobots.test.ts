@@ -104,7 +104,6 @@ describe("the robots of the spaceship (6. 11. 2026)", () => {
     for (const id of [22, 35, 69, 25]) expect(fliesAsMissile(id), String(id)).toBe(false);
     expect(PROJECTILE_MODELS).toContain("proj_missile");
     expect(existsSync(join(PUBLIC, "models-original", "proj_missile.glb"))).toBe(true);
-    expect(existsSync(join(PUBLIC, "models", "proj_missile.glb"))).toBe(true);
   });
 });
 

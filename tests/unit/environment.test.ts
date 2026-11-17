@@ -129,11 +129,11 @@ describe("what each place draws in 3D", () => {
 
 describe("the models of the user (tools/assets/sources/models)", () => {
   const registry = (file: string) => JSON.parse(readFileSync(join(PUBLIC, file), "utf-8")) as Record<string, { tris: number; bounds: number[]; fromObj: boolean }>;
-  const built = existsSync(join(PUBLIC, "models.static.json")) && existsSync(join(PUBLIC, "models.static.original.json"));
+  const built = existsSync(join(PUBLIC, "models.static.original.json"));
   const size = (b: number[]) => ({ w: b[3]! - b[0]!, h: b[4]! - b[1]!, d: b[5]! - b[2]! });
 
   it.runIf(built)("lie down as slabs, one cell wide, and the wall piece stands up (both sets)", () => {
-    for (const file of ["models.static.json", "models.static.original.json"]) {
+    for (const file of ["models.static.original.json"]) {
       const r = registry(file);
       for (const key of ["blk_city_floor", "blk_fortress_floor", "blk_dungeon_ceiling", "blk_cave_ceiling"]) {
         const s = size(r[key]!.bounds);
@@ -161,7 +161,7 @@ describe("the models of the user (tools/assets/sources/models)", () => {
   });
 
   it.runIf(built)("replace the old village, castle and lantern, in the generated world and in the campaign", () => {
-    for (const file of ["models.static.json", "models.static.original.json"]) {
+    for (const file of ["models.static.original.json"]) {
       const r = registry(file);
       for (const key of ["poi_town", "ci_47", "poi_castle", "ci_44", "obj_lantern", "ci_76"]) expect(r[key]!.fromObj, `${file} ${key}`).toBe(false);
       // the castle is about as big as the old one (1.85 x 1.5 x 1.85)

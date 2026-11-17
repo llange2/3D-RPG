@@ -43,7 +43,7 @@ describe("bug_fix_64, point 4: the castles of the kings that lost are ruins", ()
   });
 
   it("has the ruin built in both registries", () => {
-    for (const file of ["models.static.json", "models.static.original.json"]) {
+    for (const file of ["models.static.original.json"]) {
       const registry = JSON.parse(readFileSync(join(ROOT, "public", "assets", file), "utf-8")) as Record<string, { file: string; tris: number }>;
       expect(registry[CASTLE_RUIN_MODEL], file).toBeDefined();
       expect(existsSync(join(ROOT, "public", "assets", registry[CASTLE_RUIN_MODEL]!.file)), file).toBe(true);
@@ -53,7 +53,7 @@ describe("bug_fix_64, point 4: the castles of the kings that lost are ruins", ()
 
 describe("bug_fix_64, point 3: the cave entrance is the user's model", () => {
   it("is built from Cave_Entrance.glb for the overworld and the old item 42, and shows its door on +z (no extra yaw)", () => {
-    for (const file of ["models.static.json", "models.static.original.json"]) {
+    for (const file of ["models.static.original.json"]) {
       const registry = JSON.parse(readFileSync(join(ROOT, "public", "assets", file), "utf-8")) as Record<string, { bounds: number[] }>;
       // the user's file is 1.88 x 1.16 x 1.90 (the old one 1.65 x 1.21 x 2.0)
       for (const key of ["poi_cave", "ci_42"]) {

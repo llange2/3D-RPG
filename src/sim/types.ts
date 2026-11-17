@@ -58,7 +58,6 @@ export interface Item {
 export const EQUIPMENT_SLOTS = ["helmet", "body_armor", "left_hand", "right_hand", "belt", "left_ring", "right_ring", "boots", "ranged_weapon"] as const;
 export type EquipmentSlot = (typeof EQUIPMENT_SLOTS)[number];
 export const BAG_SLOTS = Array.from({ length: 20 }, (_, i) => `slot${i + 1}`);
-export type Slot = EquipmentSlot | string;
 
 export type Inventory = Record<string, Item | null>;
 

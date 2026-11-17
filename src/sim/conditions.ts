@@ -68,11 +68,6 @@ export function suppressCondition(c: Character, cond: Condition, now: number): b
   return true;
 }
 
-/** True while a Suppress spell holds the condition back. */
-export function isSuppressed(c: Character, cond: Condition): boolean {
-  return c.mods?.suppressed?.[cond] === true;
-}
-
 export interface ConditionEvent {
   /** Index of the hero in the party; -1 for a hero in the reserve (then `name` says who). */
   character: number;

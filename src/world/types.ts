@@ -81,9 +81,6 @@ export function parseDungeonDensity(text: string | null | undefined): DungeonDen
   return DUNGEON_DENSITY_NAMES.find((n) => n === text) ?? FULL_DUNGEON_DENSITY;
 }
 
-/** Deep water the world keeps free on every side: swimming across the seam is at least twice this much open sea. */
-export const SEA_MARGIN = 3;
-
 export function parseWorldSize(text: string | null | undefined): WorldSize {
   return WORLD_SIZE_NAMES.find((n) => n === text) ?? DEFAULT_WORLD_SIZE;
 }
@@ -175,10 +172,6 @@ export function isGroundWalkable(g: Ground): boolean {
 
 export function isTileWalkable(t: { ground: Ground; deco: Deco }): boolean {
   return isGroundWalkable(t.ground) && t.deco !== DECO.TREE && t.deco !== DECO.LANDMARK;
-}
-
-export function chunkOf(t: number): number {
-  return Math.floor(t / CHUNK_SIZE);
 }
 
 /** `t` brought into 0..size-1: the world is a globe, tile -1 is the last one. */

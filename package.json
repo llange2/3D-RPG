@@ -17,7 +17,6 @@
     "assets:report": "tsx tools/assets/inventory.ts",
     "assets:textures": "tsx tools/assets/build-textures.ts",
     "assets:fx": "tsx tools/assets/build-fx.ts",
-    "assets:models": "tsx tools/assets/build-models.ts",
     "assets:originals": "tsx tools/assets/build-models.ts --original",
     "assets:hd": "tsx tools/assets/build-hd-textures.ts",
     "assets:audio": "tsx tools/assets/build-audio.ts",

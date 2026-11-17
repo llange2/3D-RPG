@@ -171,11 +171,6 @@ export class Rng {
   }
 }
 
-/** Root seed of a world, taken from the `?seed=` URL parameter or a typed string. */
-export function worldSeed(text: string): SeedState {
-  return seedFromString(text);
-}
-
 /** Independent random stream for one layer and integer coordinates (chunk, POI, floor, ...). */
 export function rngFor(seed: SeedState, layer: number, ...coords: (number | string)[]): Rng {
   return new Rng(derive(seed, layer, ...coords));

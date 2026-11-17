@@ -1,5 +1,4 @@
 import "./style.css";
-import { BASE_CLASS } from "../data/tables";
 import { resistanceTone } from "../data/resistance-tone";
 import { clockText } from "../sim/party";
 import { armor, isAlive, worstCondition } from "../sim/character";
@@ -863,9 +862,4 @@ export function randomSeed(): string {
 /** Summary line of a character for lists. */
 export function describe(c: Character): string {
   return `${c.name}, ${c.raceType} ${c.classType} (L${c.level}, armor ${armor(c)})`;
-}
-
-export function classInfo(c: Character): string {
-  const base = BASE_CLASS[c.classType];
-  return base ? `needs ${base.requirements}` : "";
 }

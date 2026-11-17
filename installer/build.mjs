@@ -29,9 +29,6 @@ const outDir = path.join(releaseDir, "dist");
 
 /** Parts of public/assets the game does not load, left out of the installer (checked by `tests/unit/assets.test.ts` and the missing-file log of main.mjs). */
 const NOT_SHIPPED = [
-  "models/**", // the reduced low-poly set: the game loads `models-original` only (render/modelSet.ts)
-  "models.static.json",
-  "models.monsters.json",
   "manifest.json",
   "textures.stats.json",
 ];

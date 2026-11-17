@@ -35,6 +35,8 @@ export interface Settings {
   textureQuality: TextureQuality;
   /** The water of the fountains and the impact of the spells (`render/fx.ts`): off, low (cheap) or full. Absent in older stored settings: full. */
   effects: EffectsLevel;
+  /** A soft glow round the brightest things of the picture (a post process, `Renderer.setBloom`): only the "High" quality has it. Absent in older stored settings: off. */
+  bloom: boolean;
   /** The mouse pointer fades out after five steps of the party without a mouse movement (`ui/cursor.ts`). Absent in older stored settings: on. */
   fadeCursor: boolean;
   /** The keys of the actions (Options > Controls > Key bindings). */
@@ -54,7 +56,7 @@ export const RANGE_TARGETS: readonly RangeTarget[] = ["closest", "weakest"];
 const KEY = "mm3-seed-rpg:settings:v1";
 /** The defaults are the "Medium" quality (`game/quality.ts`): flat ground, normal textures, medium distance, normal resolution, animated town scenes. */
 export function defaultSettings(): Settings {
-  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, effects: "full", fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true, rangeTarget: "closest" };
+  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, effects: "full", bloom: false, fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true, rangeTarget: "closest" };
 }
 export const DEFAULT_SETTINGS: Settings = defaultSettings();
 
@@ -98,6 +100,7 @@ export function parseSettings(raw: string | null): Settings {
   if (stored.keys !== undefined) out.keys = parseKeys(stored.keys);
   if (typeof stored.animatedTown === "boolean") out.animatedTown = stored.animatedTown;
   if (EFFECT_LEVELS.includes(stored.effects as EffectsLevel)) out.effects = stored.effects as EffectsLevel;
+  if (typeof stored.bloom === "boolean") out.bloom = stored.bloom;
   if (typeof stored.fadeCursor === "boolean") out.fadeCursor = stored.fadeCursor;
   if (stored.rangeTarget === "closest" || stored.rangeTarget === "weakest") out.rangeTarget = stored.rangeTarget;
   if (stored.textureQuality === "normal" || stored.textureQuality === "high") out.textureQuality = stored.textureQuality;

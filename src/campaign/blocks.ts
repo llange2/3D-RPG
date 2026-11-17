@@ -138,13 +138,6 @@ export const BLOCKS: Record<number, BlockDef> = Object.fromEntries(
 /** Style used for the map border and for cells without a block. */
 export const BORDER_STYLE: CellStyle = wall(T("tex_black"));
 
-/** Texture files the campaign needs beyond the interior themes (so they can be preloaded). */
-export function campaignTextures(): string[] {
-  const set = new Set<string>();
-  for (const b of Object.values(BLOCKS)) for (const t of [b.style.floor, b.style.wall, b.style.ceiling]) if (t) set.add(t);
-  return [...set];
-}
-
 /** Blocks the old actions swap in when a wall breaks or a door opens. */
 export const BLOCK_OPEN_DOOR = 15;
 export const BLOCK_PIT = 36;
