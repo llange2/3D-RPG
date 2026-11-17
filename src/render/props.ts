@@ -16,6 +16,7 @@ import "@babylonjs/loaders/glTF";
 import { QUEST_PROP } from "../data/quest-table";
 import { assetUrl, type StaticModelInfo } from "./assets";
 import { createProceduralModels } from "./proceduralProps";
+import type { PropWatcher } from "./fx";
 import type { PropInstance } from "./terrainMesher";
 
 interface InstancedModel {
@@ -391,8 +392,16 @@ export class PropRenderer {
     return key;
   }
 
+  /** Whoever wants to know which props come and go (the effects of the fountains): told after every `setInstances` and `removeOwner`. */
+  private watcher: PropWatcher | null = null;
+
+  watch(watcher: PropWatcher | null): void {
+    this.watcher = watcher;
+  }
+
   /** Replaces the instances of one owner (a chunk). */
   setInstances(owner: string, props: PropInstance[]): void {
+    this.watcher?.set(owner, props);
     const byModel = new Map<string, PropInstance[]>();
     for (const p of props) {
       if (!this.models.has(p.model)) continue;
@@ -446,6 +455,7 @@ export class PropRenderer {
   }
 
   removeOwner(owner: string): void {
+    this.watcher?.remove(owner);
     for (const model of this.models.values()) {
       if (model.buffers.delete(owner)) model.dirty = true;
     }

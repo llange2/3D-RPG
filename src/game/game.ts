@@ -48,6 +48,8 @@ import { markResume, registryFile, takeResume } from "../render/modelSet";
 import { MENU_KEY, actionOf, assignKey, defaultKeys, primaryKey, GAME_ACTIONS } from "./keybindings";
 import { QUALITY_LEVELS, QUALITY_NAMES, applyQuality, qualityOf } from "./quality";
 import { PropRenderer } from "../render/props";
+import { Effects } from "../render/fx";
+import { EFFECT_LEVELS, EFFECT_NAMES } from "../render/fxSheets";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
@@ -332,6 +334,7 @@ export class Game {
   private sky!: SkyDome;
   private props!: PropRenderer;
   private projectiles!: Projectiles;
+  private effects!: Effects;
   /** Bumped when the scene changes, so effects scheduled for the old scene do nothing. */
   private fxEpoch = 0;
   /**
@@ -436,7 +439,10 @@ export class Game {
     progress?.(0.1);
     this.sky = new SkyDome(this.r.scene, this.textures);
     this.props = new PropRenderer(this.r.scene);
-    this.projectiles = new Projectiles(this.props, this.r.scene);
+    // the water of the fountains and what a spell does where it lands (Options > Graphics > Effects); the props tell it where the fountains stand
+    this.effects = new Effects(this.r.scene, this.settings.effects);
+    this.props.watch(this.effects);
+    this.projectiles = new Projectiles(this.props, this.r.scene, this.effects);
     const [staticInfo, monsterInfo] = await Promise.all([fetchJson<Record<string, StaticModelInfo>>(registryFile("static")), fetchJson<Record<string, MonsterModelInfo>>(registryFile("monsters"))]);
     progress?.(0.15);
     // the models are the originals, and so is the ground: the full ground tiles of the old game
@@ -3825,7 +3831,8 @@ export class Game {
     this.later(delay, () => {
       const from = this.monsters.anchor(uid);
       // aimed at the camera, a little lower so that the last frames are not cut off by the near plane
-      if (from) this.projectiles.launch(kind, from, { x: this.player.x, y: this.player.y - 0.7, z: this.player.z });
+      // (no impact: the shot ends at the party's eyes, the picture of the hit is the screen's)
+      if (from) this.projectiles.launch(kind, from, { x: this.player.x, y: this.player.y - 0.7, z: this.player.z }, 1, undefined, false);
     });
     return seconds;
   }
@@ -5333,6 +5340,7 @@ export class Game {
       { type: "toggle", label: () => `Distance: ${VIEW_NAMES[draft.viewDistance]}`, flip: () => (draft.viewDistance = VIEW_DISTANCES[(VIEW_DISTANCES.indexOf(draft.viewDistance) + 1) % VIEW_DISTANCES.length]!) },
       { type: "toggle", label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
       { type: "toggle", label: () => `Animated town scenes: ${onOff(draft.animatedTown)}`, flip: () => (draft.animatedTown = !draft.animatedTown) },
+      { type: "toggle", label: () => `Effects: ${EFFECT_NAMES[draft.effects]}`, flip: () => (draft.effects = EFFECT_LEVELS[(EFFECT_LEVELS.indexOf(draft.effects) + 1) % EFFECT_LEVELS.length]!) },
       { type: "toggle", label: () => `Show FPS: ${onOff(draft.showFps)}`, flip: () => (draft.showFps = !draft.showFps) },
     ]);
     return picked === "apply" ? this.applyOptions(draft) : false;
@@ -5408,6 +5416,7 @@ export class Game {
     }
     if (next.resolution !== before.resolution) this.r.setResolution(next.resolution);
     setAnimatedTown(next.animatedTown);
+    this.effects.setLevel(next.effects);
     setCursorFade(next.fadeCursor);
     if (!next.showFps) this.ui.setFps(null);
     this.audio.setMusicVolume(musicGain(next));
@@ -5818,6 +5827,7 @@ export class Game {
       this.pruneMonsterViews();
     }
     this.projectiles.update(dt);
+    this.effects.update(dt);
     this.campaignView.tick(dt);
     this.syncMascots();
     this.syncCaravans();
@@ -6243,7 +6253,7 @@ export class Game {
   }
 
   get internals() {
-    return { r: this.r, player: this.player, props: this.props, enc: this.enc, interior: this.interior, ui: this.ui, chunks: this.chunks, monsters: this.monsters, projectiles: this.projectiles };
+    return { r: this.r, player: this.player, props: this.props, enc: this.enc, interior: this.interior, ui: this.ui, chunks: this.chunks, monsters: this.monsters, projectiles: this.projectiles, effects: this.effects };
   }
 }
 

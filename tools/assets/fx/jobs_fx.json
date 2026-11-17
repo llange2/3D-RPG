@@ -1,0 +1,74 @@
+[
+  {
+    "name": "impact_ice",
+    "prompt": "ice shatter burst seen from the front, glowing blue frost crystals and sharp ice shards radiating outward from a bright white-blue center, sparkling frost dust, game VFX sprite, hand painted fantasy style, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, ground, landscape, grey background, snowy scenery",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "impact_acid",
+    "prompt": "toxic green acid splash burst seen from the front, glowing lime green liquid splatter with droplets and bubbles radiating outward from a bright center, game VFX sprite, hand painted fantasy style, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, ground, landscape, grey background, person",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "impact_magic",
+    "prompt": "arcane magic energy burst seen from the front, glowing violet and pink magical explosion with sparkles, star shaped rays and swirling energy radiating outward from a bright center, game VFX sprite, hand painted fantasy style, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, ground, landscape, grey background, person, runes text",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "impact_water",
+    "prompt": "water splash burst seen from the front, white and light blue splashing water crown with flying droplets radiating outward from the center, game VFX sprite, hand painted fantasy style, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, ground, landscape, grey background, ocean, person",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "spr_droplet",
+    "prompt": "a single teardrop shaped water droplet with the point facing up, glossy light blue with a bright white highlight, game asset, centered, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, multiple objects, grey background, splash, ground",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "spr_splash",
+    "prompt": "a small water splash crown, milk drop crown shape with a ring of tiny droplets, white and light blue, game asset, centered, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, multiple objects, grey background, ocean, ground",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "spr_bubble",
+    "prompt": "a single transparent soap bubble with a glowing thin rim and a bright highlight, game asset, centered, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, multiple objects, grey background, hand, person",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "spr_ice_shard_a",
+    "prompt": "a single sharp ice shard crystal, glowing pale blue and white, game asset, centered, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, multiple objects, grey background, ground, snow scenery",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "spr_ice_shard_b",
+    "prompt": "a cluster of three small jagged ice crystal shards pointing in different directions, glowing pale blue, game asset, centered, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, grey background, ground, snow scenery",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "spr_snowflake",
+    "prompt": "a single symmetrical snowflake crystal, glowing white and light blue, game asset, centered, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, multiple objects, grey background, ground, scenery",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "spr_acid_blob",
+    "prompt": "a single glowing toxic green acid blob, viscous droplet with a bright highlight, game asset, centered, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, multiple objects, grey background, ground, person",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  },
+  {
+    "name": "spr_acid_bubble",
+    "prompt": "a single glowing toxic green bubble with a bright rim and a highlight, game asset, centered, isolated on a pure black background",
+    "negative": "text, watermark, frame, border, multiple objects, grey background, ground, person",
+    "model": "z-image-turbo", "resolution": "square-1024", "quality": "medium"
+  }
+]

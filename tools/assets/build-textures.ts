@@ -11,6 +11,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
 import { buildFlatTerrain } from "./build-flat-terrain";
+import { buildFx } from "./build-fx";
 import { buildMinimap } from "./build-minimap";
 import { buildPlaceholderIcons } from "./build-placeholder-icons";
 import { buildItemIcons } from "./build-item-icons";
@@ -99,6 +100,9 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   // the 78 spell pictures become one sheet with a register (see build-spell-icons.ts)
   add("ui", (await buildSpellIcons()).bytes);
   await buildPlaceholderIcons();
+
+  // the effect pictures (particles, impact flipbooks, water) become `fx/*.webp`, see build-fx.ts
+  add("fx", (await buildFx()).bytes);
 
   // the 38 symbols of the map become one sheet (`ui/minimap.webp`), see build-minimap.ts
   add("ui", (await buildMinimap()).bytes);
