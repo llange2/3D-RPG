@@ -21,7 +21,7 @@ describe("effects: the pictures", () => {
 
   it("has every source picture at the size the code counts on", async () => {
     const sizes: Record<string, [number, number]> = {
-      particles: [1024, 1024], smoke: [1024, 256], water_ripple: [512, 512], water_jet: [128, 512],
+      particles: [1024, 1024], smoke: [1024, 256], water_ripple: [512, 512], water_flow: [128, 512], water_drop: [148, 256], foam: [512, 512],
       impact_fire: [1024, 1024], impact_ice: [1024, 1024], impact_acid: [1024, 1024], impact_magic: [1024, 1024], impact_water: [1024, 1024],
     };
     expect([...FX_PICTURES].sort()).toEqual(Object.keys(sizes).sort());
@@ -35,7 +35,7 @@ describe("effects: the pictures", () => {
 
   it("lists the built files the game loads (when the assets are built)", () => {
     if (!existsSync(join(PUBLIC, "manifest.json"))) return;
-    const files = [FX_FILES.particles, FX_FILES.smoke, FX_FILES.ripple, FX_FILES.jet, ...IMPACT_KINDS.map((k) => FX_FILES.impact[k])];
+    const files = [FX_FILES.particles, FX_FILES.smoke, FX_FILES.ripple, FX_FILES.flow, FX_FILES.drop, FX_FILES.foam, ...IMPACT_KINDS.map((k) => FX_FILES.impact[k])];
     const manifest = JSON.parse(readFileSync(join(PUBLIC, "manifest.json"), "utf-8")) as { groups: Record<string, { files: string[] }> };
     for (const f of files) {
       expect(existsSync(join(PUBLIC, f)), f).toBe(true);
@@ -58,12 +58,26 @@ describe("effects: the fountain", () => {
       if (!b) continue;
       const height = b[4]! - b[1]!;
       const radius = Math.min(b[3]! - b[0]!, b[5]! - b[2]!) / 2;
-      expect(shape.topY, model).toBeLessThanOrEqual(height + 0.01);
-      expect(shape.basinY).toBeLessThan(shape.upperY);
-      expect(shape.upperY).toBeLessThan(shape.topY);
-      expect(shape.basinR).toBeLessThan(radius);
-      expect(shape.upperR).toBeLessThan(shape.basinR);
+      expect(shape.basinR, model).toBeLessThan(radius);
+      if (shape.kind === "tiered") {
+        expect(shape.topY, model).toBeLessThanOrEqual(height + 0.01);
+        expect(shape.basinY).toBeLessThan(shape.upperY);
+        expect(shape.upperY).toBeLessThan(shape.topY);
+        expect(shape.upperR).toBeLessThan(shape.basinR);
+      } else {
+        // the stream stands inside the basin, from the water up to the mouth, and the drops are thrown in a unit direction over the water
+        expect(shape.mouthY, model).toBeLessThanOrEqual(height + 0.01);
+        expect(shape.basinY).toBeLessThan(shape.mouthY);
+        expect(Math.hypot(shape.spoutX, shape.spoutZ)).toBeLessThan(shape.basinR);
+        expect(Math.hypot(shape.throwX, shape.throwZ)).toBeCloseTo(1, 6);
+        expect(Math.hypot(shape.spoutX + shape.throwX * shape.throwR * 1.3, shape.spoutZ + shape.throwZ * shape.throwR * 1.3), "the drops land in the basin").toBeLessThan(shape.basinR);
+      }
     }
+  });
+
+  it("knows the three fountains: the town's, the landmark's and the mermaid's", () => {
+    expect(Object.keys(FOUNTAIN_SHAPES).sort()).toEqual(["ci_2", "ci_89", "obj_fountain"]);
+    expect(FOUNTAIN_SHAPES.ci_89!.kind).toBe("horn");
   });
 });
 
@@ -73,6 +87,17 @@ describe("effects: the setting", () => {
     for (const level of EFFECT_LEVELS) expect(parseSettings(JSON.stringify({ effects: level })).effects).toBe(level);
     expect(parseSettings(JSON.stringify({ effects: "lots" })).effects).toBe("full");
     expect(parseSettings(JSON.stringify({})).effects).toBe("full");
+  });
+
+  it("has the glow (bloom) only on the High quality, off by default, and reads it back", () => {
+    expect(QUALITY_PRESETS.high.bloom).toBe(true);
+    expect(QUALITY_PRESETS.medium.bloom).toBe(false);
+    expect(QUALITY_PRESETS.low.bloom).toBe(false);
+    expect(DEFAULT_SETTINGS.bloom).toBe(false);
+    expect(parseSettings(JSON.stringify({ bloom: true })).bloom).toBe(true);
+    expect(parseSettings(JSON.stringify({ bloom: "yes" })).bloom).toBe(false);
+    // a custom mix: High with the glow switched off is no longer High
+    expect(qualityOf({ ...applyQuality("high", DEFAULT_SETTINGS), bloom: false })).toBe("custom");
   });
 
   it("is part of the quality presets", () => {

@@ -16,7 +16,12 @@ export const FX_FILES = {
   particles: "fx/particles.webp",
   smoke: "fx/smoke.webp",
   ripple: "fx/water_ripple.webp",
-  jet: "fx/water_jet.webp",
+  /** Blue, drawn by its alpha (not added): the sheet of water that runs down a fountain, seamless in x and y. */
+  flow: "fx/water_flow.webp",
+  /** The user's drop (blue, tip up, 148 x 256), drawn by its alpha. */
+  drop: "fx/water_drop.webp",
+  /** The lace of foam on the water along the shore, seamless in x and y, added (`render/foam.ts`). */
+  foam: "fx/foam.webp",
   impact: {
     fire: "fx/impact_fire.webp",
     ice: "fx/impact_ice.webp",
@@ -31,7 +36,6 @@ export const IMPACT_KINDS = Object.keys(FX_FILES.impact) as ImpactKind[];
 
 /** The particle sheet: 8 x 8 cells of 128 px. */
 export const PARTICLE_GRID = 8;
-export const PARTICLE_CELL = 128;
 /** The cells of the particle sheet by name (the order of `fx_particles.json`). */
 export const PARTICLE_CELLS = {
   dot: 0, spark: 1, flame_tongue: 2, drop_teardrop: 3, drop_round: 4, splash_crown: 5, ripple_ring: 6, bubble: 7,
@@ -64,18 +68,42 @@ export function cellUv(cell: number, grid: number): CellUv {
 /**
  * The fountains the effects know: the model of the town square (`obj_fountain`) and of the landmark in the open country (item 2, the same file). Heights are in model units over the
  * lowest point (the instance's scale makes them world units), measured on the file (`node tools/dev/model-profile.mjs public/assets/models-original/obj_fountain.glb`): the lower basin holds its water at 0.70, the column
- * carries a small upper bowl whose rim is at 1.5, the finial on top ends at 1.91 (the jet leaves a little below).
+ * carries a small upper bowl whose rim is at 1.5, the finial on top ends at 1.91 (the drops leave it and fly in an arc into the basin, a blue sheet of water runs down from the rim).
+ *
+ * The user's Mermaid fountain (item 89, `Mermaid_Fountain.glb`, bug_fix_68) is a horn that pours a stream into the basin: the model has its thin column of water in it (axis x -0.097, z 0.141, from the water
+ * at y -0.20 to the mouth at about 0.25; `node tools/dev/model-silhouette.mjs`), the effects put a visible blue stream on it and throw drops from the mouth over the water. Its numbers are in file
+ * coordinates (x is mirrored by the engine, `fountainPoint` in `fx.ts` does that), heights over the lowest point.
  */
-export interface FountainShape {
+export interface TieredFountain {
+  kind: "tiered";
   /** Water level and inner radius of the lower basin. */
   basinY: number;
   basinR: number;
   /** Rim height and radius of the upper bowl, where the water runs over. */
   upperY: number;
   upperR: number;
-  /** Where the jet leaves (the top of the finial). */
+  /** Where the drops leave (the top of the finial). */
   topY: number;
 }
 
-const BASIN: FountainShape = { basinY: 0.7, basinR: 0.6, upperY: 1.5, upperR: 0.31, topY: 1.9 };
-export const FOUNTAIN_SHAPES: Readonly<Record<string, FountainShape>> = { obj_fountain: BASIN, ci_2: BASIN };
+export interface HornFountain {
+  kind: "horn";
+  /** Water level and radius of the basin round the middle of the model. */
+  basinY: number;
+  basinR: number;
+  /** The axis of the stream (file x and z) and the height of the mouth it comes from; `streamR` is its radius at the mouth. */
+  spoutX: number;
+  spoutZ: number;
+  mouthY: number;
+  streamR: number;
+  /** The way the drops are thrown (file x and z, a unit vector) and how far they fly (model units). */
+  throwX: number;
+  throwZ: number;
+  throwR: number;
+}
+
+export type FountainShape = TieredFountain | HornFountain;
+
+const BASIN: FountainShape = { kind: "tiered", basinY: 0.7, basinR: 0.6, upperY: 1.5, upperR: 0.31, topY: 1.9 };
+const MERMAID: FountainShape = { kind: "horn", basinY: 0.184, basinR: 0.44, spoutX: -0.097, spoutZ: 0.141, mouthY: 0.62, streamR: 0.026, throwX: -Math.SQRT1_2, throwZ: Math.SQRT1_2, throwR: 0.2 };
+export const FOUNTAIN_SHAPES: Readonly<Record<string, FountainShape>> = { obj_fountain: BASIN, ci_2: BASIN, ci_89: MERMAID };

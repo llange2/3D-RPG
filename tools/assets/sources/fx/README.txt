@@ -3,7 +3,7 @@ Quellgrafiken für Partikel und Wassereffekte (gebaut von tools/assets/build-fx.
 
 Konvention aller additiven Bilder: gerader Alpha, Alpha = Intensität, RGB = die Farbe (die grauen Sprites sind weiß und lassen sich im Code einfärben).
 Das Spiel mischt sie mit SRC_ALPHA + ONE; die Farbe unter Alpha 0 zählt nie (ein verlustbehafteter Encoder lässt dort Farbe hineinsickern).
-fx_smoke.png: dasselbe, gedacht für normale Mischung.
+fx_smoke.png, fx_water_flow.png und fx_water_drop.png: dasselbe, aber für normale Mischung (die Farbe zählt, der Alpha deckt).
 
 Dateien
 -------
@@ -15,7 +15,10 @@ fx_impact_acid.png  dito
 fx_impact_magic.png dito
 fx_impact_water.png dito
 fx_water_ripple.png 512x512, nahtlos in x und y (Lichtnetz eines Beckenbodens), hellblau-weiß, additiv.
-fx_water_jet.png    128x512 (Breite x Höhe), nahtlos in der Höhe, senkrechte Wasserstreifen, an den Seiten weich auslaufend, additiv.
+fx_water_flow.png   128x512 (Breite x Höhe), nahtlos in x und y, blau (tiefblau bis hellblau) mit eigenem Alpha 0,3 bis 0,76, senkrechte Streifen. NICHT additiv: normale Mischung
+                    (der Wasservorhang der Brunnen, auf einer hellen Wand würde Addieren Weiß ergeben).
+fx_water_drop.png   148x256, das Tropfenbild des Nutzers (.ignore/water_drop.png), Spitze oben, blau, auf Tropfen zugeschnitten, Farbe unter dem Rand blau gesetzt. Normale Mischung.
+fx_foam.png         512x512, nahtlos in x und y, weißer Schaum (Alpha = Intensität), additiv: der Uferschaum der Überwelt. Aus einem Flux.2-Bild (foam_f1, siehe tools/assets/fx/foam_tex.py).
 
 Herkunft
 --------

@@ -58,21 +58,21 @@ describe.skipIf(!built)("asset pipeline output", () => {
     expect(missingFlatTiles(["grass_water_edge-left"]).some((n) => n.endsWith("_pond") || n.endsWith("_island"))).toBe(false);
   });
 
-  it("has one model for each of the 91 monsters", () => {
-    const monsters = JSON.parse(readFileSync(join(PUBLIC, "models.monsters.json"), "utf-8")) as Record<string, { file: string; tris: number }>;
+  it.skipIf(!originalsBuilt)("has one model for each of the 91 monsters", () => {
+    const monsters = JSON.parse(readFileSync(join(PUBLIC, registryFile("monsters")), "utf-8")) as Record<string, { file: string; tris: number }>;
     for (const id of MONSTER_IDS) {
       expect(monsters[String(id)], `monster ${id}`).toBeDefined();
-      expect(all.has(monsters[String(id)]!.file), `monster ${id} file`).toBe(true);
+      expect(existsSync(join(PUBLIC, monsters[String(id)]!.file)), `monster ${id} file`).toBe(true);
       expect(monsters[String(id)]!.tris).toBeGreaterThan(100);
     }
   });
 
-  it("has the models of the door frames and of the projectiles", () => {
-    const stat = JSON.parse(readFileSync(join(PUBLIC, "models.static.json"), "utf-8")) as Record<string, { file: string }>;
+  it.skipIf(!originalsBuilt)("has the models of the door frames and of the projectiles", () => {
+    const stat = JSON.parse(readFileSync(join(PUBLIC, registryFile("static")), "utf-8")) as Record<string, { file: string }>;
     const keys = [...PROJECTILE_MODELS, ...Object.values(BLOCKS).flatMap((b) => (b.style.model ? [b.style.model.key] : []))];
     for (const key of keys) {
       expect(stat[key], key).toBeDefined();
-      expect(all.has(stat[key]!.file), `${key} file`).toBe(true);
+      expect(existsSync(join(PUBLIC, stat[key]!.file)), `${key} file`).toBe(true);
     }
   });
 
@@ -81,48 +81,26 @@ describe.skipIf(!built)("asset pipeline output", () => {
     for (const [id, name] of Object.entries(MUSIC_TRACKS)) expect(all.has(`audio/music/${name}.webm`), `music ${id}: ${name}`).toBe(true);
   });
 
-  it("keeps heavy models within a sane triangle budget", () => {
-    const stat = JSON.parse(readFileSync(join(PUBLIC, "models.static.json"), "utf-8")) as Record<string, { tris: number }>;
-    // towns and castles are seen once or twice at a time and get a bigger budget than props; the dungeon doors are two carved parts that the
-    // simplifier cannot reduce below about 5500 triangles without shattering them (the sloppy pass ignores the texture seams)
-    // the full ground tiles of the quality "ultra" (`gndx_*`) are the old models as they are, 2250 to 7900 triangles
-    // the ruined castle (`poi_castle_ruin`, bug_fix_64) keeps 11 998 triangles in the reduced set: the simplifier stops there (rubble and broken towers, 18 574 in the file)
-    const budget = (key: string) => (key === "poi_town" || key === "poi_castle" || key === "poi_tower" ? 10_000 : key === "poi_castle_ruin" ? 12_500 : key.startsWith("gndx_") ? 9000 : key === "blk_door_closed" || key === "blk_door_open" ? 6000 : key === "ci_70" ? 10_500 : 5000); // ci_70, the bone pile: a baked atlas that any reduction shatters
-    for (const [key, m] of Object.entries(stat)) expect(m.tris, key).toBeLessThan(budget(key));
-  });
 });
 
 describe("model set registries", () => {
   it("are named the same in the pipeline and in the game", () => {
-    // the game loads the originals only; the reduced set is what the pipeline still writes (`npm run assets:models`) and what the size budget measures
+    // the game loads the originals only, the one set the pipeline writes (`npm run assets:originals`)
     expect(PROFILES.original.staticRegistry).toBe(registryFile("static"));
     expect(PROFILES.original.monsterRegistry).toBe(registryFile("monsters"));
   });
 });
 
-// optional output of `npm run assets:originals`
-describe.skipIf(!originalsBuilt)("original models", () => {
+// output of `npm run assets:originals`
+describe.skipIf(!originalsBuilt)("models", () => {
   type Registry = Record<string, { file: string; tris: number; animated: boolean; scale: number }>;
   // read inside the tests: the body of a skipped suite still runs while tests are collected, and the files may not exist
-  const read = (kind: "static" | "monsters", set: "lowpoly" | "original"): Registry => JSON.parse(readFileSync(join(PUBLIC, set === "original" ? registryFile(kind) : `models.${kind}.json`), "utf-8")) as Registry;
+  const read = (kind: "static" | "monsters"): Registry => JSON.parse(readFileSync(join(PUBLIC, registryFile(kind)), "utf-8")) as Registry;
 
-  it("cover exactly the models of the low-poly set, with their files", () => {
-    expect(Object.keys(read("static", "original")).sort()).toEqual(Object.keys(read("static", "lowpoly")).sort());
-    expect(Object.keys(read("monsters", "original")).sort()).toEqual(Object.keys(read("monsters", "lowpoly")).sort());
-    for (const m of [...Object.values(read("static", "original")), ...Object.values(read("monsters", "original"))]) {
+  it("are all there, in the folder of the profile", () => {
+    for (const m of [...Object.values(read("static")), ...Object.values(read("monsters"))]) {
       expect(m.file.startsWith(`${PROFILES.original.dir}/`), m.file).toBe(true);
       expect(existsSync(join(PUBLIC, m.file)), m.file).toBe(true);
-    }
-  });
-
-  it("are never coarser than the reduced models, and keep how monsters are placed", () => {
-    const reducedStatic = read("static", "lowpoly");
-    for (const [key, m] of Object.entries(read("static", "original"))) expect(m.tris, key).toBeGreaterThanOrEqual(reducedStatic[key]!.tris);
-    const reducedMonsters = read("monsters", "lowpoly");
-    for (const [id, m] of Object.entries(read("monsters", "original"))) {
-      expect(m.tris, `monster ${id}`).toBeGreaterThanOrEqual(reducedMonsters[id]!.tris);
-      expect(m.animated, `monster ${id}`).toBe(reducedMonsters[id]!.animated);
-      expect(m.scale, `monster ${id}`).toBe(reducedMonsters[id]!.scale);
     }
   });
 });

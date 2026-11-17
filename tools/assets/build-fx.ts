@@ -1,7 +1,8 @@
 /**
- * The effect pictures (`tools/assets/sources/fx`, made by `tools/assets/fx`): particle sheet, smoke, the five impact flipbooks and the two seamless
- * water textures become WebP under `public/assets/fx/`. They are additive pictures with straight alpha (alpha = intensity, rgb = the colour), so the alpha is kept
- * at full quality and the sizes stay as they are: the game cuts the cells out by their number (`render/fxSheets.ts`).
+ * The effect pictures (`tools/assets/sources/fx`, made by `tools/assets/fx`): particle sheet, smoke, the five impact flipbooks and the seamless water textures become WebP
+ * under `public/assets/fx/`. Most are additive pictures with straight alpha (alpha = intensity, rgb = the colour); `water_flow` (the sheet of water down a fountain) and
+ * `water_drop` (the user's drop) are drawn by their alpha instead (blue stays blue on a bright wall). The alpha is kept at full quality and the sizes stay as they are:
+ * the game cuts the cells out by their number (`render/fxSheets.ts`).
  */
 import { statSync } from "node:fs";
 import { join } from "node:path";
@@ -11,7 +12,7 @@ import { OUT, ROOT, ensureDir, upToDate } from "./lib";
 const SOURCES = join(ROOT, "tools", "assets", "sources", "fx");
 
 /** Source file (without `fx_` and `.png`) → name under `public/assets/fx`. The names are the game's (`FX_FILES` in `render/fxSheets.ts`). */
-export const FX_PICTURES = ["particles", "smoke", "impact_fire", "impact_ice", "impact_acid", "impact_magic", "impact_water", "water_ripple", "water_jet"] as const;
+export const FX_PICTURES = ["particles", "smoke", "impact_fire", "impact_ice", "impact_acid", "impact_magic", "impact_water", "water_ripple", "water_flow", "water_drop", "foam"] as const;
 
 export async function buildFx(): Promise<{ files: number; bytes: number }> {
   let bytes = 0;

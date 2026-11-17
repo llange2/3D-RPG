@@ -19,8 +19,8 @@ npm run build:dir            # nur das entpackte Programm (win-unpacked), zum sc
 - `npm run build -- --skip-checks` lässt die Typprüfung aus.
 - Die Version steht in `installer/package.json` (`version`); vor einem neuen Release dort erhöhen.
 - Die Assets (`public/assets`, rund 500 MB) werden nicht kopiert, electron-builder nimmt sie als `extraResources` direkt aus `public/assets`.
-  **Nicht ausgeliefert** werden die Teile, die das Spiel nicht lädt (`NOT_SHIPPED` in `build.mjs`): der reduzierte Modellsatz `models/`,
-  `models.static.json`, `models.monsters.json`, `manifest.json`, `textures.stats.json`. Die Originalmodelle (`models-original`, im Git) gehören
+  **Nicht ausgeliefert** werden die Teile, die das Spiel nicht lädt (`NOT_SHIPPED` in `build.mjs`): `manifest.json`,
+  `textures.stats.json` (der reduzierte Modellsatz ist seit bug_fix_68 gelöscht). Die Originalmodelle (`models-original`, im Git) gehören
   dazu; **haben sich Modelle geändert, vorher `npm run assets:originals` laufen lassen**.
 - Keine Original-MM3-Dateien und nicht `MATURASC.TTF` im Installer (der Build kopiert nur `public/assets`).
 

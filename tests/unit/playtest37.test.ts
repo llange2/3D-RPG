@@ -161,11 +161,11 @@ describe("37th playtest, point 4: key bindings", () => {
 });
 
 describe("37th playtest, point 4b: the quality slider", () => {
-  it("sets the five switches of Low, Medium and High", () => {
+  it("sets the seven switches of Low, Medium and High (the glow is the seventh, bug_fix_68)", () => {
     const base = { ...DEFAULT_SETTINGS };
-    expect(applyQuality("low", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false, effects: "low" });
-    expect(applyQuality("medium", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true, effects: "full" });
-    expect(applyQuality("high", base)).toEqual({ environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true, effects: "full" });
+    expect(applyQuality("low", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false, effects: "low", bloom: false });
+    expect(applyQuality("medium", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true, effects: "full", bloom: false });
+    expect(applyQuality("high", base)).toEqual({ environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true, effects: "full", bloom: true });
     expect(QUALITY_LEVELS).toEqual(["low", "medium", "high", "custom"]);
   });
 

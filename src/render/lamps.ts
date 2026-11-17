@@ -7,10 +7,15 @@ import { cellCenterX, cellCenterZ } from "./interiorMesher";
 import { shownItem } from "./interiorProps";
 import { TRAP_OBJECT, elementOf } from "./interiorTraps";
 
+/** The little things that rise round a lamp (`LampKind.fx`). */
+export type LampFx = "torch" | "lava" | "acid" | "magic" | "crystal" | "portal" | "gold";
+
 /** A kind of map object that gives light. `y` is the height of the light; `range` and `intensity` replace the usual ones for a lamp that shines further or stronger. */
 export interface LampKind {
   y: number;
   color: [number, number, number];
+  /** What the effects add round it besides its halo (`Effects.setLamps`): sparks and smoke of a flame, embers of lava, bubbles of acid, wisps of magic, glints of a crystal, motes of a portal, twinkles of gold. */
+  fx?: LampFx;
   range?: number;
   intensity?: number;
   /** The share of its light the lamp keeps by day outside (0 = none, the default: by day lamps add nothing). A spell's light must show in the sun as well (48th playtest, point 6). */
@@ -32,37 +37,37 @@ export interface LampSource extends LampKind {
 }
 
 /** The crystals shine in their own colour, strongly, one to two cells around (30th playtest, point 5); the texture of both is a teal. */
-export const CRYSTAL_LAMP: LampKind = { y: 1.4, color: [0.15, 0.85, 1], range: 7.5, intensity: 4.5 };
+export const CRYSTAL_LAMP: LampKind = { y: 1.4, color: [0.15, 0.85, 1], range: 7.5, intensity: 4.5, fx: "crystal" };
 
 /** Lava, acid and magic fire glow in their own colour like the crystals, a little weaker (31st playtest, point 1); the puddles lie on the floor, the flames stand higher. */
-export const LAVA_LAMP: LampKind = { y: 0.9, color: [1, 0.42, 0.12], range: 6.5, intensity: 3.2 };
-export const ACID_LAMP: LampKind = { y: 0.9, color: [0.45, 1, 0.15], range: 6.5, intensity: 3.2 };
-export const MAGIC_FIRE_LAMP: LampKind = { y: 1.2, color: [0.68, 0.38, 1], range: 6.5, intensity: 3.2 };
+export const LAVA_LAMP: LampKind = { y: 0.9, color: [1, 0.42, 0.12], range: 6.5, intensity: 3.2, fx: "lava" };
+export const ACID_LAMP: LampKind = { y: 0.9, color: [0.45, 1, 0.15], range: 6.5, intensity: 3.2, fx: "acid" };
+export const MAGIC_FIRE_LAMP: LampKind = { y: 1.2, color: [0.68, 0.38, 1], range: 6.5, intensity: 3.2, fx: "magic" };
 
 /**
  * Everything else that glows (31st playtest, the second half of point 1), weaker than the crystals: the chalice gold, the magic wells and the altar in their
  * colour, the runes and the portal, the orb, and the fireplace and the lantern, which the campaign had before.
  */
-export const CHALICE_LAMP: LampKind = { y: 1.0, color: [1, 0.82, 0.4], range: 5, intensity: 2.2 };
+export const CHALICE_LAMP: LampKind = { y: 1.0, color: [1, 0.82, 0.4], range: 5, intensity: 2.2, fx: "gold" };
 export const RED_WELL_LAMP: LampKind = { y: 1.2, color: [1, 0.3, 0.25], range: 5.5, intensity: 2.6 };
 export const YELLOW_WELL_LAMP: LampKind = { y: 1.2, color: [1, 0.85, 0.3], range: 5.5, intensity: 2.6 };
-export const ALTAR_LAMP: LampKind = { y: 1.0, color: [0.75, 0.4, 1], range: 5, intensity: 2.4 };
+export const ALTAR_LAMP: LampKind = { y: 1.0, color: [0.75, 0.4, 1], range: 5, intensity: 2.4, fx: "magic" };
 export const RUNES_LAMP: LampKind = { y: 0.6, color: [0.5, 0.8, 1], range: 4.5, intensity: 2 };
-export const PORTAL_LAMP: LampKind = { y: 1.5, color: [0.45, 0.55, 1], range: 6, intensity: 3 };
+export const PORTAL_LAMP: LampKind = { y: 1.5, color: [0.45, 0.55, 1], range: 6, intensity: 3, fx: "portal" };
 /** What is worth taking glows gold (32nd playtest, point 3): the orb a little stronger than the keys, the heap of treasure, and the loot a monster leaves (point 14). */
-export const ORB_LAMP: LampKind = { y: 1.0, color: [1, 0.8, 0.3], range: 5.5, intensity: 3 };
+export const ORB_LAMP: LampKind = { y: 1.0, color: [1, 0.8, 0.3], range: 5.5, intensity: 3, fx: "gold" };
 /** The Magical Orb mascot (item 10) waiting for the party glows gold, clearly stronger than the orb of ultimate power (40th playtest, point 2). */
-export const MASCOT_ORB_LAMP: LampKind = { y: 1.2, color: [1, 0.78, 0.25], range: 9, intensity: 5 };
+export const MASCOT_ORB_LAMP: LampKind = { y: 1.2, color: [1, 0.78, 0.25], range: 9, intensity: 5, fx: "gold" };
 /** Prefix of the key of the mascot orb's lamp: it goes out while the Orb is the party's mascot (`Game.updateLamps`). */
 export const MASCOT_ORB_KEY = "mo:";
-export const GOLD_LAMP: LampKind = { y: 0.9, color: [1, 0.8, 0.3], range: 4.5, intensity: 2.2 };
+export const GOLD_LAMP: LampKind = { y: 0.9, color: [1, 0.8, 0.3], range: 4.5, intensity: 2.2, fx: "gold" };
 export const LOOT_LAMP: LampKind = { y: 0.6, color: [1, 0.8, 0.3], range: 4, intensity: 1.9 };
 /**
  * The power crystals of the spaceship (quest document 1.5): weak while the ship is dead, strong (three cells around, blue) once the crystal of their section has been mended.
  * The broken crystal gives no light before it is mended.
  */
 export const SHIP_CRYSTAL_WEAK: LampKind = { y: 1.4, color: [0.15, 0.6, 1], range: 4.5, intensity: 1.1 };
-export const SHIP_CRYSTAL_STRONG: LampKind = { y: 1.4, color: [0.15, 0.6, 1], range: 9, intensity: 4.5 };
+export const SHIP_CRYSTAL_STRONG: LampKind = { y: 1.4, color: [0.15, 0.6, 1], range: 9, intensity: 4.5, fx: "crystal" };
 /** The console of the bridge is lit (document 1.5: "soll beleuchtet sein"). */
 export const CONSOLE_LAMP: LampKind = { y: 1.4, color: [0.35, 0.85, 1], range: 8, intensity: 3.2 };
 /** The computer terminal of the spaceship glows blue (point 4). */
@@ -107,7 +112,7 @@ export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
   68: COMPUTER_LAMP,
   // Rustic lantern, hangs from the ceiling on its chain; since the 51st playtest (point 2) it shines like the torches of the tower: warm, weak and wide
   76: { y: 3.2 - LANTERN_DROP, color: TOWER_TORCH_LAMP.color, range: TOWER_TORCH_LAMP.range, intensity: TOWER_TORCH_LAMP.intensity },
-  71: { y: 1.4, color: [1, 0.6, 0.3] }, // Abandoned fireplace
+  71: { y: 1.4, color: [1, 0.6, 0.3], fx: "torch" }, // Abandoned fireplace
 };
 
 /** A monster that glows (`MONSTER_LAMPS`): the light follows it, at the height of its body. */
@@ -136,7 +141,7 @@ export const MONSTER_LAMPS: Readonly<Record<string, MonsterLamp>> = {
 
 /** The lamp a cell of the old maps gives, or null. */
 export function lampSource(kind: LampKind, x: number, z: number, key = `${x.toFixed(2)},${z.toFixed(2)}`): LampSource {
-  return { x, z, key, y: kind.y, color: kind.color, ...(kind.range !== undefined ? { range: kind.range } : {}), ...(kind.intensity !== undefined ? { intensity: kind.intensity } : {}) };
+  return { x, z, key, y: kind.y, color: kind.color, ...(kind.range !== undefined ? { range: kind.range } : {}), ...(kind.intensity !== undefined ? { intensity: kind.intensity } : {}), ...(kind.fx ? { fx: kind.fx } : {}) };
 }
 
 /** The key of the lamp that an action's object carries. */

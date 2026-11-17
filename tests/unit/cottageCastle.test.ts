@@ -27,7 +27,7 @@ describe("the user's models live in the repository", () => {
   });
 
   it("has the cottage, the pirate ship, the castle's floor in both model sets, and neither the castle's wall nor the spaceship's floor and ceiling", () => {
-    for (const file of ["models.static.json", "models.static.original.json"]) {
+    for (const file of ["models.static.original.json"]) {
       if (!existsSync(join(PUBLIC, file))) continue;
       const r = JSON.parse(readFileSync(join(PUBLIC, file), "utf-8")) as Record<string, { file: string; bounds: number[] }>;
       for (const key of [COTTAGE_MODEL, PIRATE_SHIP_MODEL, "blk_fortress_floor"]) {

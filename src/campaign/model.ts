@@ -13,7 +13,6 @@ export type CampaignCell = Omit<RawCell, "x" | "y">;
 export type CellOverrides = Record<string, CampaignCell | null>;
 
 const FACING_TO_DEG: Record<Facing, number> = { N: 0, E: 90, S: 180, W: 270 };
-export const degOfFacing = (f: Facing): number => FACING_TO_DEG[f];
 
 const FAMILY_KIND: Record<BlockFamily, InteriorKind> = { city: "town", outside: "town", dungeon: "dungeon", fortress: "fortress", cave: "cave", cyber: "dungeon" };
 const FAMILY_THEME: Record<BlockFamily, string> = { city: "town", outside: "town", dungeon: "dungeon", fortress: "fortress", cave: "cave", cyber: "cyber" };

@@ -44,7 +44,7 @@ try {
     g.game.internals.monsters.clear();
     g.game.internals.enc.monsters.length = 0;
   });
-  const info = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "public", "assets", "models.monsters.json"), "utf-8")) as Record<string, { fromObj?: boolean; mean?: number }>;
+  const info = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "public", "assets", "models.monsters.original.json"), "utf-8")) as Record<string, { fromObj?: boolean; mean?: number }>;
   const ids = opt("ids")?.split(",").map(Number) ?? Object.keys(info).map(Number).filter((n) => n < 1000).sort((a, b) => a - b);
   const clip = { x: 440, y: 180, width: 400, height: 400 };
   const shot = async () => (await page.screenshot({ clip })) as Buffer;

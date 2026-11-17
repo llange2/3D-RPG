@@ -396,6 +396,3 @@ export function kindForLegacyId(id: number): ActionKind | null {
   for (const def of Object.values(ACTION_DEFS)) if (def.legacyIds.includes(id)) return def.kind;
   return null;
 }
-
-/** Legacy ids that belong to the campaign (quests, riddles, puzzles) and are not generated. */
-export const CAMPAIGN_LEGACY_IDS = [13, 15, 19, 20, 22, 26, 29, 31, 37, 40, 42, 43, 45, 46, 48, 49, 53, 9032, 9033, 9035, 9039, 9041, 9047];

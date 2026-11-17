@@ -8,6 +8,7 @@ import type { TerrainMaterials } from "./materials";
 import type { PropRenderer } from "./props";
 import { meshChunk, type PropInstance } from "./terrainMesher";
 import type { Renderer } from "./engine";
+import type { Effects } from "./fx";
 
 interface LoadedChunk {
   cx: number;
@@ -15,6 +16,8 @@ interface LoadedChunk {
   mesh: Mesh;
   multi: MultiMaterial;
   props: PropInstance[];
+  /** The foam on the water along the shore of this chunk (null: none, or the effects are off). */
+  foam: Mesh | null;
   /** True while the chunk is drawn with the simple stand-in models. */
   detail: Detail;
 }
@@ -67,6 +70,8 @@ export class ChunkManager {
     private readonly props: PropRenderer,
     /** Chunks loaded around the player in each direction. */
     public radius: number,
+    /** The effects: the foam of the shore is theirs (`Effects.shoreFoam`), a chunk asks for it when it is built and gives it back when it goes. */
+    private readonly effects: Effects | null = null,
   ) {}
 
   private key(cx: number, cy: number): string {
@@ -159,7 +164,7 @@ export class ChunkManager {
     mesh.doNotSyncBoundingInfo = true;
     mesh.alwaysSelectAsActiveMesh = false;
     const detail = detailAt(Math.max(Math.abs(cx - this.centre.cx), Math.abs(cy - this.centre.cy)));
-    this.chunks.set(this.key(cx, cy), { cx, cy, mesh, multi, props: geo.props, detail });
+    this.chunks.set(this.key(cx, cy), { cx, cy, mesh, multi, props: geo.props, foam: this.effects?.shoreFoam(this.world, cx, cy) ?? null, detail });
     this.props.setInstances(this.key(cx, cy), withLod(geo.props, detail));
 
     const ms = performance.now() - t0;
@@ -173,6 +178,7 @@ export class ChunkManager {
     this.stats.triangles -= (c.mesh.getTotalIndices() ?? 0) / 3;
     c.mesh.dispose(false, false);
     c.multi.dispose(false, false);
+    if (c.foam) this.effects?.releaseFoam(c.foam);
     this.props.removeOwner(key);
     this.chunks.delete(key);
     this.stats.loaded = this.chunks.size;

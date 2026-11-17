@@ -9,7 +9,6 @@ import type { ActionInstance, MapContent } from "./types";
  */
 
 export const FACING_NAMES = ["north", "east", "south", "west"] as const;
-export const FACING_LETTERS = ["N", "E", "S", "W"] as const;
 
 /** Facing of a rotating head. */
 export function headFacing(a: Pick<ActionInstance, "uid" | "params">, opened: ReadonlySet<string>): number {

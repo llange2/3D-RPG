@@ -1,5 +1,5 @@
 /**
- * The "Quality" slider of Options > Graphics (37th playtest): Low, Medium and High set six switches at once; a combination that is none of the three is
+ * The "Quality" slider of Options > Graphics (37th playtest): Low, Medium and High set seven switches at once; a combination that is none of the three is
  * "Custom". The slider is only a view on the switches, nothing but the switches is stored.
  */
 import type { TextureQuality } from "../render/assets";
@@ -9,7 +9,7 @@ import type { EffectsLevel } from "../render/fxSheets";
 
 export type QualityLevel = "low" | "medium" | "high" | "custom";
 
-/** The six settings the slider sets. */
+/** The seven settings the slider sets. */
 export interface QualityParts {
   /** Flat, 3D floors and ceilings, or full 3D with the walls (`render/environment.ts`). */
   environment: Environment;
@@ -20,6 +20,8 @@ export interface QualityParts {
   animatedTown: boolean;
   /** The water of the fountains and the impact of the spells (`render/fx.ts`). */
   effects: EffectsLevel;
+  /** The glow round the brightest things (a post process): only the High quality. */
+  bloom: boolean;
 }
 
 /** The slider's positions from left to right. */
@@ -28,21 +30,21 @@ export const QUALITY_LEVELS: readonly QualityLevel[] = ["low", "medium", "high",
 export const QUALITY_NAMES: Record<QualityLevel, string> = { low: "Low", medium: "Medium", high: "High", custom: "Custom" };
 
 export const QUALITY_PRESETS: Record<Exclude<QualityLevel, "custom">, QualityParts> = {
-  low: { environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false, effects: "low" },
-  medium: { environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true, effects: "full" },
-  high: { environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true, effects: "full" },
+  low: { environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false, effects: "low", bloom: false },
+  medium: { environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true, effects: "full", bloom: false },
+  high: { environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true, effects: "full", bloom: true },
 };
 
 /** The level whose preset the settings equal, else "custom". */
 export function qualityOf(s: QualityParts): QualityLevel {
   for (const level of ["low", "medium", "high"] as const) {
     const p = QUALITY_PRESETS[level];
-    if (p.environment === s.environment && p.textureQuality === s.textureQuality && p.viewDistance === s.viewDistance && p.resolution === s.resolution && p.animatedTown === s.animatedTown && p.effects === s.effects) return level;
+    if (p.environment === s.environment && p.textureQuality === s.textureQuality && p.viewDistance === s.viewDistance && p.resolution === s.resolution && p.animatedTown === s.animatedTown && p.effects === s.effects && p.bloom === s.bloom) return level;
   }
   return "custom";
 }
 
-/** The six settings of a level; "custom" keeps what is there. */
+/** The seven settings of a level; "custom" keeps what is there. */
 export function applyQuality(level: QualityLevel, current: QualityParts): QualityParts {
   return level === "custom" ? { ...current } : { ...QUALITY_PRESETS[level] };
 }

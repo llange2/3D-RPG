@@ -66,7 +66,7 @@ try {
   await sleep(300);
   const first = await rows();
   expect(
-    JSON.stringify(first) === JSON.stringify(["Quality: Medium", "Environment: Flat", "Textures: normal", "Distance: Medium", "Resolution: normal", "Animated town scenes: on", "Effects: Full", "Show FPS: off"]),
+    JSON.stringify(first) === JSON.stringify(["Quality: Medium", "Environment: Flat", "Textures: normal", "Distance: Medium", "Resolution: normal", "Animated town scenes: on", "Effects: Full", "Bloom: off", "Show FPS: off"]),
     `Graphics starts at Medium (${first.join(" | ")})`,
   );
   await page.screenshot({ path: join(outDir, "options-graphics.png") });
