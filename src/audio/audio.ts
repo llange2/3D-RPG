@@ -19,6 +19,8 @@ export class AudioManager {
   private music: HTMLAudioElement | null = null;
   private currentTrack: number | null = null;
   private pendingTrack: number | null = null;
+  /** The track of the title, loaded and playing muted until the page may make sound (`warmUp`). */
+  private warm: { id: number; el: HTMLAudioElement } | null = null;
   private unlocked = false;
   private readonly supported: boolean;
   private readonly footToggle = new Map<number, number>();
@@ -76,22 +78,42 @@ export class AudioManager {
   }
 
   /**
-   * Before the first gesture: tries to play the track anyway. If the browser allows it, it plays from the moment the title is up (the first version waited for the first click even where
-   * the browser would have played, 18. 11. 2026); if not, the request stays pending and the first gesture starts it.
+   * Before the first gesture (the title screen): the track is loaded at once and played right away. Where the browser allows sound without a gesture, it is heard from the moment the
+   * title is up (18. 11. 2026). Where it does not (Chrome for a page the user has not touched yet, `NotAllowedError`), it plays MUTED, which every browser allows: the file is loaded and
+   * decoded and running, and the first click, key or touch only turns it up (`playMusic` adopts the element), so that the music starts at that instant and not after the download
+   * (19. 11. 2026: the element used to be made only at the click, the file loaded then, and the music came in a second late).
    */
-  private tryAutoplay(id: number): void {
-    const probe = new Audio(this.url("music", MUSIC_TRACKS[id]!));
-    probe.loop = true;
-    probe.volume = 0;
-    probe.play().then(
+  private warmUp(id: number): void {
+    if (this.warm?.id === id) return;
+    this.discardWarm();
+    const el = new Audio(this.url("music", MUSIC_TRACKS[id]!));
+    el.loop = true;
+    el.preload = "auto";
+    el.volume = this.musicVolume;
+    this.warm = { id, el };
+    el.play().then(
       () => {
-        probe.pause();
-        // (an Audio element that plays also means that the audio context may run)
+        if (this.warm?.el !== el) return;
+        // the browser lets the page play: heard now, and everything else is unlocked as well
+        this.warm = null;
+        this.pendingTrack = null;
+        this.music = el;
+        this.currentTrack = id;
         void this.context?.resume().catch(() => undefined);
         this.markUnlocked();
       },
-      () => undefined,
+      () => {
+        if (this.warm?.el !== el) return;
+        el.muted = true;
+        el.play().catch(() => undefined);
+      },
     );
+  }
+
+  private discardWarm(): void {
+    if (!this.warm) return;
+    this.warm.el.pause();
+    this.warm = null;
   }
 
   private url(group: "music" | "sfx", name: string): string {
@@ -102,16 +124,25 @@ export class AudioManager {
   playMusic(id: number): void {
     if (!this.supported || !(id in MUSIC_TRACKS)) return;
     if (!this.unlocked) {
-      const first = this.pendingTrack === null;
       this.pendingTrack = id;
-      if (first) this.tryAutoplay(id);
+      this.warmUp(id);
       return;
     }
     if (this.currentTrack === id && this.music && !this.music.paused) return;
     this.pendingTrack = null;
     const old = this.music;
-    const next = new Audio(this.url("music", MUSIC_TRACKS[id]!));
-    next.loop = true;
+    // the track that has been running muted since the title came up is turned up, from its start; any other is made now
+    let next: HTMLAudioElement;
+    if (this.warm?.id === id) {
+      next = this.warm.el;
+      this.warm = null;
+      next.currentTime = 0;
+      next.muted = false;
+    } else {
+      this.discardWarm();
+      next = new Audio(this.url("music", MUSIC_TRACKS[id]!));
+      next.loop = true;
+    }
     next.volume = 0;
     next.play().catch(() => undefined);
     this.music = next;
@@ -124,6 +155,7 @@ export class AudioManager {
 
   stopMusic(): void {
     this.pendingTrack = null;
+    this.discardWarm();
     this.currentTrack = null;
     if (this.music) {
       const m = this.music;
