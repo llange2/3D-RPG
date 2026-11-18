@@ -128,6 +128,8 @@ interface View {
   slide: number | null;
   /** The height of the middle of the drawn body over the holder's origin, measured once (`bodyMiddle`); null until a shot asks. */
   aim: number | null;
+  /** The lowest point of the drawn body over the holder's origin, measured with `aim`; unknown until a hit asks (`hitSpot`). */
+  feet?: number;
 }
 
 /** How a person of a campaign map stands: `yaw` in degrees (Babylon), `idle` the clip it loops. */
@@ -431,6 +433,14 @@ export class MonsterRenderer {
     return { x: v.to.x, y: v.to.y + v.aim, z: v.to.z };
   }
 
+  /** Where a blow or an arrow hits a monster (`anchor`) and the height of the floor under it: the lowest point of the body that is drawn, so that what flies off it falls to its feet. Null when it has no view. */
+  hitSpot(uid: string): { x: number; y: number; z: number; floor: number } | null {
+    const at = this.anchor(uid);
+    const v = this.views.get(uid);
+    if (!at || !v) return null;
+    return { ...at, floor: v.to.y + (v.feet ?? 0) };
+  }
+
   /**
    * How high the middle of a monster's body is over its holder's origin, from the meshes that are drawn (not the weapon and shield in its hands, not the bow that is hidden). The old formula took the
    * middle of the model's bounds but at least half a metre, which put every animated monster's shots at its knees (the goblin, 17. 11. 2026) and the static ones' at two thirds of their height.
@@ -445,6 +455,8 @@ export class MonsterRenderer {
       lo = Math.min(lo, box.minimumWorld.y);
       hi = Math.max(hi, box.maximumWorld.y);
     }
+    // (the lowest point of the body over the holder's origin: where what flies off a hit monster comes to rest)
+    if (Number.isFinite(lo)) v.feet = lo - v.holder.position.y;
     if (!Number.isFinite(lo)) {
       const [, minY, , , maxY] = v.info.bounds;
       return Math.max(0.5, ((minY + maxY) / 2) * v.holder.scaling.y);

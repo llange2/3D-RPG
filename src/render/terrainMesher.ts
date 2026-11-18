@@ -558,24 +558,49 @@ export function towerTorchSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { 
   return [-1, 1].map((k) => ({ x: cx + fx * ahead - fz * TORCH_ASIDE * k, z: cz + fz * ahead + fx * TORCH_ASIDE * k }));
 }
 
-/**
- * Where the flames of the two wall torches really are (bug_fix_68: the halo, the sparks and the smoke of the effects sit on the flame, not at the light): measured on the model in a
- * screenshot, a little to either side of the door, at the wall, about a metre and a half up. The light itself hangs further out and higher (`towerTorchSpots`).
- */
-const FLAME_AHEAD = 0.15;
-const FLAME_ASIDE = 1.05;
-export const TORCH_FLAME_HEIGHT = 1.45;
-
-export function towerFlameSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { x: number; z: number }[] {
+/** A point of a place's model in the world: the model stands on its footprint, its lowest point on the ground, turned to the side it is entered from (`poiProp`). `mx`, `my`, `mz` are in the file's coordinates (the engine mirrors glTF in x), `my` over the lowest point. */
+function poiModelPoint(poi: Pick<Poi, "x" | "y" | "size" | "side">, kind: string, mx: number, my: number, mz: number): { x: number; y: number; z: number } {
+  const spec = POI_MODEL[kind]!;
   const b = poiBounds(poi);
   const cx = tileToWorldX(b.x0) + (poi.size * TILE_SIZE) / 2;
   const cz = tileToWorldZ(b.y0) - (poi.size * TILE_SIZE) / 2;
-  const d = SIDE_DELTA[poi.side];
-  const fx = d.dx;
-  const fz = -d.dy;
-  const ahead = (poi.size * TILE_SIZE) / 2 + FLAME_AHEAD;
-  return [-1, 1].map((k) => ({ x: cx + fx * ahead - fz * FLAME_ASIDE * k, z: cz + fz * ahead + fx * FLAME_ASIDE * k }));
+  const rotY = SIDE_YAW[poi.side] + (spec.yaw * Math.PI) / 180;
+  const lx = -mx * spec.scaleXYZ[0] * poi.size;
+  const lz = mz * spec.scaleXYZ[2] * poi.size;
+  const c = Math.cos(rotY);
+  const s = Math.sin(rotY);
+  return { x: cx + lx * c + lz * s, y: my * spec.scaleXYZ[1] * poi.size, z: cz - lx * s + lz * c };
 }
+
+/**
+ * Where the flames of the wall torches really are (bug_fix_68, measured again 18. 11. 2026): the sparks and the smoke of the effects start at the flame itself, which the first version
+ * had placed at the footprint's edge, 1.5 units in front of the wall and half a metre too low (from the side the glow floated in the air beside the torch, `screen1`). The numbers are
+ * the centres of the flame-coloured vertices of the user's files (`Tower.glb`: two torches left and right of the door, 0.223 either side of the axis, 0.287 in front of it and 0.42 above
+ * the lowest point; `Cave_Entrance.glb`: one torch, 0.399 to the right of the axis, 0.717 in front of it, 0.655 over the lowest point), in file coordinates.
+ */
+const TOWER_FLAMES: readonly (readonly [number, number, number])[] = [[-0.223, 0.42, 0.287], [0.224, 0.42, 0.287]];
+// (the cave's "torch" is a lantern: its flame is a painted window of the closed model, 0.655 over the lowest point, so sparks and smoke start at the lantern's top, 0.8, or they would rise inside it, hidden)
+const CAVE_FLAMES: readonly (readonly [number, number, number])[] = [[0.399, 0.8, 0.717]];
+
+export function towerFlameSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { x: number; y: number; z: number }[] {
+  return TOWER_FLAMES.map(([mx, my, mz]) => poiModelPoint(poi, "tower", mx, my, mz));
+}
+
+/** The flame of the torch on the cave entrance (one, at the right of the opening seen from the front). */
+export function caveFlameSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { x: number; y: number; z: number }[] {
+  return CAVE_FLAMES.map(([mx, my, mz]) => poiModelPoint(poi, "cave", mx, my, mz));
+}
+
+/**
+ * Where the light of the cave's torch hangs: like the tower's (`towerTorchSpots`: a unit in front of the flame and a little higher, so that its glow lies on the ground in front of the
+ * entrance and not on the rock beside the flame, which it would burn white).
+ */
+export function caveTorchSpots(poi: Pick<Poi, "x" | "y" | "size" | "side">): { x: number; y: number; z: number }[] {
+  const d = SIDE_DELTA[poi.side];
+  return caveFlameSpots(poi).map((f) => ({ x: f.x + d.dx * TORCH_LIGHT_OUT, y: f.y + TORCH_LIGHT_UP, z: f.z - d.dy * TORCH_LIGHT_OUT }));
+}
+const TORCH_LIGHT_OUT = 1;
+const TORCH_LIGHT_UP = 0.5;
 
 /** Yaw that turns a model whose front is +z (north) towards a side; grid y grows south, which is -z. */
 const SIDE_YAW: Record<PoiSide, number> = { N: 0, E: Math.PI / 2, S: Math.PI, W: -Math.PI / 2 };

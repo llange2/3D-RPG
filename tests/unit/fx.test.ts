@@ -21,7 +21,7 @@ describe("effects: the pictures", () => {
 
   it("has every source picture at the size the code counts on", async () => {
     const sizes: Record<string, [number, number]> = {
-      particles: [1024, 1024], smoke: [1024, 256], water_ripple: [512, 512], water_flow: [128, 512], water_drop: [148, 256], foam: [512, 512],
+      particles: [1024, 1024], smoke: [1024, 256], water_ripple: [512, 512], water_flow: [128, 512], water_drop: [148, 256], foam: [512, 512], cog: [256, 256],
       impact_fire: [1024, 1024], impact_ice: [1024, 1024], impact_acid: [1024, 1024], impact_magic: [1024, 1024], impact_water: [1024, 1024],
     };
     expect([...FX_PICTURES].sort()).toEqual(Object.keys(sizes).sort());
@@ -35,7 +35,7 @@ describe("effects: the pictures", () => {
 
   it("lists the built files the game loads (when the assets are built)", () => {
     if (!existsSync(join(PUBLIC, "manifest.json"))) return;
-    const files = [FX_FILES.particles, FX_FILES.smoke, FX_FILES.ripple, FX_FILES.flow, FX_FILES.drop, FX_FILES.foam, ...IMPACT_KINDS.map((k) => FX_FILES.impact[k])];
+    const files = [FX_FILES.particles, FX_FILES.smoke, FX_FILES.ripple, FX_FILES.flow, FX_FILES.drop, FX_FILES.foam, FX_FILES.cog, ...IMPACT_KINDS.map((k) => FX_FILES.impact[k])];
     const manifest = JSON.parse(readFileSync(join(PUBLIC, "manifest.json"), "utf-8")) as { groups: Record<string, { files: string[] }> };
     for (const f of files) {
       expect(existsSync(join(PUBLIC, f)), f).toBe(true);
