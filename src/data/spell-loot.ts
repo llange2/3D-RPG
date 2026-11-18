@@ -7,14 +7,11 @@ import { SPELLS } from "./tables";
  */
 export const SPELL_COPIES = 2;
 
-/** Pandora's box: a level 1 spell of the sheet that no hero starts with (35th playtest); the guild sells it, a scroll can teach it. */
-export const PANDORAS_BOX = 2;
-
 /**
- * Does every hero of the school know this spell from the start? The level 1 spells of the sheet except Pandora's box (`startingSpells` in `sim/roster.ts`). Nobody can learn such a
- * spell from a scroll, so no scroll of it lies in the world (35th playtest).
+ * Does every hero of the school know this spell from the start? All level 1 spells of the sheet (`startingSpells` in `sim/roster.ts`), Pandora's box included again since the 71st
+ * bug fix (18. 11. 2026; the 35th playtest had taken it out and let scrolls teach it). Nobody can learn such a spell from a scroll, so no scroll of it lies in the world.
  */
-export const isStartingSpell = (id: number): boolean => SPELLS[id]?.level === 1 && id !== PANDORAS_BOX;
+export const isStartingSpell = (id: number): boolean => SPELLS[id]?.level === 1;
 
 /** The old items "Book shelf" and "Book shelf (old)": containers since the 34th playtest (searched once, they may hold a scroll), never plain decoration. */
 export const BOOKSHELVES: readonly number[] = [75, 97];

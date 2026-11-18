@@ -7,7 +7,7 @@ import { VAULT_PACKAGE, vaultBonus } from "../../src/actions/vaults";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { BONES_FIND_CHANCE, BONE_PILE, RAT_TRAP } from "../../src/data/chest-traps";
 import { QUESTS, type LayoutId, type QuestId } from "../../src/data/quest-table";
-import { PANDORAS_BOX, isStartingSpell, spellsOfTier } from "../../src/data/spell-loot";
+import { isStartingSpell, spellsOfTier } from "../../src/data/spell-loot";
 import { SPELLS } from "../../src/data/tables";
 import { BOON_ONE_IN, landmarkBoon, landmarkName } from "../../src/game/landmarkBoons";
 import { DEFAULT_SETTINGS, parseSettings } from "../../src/game/settings";
@@ -26,21 +26,27 @@ const rootSeed = world.rootSeed;
 
 const context = (party = createDefaultParty(), extra: Partial<ActionContext> = {}): ActionContext => ({ party, rootSeed, monsterThemes: { beast: 1 }, tier: 1, attempt: 0, ...extra });
 
-describe("35th playtest, points 14 and 15: Pandora's box is no starting spell, and no scroll of a starting spell lies in the world", () => {
-  it("leaves the box out of the spells a new hero starts with, and out of the first party", () => {
-    for (const cls of ["Wizard", "Cleric", "Druid", "Archer", "Paladin", "Ranger"] as const) {
+/** Pandora's box (spell 2): a starting spell of the Arcane and Nature schools again since bug_fix_71 (the 35th playtest had made it a scroll-only spell). */
+const PANDORAS_BOX = 2;
+
+describe("bug_fix_71 (was 35th playtest, points 14 and 15): Pandora's box is a starting spell again, and no scroll of a starting spell lies in the world", () => {
+  it("gives the box to every hero of the Arcane and Nature schools, and to nobody else", () => {
+    for (const cls of ["Wizard", "Druid", "Archer", "Ranger"] as const) {
       const spells = startingSpells(cls);
-      expect(spells, cls).not.toContain(PANDORAS_BOX);
+      expect(spells, cls).toContain(PANDORAS_BOX);
       for (const id of spells) expect(SPELLS[id]!.level, cls).toBe(1);
     }
-    for (const c of createDefaultParty().characters) expect(c.spells).not.toContain(PANDORAS_BOX);
+    for (const cls of ["Cleric", "Paladin"] as const) expect(startingSpells(cls), cls).not.toContain(PANDORAS_BOX);
+    for (const c of createDefaultParty().characters) {
+      expect(c.spells.includes(PANDORAS_BOX), c.classType).toBe(startingSpells(c.classType).includes(PANDORAS_BOX));
+    }
   });
 
-  it("makes no scroll of the level 1 spells the schools start with, but one of the box", () => {
+  it("makes no scroll of the level 1 spells the schools start with, the box included", () => {
     const tier1 = spellsOfTier(1);
-    expect(tier1).toContain(PANDORAS_BOX);
+    expect(tier1).not.toContain(PANDORAS_BOX);
     for (const id of tier1) expect(isStartingSpell(id), `spell ${id}`).toBe(false);
-    expect([1, 3, 4, 5, 6].every((id) => isStartingSpell(id))).toBe(true);
+    expect([1, 2, 3, 4, 5, 6].every((id) => isStartingSpell(id))).toBe(true);
   });
 });
 

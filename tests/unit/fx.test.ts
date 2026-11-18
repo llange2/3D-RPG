@@ -22,7 +22,7 @@ describe("effects: the pictures", () => {
   it("has every source picture at the size the code counts on", async () => {
     const sizes: Record<string, [number, number]> = {
       particles: [1024, 1024], smoke: [1024, 256], water_ripple: [512, 512], water_flow: [128, 512], water_drop: [148, 256], foam: [512, 512], cog: [256, 256],
-      impact_fire: [1024, 1024], impact_ice: [1024, 1024], impact_acid: [1024, 1024], impact_magic: [1024, 1024], impact_water: [1024, 1024],
+      impact_fire: [2048, 2048], impact_ice: [2048, 2048], impact_acid: [2048, 2048], impact_magic: [2048, 2048], impact_water: [2048, 2048],
     };
     expect([...FX_PICTURES].sort()).toEqual(Object.keys(sizes).sort());
     for (const [name, [w, h]] of Object.entries(sizes)) {
