@@ -9,7 +9,7 @@ Dateien
 -------
 fx_particles.png    1024x1024, Raster 8x8, Zellen 128x128, grau (im Code einfärben). Belegung: fx_particles.json (Zellindex und Quelle).
 fx_smoke.png        1024x256, vier Wölkchen à 256x256, grau, gerader Alpha.
-fx_impact_fire.png  1024x1024, Raster 4x4, 16 Bilder à 256x256, einmalig (zeilenweise abspielen), farbig. Zellmitte = Einschlagpunkt.
+fx_impact_fire.png  2048x2048, Raster 4x4, 16 Bilder à 512x512, einmalig (zeilenweise abspielen), farbig. Zellmitte = Einschlagpunkt.
 fx_impact_ice.png   dito
 fx_impact_acid.png  dito
 fx_impact_magic.png dito

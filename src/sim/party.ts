@@ -28,8 +28,8 @@ export function createDefaultParty(): Party {
   const characters: Character[] = [
     createCharacter({ name: "Maximus", classType: "Knight", raceType: "Orc", avatar: "character21", attrs: { str: 21, int: 8, per: 12, end: 20, spd: 16, acc: 14, lck: 10 } }),
     createCharacter({ name: "Elrin", classType: "Ninja", raceType: "Dwarf", avatar: "character16", attrs: { str: 16, int: 12, per: 11, end: 15, spd: 20, acc: 20, lck: 19 } }),
-    createCharacter({ name: "Ralvar", classType: "Archer", raceType: "Human", avatar: "character05", attrs: { str: 15, int: 20, per: 11, end: 14, spd: 13, acc: 20, lck: 12 }, spells: [1, 3, 6] }),
-    createCharacter({ name: "Lyneth", classType: "Druid", raceType: "Gnome", avatar: "character12", attrs: { str: 8, int: 19, per: 20, end: 18, spd: 14, acc: 10, lck: 13 }, spells: [1, 3, 4, 6] }),
+    createCharacter({ name: "Ralvar", classType: "Archer", raceType: "Human", avatar: "character05", attrs: { str: 15, int: 20, per: 11, end: 14, spd: 13, acc: 20, lck: 12 }, spells: [1, 2, 3, 6] }),
+    createCharacter({ name: "Lyneth", classType: "Druid", raceType: "Gnome", avatar: "character12", attrs: { str: 8, int: 19, per: 20, end: 18, spd: 14, acc: 10, lck: 13 }, spells: [1, 2, 3, 4, 6] }),
   ];
   // the two heroes of the old game who wait in the inn from the start
   const reserve: Character[] = [

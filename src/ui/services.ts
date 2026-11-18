@@ -15,7 +15,9 @@ import type { SeedState } from "../core/rng";
 import type { Poi } from "../world/types";
 import type { World } from "../world/world";
 import { tidy } from "../campaign/engine";
-import { clear, h } from "./dom";
+import { assetPath, clear, h } from "./dom";
+import { portraitImage } from "./avatarFx";
+import { verdictFor } from "../sim/compare";
 import { stopTownScene, townArt, type SceneName } from "./townScenes";
 import { thousands } from "../core/format";
 import { itemIcon } from "./itemIcons";
@@ -64,16 +66,54 @@ export const serviceMusic = (s: ServiceKind): number => MUSIC[s];
 /** Opens the shop screen of a town service. Resolves when the party leaves. */
 export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Promise<void> {
   const scene: SceneName = kind === "training" ? "training_grounds" : kind;
+  let removeKeys = (): void => {};
   return ui.panel((close, panel) => {
     const party = ctx.party;
     // Layout: a fixed head (title, way out), the whole picture on the left and the part that changes on the right. Only
     // the right side scrolls, so neither the picture nor the buttons are ever cut off. The views below write into `root`.
     const root = h("div", { class: "svc-main" });
     const gold = h("div", { class: "svc-gold" });
+    // bug_fix_71: the smithy shows the four heroes under its picture while the pointer rests on an item: a green arrow when the item is better than what the hero wears, a red one when
+    // it is worse, nothing when some values rise and others fall, a greyed out portrait when the hero cannot put it on. The strip keeps its height when nothing is hovered (no jumping).
+    const cmp = kind === "smith" ? h("div", { class: "cmp-strip" }) : null;
+    let hovered: Item | null = null;
+    let ctrlHeld = false;
+    const showCompare = () => {
+      if (!cmp) return;
+      clear(cmp);
+      cmp.classList.toggle("on", hovered !== null);
+      for (const c of party.characters) {
+        const verdict = hovered ? verdictFor(c, hovered, party.talents, ctrlHeld) : "same";
+        const title = verdict === "cannot" ? `${c.name} (${c.classType}) cannot put this on.` : verdict === "better" ? `${c.name}: better than what is worn` : verdict === "worse" ? `${c.name}: worse than what is worn` : c.name;
+        cmp.append(h("div", { class: `cmp-hero ${verdict}`, title }, portraitImage(c), verdict === "better" || verdict === "worse" ? h("img", { class: "cmp-arrow", src: assetPath(verdict === "better" ? "ui/arrow_up.webp" : "ui/arrow_down.webp"), alt: verdict === "better" ? "better" : "worse" }) : null));
+      }
+    };
+    /** Makes a row of the smithy show the comparison while the pointer is on it. */
+    const hoverRow = <T extends HTMLElement>(el: T, item: Item): T => {
+      el.addEventListener("mouseenter", () => ((hovered = item), showCompare()));
+      el.addEventListener("mouseleave", () => ((hovered = null), showCompare()));
+      return el;
+    };
+    // Ctrl compares a ring with the second ring (as on the character screen)
+    const onCtrl = (e: KeyboardEvent) => {
+      if (e.ctrlKey === ctrlHeld) return;
+      ctrlHeld = e.ctrlKey;
+      showCompare();
+    };
+    const onBlur = () => {
+      ctrlHeld = false;
+      showCompare();
+    };
+    if (cmp) {
+      document.addEventListener("keydown", onCtrl);
+      document.addEventListener("keyup", onCtrl);
+      window.addEventListener("blur", onBlur);
+      showCompare();
+    }
     panel.classList.add("service");
     panel.append(
       h("div", { class: "svc-head" }, h("h2", { text: `${TITLES[kind]}${ctx.poi ? ` of ${ctx.poi.name}` : ""}` }), h("button", { class: "btn", text: "Leave (Esc)", onclick: close })),
-      h("div", { class: "svc-body" }, h("div", { class: "svc-art" }, townArt(scene), gold), root),
+      h("div", { class: "svc-body" }, h("div", { class: "svc-art" }, townArt(scene), gold, cmp), root),
     );
     /** Updates the gold line; kept under the name `header` so every view starts with it. */
     const header = (extra?: string): never[] => {
@@ -174,7 +214,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       if (smithTab === "back") {
         // newest first: what was sold last is what the party most likely wants back
         [...soldHere].reverse().forEach((sold) => {
-          root.append(row(itemLabel(sold.item, 44), `${thousands(sold.price)} gold`, () => {
+          root.append(hoverRow(row(itemLabel(sold.item, 44), `${thousands(sold.price)} gold`, () => {
             const r = buyBackItem(party, sold);
             if (r.ok) {
               soldHere.splice(soldHere.indexOf(sold), 1);
@@ -182,7 +222,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
             }
             note(r.ok ? `Bought back ${sold.item.name.trim()}.` : r.reason === "gold" ? "Not enough gold." : "Every backpack is full.", r.ok ? "good" : "bad");
             refresh();
-          }, party.gold < sold.price));
+          }, party.gold < sold.price), sold.item));
         });
         if (soldHere.length === 0) root.append(h("p", { text: "You have not sold anything here. Whatever you sell can be bought back for the same price until you leave." }));
       } else if (smithTab === "buy") {
@@ -191,7 +231,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
         stock.forEach((s, n) => {
           if (ctx.soldOut?.has(soldKey(n)) || s.shelf !== smithShelf) return;
           left++;
-          root.append(row(itemLabel(s.item, 44), `${thousands(s.price)} gold`, () => {
+          root.append(hoverRow(row(itemLabel(s.item, 44), `${thousands(s.price)} gold`, () => {
             const r = buyItem(party, s);
             if (r.ok) {
               ctx.soldOut?.add(soldKey(n));
@@ -199,7 +239,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
             }
             note(r.ok ? `Bought ${s.item.name.trim()}.` : r.reason === "gold" ? "Not enough gold." : "Every backpack is full.", r.ok ? "good" : "bad");
             refresh();
-          }, party.gold < s.price));
+          }, party.gold < s.price), s.item));
         });
         if (left === 0) root.append(h("p", { text: "This shelf is empty. The smith will have new wares tomorrow." }));
       } else {
@@ -211,7 +251,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           const item = c.inventory[slot];
           if (!item || item.quest) continue;
           any = true;
-          root.append(row(itemLabel(item, 40), `sell for ${thousands(sellPrice(item, party))}`, () => {
+          root.append(hoverRow(row(itemLabel(item, 40), `sell for ${thousands(sellPrice(item, party))}`, () => {
             const price = sellPrice(item, party);
             if (sellItem(party, sellWho, slot)) {
               soldHere.push({ item, price });
@@ -219,7 +259,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
               note(`Sold ${item.name.trim()}.`, "good");
             }
             refresh();
-          }));
+          }), item));
         }
         if (!any) root.append(h("p", { text: `${c.name} has nothing to sell.` }));
       }
@@ -388,8 +428,20 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
     const views: Record<ServiceKind, () => void> = { inn, tavern, smith, temple, bank, training, guild };
     const render = () => {
       clear(root);
+      // the row under the pointer is gone with the old list (no mouseleave comes), so the comparison goes with it
+      hovered = null;
+      showCompare();
       views[kind]();
     };
     render();
-  }).finally(() => stopTownScene(scene));
+    // the window's own cleanup: the key listeners of the smithy go when it closes (the promise of `ui.panel` settles then)
+    removeKeys = () => {
+      document.removeEventListener("keydown", onCtrl);
+      document.removeEventListener("keyup", onCtrl);
+      window.removeEventListener("blur", onBlur);
+    };
+  }).finally(() => {
+    stopTownScene(scene);
+    removeKeys();
+  });
 }

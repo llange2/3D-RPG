@@ -175,7 +175,7 @@ def build_smoke(pack, out):
     save_rgba(sheet, os.path.join(out, "fx_smoke.png"))
 
 
-FRAMES, FCELL = 16, 256
+FRAMES, FCELL = 16, 512  # 512 px per frame (18. 11. 2026: 256 px looked pixelated; the raw pictures are 1024 px)
 
 
 def flipbook(base_rgb, frame_cell=FCELL, frames=FRAMES):

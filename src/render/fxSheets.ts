@@ -53,7 +53,7 @@ export const PARTICLE_CELLS = {
 } as const;
 export type ParticleName = keyof typeof PARTICLE_CELLS;
 
-/** The impact flipbooks: 4 x 4 frames of 256 px, played once from the first to the last frame; the middle of a frame is the point of impact. */
+/** The impact flipbooks: 4 x 4 frames of 512 px (2048 px sheet), played once from the first to the last frame; the middle of a frame is the point of impact. */
 export const IMPACT_GRID = 4;
 export const IMPACT_FRAMES = 16;
 

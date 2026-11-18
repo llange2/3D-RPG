@@ -147,6 +147,9 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   // the Pirate Queen (ue_quest_4, quest document 1.4): the user's painting, shown in the dialogue with the pirate ship
   add("icons portraits", await toWebp(join(SOURCES, "ui", "pirate_queen.png"), join(OUT, "icons", "portraits", "pirate_queen.webp"), 512, 85));
 
+  // the comparison arrows of the smithy (bug_fix_71, 18. 11. 2026): the user's green and red arrow (`sources/ui/arrow_up.png`, `arrow_down.png`, cut out of `.ignore/arrows.png`), on the portraits of the heroes
+  for (const name of ["arrow_up", "arrow_down"]) add("ui", await toWebp(join(SOURCES, "ui", `${name}.png`), join(OUT, "ui", `${name}.webp`), 256, 90));
+
   // the ComputerScreen (quest document 1.5): the frame of the message box of the spaceship's computers, drawn for the game (`sources/ui/computer_screen.png`, 512 x 364 like the scroll)
   add("ui", await toWebp(join(SOURCES, "ui", "computer_screen.png"), join(OUT, "ui", "computer_screen.webp"), null, 90));
 

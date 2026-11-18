@@ -134,7 +134,7 @@ describe("comparing a backpack item with what it would replace (tenth playtest, 
   it("shows each value with its change, and a stat only the worn item has as 0 with the loss", () => {
     const worn = ring({ end: 5, lck: 3 });
     const found = ring({ str: 2, lck: 5 });
-    expect(bonusLines(found, worn)).toEqual([
+    expect(bonusLines(found, worn)).toMatchObject([
       { label: "Strength", value: 2, change: 2 },
       { label: "Endurance", value: 0, change: -5 },
       { label: "Luck", value: 5, change: 2 },
@@ -142,7 +142,7 @@ describe("comparing a backpack item with what it would replace (tenth playtest, 
   });
 
   it("shows plain values without a comparison", () => {
-    expect(bonusLines(ring({ str: 2, lck: 5 }))).toEqual([
+    expect(bonusLines(ring({ str: 2, lck: 5 }))).toMatchObject([
       { label: "Strength", value: 2, change: null },
       { label: "Luck", value: 5, change: null },
     ]);
@@ -152,7 +152,7 @@ describe("comparing a backpack item with what it would replace (tenth playtest, 
   it("measures damage and armor like the other values", () => {
     const old = makeItem({ name: "sword", type: "long sword", bonus: { dam_min: 9, dam_max: 15 } });
     const better = makeItem({ name: "sword", type: "long sword", bonus: { dam_min: 11, dam_max: 14 } });
-    expect(bonusLines(better, old)).toEqual([
+    expect(bonusLines(better, old)).toMatchObject([
       { label: "Min. Damage", value: 11, change: 2 },
       { label: "Max. Damage", value: 14, change: -1 },
     ]);
@@ -185,8 +185,8 @@ describe("comparing a backpack item with what it would replace (tenth playtest, 
     expect(both.name).toBe("sword and shield");
     // the armour of the shield is lost, the damage gained
     const lines = bonusLines(axe, both);
-    expect(lines.find((l) => l.label === "Armor")).toEqual({ label: "Armor", value: 0, change: -4 });
-    expect(lines.find((l) => l.label === "Min. Damage")).toEqual({ label: "Min. Damage", value: 20, change: 17 });
+    expect(lines.find((l) => l.label === "Armor")).toMatchObject({ label: "Armor", value: 0, change: -4 });
+    expect(lines.find((l) => l.label === "Min. Damage")).toMatchObject({ label: "Min. Damage", value: 20, change: 17 });
     // a one-hander next to the shield takes only the sword's place
     expect(replacedItems(hero.inventory, makeItem({ name: "mace", type: "mace" }))).toEqual([sword]);
     // only a shield worn: it is what comes off

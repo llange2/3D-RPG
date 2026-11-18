@@ -215,6 +215,15 @@ html.ending-on #game-cursor { display: none; }
 .service .svc-art { min-height: 0; display: flex; flex-direction: column; gap: 8px; align-self: start; }
 /* contain: the picture is shown whole, never cropped; its height follows the width and never exceeds the window */
 .service .svc-art img, .service .svc-art video { display: block; width: 100%; height: auto; max-height: calc(92vh - 130px); object-fit: contain; background: #0c0805; border: 2px solid var(--gold-dim); border-radius: 8px; }
+/* smithy (bug_fix_71): the four heroes under the picture while the pointer is on an item; the strip keeps its place when nothing is hovered */
+.service .cmp-strip { display: flex; justify-content: center; gap: 10px; visibility: hidden; margin-top: 6px; }
+.service .cmp-strip.on { visibility: visible; }
+.service .cmp-hero { position: relative; flex: 0 1 84px; aspect-ratio: 1; min-width: 0; }
+.service .svc-art .cmp-hero img.portrait { width: 100%; height: 100%; max-height: none; margin: 0; object-fit: cover; border: 2px solid var(--gold-dim); border-radius: 6px; background: #000; }
+.service .svc-art .cmp-hero img.cmp-arrow { position: absolute; left: 50%; top: 50%; width: 52%; height: 62%; max-height: none; transform: translate(-50%, -50%); object-fit: contain; background: none; border: 0; border-radius: 0; filter: drop-shadow(0 1px 3px #000c); pointer-events: none; }
+.service .cmp-hero.cannot img.portrait { filter: grayscale(1) brightness(0.45); }
+.service .cmp-hero.cannot::after { content: ""; position: absolute; inset: 0; border-radius: 6px; background: #5a1f1a55; pointer-events: none; }
+@media (max-width: 860px), (max-aspect-ratio: 1/1) { .service .cmp-hero { flex-basis: 64px; } }
 .service .svc-main { min-height: 0; overflow-y: auto; padding-right: 6px; scrollbar-color: var(--gold-dim) transparent; }
 .service .svc-main > :first-child { margin-top: 0; }
 @media (max-width: 860px), (max-aspect-ratio: 1/1) {
