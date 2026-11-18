@@ -8,6 +8,7 @@ import type { Scene } from "@babylonjs/core/scene";
 import { ShoreFoam } from "./foam";
 import { type Blend, additiveMaterial, sheetTexture } from "./fxMaterials";
 import { lightAt } from "./fxLight";
+import { BLOOD_COLOURS, COG_COLOURS, HIT_COUNTS, type HitKind } from "./hitFx";
 import type { LampFx } from "./lamps";
 import { type CellUv, EFFECT_LEVELS, type EffectsLevel, FOUNTAIN_SHAPES, FX_FILES, IMPACT_FRAMES, IMPACT_GRID, IMPACT_KINDS, type ImpactKind, PARTICLE_CELLS, PARTICLE_GRID, type FountainShape, cellUv } from "./fxSheets";
 import type { PropInstance } from "./terrainMesher";
@@ -37,13 +38,9 @@ const LIGHT_FOLLOW = 7;
 /** How far from the party a lamp still shows a halo (it fades out over the last 45 %), and how near it must be to throw off sparks, smoke and the like. */
 const LAMP_FX_REACH = 30;
 const LAMP_FX_EMIT = 20;
-
-/** A number from a lamp's key, so that two lamps do not flicker in step. */
-function keyPhase(key: string): number {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 6283;
-  return h / 1000;
-}
+/** How far the burst of a hit is moved towards the eye (it must stand in front of the body, not in it), and the least light the bits take (they are never quite black in a dark place). */
+const HIT_TOWARDS_EYE = 0.45;
+const HIT_MIN_LIGHT = 0.35;
 
 /** A tiny deterministic generator: the effects are only to look at, but a screenshot should come out the same twice. */
 function rng(seed: number): () => number {
@@ -174,6 +171,10 @@ export interface FxLamp {
   fx?: LampFx;
   /** The size of the halo (world units across) instead of the one the range gives: lava glows over a whole tile. */
   glow?: number;
+  /** Whether the lamp has a halo round it. Only the crystals of the crystal paths do (the user, 18. 11. 2026: the halo of the wall crystal holders is right, on the other objects and on the monsters the light of the pool is enough). */
+  halo?: boolean;
+  /** The height over the ground where what rises from the lamp starts, instead of the lamp's own (the light hangs above a pool of lava, the lava itself is at the floor). */
+  fxY?: number;
 }
 
 interface Particle {
@@ -201,6 +202,35 @@ interface Particle {
   /** The colour of a particle that is not pale water, and the light that smoke takes at its place. */
   tint?: readonly [number, number, number];
   lit?: number;
+}
+
+/** A bit that flies off a monster that is hit (`Effects.hit`): a drop of blood, a cogwheel or a chunk, thrown out of the point of impact and falling to the floor. */
+interface Debris {
+  sheet: "chips" | "cogs";
+  cell: number;
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  age: number;
+  /** Seconds in the air at the most, and the height of the floor it falls to. */
+  life: number;
+  floor: number;
+  /** How long it has lain on the floor (it lies there a moment and fades), or -1 while it flies. */
+  landed: number;
+  /** How long it lies on the floor. */
+  rest: number;
+  /** World units across (for a drop its height) and the turn on the screen with its speed. */
+  size: number;
+  angle: number;
+  spin: number;
+  /** A drop turns its tip against its flight, like the drops of the fountains. */
+  pointed: boolean;
+  colour: readonly [number, number, number];
+  /** The light of the place at the point of impact, 0 to 1: the bits are as bright as the stone round them. */
+  lit: number;
 }
 
 interface Impact {
@@ -308,6 +338,10 @@ export class Effects implements PropWatcher {
   private main: QuadBatch | null = null;
   private drops: QuadBatch | null = null;
   private smoke: QuadBatch | null = null;
+  /** The bits that fly off a monster: drops and chunks (the particle sheet), cogwheels (their own picture), both drawn by their alpha. */
+  private chips: QuadBatch | null = null;
+  private cogs: QuadBatch | null = null;
+  private debris: Debris[] = [];
   private lamps: readonly FxLamp[] = [];
   /** How bright the sky is (0 night, 1 day): by day the halos of the lamps are faint. */
   private day = 0;
@@ -396,13 +430,70 @@ export class Effects implements PropWatcher {
     if (this.impacts.length < 24) this.impacts.push({ kind, x: at.x, y: at.y, z: at.z, t: 0, size });
   }
 
+  /**
+   * A monster is hit by a blow or an arrow at `at` (the middle of its body); `floor` is the height of the ground under it. By what it is made of (`hitKindOf`) drops of blood, cogwheels or chunks of its own
+   * colour (`tint`) burst out of the point of impact in all directions and fall to the floor, or grey smoke stands where it was hit and thins out (the user, 18. 11. 2026).
+   */
+  hit(kind: HitKind, at: { x: number; y: number; z: number }, floor: number, tint?: readonly [number, number, number]): void {
+    if (this.level === "off") return;
+    this.ensure();
+    const r = this.random;
+    const count = HIT_COUNTS[kind][this.level === "full" ? 0 : 1];
+    // the point of impact lies a little towards the eye, in front of the body that is hit and not inside it
+    const cam = this.scene.activeCamera?.globalPosition;
+    let x = at.x;
+    let z = at.z;
+    if (cam) {
+      const dx = cam.x - x;
+      const dz = cam.z - z;
+      const d = Math.hypot(dx, dz) || 1;
+      const move = Math.min(HIT_TOWARDS_EYE, d * 0.4);
+      x += (dx / d) * move;
+      z += (dz / d) * move;
+    }
+    const lit = Math.min(1, Math.max(HIT_MIN_LIGHT, lightAt(this.scene, x, at.y, z)));
+    if (kind === "smoke") {
+      // grey smoke where the blow landed: it does not move on, it swells a little and thins out
+      for (let i = 0; i < count; i++) {
+        this.particles.push({
+          kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: x + (r() - 0.5) * 0.45, y: at.y + (r() - 0.5) * 0.5, z: z + (r() - 0.5) * 0.45, vx: (r() - 0.5) * 0.06, vy: (r() - 0.5) * 0.05, vz: (r() - 0.5) * 0.06,
+          age: 0, life: 0.9 + r() * 0.6, size0: 0.28 + r() * 0.12, size1: 0.8 + r() * 0.3, peak: 0.7, floor: -1e9, lands: "none", scale: 1, site: null, lit,
+        });
+      }
+      return;
+    }
+    const ground = Math.min(floor, at.y - 0.05);
+    for (let i = 0; i < count; i++) {
+      // a random direction on the sphere with a push upwards, so that the bits arc before they fall
+      const a = r() * Math.PI * 2;
+      const up = r() * 2 - 1;
+      const side = Math.sqrt(1 - up * up);
+      const speed = (kind === "chunks" ? 1 : 1.4) + r() * (kind === "chunks" ? 1.6 : 2.2);
+      const bit: Debris = {
+        sheet: kind === "cogs" ? "cogs" : "chips", cell: kind === "blood" ? PARTICLE_CELLS.drop_teardrop : kind === "chunks" ? PARTICLE_CELLS.dust : 0,
+        x: x + (r() - 0.5) * 0.12, y: at.y + (r() - 0.5) * 0.12, z: z + (r() - 0.5) * 0.12, vx: Math.cos(a) * side * speed, vy: up * speed * 0.8 + 0.8, vz: Math.sin(a) * side * speed,
+        age: 0, life: 2, floor: ground, landed: -1, rest: kind === "blood" ? 0.2 : kind === "cogs" ? 0.55 : 0.4,
+        size: kind === "blood" ? 0.14 + r() * 0.14 : kind === "cogs" ? 0.16 + r() * 0.14 : 0.4 + r() * 0.25,
+        angle: r() * Math.PI * 2, spin: kind === "blood" ? 0 : (r() < 0.5 ? -1 : 1) * (kind === "cogs" ? 4 + r() * 8 : 1.5 + r() * 3), pointed: kind === "blood",
+        colour: kind === "blood" ? BLOOD_COLOURS[Math.floor(r() * BLOOD_COLOURS.length)]! : kind === "cogs" ? COG_COLOURS[Math.floor(r() * COG_COLOURS.length)]! : jitter(tint ?? [0.6, 0.6, 0.6], 0.85 + r() * 0.2),
+        lit,
+      };
+      this.debris.push(bit);
+    }
+    // never more bits in the air than the pictures can hold
+    if (this.debris.length > 220) this.debris.splice(0, this.debris.length - 220);
+  }
+
   /** Forgets what is in the air (a scene change). The fountains belong to their owners and go with them. */
   clear(): void {
     this.particles = [];
     this.impacts = [];
+    this.debris = [];
     this.main?.clear();
     this.drops?.clear();
     this.smoke?.clear();
+    this.chips?.clear();
+    this.cogs?.clear();
     for (const b of this.impactBatches.values()) b.clear();
   }
 
@@ -429,6 +520,8 @@ export class Effects implements PropWatcher {
     this.main = new QuadBatch(this.scene, "fx:particles", sheetTexture(this.scene, FX_FILES.particles, false), 420);
     this.drops = new QuadBatch(this.scene, "fx:drops", sheetTexture(this.scene, FX_FILES.drop, false), 200, "combine", true);
     this.smoke = new QuadBatch(this.scene, "fx:smoke", sheetTexture(this.scene, FX_FILES.smoke, false), 80, "combine", true);
+    this.chips = new QuadBatch(this.scene, "fx:chips", sheetTexture(this.scene, FX_FILES.particles, false), 160, "combine", true);
+    this.cogs = new QuadBatch(this.scene, "fx:cogs", sheetTexture(this.scene, FX_FILES.cog, false), 48, "combine", true);
     for (const kind of IMPACT_KINDS) this.impactBatches.set(kind, new QuadBatch(this.scene, `fx:impact:${kind}`, sheetTexture(this.scene, FX_FILES.impact[kind], false), 12, "combine"));
     this.rippleTexture = sheetTexture(this.scene, FX_FILES.ripple, true);
     this.flowTexture = sheetTexture(this.scene, FX_FILES.flow, true);
@@ -466,7 +559,7 @@ export class Effects implements PropWatcher {
     if (this.level === "off") return;
     const camera = this.scene.activeCamera;
     if (camera) this.foam.animate(dt, camera.globalPosition);
-    const idle = this.sites.size === 0 && this.particles.length === 0 && this.impacts.length === 0 && this.lamps.length === 0;
+    const idle = this.sites.size === 0 && this.particles.length === 0 && this.impacts.length === 0 && this.lamps.length === 0 && this.debris.length === 0;
     if (!camera || idle) {
       if (this.ready && this.main && this.main.mesh.isEnabled()) this.clear();
       return;
@@ -479,15 +572,20 @@ export class Effects implements PropWatcher {
     main.start();
     drops.start();
     smoke.start();
+    this.chips!.start();
+    this.cogs!.start();
     for (const b of this.impactBatches.values()) b.start();
     const view = viewAxes(camera);
     this.updateSites(dt, camera);
     this.updateLamps(dt, camera, view);
     this.updateParticles(dt, view);
+    this.updateDebris(dt, view);
     this.updateImpacts(dt, camera, view);
     main.finish();
     drops.finish();
     smoke.finish();
+    this.chips!.finish();
+    this.cogs!.finish();
     for (const b of this.impactBatches.values()) b.finish();
     // the water of the basin shines with its own picture, which slides over it; the sheet of water runs down
     if (this.rippleTexture) {
@@ -657,14 +755,14 @@ export class Effects implements PropWatcher {
     for (const l of this.lamps) {
       const d = Math.hypot(l.x - cam.x, l.z - cam.z);
       if (d > LAMP_FX_REACH) continue;
-      const near = 1 - smooth(LAMP_FX_REACH * 0.55, LAMP_FX_REACH, d);
-      // a flame breathes
-      const flicker = l.fx === "torch" || l.fx === "lava" ? 0.86 + 0.14 * Math.sin(this.clock * 13 + keyPhase(l.key)) * Math.sin(this.clock * 4.3 + keyPhase(l.key) * 0.7) : 1;
-      const k = 0.5 * strength * near * flicker;
-      const size = l.glow ?? Math.min(2.6, Math.max(0.6, (l.range ?? 5) * 0.16));
-      const cell = l.fx === "crystal" || l.fx === "magic" || l.fx === "portal" ? PARTICLE_CELLS.soft_star : PARTICLE_CELLS.dot;
-      const h = size / 2;
-      if (!main.full) main.quad(l.x, l.y, l.z, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, cellUv(cell, PARTICLE_GRID), l.color[0] * k, l.color[1] * k, l.color[2] * k);
+      if (l.halo) {
+        const near = 1 - smooth(LAMP_FX_REACH * 0.55, LAMP_FX_REACH, d);
+        const k = 0.5 * strength * near;
+        const size = l.glow ?? Math.min(2.6, Math.max(0.6, (l.range ?? 5) * 0.16));
+        const cell = l.fx === "crystal" || l.fx === "magic" || l.fx === "portal" ? PARTICLE_CELLS.soft_star : PARTICLE_CELLS.dot;
+        const h = size / 2;
+        if (!main.full) main.quad(l.x, l.y, l.z, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, cellUv(cell, PARTICLE_GRID), l.color[0] * k, l.color[1] * k, l.color[2] * k);
+      }
       if (full && l.fx && d < LAMP_FX_EMIT) this.emitLamp(l, dt, strength);
     }
   }
@@ -672,6 +770,8 @@ export class Effects implements PropWatcher {
   /** What a lamp throws off: sparks and smoke of a flame, embers of lava, bubbles of acid, wisps of magic, glints of a crystal, motes of a portal, twinkles of gold. */
   private emitLamp(l: FxLamp, dt: number, strength: number): void {
     const r = this.random;
+    // where it all starts: the surface of the pool, the cup of the torch (the light of a lamp hangs elsewhere, `FxLamp.fxY`)
+    const y0 = l.fxY ?? l.y;
     const roll = (perSecond: number): boolean => r() < perSecond * dt;
     const add = (cell: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size0: number, size1: number, peak: number, tint: readonly [number, number, number]): void => {
       this.particles.push({ kind: "puff", cell, x, y, z, vx, vy, vz, age: 0, life, size0, size1, peak, floor: -1e9, lands: "none", scale: 1, site: null, tint: [tint[0] * strength, tint[1] * strength, tint[2] * strength] });
@@ -683,11 +783,11 @@ export class Effects implements PropWatcher {
     };
     switch (l.fx) {
       case "torch": {
-        if (roll(2.4)) add(PARTICLE_CELLS.spark, l.x + (r() - 0.5) * 0.12, l.y, l.z + (r() - 0.5) * 0.12, (r() - 0.5) * 0.3, 0.8 + r() * 0.9, (r() - 0.5) * 0.3, 0.7 + r() * 0.7, 0.14, 0.04, 0.95, [1, 0.72, 0.36]);
+        if (roll(2.4)) add(PARTICLE_CELLS.spark, l.x + (r() - 0.5) * 0.12, y0, l.z + (r() - 0.5) * 0.12, (r() - 0.5) * 0.3, 0.8 + r() * 0.9, (r() - 0.5) * 0.3, 0.7 + r() * 0.7, 0.14, 0.04, 0.95, [1, 0.72, 0.36]);
         if (roll(0.55) && !this.smoke!.full) {
-          const lit = lightAt(this.scene, l.x, l.y + 0.4, l.z);
+          const lit = lightAt(this.scene, l.x, y0 + 0.4, l.z);
           this.particles.push({
-            kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: l.x + (r() - 0.5) * 0.1, y: l.y + 0.2, z: l.z + (r() - 0.5) * 0.1, vx: (r() - 0.5) * 0.25, vy: 0.5 + r() * 0.3, vz: (r() - 0.5) * 0.25,
+            kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: l.x + (r() - 0.5) * 0.1, y: y0 + 0.2, z: l.z + (r() - 0.5) * 0.1, vx: (r() - 0.5) * 0.25, vy: 0.5 + r() * 0.3, vz: (r() - 0.5) * 0.25,
             age: 0, life: 2.6 + r() * 1.2, size0: 0.22, size1: 1.1, peak: 0.34, floor: -1e9, lands: "none", scale: 1, site: null, lit,
           });
         }
@@ -696,28 +796,28 @@ export class Effects implements PropWatcher {
       case "lava": {
         if (roll(1.6)) {
           const [ox, oz] = around(0.5);
-          add(PARTICLE_CELLS.dot, l.x + ox, l.y, l.z + oz, (r() - 0.5) * 0.2, 0.6 + r() * 0.8, (r() - 0.5) * 0.2, 1 + r() * 1.1, 0.12, 0.03, 1, [1, 0.5, 0.16]);
+          add(PARTICLE_CELLS.dot, l.x + ox, y0, l.z + oz, (r() - 0.5) * 0.2, 0.6 + r() * 0.8, (r() - 0.5) * 0.2, 1 + r() * 1.1, 0.12, 0.03, 1, [1, 0.5, 0.16]);
         }
         break;
       }
       case "acid": {
         if (roll(1.1)) {
           const [ox, oz] = around(0.45);
-          add(PARTICLE_CELLS.acid_bubble, l.x + ox, l.y, l.z + oz, 0, 0.4 + r() * 0.4, 0, 1.6 + r(), 0.12, 0.2, 0.7, [0.55, 1, 0.25]);
+          add(PARTICLE_CELLS.acid_bubble, l.x + ox, y0, l.z + oz, 0, 0.4 + r() * 0.4, 0, 1.6 + r(), 0.12, 0.2, 0.7, [0.55, 1, 0.25]);
         }
         break;
       }
       case "magic": {
         if (roll(1.3)) {
           const [ox, oz] = around(0.35);
-          add(PARTICLE_CELLS.magic_wisp, l.x + ox, l.y, l.z + oz, (r() - 0.5) * 0.2, 0.4 + r() * 0.4, (r() - 0.5) * 0.2, 1.4 + r() * 0.8, 0.22, 0.12, 0.7, [0.78, 0.5, 1]);
+          add(PARTICLE_CELLS.magic_wisp, l.x + ox, y0, l.z + oz, (r() - 0.5) * 0.2, 0.4 + r() * 0.4, (r() - 0.5) * 0.2, 1.4 + r() * 0.8, 0.22, 0.12, 0.7, [0.78, 0.5, 1]);
         }
         break;
       }
       case "crystal": {
         if (roll(0.9)) {
           const [ox, oz] = around(0.35);
-          add(PARTICLE_CELLS.frost_glint, l.x + ox, l.y + (r() - 0.5) * 0.7, l.z + oz, 0, 0, 0, 0.9, 0.3, 0.3, 1, [0.5, 0.95, 1]);
+          add(PARTICLE_CELLS.frost_glint, l.x + ox, y0 + (r() - 0.5) * 0.7, l.z + oz, 0, 0, 0, 0.9, 0.3, 0.3, 1, [0.5, 0.95, 1]);
         }
         break;
       }
@@ -725,14 +825,25 @@ export class Effects implements PropWatcher {
         if (roll(3)) {
           // a mote that leaves the rim of the portal and drifts up, turning round it
           const a = r() * Math.PI * 2;
-          add(PARTICLE_CELLS.soft_star, l.x + Math.cos(a) * 0.55, l.y - 0.6 + r() * 1.2, l.z + Math.sin(a) * 0.55, -Math.sin(a) * 0.35, 0.3 + r() * 0.3, Math.cos(a) * 0.35, 1.4, 0.16, 0.05, 0.8, [0.6, 0.72, 1]);
+          add(PARTICLE_CELLS.soft_star, l.x + Math.cos(a) * 0.55, y0 - 0.6 + r() * 1.2, l.z + Math.sin(a) * 0.55, -Math.sin(a) * 0.35, 0.3 + r() * 0.3, Math.cos(a) * 0.35, 1.4, 0.16, 0.05, 0.8, [0.6, 0.72, 1]);
         }
         break;
       }
       case "gold": {
         if (roll(1)) {
           const [ox, oz] = around(0.4);
-          add(PARTICLE_CELLS.cross_glint, l.x + ox, l.y + (r() - 0.3) * 0.6, l.z + oz, 0, 0.1, 0, 1, 0.26, 0.26, 1, [1, 0.86, 0.42]);
+          add(PARTICLE_CELLS.cross_glint, l.x + ox, y0 + (r() - 0.3) * 0.6, l.z + oz, 0, 0.1, 0, 1, 0.26, 0.26, 1, [1, 0.86, 0.42]);
+        }
+        break;
+      }
+      case "pool": {
+        // a magic pool (the red and the yellow well): smoke in the colour of the pool rises slowly from its surface and thins out
+        if (roll(1.5) && !this.smoke!.full) {
+          const [ox, oz] = around(0.75);
+          this.particles.push({
+            kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: l.x + ox, y: y0, z: l.z + oz, vx: (r() - 0.5) * 0.12, vy: 0.22 + r() * 0.2, vz: (r() - 0.5) * 0.12,
+            age: 0, life: 2.6 + r() * 1.2, size0: 0.4, size1: 1.2, peak: 0.42, floor: -1e9, lands: "none", scale: 1, site: null, lit: lightAt(this.scene, l.x + ox, y0 + 0.3, l.z + oz), tint: l.color,
+          });
         }
         break;
       }
@@ -773,7 +884,9 @@ export class Effects implements PropWatcher {
         const size = p.size0 + (p.size1 - p.size0) * t;
         const h = size / 2;
         const grey = 0.62 * lit;
-        this.smoke!.quad(p.x, p.y, p.z, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, smokeUv(p.cell), grey, grey, grey * 1.04, a);
+        // (smoke of a magic pool has the colour of the pool, the smoke of the undead and of a flame is grey)
+        const c = p.tint;
+        this.smoke!.quad(p.x, p.y, p.z, view.rx * h, view.ry * h, view.rz * h, view.ux * h, view.uy * h, view.uz * h, smokeUv(p.cell), c ? c[0] * lit * 0.9 : grey, c ? c[1] * lit * 0.9 : grey, c ? c[2] * lit * 0.9 : grey * 1.04, a);
         continue;
       }
       if (p.kind === "drop") {
@@ -827,6 +940,52 @@ export class Effects implements PropWatcher {
     }
   }
 
+  // ---- what flies off a monster that is hit
+
+  private updateDebris(dt: number, view: ViewAxes): void {
+    const live: Debris[] = [];
+    for (const d of this.debris) {
+      d.age += dt;
+      if (d.landed >= 0) {
+        d.landed += dt;
+        if (d.landed >= d.rest) continue;
+      } else {
+        d.vy -= GRAVITY * dt;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.z += d.vz * dt;
+        if (d.y <= d.floor && d.vy < 0) {
+          d.y = d.floor;
+          d.landed = 0;
+        } else if (d.age >= d.life) continue;
+        d.angle += d.spin * dt;
+        if (d.pointed) {
+          // the tip of a drop trails: the picture is turned so that its point faces against the motion on the screen
+          const sr = d.vx * view.rx + d.vy * view.ry + d.vz * view.rz;
+          const su = d.vx * view.ux + d.vy * view.uy + d.vz * view.uz;
+          const len = Math.hypot(sr, su);
+          if (len > 1e-3) d.angle = Math.atan2(sr / len, -su / len);
+        }
+      }
+      live.push(d);
+      const batch = d.sheet === "cogs" ? this.cogs! : this.chips!;
+      if (batch.full) continue;
+      // lying on the floor it fades out
+      const alpha = d.landed >= 0 ? 1 - smooth(0.3, 1, d.landed / d.rest) : 1;
+      const h = d.size / 2;
+      const c = Math.cos(d.angle) * h;
+      const s = Math.sin(d.angle) * h;
+      const uv = d.sheet === "cogs" ? FULL_PICTURE : cellUv(d.cell, PARTICLE_GRID);
+      batch.quad(
+        d.x, d.y, d.z,
+        view.rx * c + view.ux * s, view.ry * c + view.uy * s, view.rz * c + view.uz * s,
+        -view.rx * s + view.ux * c, -view.ry * s + view.uy * c, -view.rz * s + view.uz * c,
+        uv, d.colour[0] * d.lit, d.colour[1] * d.lit, d.colour[2] * d.lit, alpha,
+      );
+    }
+    this.debris = live;
+  }
+
   // ---- impacts
 
   private updateImpacts(dt: number, camera: Camera, view: ViewAxes): void {
@@ -858,6 +1017,10 @@ export class Effects implements PropWatcher {
     this.drops?.mesh.dispose(false, true);
     this.smoke?.mesh.dispose(false, true);
     this.smoke = null;
+    this.chips?.mesh.dispose(false, true);
+    this.chips = null;
+    this.cogs?.mesh.dispose(false, true);
+    this.cogs = null;
     for (const b of this.impactBatches.values()) b.mesh.dispose(false, true);
     this.waterMaterial?.dispose(false, true);
     this.flowMaterial?.dispose(false, true);
@@ -869,6 +1032,9 @@ export class Effects implements PropWatcher {
     this.ready = false;
   }
 }
+
+/** A colour made brighter or darker, kept at 1 at the most. */
+const jitter = (c: readonly [number, number, number], k: number): [number, number, number] => [Math.min(1, c[0] * k), Math.min(1, c[1] * k), Math.min(1, c[2] * k)];
 
 /** The whole of a single picture. */
 const FULL_PICTURE: CellUv = { u0: 0, u1: 1, v0: 0, v1: 1 };

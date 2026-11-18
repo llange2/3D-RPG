@@ -22,6 +22,8 @@ export const FX_FILES = {
   drop: "fx/water_drop.webp",
   /** The lace of foam on the water along the shore, seamless in x and y, added (`render/foam.ts`). */
   foam: "fx/foam.webp",
+  /** The user's cogwheel (`.ignore/cogwheel.png`, cut out and turned grey, 256 x 256), drawn by its alpha: what flies off a robot that is hit (`fx.ts` `hit`). */
+  cog: "fx/cog.webp",
   impact: {
     fire: "fx/impact_fire.webp",
     ice: "fx/impact_ice.webp",

@@ -53,13 +53,45 @@ export class AudioManager {
     }
     const unlock = () => {
       void this.context?.resume();
-      if (this.unlocked) return;
-      this.unlocked = true;
-      if (this.pendingTrack !== null) this.playMusic(this.pendingTrack);
-      this.setAmbient(this.wanted);
+      this.markUnlocked();
     };
-    window.addEventListener("pointerdown", unlock, { once: false });
-    window.addEventListener("keydown", unlock, { once: false });
+    // every input that browsers count as a gesture (a touch only counts when it is lifted)
+    for (const type of ["pointerdown", "pointerup", "mousedown", "click", "keydown", "touchend"]) window.addEventListener(type, unlock, { once: false, passive: true });
+    // where the browser lets a page play without a gesture (a site the user visits a lot, the game's own window), the audio context runs at once: no click is waited for
+    if (this.context) {
+      this.context.addEventListener("statechange", () => {
+        if (this.context?.state === "running") this.markUnlocked();
+      });
+      void this.context.resume().catch(() => undefined);
+      if (this.context.state === "running") this.markUnlocked();
+    }
+  }
+
+  /** From now on sound may play: starts the track that was asked for at the title and the surroundings that wait. */
+  private markUnlocked(): void {
+    if (this.unlocked) return;
+    this.unlocked = true;
+    if (this.pendingTrack !== null) this.playMusic(this.pendingTrack);
+    this.setAmbient(this.wanted);
+  }
+
+  /**
+   * Before the first gesture: tries to play the track anyway. If the browser allows it, it plays from the moment the title is up (the first version waited for the first click even where
+   * the browser would have played, 18. 11. 2026); if not, the request stays pending and the first gesture starts it.
+   */
+  private tryAutoplay(id: number): void {
+    const probe = new Audio(this.url("music", MUSIC_TRACKS[id]!));
+    probe.loop = true;
+    probe.volume = 0;
+    probe.play().then(
+      () => {
+        probe.pause();
+        // (an Audio element that plays also means that the audio context may run)
+        void this.context?.resume().catch(() => undefined);
+        this.markUnlocked();
+      },
+      () => undefined,
+    );
   }
 
   private url(group: "music" | "sfx", name: string): string {
@@ -70,7 +102,9 @@ export class AudioManager {
   playMusic(id: number): void {
     if (!this.supported || !(id in MUSIC_TRACKS)) return;
     if (!this.unlocked) {
+      const first = this.pendingTrack === null;
       this.pendingTrack = id;
+      if (first) this.tryAutoplay(id);
       return;
     }
     if (this.currentTrack === id && this.music && !this.music.paused) return;

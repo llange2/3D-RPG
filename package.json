@@ -14,6 +14,7 @@
     "data:validate": "tsx tools/export/validate-data.ts",
     "data:maps": "python -I tools/export/export_maps.py",
     "data:towns": "tsx tools/export/export-town-blueprints.ts",
+    "data:tints": "tsx tools/export/export-monster-tints.ts",
     "assets:report": "tsx tools/assets/inventory.ts",
     "assets:textures": "tsx tools/assets/build-textures.ts",
     "assets:fx": "tsx tools/assets/build-fx.ts",

@@ -24,7 +24,7 @@ import { ARTIFACT_TYPE, ARTIFACT_XP, KEEPERS } from "../data/keepers";
 import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
 import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, TEMPORAL_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, POWER_CRYSTAL, SKULL, SKULLS_FOR_RING, STORAGE_BAY } from "../data/quest-table";
-import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, talentInfo } from "../data/tables";
+import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, monsterGroup, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, showcaseLabelAt, hasQuartermaster, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { hasRoundWalls } from "../interiors/roundCorners";
@@ -49,11 +49,12 @@ import { MENU_KEY, actionOf, assignKey, defaultKeys, primaryKey, GAME_ACTIONS } 
 import { QUALITY_LEVELS, QUALITY_NAMES, applyQuality, qualityOf } from "./quality";
 import { PropRenderer } from "../render/props";
 import { Effects, type FxLamp } from "../render/fx";
+import { chunkTint, hitKindOf } from "../render/hitFx";
 import { EFFECT_LEVELS, EFFECT_NAMES } from "../render/fxSheets";
 import { PROJECTILE_MODELS, Projectiles, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
-import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setRuinedCastleKinds, setUltraGround, tileModelKeys, towerFlameSpots, towerTorchSpots, TORCH_FLAME_HEIGHT, type PropInstance } from "../render/terrainMesher";
+import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setRuinedCastleKinds, setUltraGround, tileModelKeys, caveFlameSpots, caveTorchSpots, towerFlameSpots, towerTorchSpots, type PropInstance } from "../render/terrainMesher";
 import { FLAT_TERRAINS, type FlatRegister } from "../data/flatTerrain";
 import { FlatTileSet } from "../render/flatGround";
 import { ITEM_MODELS, cottageProp, itemModelKey, itemProp } from "../render/itemProps";
@@ -3848,6 +3849,14 @@ export class Game {
     return flights;
   }
 
+  /** A blow or an arrow has hit a monster: blood, cogwheels, chunks of its colour or grey smoke, by its group (`hitKindOf`, `Effects.hit`). */
+  private monsterHitFx(uid: string, defId: number): void {
+    const spot = this.monsters.hitSpot(uid);
+    if (!spot) return;
+    const kind = hitKindOf(monsterGroup(defId));
+    this.effects.hit(kind, spot, spot.floor, kind === "chunks" ? chunkTint(defId) : undefined);
+  }
+
   /** A monster's ranged attack flies at the party. Returns how long it takes, so the hit can be shown on arrival. */
   private launchMonsterShot(uid: string, damageType: string, delay: number): number {
     const m = this.enc.monsters.find((x) => x.uid === uid);
@@ -3999,6 +4008,8 @@ export class Game {
               if (e.kind === "melee") this.audio.play(9016);
               // (a robot that is hit clangs instead of crying out)
               this.audio.play(isRobot(e.defId) ? ROBOT_SOUND.hit : 9033, 0.6);
+              // what flies off the monster depends on what it is made of; spells have their own bursts
+              if (e.kind !== "magic") this.monsterHitFx(e.uid, e.defId);
             } else {
               this.ui.log(`${who} misses.`, "combat");
               this.audio.play(9017);
@@ -6085,9 +6096,9 @@ export class Game {
       .filter((lamp) => !(orbAway && lamp.key.startsWith(MASCOT_ORB_KEY)))
       .map((lamp) => ({ lamp, d: Math.hypot(lamp.x - x, lamp.z - z) }))
       .filter((e) => e.d < (e.lamp.reach ?? LAMP_REACH));
-    // the effects put a halo round every lamp in reach, not only the few that get a light of the pool (a shot in flight has its burst, not a halo), and the lava glows over its tiles
-    // (the light of a tower torch hangs beside the flame: its halo is the flame's, `towerFlames`; loot has no halo, only its light, the user, 17. 11. 2026)
-    this.effects.setLamps([...inReach.filter((e) => !e.lamp.priority && !e.lamp.key.startsWith("tt:") && !e.lamp.key.startsWith("l:")).map((e) => e.lamp), ...this.lavaGlow, ...this.towerFlames], 1 - need);
+    // the effects add what rises from every lamp in reach, not only from the few that get a light of the pool (a shot in flight has its burst, and the light of a torch hangs beside its flame: what
+    // rises there is the flame's, `towerFlames`). Only the crystals of the crystal paths have a halo (the user, 18. 11. 2026: elsewhere the light of the pool is enough)
+    this.effects.setLamps([...inReach.filter((e) => !e.lamp.priority && !e.lamp.key.startsWith("tt:")).map((e) => ({ ...e.lamp, halo: e.lamp.key.startsWith("q8:") })), ...this.lavaGlow, ...this.towerFlames], 1 - need);
     const near = inReach
       .sort((a, b) => Number(b.lamp.priority ?? false) - Number(a.lamp.priority ?? false) || a.d - b.d)
       .slice(0, this.lampSlots.length);
@@ -6151,7 +6162,7 @@ export class Game {
         if (t.ground !== GROUND.LAVA_POOL) continue;
         const x = tileCenterX(tx + dx);
         const z = tileCenterZ(ty + dy);
-        found.push({ lamp: { key: `lava:${tx + dx},${ty + dy}`, x, y: 0.3, z, color: [1, 0.42, 0.12], range: 5, fx: "lava", glow: 3.2 }, d: dx * dx + dy * dy });
+        found.push({ lamp: { key: `lava:${tx + dx},${ty + dy}`, x, y: 0.05, z, color: [1, 0.42, 0.12], range: 5, fx: "lava" }, d: dx * dx + dy * dy });
       }
     }
     this.lavaGlow = found.sort((a, b) => a.d - b.d).slice(0, LAVA_GLOW_MAX).map((e) => e.lamp);
@@ -6172,10 +6183,13 @@ export class Game {
       const reach = LAMP_REACH + 2 * CHUNK_SIZE;
       const { tx, ty } = this.player;
       for (const poi of this.world.poisInRect(tx - reach, ty - reach, tx + reach, ty + reach)) {
-        if (!isTower(poi)) continue;
-        towerTorchSpots(poi).forEach((s, k) => this.towerLamps.push(lampSource(TOWER_TORCH_LAMP, s.x, s.z, `tt:${poi.id}:${k}@${poi.x},${poi.y}`)));
-        // the flames of the wall torches themselves (not where their light hangs): a small halo, sparks and smoke
-        towerFlameSpots(poi).forEach((s, k) => this.towerFlames.push({ key: `tf:${poi.id}:${k}@${poi.x},${poi.y}`, x: s.x, y: TORCH_FLAME_HEIGHT, z: s.z, color: TOWER_TORCH_LAMP.color, range: 5, fx: "torch", glow: 1.8 }));
+        // the tower has two wall torches beside its door, the cave entrance one (18. 11. 2026: the user's `Cave_Entrance.glb`), both lit and burning in the same way
+        const tower = isTower(poi);
+        if (!tower && poi.kind !== "cave") continue;
+        const light = tower ? towerTorchSpots(poi).map((s) => ({ ...s, y: TOWER_TORCH_LAMP.y })) : caveTorchSpots(poi);
+        light.forEach((s, k) => this.towerLamps.push({ ...lampSource(TOWER_TORCH_LAMP, s.x, s.z, `tt:${poi.id}:${k}@${poi.x},${poi.y}`), y: s.y }));
+        // the flames of the wall torches themselves (not where their light hangs): sparks and smoke start there
+        (tower ? towerFlameSpots(poi) : caveFlameSpots(poi)).forEach((s, k) => this.towerFlames.push({ key: `tf:${poi.id}:${k}@${poi.x},${poi.y}`, x: s.x, y: s.y, z: s.z, color: TOWER_TORCH_LAMP.color, range: 5, fx: "torch" }));
       }
     }
     if ((had === 0) !== (this.towerLamps.length === 0)) this.enableLampLights();

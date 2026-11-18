@@ -12,7 +12,7 @@ import { OUT, ROOT, ensureDir, upToDate } from "./lib";
 const SOURCES = join(ROOT, "tools", "assets", "sources", "fx");
 
 /** Source file (without `fx_` and `.png`) → name under `public/assets/fx`. The names are the game's (`FX_FILES` in `render/fxSheets.ts`). */
-export const FX_PICTURES = ["particles", "smoke", "impact_fire", "impact_ice", "impact_acid", "impact_magic", "impact_water", "water_ripple", "water_flow", "water_drop", "foam"] as const;
+export const FX_PICTURES = ["particles", "smoke", "impact_fire", "impact_ice", "impact_acid", "impact_magic", "impact_water", "water_ripple", "water_flow", "water_drop", "foam", "cog"] as const;
 
 export async function buildFx(): Promise<{ files: number; bytes: number }> {
   let bytes = 0;
