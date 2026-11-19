@@ -1,3 +1,4 @@
+import { runeActive } from "../actions/quests";
 import { heapGone, trapElementOf } from "../actions/registry";
 import type { ActionKind, MapContent } from "../actions/types";
 import { CELL, type Facing, type InteriorMap } from "../interiors/types";
@@ -465,7 +466,8 @@ export function knownContent(content: MapContent, opened: ReadonlySet<string>, e
     const at = key.indexOf("@");
     used.add(at > 0 ? key.slice(0, at) : key);
   }
-  return { ...content, actions: content.actions.filter((a) => !hasHiddenUse(a) || used.has(a.uid)) };
+  // (the runes next to a target of the crystal paths are not there before the paths are solved: the map must not give the end room away, 59th playtest point 1)
+  return { ...content, actions: content.actions.filter((a) => (!hasHiddenUse(a) || used.has(a.uid)) && !(a.kind === "rune" && a.params.need === "crystals" && !runeActive(a, content, opened))) };
 }
 
 /**

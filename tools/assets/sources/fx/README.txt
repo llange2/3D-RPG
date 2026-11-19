@@ -26,5 +26,7 @@ Herkunft
 - Tropfen, Blase, Eissplitter, Säureblase und die Einschlagbilder für Feuer und Eis: erzeugt mit dem AI Governor (Image Generator, Z-Image Turbo, 1024x1024,
   schwarzer Hintergrund). Einschlag Säure/Magie/Wasser, Säureklecks, Wasserkrone (Spritzerkrone) und Eiskristall (Schneeflocke): vom Nutzer neu erstellt.
   Die Flipbooks sind aus je einem Einschlagbild berechnet (wachsen, aufleuchten, vom Rand her ausbrennen, leichte Drehung).
+  Ausnahme seit dem 19. 11. 2026: fx_impact_fire/ice/acid/magic sind die fertigen 4x4-Blätter des Nutzers (2048², `.ignore/impact_*.png`, auf Weiß bzw. Schachbrett), von
+  build_fx.py (Modus `sheets`) nur noch in geraden Alpha umgerechnet; nur fx_impact_water kommt noch aus einem Einzelbild.
 - Runder Tropfen (fx_particles Zelle 4) und die beiden Wassertexturen: prozedural (periodisches Rauschen bzw. iterierte Sinusverzerrung), daher nahtlos.
 - Neu bauen: tools/assets/fx/README.md.

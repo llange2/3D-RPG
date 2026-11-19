@@ -178,5 +178,6 @@
  * 72 = bug_fix_68: every airlock of the spaceship has both its levers (a lever niche is a real niche of rock beside the corridor, found up to five cells from the lock on either side; in seed pearl-shore-794
  * the second niche of the lock to life support lay in a room, so the lever was refused), which moves some corridor cells beside the airlocks.
  * 73 = bug_fix_71: Pandora's box is a starting spell of the Arcane and Nature schools again (`isStartingSpell`), so no scroll of it lies in the world any more (`planSpellLoot`, `spellsOfTier`).
+ * 74 = the 59th playtest, point 1: a place of quest_8 whose end room is farther than 5 cells from a target gets runes next to that target (`need: "crystals"`), which appear when the paths are solved and carry the party into the end room.
  */
-export const GEN_VERSION = 73;
+export const GEN_VERSION = 74;

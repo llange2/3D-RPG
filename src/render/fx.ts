@@ -793,6 +793,28 @@ export class Effects implements PropWatcher {
         }
         break;
       }
+      case "rune": {
+        // glints that flare up over the signs, and an ember that rises from them now and then (orange, like their light; 59th playtest, point 2)
+        if (roll(1.6)) {
+          const [ox, oz] = around(0.45);
+          add(PARTICLE_CELLS.frost_glint, l.x + ox, y0 + 0.05 + r() * 0.5, l.z + oz, 0, 0, 0, 0.9, 0.3, 0.3, 1, [1, 0.62, 0.22]);
+        }
+        if (roll(1.1)) {
+          const [ox, oz] = around(0.4);
+          add(PARTICLE_CELLS.spark, l.x + ox, y0, l.z + oz, (r() - 0.5) * 0.1, 0.35 + r() * 0.4, (r() - 0.5) * 0.1, 1.2 + r() * 0.8, 0.12, 0.03, 0.9, [1, 0.6, 0.2]);
+        }
+        break;
+      }
+      case "lantern": {
+        // the smoke of the candle in the glass: a thin thread from the top of the body that thins out along the chain, short-lived so that it is gone before it reaches the ceiling (59th playtest, point 3)
+        if (roll(1.4) && !this.smoke!.full) {
+          this.particles.push({
+            kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: l.x + (r() - 0.5) * 0.05, y: y0, z: l.z + (r() - 0.5) * 0.05, vx: (r() - 0.5) * 0.06, vy: 0.1 + r() * 0.08, vz: (r() - 0.5) * 0.06,
+            age: 0, life: 2.2 + r() * 0.8, size0: 0.12, size1: 0.55, peak: 0.5, floor: -1e9, lands: "none", scale: 1, site: null, lit: lightAt(this.scene, l.x, y0 + 0.2, l.z),
+          });
+        }
+        break;
+      }
       case "lava": {
         if (roll(1.6)) {
           const [ox, oz] = around(0.5);

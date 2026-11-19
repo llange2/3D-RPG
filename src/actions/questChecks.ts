@@ -2,7 +2,7 @@ import { RIDDLES_WORLD } from "../data/riddles";
 import { CRYSTAL_HOLDER, ORB } from "../data/quest-table";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { simulateCrystals, staticBlockers, type WallNode } from "./crystals";
-import { isEndBoss } from "./quests";
+import { CRYSTAL_RUNE_RANGE, isEndBoss } from "./quests";
 import type { ActionInstance, MapContent } from "./types";
 
 /**
@@ -152,6 +152,16 @@ export function questIssues(map: InteriorMap, content: MapContent): string[] {
       if (!simulateCrystals(nodes, cells, staticBlockers(map, content.actions)).solved) issues.push(`${key}: the crystals of the solution do not light the targets`);
       const held = content.actions.filter((a) => a.kind === "treasure" && typeof a.params.extra === "string").flatMap((a) => String(a.params.extra).split(",")).filter((t) => t === CRYSTAL_HOLDER).length;
       if (held !== cells.length) issues.push(`${key}: ${held} crystals in the chests, the solution needs ${cells.length}`);
+      // an end room farther than `CRYSTAL_RUNE_RANGE` from a target has runes next to that target, one that is near has none (59th playtest, point 1)
+      if (end) {
+        const gap = (c: { x: number; y: number }): number => Math.max(end.x - c.x, c.x - (end.x + end.w - 1), end.y - c.y, c.y - (end.y + end.h - 1), 0);
+        const runes = of("rune").filter((a) => a.params.need === "crystals");
+        for (const t of targets) {
+          const near = runes.some((r) => Math.max(Math.abs(r.x - t.x), Math.abs(r.y - t.y)) <= 3);
+          if (gap(t) > CRYSTAL_RUNE_RANGE && !near) issues.push(`${key}: the target at ${t.x}/${t.y} is ${gap(t)} cells from the end room and has no runes next to it`);
+        }
+        if (runes.length > 0 && !targets.some((t) => gap(t) > CRYSTAL_RUNE_RANGE)) issues.push(`${key}: runes next to the targets although the end room is at hand`);
+      }
       // the light of the solution must not be stopped by anything the rules put on its way
       for (const c of cells) if (content.actions.some((a) => a.x === c.x && a.y === c.y)) issues.push(`${key}: an object stands where the crystal at ${c.x}/${c.y} goes`);
       break;

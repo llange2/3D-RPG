@@ -42,7 +42,7 @@ import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
 import { CRYSTAL_LAMP_REACH, CRYSTAL_PATH_LINE, CRYSTAL_PATH_LIT, CRYSTAL_PATH_WAITING, ITEM_LAMPS, LINE_LAMP_EVERY, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, TOWER_TORCH_LAMP, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellsOfLine } from "../render/glowLineGeometry";
-import { cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
+import { ceilingHeightOf, cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
 import { markResume, registryFile, takeResume } from "../render/modelSet";
 import { MENU_KEY, actionOf, assignKey, defaultKeys, primaryKey, GAME_ACTIONS } from "./keybindings";
@@ -1029,7 +1029,7 @@ export class Game {
         this.interiorView.slideSeconds = this.audio.durationOf(doorSound("slide"), 1.536);
       }
       this.interiorView.show(map, content, this.state.opened, this.state.broken);
-      this.setLamps(crystalLamps(content, this.state.opened), true);
+      this.setLamps(crystalLamps(content, this.state.opened, ceilingHeightOf(map)), true);
       this.loadCrystals();
       this.syncShip(true);
       this.sky.setVisible(map.theme.open);
@@ -2787,7 +2787,7 @@ export class Game {
     // the key or key card in its chest is gone from the map once it is taken; the runes of the gongs appear with the last gong
     if ((a.kind === "treasure" && outcome.consumed && typeof a.params.quest === "string") || (a.kind === "gong" && outcome.state)) this.interiorView.refreshObjects();
     // (and the glow of the key or the heap goes out with it; the runes light up with the last gong)
-    if (this.interior && !this.interior.campaign && (objectTaken(a, this.state.opened) || a.kind === "gong" || a.kind === "head")) this.lamps = crystalLamps(this.interior.content, this.state.opened);
+    if (this.interior && !this.interior.campaign && (objectTaken(a, this.state.opened) || a.kind === "gong" || a.kind === "head")) this.lamps = crystalLamps(this.interior.content, this.state.opened, ceilingHeightOf(this.interior.map));
     // an emptied heap of treasure leaves its cell, which the party may then walk over
     if (this.interior && !this.interior.campaign && heapGone(a, this.state.opened)) {
       this.interior.blocked.delete(a.y * this.interior.map.width + a.x);
@@ -2904,7 +2904,7 @@ export class Game {
           this.jumpTo(e.x, e.y, e.silent, e.facing);
           break;
         case "endroom":
-          this.openEndRoom();
+          this.openEndRoom(e.jump === true);
           break;
         case "guards":
           this.spawnGuards(e.kind);
@@ -3307,9 +3307,22 @@ export class Game {
       this.enableLampLights();
     }
     if (result.solved && !this.state.opened.has(endFlag(map.key))) {
-      this.audio.play(9018);
-      this.ui.log("Every crystal that waited has its light. Something in the walls answers.", "good");
-      this.openEndRoom();
+      // a place whose end room lies far from a target has runes next to it (`crystalPaths`): they light up and take the party there, the room itself stays shut until they do
+      const runes = rt.content.actions.filter((a) => a.kind === "rune" && a.params.need === "crystals");
+      const flag = runes.length > 0 ? String(runes[0]!.params.flag) : null;
+      if (flag !== null) {
+        if (!this.state.opened.has(flag)) {
+          this.state.opened.add(flag);
+          this.audio.play(9018);
+          this.ui.log("Every crystal that waited has its light. Far away something answers: magic runes light up on the floor next to the crystal.", "good");
+          this.lamps = crystalLamps(rt.content, this.state.opened, ceilingHeightOf(map));
+          this.interiorView.refreshObjects();
+        }
+      } else {
+        this.audio.play(9018);
+        this.ui.log("Every crystal that waited has its light. Something in the walls answers.", "good");
+        this.openEndRoom();
+      }
     }
   }
 
@@ -3393,7 +3406,7 @@ export class Game {
    * and any place without room for a sealed one) takes the party in by teleport. The flag stays in the save, so the room is open when the party
    * comes back.
    */
-  private openEndRoom(): void {
+  private openEndRoom(jump = false): void {
     const rt = this.interior;
     const end = rt?.map.dungeon?.endRoom;
     if (!rt || !end) return;
@@ -3412,6 +3425,10 @@ export class Game {
     }
     if (end.isolated) {
       this.ui.log("The floor falls away, and a strange light takes you.", "good");
+      this.jumpTo(end.cx, end.cy);
+    } else if (jump) {
+      // the runes of the crystal paths: the sealed room lies far from the target, so they take the party to it (59th playtest, point 1)
+      this.ui.log("The runes lift you off the floor and carry you through the rock.", "good");
       this.jumpTo(end.cx, end.cy);
     }
   }
@@ -3781,7 +3798,12 @@ export class Game {
       const { x, y, z } = this.player;
       this.projectiles.burst({ x, y, z }, STAR_BURST_LIGHT);
       this.ui.lightFlash(STAR_BURST_LIGHT.seconds);
-      for (const e of hits) flights.set(e.uid, 0);
+      for (const e of hits) {
+        flights.set(e.uid, 0);
+        // (every attack spell leaves an impact on what it hits, 19. 11. 2026, playtest 59 point 5)
+        const at = this.monsters.anchor(e.uid);
+        if (at) this.projectiles.impactAt("magic", at);
+      }
       return flights;
     }
     if (area) {
@@ -3825,21 +3847,29 @@ export class Game {
       // Cold Ray: one blue line to every monster of the line it hits (the lines lie on top of each other), gone within 0.7 s
       for (const e of hits) {
         const at = this.monsters.anchor(e.uid);
-        if (at) this.projectiles.beam("ice", from, at);
+        // (the frost strikes where every line ends, like Prismatic Light)
+        if (at) this.projectiles.beam("ice", from, at, true);
         flights.set(e.uid, 0);
       }
       return flights;
     }
     if (spell) {
-      let far: { at: Point; dist: number } | null = null;
+      let far: { uid: string; at: Point; dist: number } | null = null;
       for (const e of hits) {
         const at = this.monsters.anchor(e.uid);
         const dist = at ? Math.hypot(at.x - from.x, at.z - from.z) : -1;
-        if (at && (!far || dist > far.dist)) far = { at, dist };
+        if (at && (!far || dist > far.dist)) far = { uid: e.uid, at, dist };
       }
       if (!far) return flights;
       const seconds = this.projectiles.launch(spell, from, far.at);
-      for (const e of hits) flights.set(e.uid, seconds);
+      for (const e of hits) {
+        flights.set(e.uid, seconds);
+        // the bolt strikes the farthest monster where it lands; every other monster of a line it passes through gets its impact when the bolt reaches it
+        const at = this.monsters.anchor(e.uid);
+        if (!at || e.uid === far.uid) continue;
+        const reach = Math.hypot(at.x - from.x, at.z - from.z) / (far.dist || 1);
+        this.later(seconds * Math.min(1, reach), () => this.projectiles.impactAt(spell, at));
+      }
       return flights;
     }
     for (const e of hits) {
@@ -6003,7 +6033,7 @@ export class Game {
     this.shipTarget = this.state.opened.has(LIFE_FLAG) ? 1 : 0;
     if (initial) this.shipLight = this.shipTarget;
     else this.shipFade = this.audio.durationOf(9055, 1.44);
-    this.lamps = crystalLamps(rt.content, this.state.opened);
+    this.lamps = crystalLamps(rt.content, this.state.opened, ceilingHeightOf(rt.map));
     this.interiorView.refreshObjects();
     this.updateAmbient();
   }
@@ -6098,7 +6128,7 @@ export class Game {
       .filter((e) => e.d < (e.lamp.reach ?? LAMP_REACH));
     // the effects add what rises from every lamp in reach, not only from the few that get a light of the pool (a shot in flight has its burst, and the light of a torch hangs beside its flame: what
     // rises there is the flame's, `towerFlames`). Only the crystals of the crystal paths have a halo (the user, 18. 11. 2026: elsewhere the light of the pool is enough)
-    this.effects.setLamps([...inReach.filter((e) => !e.lamp.priority && !e.lamp.key.startsWith("tt:")).map((e) => ({ ...e.lamp, halo: e.lamp.key.startsWith("q8:") })), ...this.lavaGlow, ...this.towerFlames], 1 - need);
+    this.effects.setLamps([...inReach.filter((e) => !e.lamp.priority && !e.lamp.key.startsWith("tt:")).map((e) => ({ ...e.lamp, halo: e.lamp.key.startsWith("q8:") || e.lamp.halo === true })), ...this.lavaGlow, ...this.towerFlames], 1 - need);
     const near = inReach
       .sort((a, b) => Number(b.lamp.priority ?? false) - Number(a.lamp.priority ?? false) || a.d - b.d)
       .slice(0, this.lampSlots.length);

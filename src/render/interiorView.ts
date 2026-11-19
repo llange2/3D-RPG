@@ -17,7 +17,7 @@ import { faceOpenYaw } from "./facing";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { BROKEN_PIECES, CEILING_RELIEF, floorModelOfTexture, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
-import { CELL_SIZE, ceilingDropOf, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type DoorFrame, type WallPanel } from "./interiorMesher";
+import { CELL_SIZE, ceilingDropOf, ceilingHeightOf, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type DoorFrame, type WallPanel } from "./interiorMesher";
 import { DECO_MODELS } from "../data/wall-deco";
 import { ALTAR_SCALE, decoSink, shownItem, themedProp, wallHolderDistance, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
@@ -838,7 +838,7 @@ export class InteriorView {
       // so is an emptied heap of treasure
       if (heapGone(a, this.opened)) continue;
       // a themed place shows the old items of its style (a barrel, a bone pile, a banner) instead of a chest or well picked by chance
-      const themed = themedProp(a, x, z, (this.faceOpen(map, a, h >>> 8) * 180) / Math.PI, this.staticInfo, this.opened, this.content ?? undefined);
+      const themed = themedProp(a, x, z, (this.faceOpen(map, a, h >>> 8) * 180) / Math.PI, this.staticInfo, this.opened, this.content ?? undefined, ceilingHeightOf(map));
       // a head of the ring that is not there leaves its cell empty
       if (!themed && a.kind === "head") continue;
       if (themed && a.kind === "head" && a.params.mode === "rotate") {

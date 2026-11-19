@@ -215,6 +215,83 @@ def flipbook(base_rgb, frame_cell=FCELL, frames=FRAMES):
     return sheet
 
 
+# 19. 11. 2026: the user now delivers fire, ice, acid and magic as FINISHED 4x4 sheets (2048², 16 frames of 512, .ignore/impact_<name>.png), no longer as one burst picture.
+# Fire, ice and acid are drawn on white paper, magic on a baked-in grey checkerboard ("transparency" of an image editor, 40 x 40 squares, dark first). Both are turned back
+# into straight alpha: the paper/checker colour is the known background, the brightest channel of the pure colour counts as 1.
+SHEET_BACKGROUNDS = {"fire": "white", "ice": "white", "acid": "white", "magic": "checker"}
+CHECKER_SQUARES = 40
+CHECKER_DARK, CHECKER_LIGHT = 46.5 / 255, 100.5 / 255  # measured in the top-left corner of impact_magic.png
+
+
+def checker_background(size):
+    """The baked-in checkerboard as a grey value per pixel (anti-aliased by 2x supersampling)."""
+    ss = 2
+    ys, xs = (np.mgrid[0:size * ss, 0:size * ss].astype(np.float32) + 0.5) / ss
+    square = size / CHECKER_SQUARES
+    parity = (np.floor(xs / square) + np.floor(ys / square)) % 2
+    bg = np.where(parity == 0, CHECKER_DARK, CHECKER_LIGHT).astype(np.float32)
+    return bg.reshape(size, ss, size, ss).mean(axis=(1, 3))
+
+
+def unmix_white(rgb, cell):
+    """Picture on white paper -> straight alpha. Ink density is the alpha, the colour is the ink at full brightness; the pale hot core inside the burst (white, yellow-white)
+    would vanish with that rule (white paper = nothing), so inside the silhouette bright and pale pixels near the middle of a frame turn opaque."""
+    from scipy import ndimage
+    mn = rgb.min(axis=2)
+    a = np.clip(((1 - mn) - 0.02) / 0.98, 0, 1)
+    c = (rgb - mn[..., None]) / np.maximum(1 - mn, 1e-4)[..., None]
+    c = np.where((a > 0)[..., None], c, 1.0)
+    inside = ndimage.binary_fill_holes(mn < 0.9).astype(np.float64)
+    inside = ndimage.gaussian_filter(inside, 2)
+    ys, xs = np.mgrid[0:rgb.shape[0], 0:rgb.shape[1]]
+    r = np.hypot(xs % cell - cell / 2, ys % cell - cell / 2)
+    # the last frames have no core any more, only a pale haze that must stay a haze (it turned into white blotches)
+    frame = (ys // cell) * 4 + xs // cell
+    frame_fade = smooth(14, 10, frame)
+    # hot = the second brightest channel is high (yellow-white fire, cyan-white ice, pale acid) but the pixel still carries ink: pure paper is a hole, not light
+    hot = smooth(0.82, 0.97, np.sort(rgb, axis=2)[..., 1]) * smooth(0.99, 0.94, mn) * smooth(0.28 * cell, 0.15 * cell, r) * frame_fade
+    heart = smooth(0.84, 0.94, rgb.mean(axis=2)) * smooth(0.12 * cell, 0.05 * cell, r) * frame_fade  # the very middle may be pure white: that is the point of impact
+    core = np.maximum(hot, heart) * inside
+    pale = rgb / np.maximum(rgb.max(axis=2), 1e-4)[..., None]
+    c = c * (1 - core[..., None]) + pale * core[..., None]
+    return c, np.maximum(a, core)
+
+
+def unmix_checker(rgb, cell):
+    """Picture on the baked-in checkerboard -> straight alpha (pixel = bg * (1 - a) + colour * a, brightest channel of the colour = 1).
+    The alpha model gives the same colour on dark and light squares; adding the glow to the checker did not."""
+    bg = checker_background(rgb.shape[0])[..., None]
+    a = np.clip((rgb.max(axis=2, keepdims=True) - bg) / (1 - bg), 0, 1)
+    a = np.clip((a - 0.09) / 0.91, 0, 1)  # the paper noise of the background must not become a haze
+    c = np.clip((rgb - bg * (1 - a)) / np.maximum(a, 1e-3), 0, 1)
+    return c, a[..., 0]
+
+
+def sheet_impact(path, kind, frame_cell=FCELL):
+    """A finished 4x4 sheet -> the game's flipbook (straight alpha, 4 x 4 frames of `frame_cell`)."""
+    im = Image.open(path).convert("RGB")
+    side = 4 * frame_cell
+    if im.size != (side, side):
+        im = im.resize((side, side), Image.LANCZOS)
+    rgb = np.asarray(im, dtype=np.float64) / 255.0
+    c, a = (unmix_white if kind == "white" else unmix_checker)(rgb, frame_cell)
+    # no content may reach the rim of a frame (neighbouring frames lean over: the spikes of the magic star cross the borders)
+    win = np.tile(window(frame_cell, frame_cell, 0.05), (4, 4))
+    return np.dstack([np.clip(c, 0, 1), np.clip(a * win, 0, 1)])
+
+
+def build_sheet_impacts(raw, out):
+    done = []
+    for name, kind in SHEET_BACKGROUNDS.items():
+        p = os.path.join(raw, "impact_%s.png" % name)
+        if not os.path.exists(p):
+            print("missing", p)
+            continue
+        save_rgba(sheet_impact(p, kind), os.path.join(out, "fx_impact_%s.png" % name))
+        done.append(name)
+    return done
+
+
 def build_impacts(raw, out):
     done = []
     for name in IMPACTS:
@@ -238,3 +315,5 @@ if __name__ == "__main__":
         build_smoke(pack, out)
     if what in ("impacts", "all"):
         print("impacts:", build_impacts(raw, out))
+    if what == "sheets":  # the finished sheets of the user (fire, ice, acid, magic); water still comes from impacts
+        print("sheets:", build_sheet_impacts(raw, out))

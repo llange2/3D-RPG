@@ -2,6 +2,7 @@ import { BASE_CLASS } from "../data/tables";
 import { averageDamageLines } from "./combat";
 import { combineItems, needsArmsMaster, ARMS_MASTER, bonusLines, makeItem } from "./items";
 import { equipTarget, offHandRingSlot, replacedItems } from "./character";
+import { learnBlock } from "./spells";
 import type { BonusKey, Character, Item } from "./types";
 
 /**
@@ -28,6 +29,12 @@ export function canUseItem(c: Character, item: Item, talents: readonly string[])
  * `offHand`: a ring is compared with the second ring (Ctrl, 62nd playtest point 5), where there is one to replace.
  */
 export function verdictFor(c: Character, item: Item, talents: readonly string[], offHand = false): Verdict {
+  // 59th playtest, point 7: a scroll is judged by the rules of learning it (`learnBlock`): a green arrow for the heroes who can learn it now, the portrait without an arrow for those
+  // who could later (their school, a level too low), greyed out for the others (another school, or they know it already)
+  if (item.type === "spell") {
+    const block = learnBlock(c, item.spellId);
+    return block === null ? "better" : block === "level" ? "same" : "cannot";
+  }
   if (!canUseItem(c, item, talents) || !equipTarget(c.inventory, item)) return "cannot";
   const replaced = combineItems(replacedItems(c.inventory, item, offHand && offHandRingSlot(c.inventory, item) !== null)) ?? NOTHING;
   const avg = averageDamageLines(c, item, replaced, false);

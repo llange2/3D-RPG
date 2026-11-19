@@ -1,5 +1,6 @@
 import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
+import { LANTERN_ITEM, lanternOriginY } from "../data/item-tuning";
 import { DECO_MODELS, DECO_PLATE, DECO_SCALE } from "../data/wall-deco";
 import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM, TEMPORAL_ITEM, TEMPORAL_SCALE, WALL_CRYSTAL_ITEM } from "../data/quest-table";
 import { CRYSTAL_BURY, CRYSTAL_SCALE, WALL_HOLDER_MID } from "./crystalLook";
@@ -147,7 +148,7 @@ export function wallHolderDistance(staticInfo: Record<string, StaticModelInfo>, 
 }
 
 /** The prop for a themed object, or null when the action shows nothing of the theme (then the view picks a chest or well by chance). `bearing` is degrees, 0 = north. */
-export function themedProp(a: ActionInstance, x: number, z: number, bearing: number, staticInfo: Record<string, StaticModelInfo>, opened: ReadonlySet<string> = new Set(), content?: MapContent): PropInstance | null {
+export function themedProp(a: ActionInstance, x: number, z: number, bearing: number, staticInfo: Record<string, StaticModelInfo>, opened: ReadonlySet<string> = new Set(), content?: MapContent, ceiling?: number): PropInstance | null {
   let item = shownItem(a);
   if (item === null) return null;
   // the broken crystal of the engine room or of life support is the intact one once the party has mended it
@@ -200,7 +201,8 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
     return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
   }
   if (own) return { model: own.model, x, y: own.lift ?? 0, z, rotY: (bearing * Math.PI) / 180, scale: own.scale, ...(own.scale3 ? { scaleXYZ: own.scale3 } : {}) };
-  const prop = itemProp(item, bearing, x, z, staticInfo);
+  // the lantern hangs from the ceiling of this place, whatever height it has (59th playtest, point 3)
+  const prop = itemProp(item, bearing, x, z, staticInfo, item === LANTERN_ITEM && ceiling !== undefined ? lanternOriginY(ceiling) : undefined);
   // 56th playtest, point 3: the base plate of the lever lies off the model's origin (its middle is 0.31 towards the side the handle points away from), so the half circle moved it by twice that.
   // The turned lever moves back by the rotated offset, and the plate stays where it was while the handle swings over
   if (prop && pulledLever && LEVER_BASE_X[item] !== undefined) {

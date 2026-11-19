@@ -1,6 +1,6 @@
 import { runeActive } from "../actions/quests";
 import { heapGone } from "../actions/registry";
-import { LANTERN_DROP } from "../data/item-tuning";
+import { LANTERN_BODY_TOP, LANTERN_DROP, LANTERN_ITEM, lanternOriginY } from "../data/item-tuning";
 import { ENGINE_CRYSTAL_FLAG, LIFE_FLAG } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
@@ -8,7 +8,7 @@ import { shownItem } from "./interiorProps";
 import { TRAP_OBJECT, elementOf } from "./interiorTraps";
 
 /** The little things that rise round a lamp (`LampKind.fx`). */
-export type LampFx = "torch" | "lava" | "acid" | "magic" | "crystal" | "portal" | "gold" | "pool";
+export type LampFx = "torch" | "lava" | "acid" | "magic" | "crystal" | "portal" | "gold" | "pool" | "lantern" | "rune";
 
 /** A kind of map object that gives light. `y` is the height of the light; `range` and `intensity` replace the usual ones for a lamp that shines further or stronger. */
 export interface LampKind {
@@ -18,6 +18,8 @@ export interface LampKind {
   fx?: LampFx;
   /** The height over the ground where what rises from it starts, when that is not the height of the light: the light of a pool of lava hangs a metre over it, its embers rise from the surface (the user, 18. 11. 2026). */
   fxY?: number;
+  /** A soft disc of its colour round the lamp (`Effects.setLamps`): the light of the pool is shared by two lamps, a halo is what shows the rest (the runes, 59th playtest point 2; the crystal paths have one by their key). */
+  halo?: boolean;
   range?: number;
   intensity?: number;
   /** The share of its light the lamp keeps by day outside (0 = none, the default: by day lamps add nothing). A spell's light must show in the sun as well (48th playtest, point 6). */
@@ -55,7 +57,8 @@ export const CHALICE_LAMP: LampKind = { y: 1.0, color: [1, 0.82, 0.4], range: 5,
 export const RED_WELL_LAMP: LampKind = { y: 1.2, color: [1, 0.3, 0.25], range: 5.5, intensity: 2.6, fx: "pool", fxY: 0.45 };
 export const YELLOW_WELL_LAMP: LampKind = { y: 1.2, color: [1, 0.85, 0.3], range: 5.5, intensity: 2.6, fx: "pool", fxY: 0.45 };
 export const ALTAR_LAMP: LampKind = { y: 1.0, color: [0.75, 0.4, 1], range: 5, intensity: 2.4, fx: "magic" };
-export const RUNES_LAMP: LampKind = { y: 0.6, color: [0.5, 0.8, 1], range: 4.5, intensity: 2 };
+// (59th playtest, point 2: the runes were hard to make out; they shine orange now, stronger, with glints and sparks rising from them like the crystals' glints)
+export const RUNES_LAMP: LampKind = { y: 0.7, color: [1, 0.55, 0.16], range: 8.5, intensity: 3.4, fx: "rune", fxY: 0.1, halo: true };
 export const PORTAL_LAMP: LampKind = { y: 1.5, color: [0.45, 0.55, 1], range: 6, intensity: 3, fx: "portal" };
 /** What is worth taking glows gold (32nd playtest, point 3): the orb a little stronger than the keys, the heap of treasure, and the loot a monster leaves (point 14). */
 export const ORB_LAMP: LampKind = { y: 1.0, color: [1, 0.8, 0.3], range: 5.5, intensity: 3, fx: "gold", fxY: 0.7 };
@@ -121,6 +124,15 @@ export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
   71: { y: 1.4, color: [1, 0.6, 0.3], fx: "torch", fxY: 0.6 }, // Abandoned fireplace (the fire burns in the hearth, low in the model)
 };
 
+/**
+ * The lantern of a generated place (item 76) under a ceiling at `ceiling` (59th playtest, point 3): its light hangs 0.6 under the origin as before, but the origin follows the ceiling
+ * (`lanternOriginY`), and a thread of smoke rises from the top of the glass body, along the chain to the ceiling (`fx: "lantern"`).
+ */
+export function lanternLamp(ceiling: number): LampKind {
+  const origin = lanternOriginY(ceiling);
+  return { y: origin - LANTERN_DROP, color: TOWER_TORCH_LAMP.color, range: TOWER_TORCH_LAMP.range, intensity: TOWER_TORCH_LAMP.intensity, fx: "lantern", fxY: origin + LANTERN_BODY_TOP };
+}
+
 /** A monster that glows (`MONSTER_LAMPS`): the light follows it, at the height of its body. */
 export type MonsterLamp = Omit<LampKind, "y">;
 
@@ -147,7 +159,7 @@ export const MONSTER_LAMPS: Readonly<Record<string, MonsterLamp>> = {
 
 /** The lamp a cell of the old maps gives, or null. */
 export function lampSource(kind: LampKind, x: number, z: number, key = `${x.toFixed(2)},${z.toFixed(2)}`): LampSource {
-  return { x, z, key, y: kind.y, color: kind.color, ...(kind.range !== undefined ? { range: kind.range } : {}), ...(kind.intensity !== undefined ? { intensity: kind.intensity } : {}), ...(kind.fx ? { fx: kind.fx } : {}), ...(kind.fxY !== undefined ? { fxY: kind.fxY } : {}) };
+  return { x, z, key, y: kind.y, color: kind.color, ...(kind.range !== undefined ? { range: kind.range } : {}), ...(kind.intensity !== undefined ? { intensity: kind.intensity } : {}), ...(kind.fx ? { fx: kind.fx } : {}), ...(kind.fxY !== undefined ? { fxY: kind.fxY } : {}), ...(kind.halo ? { halo: true } : {}) };
 }
 
 /** The key of the lamp that an action's object carries. */
@@ -159,7 +171,7 @@ export function objectTaken(a: Pick<ActionInstance, "uid" | "kind" | "params">, 
 }
 
 /** The glowing objects of a generated place (crystals of shrines, riddles and decoration, the objects of the elemental traps): each lights its cell. */
-export function crystalLamps(content: MapContent, opened: ReadonlySet<string> = new Set()): LampSource[] {
+export function crystalLamps(content: MapContent, opened: ReadonlySet<string> = new Set(), ceiling?: number): LampSource[] {
   const out: LampSource[] = [];
   for (const a of content.actions) {
     // a key or key card that was taken, and a heap that was emptied, take their glow with them (36th playtest, points 6 and 23)
@@ -181,7 +193,7 @@ export function crystalLamps(content: MapContent, opened: ReadonlySet<string> = 
     }
     const element = elementOf(a);
     const item = element !== null ? TRAP_OBJECT[element] : shownItem(a);
-    const kind = item === null ? undefined : ITEM_LAMPS[item];
+    const kind = item === null ? undefined : item === LANTERN_ITEM && ceiling !== undefined ? lanternLamp(ceiling) : ITEM_LAMPS[item];
     if (kind) out.push(lampSource(kind, cellCenterX(a.x), cellCenterZ(a.y), lampKeyOf(a)));
   }
   return out;

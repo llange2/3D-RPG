@@ -52,7 +52,7 @@ export type Effect =
   /** The game asks which hero (a chalice is to be drunk) and calls `resolveAction` again with `ctx.hero` set, or null when nobody was chosen. */
   | { type: "pick"; question: string }
   /** The quest of the place is done: its end room opens (the seal gives way, or the party is teleported into the pocket). */
-  | { type: "endroom" }
+  | { type: "endroom"; jump?: boolean }
   /** An alarm: the guards of the castle come (`light` in the halls of the keep, `heavy` between the throne room and the gate). */
   | { type: "guards"; kind: "light" | "heavy" }
   /** The party stands before a king: the game takes the orbs, if there are any, and pays. */
@@ -764,7 +764,8 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
       const ready = runeActive(action, content, opened);
       if (!ready) return { effects, consumed: false };
       // (what happens next is told by the game once it knows the kind of end room: the floor falls away only for a pocket in the rock, a sealed room just opens its wall)
-      effects.push({ type: "text", text: "The runes flare up." }, { type: "endroom" });
+      // (the runes of the crystal paths stand next to a target that may be far from the end room: they carry the party there even when the room is sealed, `jump`)
+      effects.push({ type: "text", text: "The runes flare up." }, action.params.need === "crystals" ? { type: "endroom", jump: true } : { type: "endroom" });
       return { effects, consumed: false };
     }
 

@@ -52,6 +52,15 @@ export function moanSolved(content: MapContent, opened: ReadonlySet<string>): bo
 /** The flag in the save that says the end room of a place has been opened (`opened` is saved with the game). */
 export const endFlag = (mapKey: string): string => `${mapKey}@end`;
 
+/**
+ * 59th playtest, point 1: the flag that says the crystal paths of a place (quest_8) are solved and its runes are up. The light is worked out while the party plays (`Game.syncCrystals`) and
+ * is no state of the save, so the moment it is right is written down: the runes near the targets are there from then on.
+ */
+export const crystalsSolvedFlag = (mapKey: string): string => `${mapKey}@crystals`;
+
+/** How far (in cells, in a straight line) a solved target may be from the end room before the end room is not "at hand" and runes take the party there (the user: about 5 cells). */
+export const CRYSTAL_RUNE_RANGE = 5;
+
 /** The ring is right when a head stands in each of its four corners (the old prover looked at the corners only). */
 export function ringSolved(content: MapContent, opened: ReadonlySet<string>): boolean {
   const ring = heads(content, "ring");
@@ -95,6 +104,7 @@ export function gongRuneActive(a: Pick<ActionInstance, "params">, content: MapCo
 export function runeActive(a: Pick<ActionInstance, "params">, content: MapContent, opened: ReadonlySet<string>): boolean {
   if (a.params.need === "moan") return moanSolved(content, opened);
   if (a.params.need === "heads") return rotationSolved(content, opened);
+  if (a.params.need === "crystals") return opened.has(String(a.params.flag));
   return gongRuneActive(a, content, opened);
 }
 
