@@ -53,6 +53,24 @@ export const ceilingDropOf = (map: InteriorMap): number => (map.dungeon?.tower ?
 /** The height of the ceiling's underside: what hangs from it (the lantern, 59th playtest point 3) reaches up to it. */
 export const ceilingHeightOf = (map: InteriorMap): number => wallHeightOf(map) - ceilingDropOf(map);
 
+/** The window of 3D ceiling pieces never gets smaller than this (cells around the party, at the farthest view distance) ... */
+export const CEILING_RADIUS_MIN = 6;
+/** ... nor larger than this: it only holds the cells that have a piece, but each is a few thousand triangles. */
+export const CEILING_RADIUS_MAX = 11;
+/** What is left of a ceiling piece in the fog at the edge of the window: a piece that pops in is seen at once if more than this shows. */
+const CEILING_EDGE_VISIBLE = 0.05;
+
+/**
+ * How many cells around the party get a 3D ceiling piece (bug_fix_73, 19th November 2026): the edge of the window is where the next piece appears with each step, so it lies where
+ * the exponential-squared fog (`exp(-(distance x density)^2)`) has swallowed it. A fixed radius of 6 left 16 % of a piece at the edge with the dungeon's fog and 40 % with the
+ * Light spell (the fog is thinner then), and the piece popped in. `viewShare` is the view distance's share (close, medium, far).
+ */
+export function ceilingWindow(fogDensity: number, viewShare: number): number {
+  const fogCells = fogDensity > 0 ? Math.sqrt(-Math.log(CEILING_EDGE_VISIBLE)) / (fogDensity * CELL_SIZE) : CEILING_RADIUS_MAX;
+  const full = Math.min(CEILING_RADIUS_MAX, Math.max(CEILING_RADIUS_MIN, Math.ceil(fogCells)));
+  return Math.max(2, Math.round(full * viewShare));
+}
+
 /** A wall face that a 3D wall piece is drawn in front of: the cell it belongs to, the side the wall lies on and the model. */
 export interface WallPanel {
   x: number;

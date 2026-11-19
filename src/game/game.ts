@@ -5980,6 +5980,7 @@ export class Game {
       // under the open sky of a town or castle the fog follows the day like the overworld's does (white fog around a black night looks wrong)
       const nightK = open ? NIGHT_FOG + (1 - NIGHT_FOG) * this.lightLevel : 1;
       const target = hex(t.fog.color);
+      this.interiorView.setFogDensity(t.fog.density * (lit ? 0.7 : 1));
       this.fog = {
         r: this.fog.r + (target.r * nightK - this.fog.r) * k,
         g: this.fog.g + (target.g * nightK - this.fog.g) * k,

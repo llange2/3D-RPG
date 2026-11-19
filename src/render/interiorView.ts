@@ -17,7 +17,7 @@ import { faceOpenYaw } from "./facing";
 import { groundTexture, type FlatTileSet } from "./flatGround";
 import { InteriorDoors } from "./interiorDoors";
 import { BROKEN_PIECES, CEILING_RELIEF, floorModelOfTexture, hasGroundModels, hasWallModels, wallModelOfTexture, type Environment } from "./environment";
-import { CELL_SIZE, ceilingDropOf, ceilingHeightOf, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type DoorFrame, type WallPanel } from "./interiorMesher";
+import { CELL_SIZE, ceilingDropOf, ceilingWindow, ceilingHeightOf, cellCenterX, cellCenterZ, cellX, cellZ, ceilingModelAt, environmentModels, floorModelAt, meshInterior, modelCeilingCells, modelFloorCells, wallHeightOf, type DoorFrame, type WallPanel } from "./interiorMesher";
 import { DECO_MODELS } from "../data/wall-deco";
 import { ALTAR_SCALE, decoSink, shownItem, themedProp, wallHolderDistance, WALL_HUNG } from "./interiorProps";
 import { floatY, ITEM_MODELS, itemModelKey, itemProp, MAGIC_FLAMES_ITEM } from "./itemProps";
@@ -60,8 +60,6 @@ const FLOOR_SCALE: [number, number, number] = [1.5, 1.473, 1.5];
 const FLOOR_RADIUS = 8;
 /** The city's tiles are seen in daylight and far through the thin fog, so their window is wider; beyond it the flat floor quad below shows the same tiles. */
 const CITY_FLOOR_RADIUS = 10;
-/** The ceiling hangs above the eyes and the torch hardly reaches it: a smaller window than the floor's. */
-const CEILING_RADIUS = 6;
 /** The wall pieces of "Full 3D" within this many cells of the party; farther off, the flat wall behind them shows. */
 const PANEL_RADIUS = 10;
 /** A floor tile of the user's lies a hair above the flat floor quad it covers; a ceiling hangs a hair under the flat one (no z-fighting at 1 cm). */
@@ -373,6 +371,18 @@ export class InteriorView {
   }
 
   private viewShare = 1;
+  private fogDensity = 0.075;
+
+  /**
+   * The fog density the map is seen through (the theme's, thinner with the Light spell): the window of 3D ceiling pieces reaches as far as the fog lets them be seen, so no piece pops
+   * in at its edge. Only a change of the window redraws the ceiling.
+   */
+  setFogDensity(density: number): void {
+    if (density === this.fogDensity) return;
+    const before = ceilingWindow(this.fogDensity, this.viewShare);
+    this.fogDensity = density;
+    if (this.map && ceilingWindow(density, this.viewShare) !== before) this.pushCeiling(true);
+  }
 
   /** The 3D models of the environment on this map that are wanted and loaded: floors and ceilings from "3D Floor/Ceiling" on, wall pieces in "Full 3D". */
   private enabledModels(): Set<string> {
@@ -569,7 +579,7 @@ export class InteriorView {
     return out;
   }
 
-  /** The 3D ceilings within `CEILING_RADIUS` cells: the flat back of each slab lies a hair under the flat ceiling, its relief hangs into the room. */
+  /** The 3D ceilings within `ceilingWindow` cells: the flat back of each slab lies a hair under the flat ceiling, its relief hangs into the room. */
   private pushCeiling(force: boolean): void {
     const map = this.map;
     const owner = `${this.owner}:ceiling`;
@@ -582,7 +592,7 @@ export class InteriorView {
     const at = this.floorFocus;
     if (!force && this.ceilingShown && this.ceilingShown.x === at.x && this.ceilingShown.y === at.y) return;
     this.ceilingShown = { ...at };
-    const near = Math.max(2, Math.round(CEILING_RADIUS * this.viewShare));
+    const near = ceilingWindow(this.fogDensity, this.viewShare);
     const height = wallHeightOf(map);
     const list: PropInstance[] = [];
     for (const i of this.ceilingCells) {
