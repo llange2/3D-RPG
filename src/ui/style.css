@@ -446,6 +446,13 @@ html.ending-on #game-cursor { display: none; }
   position: absolute; z-index: 40; max-width: min(360px, 90vw); box-sizing: border-box; padding: 8px 12px; border-radius: 8px; pointer-events: none;
   background: #2b1b0cf5; color: #f3e3b8; border: 1px solid #8f6b2c; box-shadow: 0 4px 16px #000c; font-size: 15px; line-height: 1.35;
 }
+/* the mouse-over of everything else (59th playtest, point 4: `title` texts in the game's own font and colours instead of the browser's grey box, src/ui/hoverTips.ts) */
+.hover-tip {
+  position: fixed; z-index: 2147483646; max-width: min(380px, 90vw); box-sizing: border-box; padding: 7px 11px; border-radius: 8px; pointer-events: none;
+  background: #2b1b0cf5; color: #f3e3b8; border: 1px solid #8f6b2c; box-shadow: 0 4px 16px #000c; font-size: 15px; line-height: 1.35; white-space: pre-line;
+}
+.hover-tip .hover-tip-name { font-family: var(--font-head); font-size: 16px; color: #f5d98a; margin-bottom: 2px; }
+.hover-tip .hover-tip-text { color: #d6bd86; }
 .spell-tip .spell-name { font-family: var(--font-head); font-size: 18px; color: #f5d98a; }
 .spell-tip .small { color: #d6bd86; }
 

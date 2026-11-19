@@ -4,6 +4,7 @@ import { bootDone, bootProgress } from "./boot";
 import { interiorFingerprints } from "../actions/fingerprint";
 import { chunkHash, World } from "../world/world";
 import { installCursor } from "../ui/cursor";
+import { installHoverTips } from "../ui/hoverTips";
 import { preloadImages } from "../ui/dom";
 import { AVATAR_EFFECTS, effectFile } from "../ui/avatarFx";
 import { preloadButtonArt } from "../ui/buttonArt";
@@ -20,6 +21,8 @@ async function main(): Promise<void> {
   // the start message of index.html stays up until the game can show a screen of its own (the title or the loading picture)
   bootProgress(0);
   installCursor();
+  // the mouse-over texts (`title`) in the look of the rest of the interface
+  installHoverTips();
   preloadImages(["ui/scroll.webp", "ui/computer_screen.webp"]);
   // the 78 spell pictures are one sheet: fetched and decoded now, so that the spell window opens with every plate in place
   void preloadSpellIcons();

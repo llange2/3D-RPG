@@ -39,6 +39,18 @@ export const COTTAGE_YAW = 90;
 export const LANTERN_DROP = 0.6;
 export const Y_OFFSET: Readonly<Record<string, number>> = { "76": -LANTERN_DROP };
 
+/**
+ * 59th playtest, point 3: in a generated dungeon the lantern hangs from the ceiling, whatever height that has (dungeon 4.5, tower 4.2, castle 4.2, cave and town 3: `ceilingHeightOf`). The fixed drop
+ * of the 51st playtest left a gap of 0.6 under a dungeon ceiling. The top of the chain now lies `LANTERN_SINK` in the ceiling. `LANTERN_HALF` is the model's half height (`ci_76.glb` is
+ * 1.9 high, centred on its origin, scaled 0.7); the glass body ends `LANTERN_BODY_TOP` above the origin, and the chain goes on above it.
+ */
+export const LANTERN_ITEM = 76;
+export const LANTERN_HALF = 0.665;
+export const LANTERN_BODY_TOP = 0.31;
+export const LANTERN_SINK = 0.03;
+/** The height of the lantern's origin when it hangs from a ceiling at `ceiling`. */
+export const lanternOriginY = (ceiling: number): number => ceiling + LANTERN_SINK - LANTERN_HALF;
+
 type Pose = { scale3: [number, number, number]; y?: number };
 
 /** The old item models with the corrections applied. Every renderer of the old items (campaign, landmarks, caravans) reads these. */

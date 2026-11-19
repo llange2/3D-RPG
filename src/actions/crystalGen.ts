@@ -3,6 +3,7 @@ import { WALL_CRYSTAL_ITEM, CRYSTAL_HOLDER } from "../data/quest-table";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { BASE_COLORS, simulateCrystals, staticBlockers, type PlacedCrystal, type WallNode } from "./crystals";
 import { eligibleChests } from "./machines";
+import { CRYSTAL_RUNE_RANGE, crystalsSolvedFlag } from "./quests";
 import type { QuestEnv, QuestResult } from "./questGen";
 import type { ActionInstance, ParamValue } from "./types";
 
@@ -400,6 +401,20 @@ export function crystalPaths(env: QuestEnv, rng: Rng): QuestResult {
     env.place({ uid: env.uid("crystal"), kind: "crystal", x: n.spot.x, y: n.spot.y, params });
   });
   reserveAll();
+  // 59th playtest, point 1 (Shaft of Falelaa, pearl-wood-803): the target may be anywhere in the place, so the end room that opens when it is lit can be a long way off, and the party hears the stone
+  // and sees nothing. An end room farther than `CRYSTAL_RUNE_RANGE` cells from a target gets runes next to that target (Quest 2 and 3 have them too): they appear when the paths are solved and take the party in.
+  const end = map.dungeon?.endRoom;
+  if (end) {
+    const gap = (c: Cell): number => Math.max(end.x - c.x, c.x - (end.x + end.w - 1), end.y - c.y, c.y - (end.y + end.h - 1), 0);
+    const flag = crystalsSolvedFlag(map.key);
+    for (const t of plan.nodes.filter((n) => n.role === "target" && gap(n.spot) > CRYSTAL_RUNE_RANGE)) {
+      const near = [...reach]
+        .map((i) => ({ x: i % W, y: Math.floor(i / W) }))
+        .filter((c) => Math.max(Math.abs(c.x - t.spot.x), Math.abs(c.y - t.spot.y)) <= 3 && !sameCell(c, t.spot) && env.free(c.x, c.y))
+        .sort((a, b) => Math.max(Math.abs(a.x - t.spot.x), Math.abs(a.y - t.spot.y)) - Math.max(Math.abs(b.x - t.spot.x), Math.abs(b.y - t.spot.y)) || a.y - b.y || a.x - b.x);
+      for (const c of near) if (env.place({ uid: env.uid("rune"), kind: "rune", x: c.x, y: c.y, params: { need: "crystals", item: 73, flag } })) break;
+    }
+  }
   const count = plan.crystals.length;
   return { finish: () => hideCrystals(env.map, env.actions, count, rng) };
 }

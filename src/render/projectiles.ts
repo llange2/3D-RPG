@@ -83,7 +83,8 @@ interface Flight {
 }
 
 /** The kinds of projectile that leave an impact where they land, and the element it shows. */
-const IMPACT_OF: Readonly<Partial<Record<ProjectileKind, ImpactKind>>> = { fire: "fire", ice: "ice", acid: "acid", magic: "magic" };
+// (a spell of the physical type has no picture of its own and shows the magic one, like the lines of Prismatic Light; 19. 11. 2026: every attack spell leaves an impact)
+const IMPACT_OF: Readonly<Partial<Record<ProjectileKind, ImpactKind>>> = { fire: "fire", ice: "ice", acid: "acid", magic: "magic", physical: "magic" };
 
 /** An element that appears where it strikes and fades out (Elemental Storm): standing upright, not flying. */
 interface Flash {
@@ -182,6 +183,12 @@ export class Projectiles {
       } else this.flights.push({ id: Projectiles.flights++, kind, pose: POSES[kind], laser: null, from: start, to, yaw, t: 0, duration, impact });
     }
     return duration;
+  }
+
+  /** The impact of a spell of `kind` at `at` without a flight of its own: the other monsters a bolt passes through (Acid Spray, Moon Ray) and the monsters of Star Burst. */
+  impactAt(kind: ProjectileKind, at: Point): void {
+    const struck = IMPACT_OF[kind];
+    if (struck) this.effects?.impact(struck, at);
   }
 
   /** An element appears at `at` and fades out over `FLASH_SECONDS` (Elemental Storm). Only the three elements have a picture. */

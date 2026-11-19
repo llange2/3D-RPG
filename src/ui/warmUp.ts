@@ -6,6 +6,21 @@ import { preloadSpellIcons, spellPlate } from "./spellIcons";
 
 let kept: HTMLElement | null = null;
 
+/** The arrows of the smithy's comparison (green: better, red: worse), 59th playtest point 6: they were fetched at the first hover, so the first rows showed no arrow for a moment. */
+export const COMPARE_ARROWS = ["ui/arrow_up.webp", "ui/arrow_down.webp"] as const;
+const arrowImages: HTMLImageElement[] = [];
+
+/** Starts loading and decoding the comparison arrows (at start-up, and again, harmlessly, when the smithy opens). */
+export function preloadCompareArrows(): void {
+  if (arrowImages.length > 0) return;
+  for (const file of COMPARE_ARROWS) {
+    const img = new Image();
+    img.src = assetPath(file);
+    void img.decode().catch(() => undefined);
+    arrowImages.push(img);
+  }
+}
+
 /** The four faces the style sheet imports (`@fontsource`): the heads in Cinzel, the text in Almendra, regular and bold. */
 const FONTS: readonly (readonly [weight: number, family: string])[] = [
   [500, "Cinzel"],
@@ -48,6 +63,8 @@ export async function keepSpellArtWarm(): Promise<void> {
   const row = h("div", { style: "display:flex;gap:2px;width:640px" });
   for (const effect of AVATAR_EFFECTS) row.append(h("img", { src: assetPath(effectFile(effect)), alt: "", style: "width:26px;height:26px;flex:none" }));
   parts.push(row);
+  preloadCompareArrows();
+  for (const file of COMPARE_ARROWS) row.append(h("img", { src: assetPath(file), alt: "", style: "width:26px;height:26px;flex:none" }));
   // a line of text in each face: a face that no visible text uses can be dropped, and the text then shows in the stand-in font until it is fetched again
   for (const [weight, family] of FONTS) parts.push(h("span", { text: FONT_SAMPLE, style: `font:${weight} 16px "${family}", Georgia, serif;white-space:nowrap;display:block` }));
   const holder = h("div", { class: "art-warm" }, ...parts);

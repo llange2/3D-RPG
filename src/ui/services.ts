@@ -22,6 +22,7 @@ import { stopTownScene, townArt, type SceneName } from "./townScenes";
 import { thousands } from "../core/format";
 import { itemIcon } from "./itemIcons";
 import { openRoster } from "./roster";
+import { preloadCompareArrows } from "./warmUp";
 import type { UI } from "./ui";
 
 export interface ServiceContext {
@@ -76,6 +77,8 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
     // bug_fix_71: the smithy shows the four heroes under its picture while the pointer rests on an item: a green arrow when the item is better than what the hero wears, a red one when
     // it is worse, nothing when some values rise and others fall, a greyed out portrait when the hero cannot put it on. The strip keeps its height when nothing is hovered (no jumping).
     const cmp = kind === "smith" ? h("div", { class: "cmp-strip" }) : null;
+    // (the arrows are fetched and decoded as the smithy opens, not at the first hover)
+    if (cmp) preloadCompareArrows();
     let hovered: Item | null = null;
     let ctrlHeld = false;
     const showCompare = () => {
@@ -84,7 +87,10 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       cmp.classList.toggle("on", hovered !== null);
       for (const c of party.characters) {
         const verdict = hovered ? verdictFor(c, hovered, party.talents, ctrlHeld) : "same";
-        const title = verdict === "cannot" ? `${c.name} (${c.classType}) cannot put this on.` : verdict === "better" ? `${c.name}: better than what is worn` : verdict === "worse" ? `${c.name}: worse than what is worn` : c.name;
+        const scroll = hovered?.type === "spell" ? SPELLS[hovered.spellId] : undefined;
+        const title = scroll
+          ? verdict === "better" ? `${c.name} can learn this now.` : verdict === "same" ? `${c.name} needs level ${scroll.level} to learn this.` : learnBlock(c, scroll.id) === "known" ? `${c.name} already knows this.` : `A ${c.classType} cannot learn this.`
+          : verdict === "cannot" ? `${c.name} (${c.classType}) cannot put this on.` : verdict === "better" ? `${c.name}: better than what is worn` : verdict === "worse" ? `${c.name}: worse than what is worn` : c.name;
         cmp.append(h("div", { class: `cmp-hero ${verdict}`, title }, portraitImage(c), verdict === "better" || verdict === "worse" ? h("img", { class: "cmp-arrow", src: assetPath(verdict === "better" ? "ui/arrow_up.webp" : "ui/arrow_down.webp"), alt: verdict === "better" ? "better" : "worse" }) : null));
       }
     };

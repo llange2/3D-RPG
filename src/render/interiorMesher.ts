@@ -50,6 +50,8 @@ export function wallHeightOf(map: InteriorMap): number {
  */
 export const TOWER_CEILING_DROP = 0.3;
 export const ceilingDropOf = (map: InteriorMap): number => (map.dungeon?.tower ? TOWER_CEILING_DROP : 0);
+/** The height of the ceiling's underside: what hangs from it (the lantern, 59th playtest point 3) reaches up to it. */
+export const ceilingHeightOf = (map: InteriorMap): number => wallHeightOf(map) - ceilingDropOf(map);
 
 /** A wall face that a 3D wall piece is drawn in front of: the cell it belongs to, the side the wall lies on and the model. */
 export interface WallPanel {
