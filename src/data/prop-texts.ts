@@ -118,6 +118,17 @@ export const BARREL_EMPTY: readonly string[] = [
   "The barrel holds a single wet sock. You leave it where it is.",
   "Empty. Someone has written \"Not here either\" on the bottom.",
 ];
+const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"] as const;
+
+/**
+ * What Seth Squirm says about his machines (59th playtest, point 5). A coin is worth `points` attribute points, and that depends on the size of the world (`coinPoints`: a small world
+ * has fewer containers, so its coins carry more), so the line is made when he is spoken to, with the points of this game.
+ */
+export function sethLine(points: number): string {
+  const amount = NUMBER_WORDS[points] ?? String(points);
+  return `Seth Squirm grins at you. "Psst! The statues in this room are machines. Put a Quatloo coin in the slot of one and it makes you stronger, in whatever it is the master of: one coin buys ${amount} point${points === 1 ? "" : "s"}. The coins lie hidden in the chests of the dungeons, caves and castles of the first three levels. Read what each statue says."`;
+}
+
 export const BARREL_COINS: readonly string[] = [
   "Under a layer of apples you find a few coins.",
   "At the bottom of the barrel lies a forgotten purse.",

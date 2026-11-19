@@ -3,7 +3,7 @@
  * the party enters the place, is set down on each cell given and looks the way given.
  *
  * Usage: GAME_URL=http://localhost:<port>/ npx tsx tools/dev/shot-place.ts <folder> <seed> <place name> <flat|floor|full> <x,y,F> [<x,y,F> ...]
- * (the world is the default size with the default number of dungeons, like `?size=default&dungeons=default`; the file is `<name>-<env>-<x>_<y>_<F>.png`)
+ * (the world is the default size (`SIZE=small|large|huge` changes it) with the default number of dungeons, like `?size=default&dungeons=default`; the file is `<name>-<env>-<x>_<y>_<F>.png`)
  */
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -15,7 +15,8 @@ const [outDir = "place-shots", seed = "birch-reach-493", name = "Tower of Elvaa"
 mkdirSync(outDir, { recursive: true });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const world = new World(seed, "default", (process.env.DUNGEONS ?? "default") as never);
+const size = process.env.SIZE ?? "default";
+const world = new World(seed, size as never, (process.env.DUNGEONS ?? "default") as never);
 const poi = world.allPois().find((p) => p.name.toLowerCase() === name.toLowerCase() || p.id === name);
 if (!poi) throw new Error(`no place named ${name}`);
 
@@ -34,7 +35,7 @@ try {
     if ((m.type() === "error" || m.type() === "warn") && !/403|Failed to load resource/.test(m.text())) problems.push(`[console ${m.type()}] ${m.text().slice(0, 300)}`);
   });
   await page.evaluateOnNewDocument((v: string) => localStorage.setItem("mm3-seed-rpg:settings:v1", v), JSON.stringify({ environment }));
-  await page.goto(`${base}?autostart=1&seed=${seed}&size=default&dungeons=${process.env.DUNGEONS ?? "default"}&outside=1`, { waitUntil: "load", timeout: 60000 });
+  await page.goto(`${base}?autostart=1&seed=${seed}&size=${size}&dungeons=${process.env.DUNGEONS ?? "default"}&outside=1`, { waitUntil: "load", timeout: 60000 });
   await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
   await sleep(5000);
   await page.evaluate(`(async () => { await __game.enter(${JSON.stringify(poi.id)}); })()`);

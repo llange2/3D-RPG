@@ -91,6 +91,10 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   const portraits = await listFiles(TEX, (n) => /^character\d+.*\.(png|jpg)$/.test(n));
   await pool(portraits, 8, async (n) => add("icons portraits", await toWebp(join(TEX, n), join(OUT, "icons", "portraits", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 192, 85)));
 
+  // portraits the old game lacks, painted by the user (`sources/portraits`, same name as the state picture): the dwarf had no `character17_Crazy`
+  const extraPortraits = await listFiles(join(SOURCES, "portraits"), (n) => /^character\d+.*\.(png|jpg)$/.test(n));
+  await pool(extraPortraits, 4, async (n) => add("icons portraits", await toWebp(join(SOURCES, "portraits", n), join(OUT, "icons", "portraits", `${n.replace(/\.(png|jpg)$/, "")}.webp`), 192, 85)));
+
   // and every hero's portraits in all their states become one sheet each (see build-portrait-sheets.ts)
   add("icons portraits", (await buildPortraitSheets()).bytes);
 

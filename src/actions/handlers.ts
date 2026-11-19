@@ -1,7 +1,7 @@
 import { thousands } from "../core/format";
 import { LAYER, rngFor, type Rng, type SeedState } from "../core/rng";
 import { loreLine } from "../data/lore";
-import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, emptyContainerLine, propLine } from "../data/prop-texts";
+import { BARREL_COINS, BARREL_EMPTY, BOOKSHELF_EMPTY, BOOKSHELF_FOUND, emptyContainerLine, propLine, sethLine } from "../data/prop-texts";
 import { RAT_TRAP, SEARCHABLE_DECOR, dodgeChance, trapDamageFor, ratHit, ratMiss, ratOpening, trapHit, trapMiss, trapOpening, trapProtected, trapShrugged, type ChestTrapElement, type TrapHero } from "../data/chest-traps";
 import { isBookshelf } from "../data/spell-loot";
 import { ITEM_RULES } from "../data/item-rules";
@@ -896,6 +896,8 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
     case "lore":
       // the computers, the broken crystals and the console of the spaceship know what the party has done in it
       if (p.terminal === "status" || p.terminal === "crystal" || p.terminal === "console") return shipTerminal(action, ctx);
+      // Seth Squirm names what a coin is worth in this world (the factor of its size)
+      if (p.seth === true) return { effects: [{ type: "text", text: sethLine(coinPoints(ctx.scale)) }], consumed: false };
       // a quest's hint carries its own words; the plain ones are lines of the old game's pool
       effects.push({ type: "text", text: typeof p.text === "string" ? p.text : loreLine(String(p.pool ?? "dungeon"), Number(p.line ?? 0)) });
       return { effects, consumed: false };
