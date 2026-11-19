@@ -26,7 +26,7 @@ const MACHINES = [
 
 /** The persona of Seth Squirm and the lines he speaks. */
 export const SETH = 90;
-const SETH_TEXT = "Seth Squirm grins at you. \"Psst! The statues in this room are machines. Put a Quatloo coin in the slot of one and it makes you stronger, in whatever it is the master of: one coin buys three points. The coins lie hidden in the chests of the dungeons, caves and castles of the first three levels. Read what each statue says.\"";
+// (his words come from `sethLine` when he is spoken to: the points of a coin depend on the size of the world)
 
 /** The statue that stands for the machines in a world: one of three, by the seed of the world. */
 export const machineItem = (rootSeed: SeedState): number => [29, 33, 34][new Rng(derive(rootSeed, "machine-statue")).int(3)]!;
@@ -81,7 +81,7 @@ export function placeMachines(env: QuestEnv): void {
     taken.add(key(c.x, c.y));
     env.placeEnd(make(c.x, c.y));
   };
-  put((x, y) => ({ uid: env.uid("seth"), kind: "lore", x, y, params: { pool: "dungeon", line: 0, persona: SETH, text: SETH_TEXT } }));
+  put((x, y) => ({ uid: env.uid("seth"), kind: "lore", x, y, params: { pool: "dungeon", line: 0, persona: SETH, seth: true } }));
   for (const m of MACHINES) {
     put((x, y) => ({ uid: env.uid("machine"), kind: "machine", x, y, params: { item, attr: m.attr, text: `The plaque at the statue reads: 'I am ${m.name}, ${m.title}. For a coin I will improve your ${m.word}.'` } }));
   }

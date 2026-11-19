@@ -116,8 +116,8 @@ const PORTRAIT_SUFFIX: Partial<Record<Condition, string>> = {
 };
 
 /**
- * A portrait picture that falls back to the hero's plain portrait when the file of the condition is missing (the old game has
- * no `character17_Crazy`, for one).
+ * A portrait picture that falls back to the hero's plain portrait when the file of the condition is missing (a safety net:
+ * every hero has all states since the dwarf's `character17_Crazy` was added).
  */
 export function portraitImage(c: Pick<Character, "avatar" | "conditions" | "name">, className = "portrait"): HTMLImageElement {
   const file = portraitOf(c);

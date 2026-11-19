@@ -163,7 +163,7 @@ describe("portraits follow the condition", () => {
 
   it("names pictures that exist for every hero and every condition", () => {
     if (!existsSync(PORTRAITS)) return;
-    // the old game itself has no crazy picture for the fifth hero; the screen falls back to the plain portrait (`portraitImage`)
+    // (the old game had no crazy picture for the dwarf, `character17`; the user painted one for the 60th playtest, `tools/assets/sources/portraits`, so nothing is missing now)
     const missing: string[] = [];
     for (let n = 1; n <= 22; n++) {
       const avatar = `character${String(n).padStart(2, "0")}`;
@@ -172,7 +172,7 @@ describe("portraits follow the condition", () => {
         if (!existsSync(join(PORTRAITS, `${file}.webp`))) missing.push(file);
       }
     }
-    expect([...new Set(missing)]).toEqual(["character17_Crazy"]);
+    expect([...new Set(missing)]).toEqual([]);
     for (let n = 1; n <= 22; n++) expect(existsSync(join(PORTRAITS, `character${String(n).padStart(2, "0")}.webp`))).toBe(true);
   });
 });

@@ -5,7 +5,7 @@
  * cuts them into pictures and shows every state at once.
  *
  * Frame order: the plain portrait, then `STATES` in this order; the dead and the rotten have one picture for everybody (`character00_Dead`, `character00_Rotten`)
- * and are in every sheet. A state a hero has no picture for (the old game has no `character17_Crazy`) is empty: the register names the frames that exist.
+ * and are in every sheet. A state a hero has no picture for is empty (`character17_Crazy` came from the user, `sources/portraits`): the register names the frames that exist.
  */
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

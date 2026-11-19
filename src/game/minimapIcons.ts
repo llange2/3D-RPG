@@ -211,6 +211,17 @@ export class MinimapIcons {
     ctx.globalAlpha = old;
   }
 
+  /**
+   * The light veil over a water tile that makes it shallow water, on the same whole pixels as the tile under it (60th playtest, point 2): at a fractional position the veil's edges are
+   * blended by how much of the pixel they cover, and zoomed out those half-veiled pixels between two cells were a grid of darker lines over all the shallow water.
+   */
+  drawVeil(ctx: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    ctx.fillStyle = "rgba(255,255,255,0.32)";
+    ctx.fillRect(x0, y0, Math.ceil(x + w) - x0, Math.ceil(y + w) - y0);
+  }
+
   /** Draws a painted tile of a place (or the question mark of an event) on `ground` into a rectangle; a place of 2 x 2 tiles is one symbol over four. */
   drawPlace(ctx: CanvasRenderingContext2D, name: PlaceName, ground: PlaceGround, x: number, y: number, w: number, h = w, dimmed = false): void {
     const at = this.source(`${name}:${ground}`);

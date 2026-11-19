@@ -58,6 +58,12 @@ export function faceOpenYaw(map: InteriorMap, sets: FacingSets, a: ActionInstanc
   // the back goes to a real wall, not to a neighbouring statue or chest: the chest of the Vault of Corthea (85/31) sat with its side to the wall (36th playtest, point 21)
   const wallBehind = choices.filter(([, back]) => wallAt(back));
   if (wallBehind.length > 0) choices = wallBehind;
+  else {
+    // 60th playtest, point 1 (Underhalls of Yarula 41/40): the empty cell in front of a statue at the wall was taken by a beam, so it looked along the wall and at the next one; a wall behind with a
+    // cell in front that has an object on it (still floor) is better than the side to the wall, so the statue looks into the room
+    const flush = BEARINGS.filter(([front, back]) => wallAt(back) && floorCell(a.x + FACING_DELTA[front].dx, a.y + FACING_DELTA[front].dy));
+    if (flush.length > 0) choices = flush;
+  }
   if (choices.length > 1) {
     // a corner, a corridor: it looks along the longer way and turns its back to the nearer wall
     const score = ([front, back]: readonly [Facing, Facing, number]) => run(front) - run(back);

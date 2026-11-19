@@ -215,6 +215,9 @@ html.ending-on #game-cursor { display: none; }
 .service .svc-art { min-height: 0; display: flex; flex-direction: column; gap: 8px; align-self: start; }
 /* contain: the picture is shown whole, never cropped; its height follows the width and never exceeds the window */
 .service .svc-art img, .service .svc-art video { display: block; width: 100%; height: auto; max-height: calc(92vh - 130px); object-fit: contain; background: #0c0805; border: 2px solid var(--gold-dim); border-radius: 8px; }
+/* the game's clips (town services, Capybara) are never put on a hardware overlay (59th playtest follow-up, point 3): when Chrome promotes a video to an overlay plane and takes it away again
+   as the tooltip or the pointer moves over it, the video is a hole through which the world behind the window shows. Any filter keeps it in the normal compositing path (the filter does not change the picture). */
+.service .svc-art video, video.mascot-pic, .card video.portrait { filter: saturate(1.001); }
 /* smithy (bug_fix_71): the four heroes under the picture while the pointer is on an item; the strip keeps its place when nothing is hovered */
 .service .cmp-strip { display: flex; justify-content: center; gap: 10px; visibility: hidden; margin-top: 6px; }
 .service .cmp-strip.on { visibility: visible; }

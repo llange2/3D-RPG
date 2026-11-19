@@ -145,8 +145,7 @@ function drawOverworldTile(ctx: CanvasRenderingContext2D, icons: MinimapIcons, t
       return;
     case GROUND.SHALLOW:
       icons.drawSymbol(ctx, "water", x, y, w);
-      ctx.fillStyle = "rgba(255,255,255,0.32)";
-      ctx.fillRect(x, y, w, w);
+      icons.drawVeil(ctx, x, y, w);
       return;
     case GROUND.MOUNTAIN:
       icons.drawGround(ctx, ground, "mountain", x, y, w);
