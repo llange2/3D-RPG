@@ -218,8 +218,12 @@ export class MinimapIcons {
   drawVeil(ctx: CanvasRenderingContext2D, x: number, y: number, w: number): void {
     const x0 = Math.floor(x);
     const y0 = Math.floor(y);
+    const side = Math.ceil(x + w) - x0;
+    const sideY = Math.ceil(y + w) - y0;
+    // the dark edge of the tile (3 of its 48 px) stays black: the veil lies on the inside only (62nd playtest, point 2: it turned the lines of the shallow water light); a cell that is drawn without the edge is veiled whole
+    const e = this.trims(w) ? 0 : Math.max(1, Math.round((3 * side) / 48));
     ctx.fillStyle = "rgba(255,255,255,0.32)";
-    ctx.fillRect(x0, y0, Math.ceil(x + w) - x0, Math.ceil(y + w) - y0);
+    ctx.fillRect(x0 + e, y0 + e, side - 2 * e, sideY - 2 * e);
   }
 
   /** Draws a painted tile of a place (or the question mark of an event) on `ground` into a rectangle; a place of 2 x 2 tiles is one symbol over four. */

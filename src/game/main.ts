@@ -45,6 +45,11 @@ async function main(): Promise<void> {
   document.body.appendChild(canvas);
 
   const game = await Game.create(canvas, bootProgress);
+  // the dev server reloads the page when a file changes (a pull, a job saving) or when it comes back after a restart: the game in progress is saved first and continues after it
+  if (import.meta.hot) {
+    import.meta.hot.on("vite:beforeFullReload", () => game.prepareReload());
+    import.meta.hot.on("vite:ws:disconnect", () => game.prepareReload());
+  }
   const overlay = document.createElement("pre");
   overlay.style.cssText = "position:fixed;left:8px;bottom:8px;margin:0;padding:6px 8px;background:#000a;color:#cfe;font:12px/1.35 monospace;pointer-events:none;white-space:pre;z-index:50";
   if (params.get("debug") === "1") {

@@ -555,7 +555,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
         } else if (dt) {
           const pool = themeMonsters(dt, tier);
           for (let m = 0; m < group; m++) monsterIds.push(pool[local.int(pool.length)]!);
-          if (boss) monsterIds[0] = themeBoss(dt, Math.min(5, tier));
+          // (the guard of the deepest room is the strongest monster of the place's own level; only the end boss of a quest may be a level above)
+          if (boss) monsterIds[0] = themeBoss(dt, Math.min(5, tier), false);
         } else for (let m = 0; m < group; m++) monsterIds.push(pickMonsterWeighted(local, map.theme.monsterThemes, tier).id);
         if (boss && !dt) {
           // the boss is one step above the rest of the place (but not above tier 2 on the first tier, so a new party can win)

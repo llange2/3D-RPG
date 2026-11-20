@@ -5509,12 +5509,19 @@ export class Game {
 
   /** Saves the game, marks the reload as a continuation and reloads the page (after a change that the loaded textures cannot follow). */
   private reloadPage(): boolean {
-    if (this.mode !== "title") {
-      this.save("auto");
-      markResume(kindOfState(this.state));
-    }
+    this.prepareReload();
     location.reload();
     return true;
+  }
+
+  /**
+   * The page is about to be reloaded by someone else (the dev server saw a changed file, or came back after a restart: the 62nd playtest's game "just loaded again" in the middle of play):
+   * the game is autosaved and the reload marked, so that the next load continues where it was instead of showing the title.
+   */
+  prepareReload(): void {
+    if (this.mode === "title") return;
+    this.save("auto");
+    markResume(kindOfState(this.state));
   }
 
   /**

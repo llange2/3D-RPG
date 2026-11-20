@@ -182,5 +182,6 @@
  * 75 = the 60th playtest, point 5: Seth Squirm's action carries `seth: true` instead of a fixed text (he names what a coin is worth in this world when he is spoken to), the statues of the machines face into the room (point 1).
  * 76 = the 61st playtest, point 3: the quartermaster of the town of level 3 always has a place (a street with two free cells beside it first, then one, then none: Silvamere of a small world had no
  * such street and no quartermaster), which moves the objects of that town.
+ * 77 = the 62nd playtest, point 6: the guard of the deepest room is never above the level of its place (`themeBoss(…, stretch false)`: a Vulture Roc of level 5 in a level 4 dungeon).
  */
-export const GEN_VERSION = 76;
+export const GEN_VERSION = 77;
