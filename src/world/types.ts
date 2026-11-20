@@ -110,6 +110,11 @@ export interface Poi {
   /** `rx` is the index of the island the place stands on, `ry` is 0 (what was a region of the endless world is an island now). */
   region: { rx: number; ry: number };
   anchor: boolean;
+  /**
+   * A cave or dungeon that stands closer to another than the usual distance (62nd playtest, point 5: the islands of levels 1 to 4 were full at six tiles apart): never a castle, a pyramid or a tower,
+   * and where a neighbour is within the usual distance a wall of mountains closes its back (`World.separators`), so that the way between the two is longer than the distance.
+   */
+  tight?: boolean;
   /** Difficulty tier 1..5: the level of the island it stands on. */
   tier: number;
   /** Biome at the centre, used for interior themes. */
