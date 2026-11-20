@@ -1169,7 +1169,8 @@ export class Game {
         }
       }
       const p = this.worldPos(a.x, a.y);
-      void this.monsters.add(`npc:${a.uid}`, personaModelId(persona), p.x, p.y, p.z, { yaw: personaYaw(persona, bearing), idle: PERSONAS[persona]!.idle });
+      // (61st playtest, point 1: the floor of a town lies on its 3D plates, a hand over the flat quad; the person stands on them)
+      void this.monsters.add(`npc:${a.uid}`, personaModelId(persona), p.x, p.y + this.interiorView.floorLift, p.z, { yaw: personaYaw(persona, bearing), idle: PERSONAS[persona]!.idle });
     }
   }
 

@@ -411,21 +411,27 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     // the quartermaster (level 3): his two stacks of equipment beside him, which belong to him
     if (map.townHints.quartermaster) {
       const around = (a: { x: number; y: number }): { x: number; y: number }[] => (Object.values(FACING_DELTA) as { dx: number; dy: number }[]).map((d) => ({ x: a.x + d.dx, y: a.y + d.dy })).filter((c) => map.cells[idx(c.x, c.y)] === CELL.FLOOR);
-      for (const spot of streets) {
-        if (!fits(spot)) continue;
-        blockedCells.add(idx(spot.x, spot.y));
-        const stacks: { x: number; y: number }[] = [];
-        for (const c of around(spot)) {
-          if (stacks.length < 2 && fits(c)) {
-            stacks.push(c);
-            blockedCells.add(idx(c.x, c.y));
+      // 61st playtest, point 3: the quartermaster must stand in his town (Silvamere, a small world, had no street with two free cells beside a free cell: none of him). The stacks are the
+      // trimmings: first the spot with both, then with one, last with none
+      let placed = false;
+      for (const wanted of [2, 1, 0]) {
+        for (const spot of streets) {
+          if (placed) break;
+          if (!fits(spot)) continue;
+          blockedCells.add(idx(spot.x, spot.y));
+          const stacks: { x: number; y: number }[] = [];
+          for (const c of around(spot)) {
+            if (stacks.length < wanted && fits(c)) {
+              stacks.push(c);
+              blockedCells.add(idx(c.x, c.y));
+            }
           }
+          for (const c of [spot, ...stacks]) blockedCells.delete(idx(c.x, c.y));
+          if (stacks.length < wanted) continue;
+          put({ uid: `${map.key}#quartermaster:0`, kind: "quartermaster", x: spot.x, y: spot.y, params: { persona: QUARTERMASTER_PERSONA } });
+          stacks.forEach((c, n) => put({ uid: `${map.key}#quartermaster-goods:${n}`, kind: "decor", x: c.x, y: c.y, params: { item: STORAGE_EQUIPMENT, text: QUARTERMASTER_GOODS } }));
+          placed = true;
         }
-        for (const c of [spot, ...stacks]) blockedCells.delete(idx(c.x, c.y));
-        if (stacks.length < 2) continue;
-        put({ uid: `${map.key}#quartermaster:0`, kind: "quartermaster", x: spot.x, y: spot.y, params: { persona: QUARTERMASTER_PERSONA } });
-        stacks.forEach((c, n) => put({ uid: `${map.key}#quartermaster-goods:${n}`, kind: "decor", x: c.x, y: c.y, params: { item: STORAGE_EQUIPMENT, text: QUARTERMASTER_GOODS } }));
-        break;
       }
     }
   }
