@@ -104,6 +104,9 @@ function bossPair(rng: Rng, tier: number): { population: number; boss: number } 
   return pool[rng.int(pool.length)]!;
 }
 
+/** A tower (two tiles wide) needs this much room (Chebyshev) to the tight places that stand closer to others than the usual distance. */
+const TOWER_ROOM = 6;
+
 /** Thinned-out worlds keep at least this many ordinary dungeons (no caves) on a level: key cards, orbs and locks need dungeons. */
 const KEEP_DUNGEONS_PER_LEVEL = 2;
 /** An island keeps at least this many places (towns included): below it the roads of the island fall apart. */
@@ -111,14 +114,13 @@ const KEEP_PLACES_PER_ISLAND = 2;
 
 /**
  * The places of a world with fewer caves and dungeons (6. 11. 2026, "Dungeons" on the title screen). `share` of the ordinary ones of each level stay (rounded), chosen by the
- * seed; the towns, the castles and the five pyramids (which are `pyramids`, picked exactly as `planPlaces` picks them, and handed to it) are never touched, so a world with fewer
+ * seed; the towns, the castles and the five pyramids (`pyramids`, chosen by `World.planPyramids` on the islands of level 5 before places are added or dropped) are never touched, so a world with fewer
  * dungeons has the same castles and pyramids. A level keeps at least `KEEP_DUNGEONS_PER_LEVEL` dungeons and an island `KEEP_PLACES_PER_ISLAND` places, whatever the share says.
  */
-export function thinOutPlaces(rootSeed: SeedState, placed: readonly (readonly Poi[])[], share: number): { placed: Poi[][]; pyramids: Poi[] } {
+export function thinOutPlaces(rootSeed: SeedState, placed: readonly (readonly Poi[])[], share: number, pyramids: readonly Poi[]): { placed: Poi[][] } {
   const isPlace = (p: Poi) => p.kind === "dungeon" || p.kind === "cave";
   const places = placed.flat().filter(isPlace);
-  const pyramids = pickPyramids(rngFor(rootSeed, LAYER.INTERIOR, "quest-plan"), places.filter(isDungeon));
-  if (share >= 1) return { placed: placed.map((list) => [...list]), pyramids };
+  if (share >= 1) return { placed: placed.map((list) => [...list]) };
   const rng = rngFor(rootSeed, LAYER.POI, "thin-out");
   const pyramidIds = new Set(pyramids.map((p) => p.id));
   const ordinary = places.filter((p) => !pyramidIds.has(p.id));
@@ -141,7 +143,7 @@ export function thinOutPlaces(rootSeed: SeedState, placed: readonly (readonly Po
       toDrop--;
     }
   }
-  return { placed: placed.map((list) => list.filter((p) => !dropped.has(p.id))), pyramids };
+  return { placed: placed.map((list) => list.filter((p) => !dropped.has(p.id))) };
 }
 
 export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly Poi[], castleWords: Map<string, number> = new Map(), castleSpells: Map<string, number[]> = new Map(), pickedPyramids?: readonly Poi[]): Map<string, DungeonRef> {
@@ -201,7 +203,9 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
   });
 
   // 4. the orbs: 21 on the level 5 dungeons (the level 4 ones if the world has no level 5), as evenly as the number allows
-  const orbHolders = dungeons.filter((p) => p.tier >= 5).length > 0 ? dungeons.filter((p) => p.tier >= 5) : dungeons.filter((p) => p.tier >= 4);
+  // (a room holds up to seven orbs: where level 5 has fewer than four dungeons the nearest ones of level 4 hold some too)
+  const deepest = dungeons.filter((p) => p.tier >= 5);
+  const orbHolders = deepest.length >= 4 ? deepest : [...deepest, ...dungeons.filter((p) => p.tier === 4).sort((a, b) => a.id.localeCompare(b.id))].slice(0, Math.max(4, deepest.length));
   const orbs = new Map<string, number>();
   const orbOrder = rng.shuffle([...orbHolders]);
   orbOrder.forEach((p, i) => orbs.set(p.id, Math.floor(DUNGEON_ORBS / orbOrder.length) + (i < DUNGEON_ORBS % orbOrder.length ? 1 : 0)));
@@ -247,8 +251,9 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
       continue;
     }
     const quest = decks[kind].draw();
-    // (no tower on a lava island: its only ways are streams of lava, and a tower has a way of plain ground)
-    const layouts = layoutsFor(quest, kind).filter((l) => !(l === "dungeon_5" && poi.biome === BIOME.LAVA));
+    // (no tower on a lava island: its only ways are streams of lava, and a tower has a way of plain ground; none on a tight place either: it has no room for the second tile of the footprint)
+    const crowded = poi.tight || pois.some((q) => q.tight && Math.max(Math.abs(q.x - poi.x), Math.abs(q.y - poi.y)) < TOWER_ROOM);
+    const layouts = layoutsFor(quest, kind).filter((l) => !(l === "dungeon_5" && (poi.biome === BIOME.LAVA || crowded)));
     const layout = rngPick(look, layouts);
     // 0 to 4 mini quests by the size of the world (fewer where the list of riddles would run out); every riddle occurs once in a world
     const miniIds = Array.from({ length: miniCounts.get(poi.id) ?? 0 }, () => takeRiddle(RIDDLE_NUMBERS));

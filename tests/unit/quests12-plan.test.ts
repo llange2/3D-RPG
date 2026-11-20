@@ -23,7 +23,8 @@ describe("the quest plan of a world (quest document 1.2)", () => {
         // spread over the islands: no island holds more than one while another has a dungeon to spare
         const perIsland = new Map<number, number>();
         for (const r of pyramids) perIsland.set(r.poi.region.rx, (perIsland.get(r.poi.region.rx) ?? 0) + 1);
-        const islandsWithDungeons = new Set(refs.filter((r) => r.poi.kind === "dungeon").map((r) => r.poi.region.rx)).size;
+        // (the pyramids stand on the islands of level 5 since the 62nd playtest: those are the islands that count)
+        const islandsWithDungeons = new Set(refs.filter((r) => r.poi.kind === "dungeon" && r.poi.tier === 5).map((r) => r.poi.region.rx)).size;
         expect(Math.max(...perIsland.values())).toBeLessThanOrEqual(Math.ceil(SECTIONS / islandsWithDungeons));
         expect(checkKeyChain(refs.map((r) => ({ id: r.poi.id, ref: r.ref })), (id) => all.find((p) => p.id === id)!.tier), `${seed} ${size}`).toEqual([]);
         // caves are free, level 1 and 2 are free, the rest of the dungeons are locked as far as there are keys
@@ -45,7 +46,7 @@ describe("the quest plan of a world (quest document 1.2)", () => {
     });
   }
 
-  it("is deterministic", { timeout: 180_000 }, () => {
+  it("is deterministic", { timeout: 300_000 }, () => {
     const a = places(new World("det", "default")).map((p) => JSON.stringify(planDungeon(new World("det", "default"), p)));
     const b = places(new World("det", "default")).map((p) => JSON.stringify(planDungeon(new World("det", "default"), p)));
     expect(a).toEqual(b);

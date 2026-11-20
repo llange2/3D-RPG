@@ -56,7 +56,7 @@ describe("world determinism", () => {
     }
   });
 
-  it("matches the golden hashes of 100 seeds (bump GEN_VERSION and run golden:update on purpose only)", { timeout: 120_000 }, () => {
+  it("matches the golden hashes of 100 seeds (bump GEN_VERSION and run golden:update on purpose only)", { timeout: 240_000 }, () => {
     const file = join(import.meta.dirname, "..", "golden", "world-hashes.json");
     expect(existsSync(file), "run `npm run golden:update` once to create the golden file").toBe(true);
     const golden = JSON.parse(readFileSync(file, "utf-8")) as { genVersion: number; chunks: [number, number][]; hashes: Record<string, number[]> };

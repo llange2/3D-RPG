@@ -47,6 +47,8 @@ try {
           if (n > best.n) best = { n, x, y };
         }
       }
+      // WHOLE=1: the whole world on one picture (the cell count is the width of the world), for the spread of the places
+      if (${process.env.WHOLE ? 1 : 0}) best = { n: 0, x: Math.floor(world.width / 2), y: Math.floor(world.height / 2) };
       const canvas = document.createElement("canvas");
       canvas.width = 640; canvas.height = 640;
       mm.drawOverworldMap(canvas, world, g.state.explored, best.x, best.y, "N", [], ${cells}, true, { x: best.x, y: best.y }, icons);

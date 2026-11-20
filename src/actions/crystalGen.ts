@@ -412,7 +412,18 @@ export function crystalPaths(env: QuestEnv, rng: Rng): QuestResult {
         .map((i) => ({ x: i % W, y: Math.floor(i / W) }))
         .filter((c) => Math.max(Math.abs(c.x - t.spot.x), Math.abs(c.y - t.spot.y)) <= 3 && !sameCell(c, t.spot) && env.free(c.x, c.y))
         .sort((a, b) => Math.max(Math.abs(a.x - t.spot.x), Math.abs(a.y - t.spot.y)) - Math.max(Math.abs(b.x - t.spot.x), Math.abs(b.y - t.spot.y)) || a.y - b.y || a.x - b.x);
-      for (const c of near) if (env.place({ uid: env.uid("rune"), kind: "rune", x: c.x, y: c.y, params: { need: "crystals", item: 73, flag } })) break;
+      const rune = (c: Cell): ActionInstance => ({ uid: env.uid("rune"), kind: "rune", x: c.x, y: c.y, params: { need: "crystals", item: 73, flag } });
+      if (near.some((c) => env.place(rune(c)))) continue;
+      // 62nd playtest: a target at the end of a corridor has no cell near it that is not a passage of one cell, and without the rune the party that has lit the paths could never go in (p:8:0:113 of
+      // the world "alpha", p:4:0:136): a rune does not block, so it may stand in a passage then, on the nearest floor cell that nothing holds
+      const spare = [...reach]
+        .map((i) => ({ x: i % W, y: Math.floor(i / W) }))
+        .filter((c) => Math.max(Math.abs(c.x - t.spot.x), Math.abs(c.y - t.spot.y)) <= 3 && !sameCell(c, t.spot) && Math.max(Math.abs(c.x - map.spawn.x), Math.abs(c.y - map.spawn.y)) > 1)
+        .sort((a, b) => Math.max(Math.abs(a.x - t.spot.x), Math.abs(a.y - t.spot.y)) - Math.max(Math.abs(b.x - t.spot.x), Math.abs(b.y - t.spot.y)) || a.y - b.y || a.x - b.x);
+      // (the cells of the light lines are reserved, and in a corridor they are all there is: a rune on one of them hinders nobody, only a crystal of the solution or another object must not stand there)
+      const taken = new Set([...env.actions.map((a) => idx(a.x, a.y)), ...plan.crystals.map((c) => idx(c.x, c.y))]);
+      const cell = spare.find((c) => !taken.has(idx(c.x, c.y)) && map.cells[idx(c.x, c.y)] === CELL.FLOOR);
+      if (cell) env.actions.push(rune(cell));
     }
   }
   const count = plan.crystals.length;

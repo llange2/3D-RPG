@@ -1,7 +1,7 @@
 import { fbm2, hash2, ONE, permille, valueNoise2 } from "../core/noise";
 import { derive, LAYER, rngFor, seedFromString, type SeedState } from "../core/rng";
 import { ALIGNMENTS, type Alignment } from "../data/castles";
-import { CASTLE_TIERS } from "../data/quest-table";
+import { CASTLE_TIERS, SECTIONS } from "../data/quest-table";
 import { placeName, towerName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { planPlaces, thinOutPlaces } from "../interiors/dungeonPlan";
@@ -141,6 +141,24 @@ const LAND_PER_PLACE = 60;
 /** The same on a lava island. */
 const LAVA_PER_PLACE = 100;
 const MIN_PLACE_DISTANCE = 6;
+/**
+ * The islands of levels 1 to 4 were full at `MIN_PLACE_DISTANCE`, with half of the land left empty (62nd playtest, point 5): after the castles and the pyramids are chosen (they need the
+ * room), caves and dungeons are added at this distance from each other (never closer than `MIN_PLACE_DISTANCE` to a town, a castle or a pyramid), on land with `TIGHT_ROOM` tiles of land
+ * round it (the tongues of land of the coast), and a neighbour within `MIN_PLACE_DISTANCE` gets a wall of mountains between (`separators`).
+ */
+const TIGHT_PLACE_DISTANCE = 4;
+const TIGHT_ROOM = 1;
+/** A tight place clears one tile of plain ground round it, not two: so it may stand one tile from the coast and clears no sea (the tiles of the coast keep the rules of the painted ground). */
+const TIGHT_FLATTEN = 1;
+/** The search for tight places on an island ends after this many tries in a row that found nothing. */
+const TIGHT_MISSES = 150;
+/** A tight place keeps this far (tiles) from the land of any other island. */
+const TIGHT_SEA = 5;
+const TIGHT_AREA_LEVEL_4 = 50;
+/** The orbs lie in the end rooms of at least this many dungeons of level 5 (a room holds up to seven, 23 orbs): caves of level 5 become dungeons where there are fewer. */
+const MIN_ORB_HOLDERS = 4;
+/** The mountain wall of a tight place stands this many tiles from its footprint, just outside the ground it clears (`TIGHT_FLATTEN`), and leaves the side of its door open. */
+const SEPARATOR_DISTANCE = 2;
 /** Distance (Chebyshev) from a town inside which no other place is built. */
 const TOWN_CLEARANCE = 6;
 /** A place keeps this many tiles of land round it (no coast within reach of the cleared ground), so that it stands on the island and not on a spit. */
@@ -263,6 +281,8 @@ export class World {
   /** The spell scrolls that lie in each castle (`planSpellLoot`); the ones of caves and dungeons are part of their `DungeonRef`. */
   private readonly castleSpells = new Map<string, number[]>();
   private poiList: Poi[] = [];
+  /** The tiles of the mountain walls behind the tight places (`separators`), as `y * width + x`. */
+  private separatorTiles = new Set<number>();
   private readonly poiMap = new Map<string, Poi>();
   private readonly flatElevation = new Map<string, number>();
   /** Per chunk (row * chunksAcross + column): the road pieces within reach of it and the places near it, so a tile does not look at all of them. */
@@ -619,6 +639,119 @@ export class World {
     return pois;
   }
 
+  /** A cave that has to be a dungeon (a pyramid or the keeper of orbs needs one): the same place with the name of a dungeon. */
+  private makeDungeon(poi: Poi): void {
+    const nameRng = rngFor(this.seed, LAYER.POI, poi.region.rx, 0, Number(poi.id.split(":")[3]), "name");
+    poi.kind = "dungeon";
+    poi.size = POI_SIZE.dungeon;
+    poi.name = placeName(nameRng, "dungeon");
+  }
+
+  /**
+   * The five pyramids, all on islands of level 5 (62nd playtest, point 5: they stood on islands of level 1 and 4 and were drawn with that level): a dungeon on each of those islands in turn
+   * (a cave of level 5 becomes a dungeon when its turn comes), and only if level 5 has not even that many places, dungeons of the highest levels below. Chosen from the
+   * places of the first round, before the tight ones are added.
+   */
+  private planPyramids(places: readonly Poi[]): Poi[] {
+    const rng = rngFor(this.seed, LAYER.POI, "pyramid-sites");
+    const out: Poi[] = [];
+    // the islands of level 5 in turn, each giving its dungeons first and then its caves (which become dungeons): no island holds a third pyramid while another has a place to spare
+    const byIsland = new Map<number, Poi[]>();
+    for (const p of places.filter((q) => (q.kind === "dungeon" || q.kind === "cave") && q.tier === 5)) byIsland.set(p.region.rx, [...(byIsland.get(p.region.rx) ?? []), p]);
+    const islands = rng.shuffle([...byIsland.keys()].sort((x, y) => x - y));
+    for (const i of islands) {
+      const list = byIsland.get(i)!;
+      byIsland.set(i, [...rng.shuffle(list.filter((p) => p.kind === "dungeon")), ...rng.shuffle(list.filter((p) => p.kind === "cave"))]);
+    }
+    for (let round = 0; out.length < SECTIONS; round++) {
+      let any = false;
+      for (const i of islands) {
+        const p = byIsland.get(i)![round];
+        if (p && out.length < SECTIONS) {
+          if (p.kind === "cave") this.makeDungeon(p);
+          out.push(p);
+          any = true;
+        }
+      }
+      if (!any) break;
+    }
+    // (level 5 with fewer than five places: dungeons of the highest levels below)
+    if (out.length < SECTIONS) {
+      const rest = rng.shuffle(places.filter((p) => p.kind === "dungeon" && !out.includes(p))).sort((x, y) => y.tier - x.tier);
+      for (const p of rest) if (out.length < SECTIONS) out.push(p);
+    }
+    return out;
+  }
+
+  /**
+   * More caves and dungeons on an island that has room left (62nd playtest, point 5): in the gaps between the places of the first round and on the tongues of land of its coast, `TIGHT_PLACE_DISTANCE`
+   * from each other, `MIN_PLACE_DISTANCE` from a town, a castle or a pyramid. Lava islands and islands of level 5 have enough of their own.
+   */
+  private tightPlaces(isl: Island, list: readonly Poi[], pyramids: ReadonlySet<string>): Poi[] {
+    const out = [...list];
+    if (isl.biome === BIOME.LAVA || Math.min(...isl.tiers) >= 5) return out;
+    const box = { x0: isl.x - isl.reach, y0: isl.y - isl.reach, x1: isl.x + isl.reach, y1: isl.y + isl.reach };
+    const fixed = (p: Poi): boolean => p.kind === "town" || p.kind === "castle" || pyramids.has(p.id);
+    // (the islands of level 4 are many and big: one place to `TIGHT_AREA_LEVEL_4` tiles keeps their share of the places near that of the other levels)
+    const cap = Math.min(...isl.tiers) === 4 ? Math.floor(isl.area / TIGHT_AREA_LEVEL_4) : Infinity;
+    const places = (): number => out.filter((p) => p.kind === "dungeon" || p.kind === "cave").length;
+    // (the search ends when it has found nothing for a while: every try costs the ground of nine tiles, and a world has up to forty islands)
+    let misses = 0;
+    for (let attempt = 0; attempt < 400 && misses < TIGHT_MISSES && places() < cap; attempt++) {
+      const rng = rngFor(this.seed, LAYER.POI, isl.index, 0, "tight", attempt);
+      const x = isl.x + rng.range(isl.box.x0, isl.box.x1);
+      const y = isl.y + rng.range(isl.box.y0, isl.box.y1);
+      const pos = this.findLand(isl, x, y, 1, box.x0, box.y0, box.x1, box.y1, TIGHT_ROOM);
+      if (!pos || out.some((p) => Math.max(Math.abs(pos.x - p.x), Math.abs(pos.y - p.y)) < (fixed(p) ? MIN_PLACE_DISTANCE : TIGHT_PLACE_DISTANCE)) || this.nearOtherIsland(isl, pos.x, pos.y)) {
+        misses++;
+        continue;
+      }
+      misses = 0;
+      const poi = this.makePoi(isl, 1000 + attempt, pos.x, pos.y, this.poiKind(rng, isl.biome), false);
+      poi.tight = true;
+      out.push(poi);
+    }
+    return out;
+  }
+
+  /** Is land of another island within `TIGHT_SEA` tiles of (x, y)? A tight place by such a coast would take the deep tile out of the channel (the shore beside a place is shallow). */
+  private nearOtherIsland(isl: Island, x: number, y: number, sea = TIGHT_SEA): boolean {
+    for (const other of this.layout.islands) {
+      if (other === isl) continue;
+      if (Math.abs(wrapDelta(other.x, x, this.width)) > other.reach + sea || Math.abs(wrapDelta(other.y, y, this.height)) > other.reach + sea) continue;
+      for (let dy = -sea; dy <= sea; dy++) {
+        for (let dx = -sea; dx <= sea; dx++) if (fieldAt(other, wrapDelta(other.x, x + dx, this.width), wrapDelta(other.y, y + dy, this.height)) > 0) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * The mountain walls of the tight places that have a neighbour closer than `MIN_PLACE_DISTANCE`: a ring of mountains `SEPARATOR_DISTANCE` tiles from the footprint, open on the side of the door, so that
+   * the way from one to the other leads round the wall (a U of mountains round the place, the way in through the opening). Walls stand only on plain land that no place clears.
+   */
+  private separators(pois: readonly Poi[], roads: readonly RoadSeg[]): Set<number> {
+    const out = new Set<number>();
+    for (const p of pois) {
+      if (!p.tight) continue;
+      if (!pois.some((q) => q !== p && Math.max(Math.abs(q.x - p.x), Math.abs(q.y - p.y)) < MIN_PLACE_DISTANCE)) continue;
+      const b = poiBounds(p);
+      const door = SIDE_DELTA[p.side];
+      const d = SEPARATOR_DISTANCE;
+      for (let y = b.y0 - d; y <= b.y1 + d; y++) {
+        for (let x = b.x0 - d; x <= b.x1 + d; x++) {
+          if (x > b.x0 - d && x < b.x1 + d && y > b.y0 - d && y < b.y1 + d) continue;
+          // (the whole edge of the ring on the side of the door stays open)
+          if ((door.dx > 0 && x === b.x1 + d) || (door.dx < 0 && x === b.x0 - d) || (door.dy > 0 && y === b.y1 + d) || (door.dy < 0 && y === b.y0 - d)) continue;
+          // (no road runs through or along a wall: a stretch of road in the mountains is a pass, and a pass is at most five tiles long)
+          if (roads.some((r) => r.distance(x, y) <= 1)) continue;
+          out.add(this.wrapY(y) * this.width + this.wrapX(x));
+        }
+      }
+    }
+    return out;
+  }
+
   // ---------------------------------------------------------------- roads
 
   private roadSeed(kind: string, a: number, b: number): number {
@@ -921,15 +1054,17 @@ export class World {
     // the quests, keys and orbs are planned for the whole world; the plan says which dungeons are pyramids (they ask for a key card), and those are three tiles wide
     let placed = this.layout.islands.map((isl) => this.placesOf(isl));
     this.planCastles(placed.flat());
-    // fewer caves and dungeons (title screen, "Dungeons"): after the castles are chosen, so that they stand where they stand in a full world; the pyramids are picked before
-    // places are dropped and handed on. A full world takes the plan's own way, untouched.
+    // the pyramids stand on level 5 and, like the castles, on places that have their room: chosen before the tight places are added (62nd playtest, point 5)
+    const pyramids = this.planPyramids(placed.flat());
+    const pyramidIds = new Set(pyramids.map((p) => p.id));
+    placed = placed.map((list, i) => this.tightPlaces(this.layout.islands[i]!, list, pyramidIds));
+    // the orbs of level 5 need dungeons to lie in: where the pyramids took most of them, caves of level 5 are made dungeons
+    const holders = placed.flat().filter((p) => p.kind === "dungeon" && p.tier === 5 && !pyramidIds.has(p.id)).length;
+    const caves = rngFor(this.seed, LAYER.POI, "orb-holders").shuffle(placed.flat().filter((p) => p.kind === "cave" && p.tier === 5));
+    for (let n = holders; n < MIN_ORB_HOLDERS && caves.length > 0; n++) this.makeDungeon(caves.pop()!);
+    // fewer caves and dungeons (title screen, "Dungeons"): after the castles and the pyramids are chosen, so that they stand where they stand in a full world.
     const share = DUNGEON_DENSITIES[this.density].share;
-    let pyramids: Poi[] | undefined;
-    if (share < 1) {
-      const thinned = thinOutPlaces(this.seed, placed, share);
-      placed = thinned.placed;
-      pyramids = thinned.pyramids;
-    }
+    if (share < 1) placed = thinOutPlaces(this.seed, placed, share, pyramids).placed;
     this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords, this.castleSpells, pyramids);
     for (const p of placed.flat()) {
       const ref = this.dungeonRefs.get(p.id);
@@ -960,6 +1095,7 @@ export class World {
       if (from && to) mine.connectors.push(...this.route(from, to, this.roadSeed("B", isl.index, other.index), [...mine.pois, ...theirs.pois]));
     }
     this.poiList = this.plans.flatMap((p) => p.pois);
+    this.separatorTiles = this.separators(this.poiList, this.plans.flatMap((p) => p.connectors));
     for (const p of this.poiList) {
       this.poiMap.set(p.id, p);
       this.flatElevation.set(p.id, Math.min(MOUNTAIN_LEVEL - 600, Math.max(SEA_LEVEL + 600, this.baseTile(this.wrapX(p.x), this.wrapY(p.y)).elevation)));
@@ -1135,7 +1271,7 @@ export class World {
       const b = poiBounds(p);
       // a lava island clears one tile of lava round a place, other islands `FLATTEN` tiles of plain ground
       const lavaRing = p.biome === BIOME.LAVA;
-      const room = lavaRing ? LAVA_RING : FLATTEN;
+      const room = lavaRing ? LAVA_RING : p.tight ? TIGHT_FLATTEN : FLATTEN;
       if (tx < b.x0 - room || tx > b.x1 + room || ty < b.y0 - room || ty > b.y1 + room) continue;
       cleared = true;
       if (ground === GROUND.WATER || ground === GROUND.MOUNTAIN || ground === GROUND.LAVA_POOL || ground === GROUND.SHALLOW) {
@@ -1146,7 +1282,7 @@ export class World {
       biome = p.biome;
       elevation = this.flatElevation.get(p.id)!;
     }
-    if (rock && !cleared) {
+    if ((rock || (ground === GROUND.LAND && this.separatorTiles.has(ty * this.width + tx))) && !cleared) {
       ground = GROUND.MOUNTAIN;
       elevation = MOUNTAIN_LEVEL + 1 + 2000;
       deco = DECO.NONE;

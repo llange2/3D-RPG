@@ -183,5 +183,8 @@
  * 76 = the 61st playtest, point 3: the quartermaster of the town of level 3 always has a place (a street with two free cells beside it first, then one, then none: Silvamere of a small world had no
  * such street and no quartermaster), which moves the objects of that town.
  * 77 = the 62nd playtest, point 6: the guard of the deepest room is never above the level of its place (`themeBoss(…, stretch false)`: a Vulture Roc of level 5 in a level 4 dungeon).
+ * 78 = the 62nd playtest, point 5 (places per level): the five pyramids stand on islands of level 5 only (`World.planPyramids`, caves of level 5 become dungeons where needed); caves and dungeons are added on the
+ * islands of levels 1 to 4 at four tiles from each other and on the tongues of land of the coast (`tightPlaces`, `Poi.tight`: never a castle, a pyramid or a tower), with a wall of mountains behind them where a
+ * neighbour is closer than six tiles (`separators`; they clear one tile round them, `TIGHT_FLATTEN`, and keep five tiles from other islands); the orbs lie in at least four dungeons (some on level 4 where the pyramids took level 5).
  */
-export const GEN_VERSION = 77;
+export const GEN_VERSION = 78;

@@ -8,7 +8,7 @@ import { hash2 } from "../../src/core/noise";
 import { sethLine } from "../../src/data/prop-texts";
 import { MinimapIcons } from "../../src/game/minimapIcons";
 import { generateInterior } from "../../src/interiors";
-import { FACING_DELTA } from "../../src/interiors/types";
+import { CELL, FACING_DELTA } from "../../src/interiors/types";
 import { faceOpenYaw, facingSets } from "../../src/render/facing";
 import { createDefaultParty } from "../../src/sim/party";
 import { World } from "../../src/world/world";
@@ -17,18 +17,31 @@ import { planDungeon } from "../../src/interiors/dungeonPlan";
 /** The 60th playtest: the statues look into the room (point 1), no lines in shallow water on the zoomed-out map (2), the dwarf's Crazy portrait (4), Seth Squirm names the points of a coin (5). */
 
 describe("60th playtest, point 1: a statue at a wall looks into the room, though a beam stands in front of it", () => {
-  it("the statue of the Underhalls of Yarula (41/40, pearl-wood-803, small) has its back to the wall on its west and looks east", { timeout: 120_000 }, () => {
-    const world = new World("pearl-wood-803", "small", "default");
-    const poi = world.allPois().find((p) => p.name === "Underhalls of Yarula")!;
-    const map = generateInterior(world, poi);
-    const content = buildMapContent(world, poi, map);
-    const statue = content.actions.find((a) => a.kind === "lore" && a.x === 41 && a.y === 40 && a.params.item === 28)!;
-    expect(statue).toBeDefined();
-    const sets = facingSets(map, content.actions, new Set());
-    const yaw = faceOpenYaw(map, sets, statue, (hash2(0x51, statue.x, statue.y) >>> 0) >>> 8, false);
-    // yaw is the compass bearing: 90 degrees = east
-    expect(Math.round((yaw * 180) / Math.PI)).toBe(90);
-    expect(FACING_DELTA.E).toEqual({ dx: 1, dy: 0 });
+  // (the places of the world moved with the 62nd playtest, and the Underhalls of Yarula of this seed no longer have the statue at 41/40 that this test was made for: every statue of the world is checked now,
+  // and the ones with their back to a wall, which stand beside something that shuts out the cell in front, are the case of the report)
+  it("every statue of the dungeons of three small worlds that has a wall on one side looks away from it, into the room", { timeout: 240_000 }, () => {
+    const BEARING: Record<number, keyof typeof FACING_DELTA> = { 0: "N", 90: "E", 180: "S", 270: "W" };
+    let checked = 0;
+    for (const [seed, poi, world] of ["alpha", "beta", "gamma"].flatMap((s) => {
+      const w = new World(s, "small", "default");
+      return w.allPois().filter((p) => p.kind === "dungeon" && planDungeon(w, p)?.klass !== "C").map((p) => [s, p, w] as const);
+    })) {
+      const map = generateInterior(world, poi);
+      const content = buildMapContent(world, poi, map);
+      const sets = facingSets(map, content.actions, new Set());
+      const floor = (x: number, y: number) => map.cells[y * map.width + x] === CELL.FLOOR && !sets.wallLike.has(y * map.width + x);
+      for (const statue of content.actions.filter((a) => a.kind === "lore" && a.params.item === 28)) {
+        const walls = (Object.keys(FACING_DELTA) as (keyof typeof FACING_DELTA)[]).filter((f) => !floor(statue.x + FACING_DELTA[f].dx, statue.y + FACING_DELTA[f].dy));
+        if (walls.length !== 1) continue;
+        const yaw = faceOpenYaw(map, sets, statue, (hash2(0x51, statue.x, statue.y) >>> 0) >>> 8, false);
+        const front = BEARING[Math.round((yaw * 180) / Math.PI) % 360]!;
+        // the back is the wall, the front the cell opposite to it
+        expect(FACING_DELTA[front].dx + FACING_DELTA[walls[0]!].dx, `${seed} ${poi.name} ${statue.x}/${statue.y}`).toBe(0);
+        expect(FACING_DELTA[front].dy + FACING_DELTA[walls[0]!].dy, `${seed} ${poi.name} ${statue.x}/${statue.y}`).toBe(0);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });
 
