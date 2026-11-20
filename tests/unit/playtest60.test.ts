@@ -38,10 +38,16 @@ describe("60th playtest, point 2: the veil of shallow water lies on the pixels o
     const ctx = { fillStyle: "", fillRect: (...a: number[]) => fills.push(a) } as unknown as CanvasRenderingContext2D;
     const icons = Object.create(MinimapIcons.prototype) as MinimapIcons;
     icons.drawVeil(ctx, 17.3, 34.6, 18);
-    expect(fills).toEqual([[17, 34, 19, 19]]);
+    // (62nd playtest, point 2: the dark edge of the tile, 3 of 48 px, stays free of the veil: one pixel at this size)
+    expect(fills).toEqual([[18, 35, 17, 17]]);
     fills.length = 0;
     icons.drawVeil(ctx, 20, 40, 20);
-    expect(fills).toEqual([[20, 40, 20, 20]]);
+    expect(fills).toEqual([[21, 41, 18, 18]]);
+    // a cell that is drawn without the edge (zoomed out) is veiled whole
+    fills.length = 0;
+    (icons as unknown as { gridMin: number }).gridMin = 20;
+    icons.drawVeil(ctx, 8, 8, 10);
+    expect(fills).toEqual([[8, 8, 10, 10]]);
   });
 });
 

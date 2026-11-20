@@ -16,10 +16,11 @@ export function themeMonsters(t: DungeonTheme, tier: number): number[] {
 
 /**
  * The boss of a themed place: the theme's own, or, where that one is too strong for the tier (one level above it is allowed, and
- * not at all on tier 1), the strongest of the other monsters that fits.
+ * not at all on tier 1, nor with `stretch` false), the strongest of the other monsters that fits.
  */
-export function themeBoss(t: DungeonTheme, tier: number): number {
-  const limit = Math.min(5, tier + (tier >= 2 ? 1 : 0));
+export function themeBoss(t: DungeonTheme, tier: number, stretch = true): number {
+  // `stretch` false: nobody above the tier (62nd playtest, point 6: the guard of the deepest room of a level 4 dungeon was a Vulture Roc of level 5, and no one calls it a boss)
+  const limit = Math.min(5, tier + (stretch && tier >= 2 ? 1 : 0));
   const byStrength = [t.boss, ...[...t.monsters].sort((a, b) => levelOf(b) - levelOf(a))];
   return byStrength.find((id) => levelOf(id) <= limit) ?? themeMonsters(t, tier)[0]!;
 }

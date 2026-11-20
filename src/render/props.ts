@@ -95,7 +95,7 @@ const ORB_SHINE = 0.75;
  * level as the rock around it, but its frame stones are light and the dark opening drags the mean of the texture down, so the frame stood out from the wall (measured
  * under the torch: 45 against 25 of 255). 0.65 brings it to about 29.
  */
-const MODEL_DIM: Record<string, number> = { blk_cave_exit: 0.65 };
+const MODEL_DIM: Record<string, number> = { blk_cave_exit: 0.65, gnd_swamp: 0.8, gndx_swamp: 0.8 };
 
 /**
  * A colour factor per model (48th playtest, point 6): the wooden support beam (item 99) is a bright orange, the wood of the dungeon's ceiling a dark brown. The mean colours of the two

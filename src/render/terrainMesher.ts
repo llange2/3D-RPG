@@ -3,8 +3,15 @@ import { COTTAGE_MODEL, COTTAGE_SCALE, COTTAGE_SCALE_XYZ, tunedItemModels } from
 import { CARAVAN_ITEM, COTTAGE_EVERY } from "../world/caravans";
 import { BIOME, CHUNK_SIZE, DECO, GROUND, SIDE_DELTA, TILE_SIZE, isTileWalkable, isTower, poiBounds, type Biome, type Poi, type TileInfo } from "../world/types";
 import { poiFront, type PoiSide, type World } from "../world/world";
+import type { FlatTerrain } from "../data/flatTerrain";
 import { flatTerrainOf, type FlatTileSet } from "./flatGround";
 import { tileHeight, tileToWorldX, tileToWorldZ, usesTileModels } from "./heights";
+
+/**
+ * A brightness factor per terrain on the painted flat tiles (vertex colours, the picture itself stays as painted). The swamp's picture is brown and orange, and by day the sun and the sky together
+ * lit it so strongly that it came out washed over (62nd playtest, point 1); 0.8 takes the glare off and keeps the colours. The 3D swamp tile has the same factor (`MODEL_DIM` in `props.ts`).
+ */
+export const FLAT_SHADE: Readonly<Partial<Record<FlatTerrain, number>>> = { swamp: 0.8 };
 
 /** Geometry of one chunk, grouped by material. Pure data: no Babylon, can be built on the main thread or in a worker. */
 export interface ChunkGeometry {
@@ -485,12 +492,17 @@ export function meshChunk(world: World, cx: number, cy: number): ChunkGeometry {
         const px = tileToWorldX(x0 + i);
         const pz = tileToWorldZ(y0 + j);
         const up: [number, number, number] = [0, 1, 0];
-        const white: [number, number, number] = [1, 1, 1];
+        // each corner of the picture is the middle of one of the four map tiles: its brightness is that of the tile's terrain, so that two pictures meet with the same colour on their
+        // shared corner and a border between two terrains is a gradient, not a step (62nd playtest, point 1: the swamp by day)
+        const shadeOf = (t: FlatTerrain): [number, number, number] => {
+          const s = FLAT_SHADE[t] ?? 1;
+          return [s, s, s];
+        };
         // the top of the picture is north; the same winding as the ground quads above
-        const nw = g.vertex([px - half, 0, pz + half], up, [0, 1], white);
-        const ne = g.vertex([px + half, 0, pz + half], up, [1, 1], white);
-        const se = g.vertex([px + half, 0, pz - half], up, [1, 0], white);
-        const sw = g.vertex([px - half, 0, pz - half], up, [0, 0], white);
+        const nw = g.vertex([px - half, 0, pz + half], up, [0, 1], shadeOf(terrainAt(i - 1, j - 1)));
+        const ne = g.vertex([px + half, 0, pz + half], up, [1, 1], shadeOf(terrainAt(i, j - 1)));
+        const se = g.vertex([px + half, 0, pz - half], up, [1, 0], shadeOf(terrainAt(i, j)));
+        const sw = g.vertex([px - half, 0, pz - half], up, [0, 0], shadeOf(terrainAt(i - 1, j)));
         g.tri(nw, se, ne);
         g.tri(nw, sw, se);
       }
