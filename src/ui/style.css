@@ -171,6 +171,22 @@ html.ending-on #game-cursor { display: none; }
 .parchment.identify .res-low { color: #1f7a1f; font-weight: 700; }
 .parchment.identify .res-mid { color: #c26a00; font-weight: 700; }
 .parchment.identify .res-high { color: #b3151b; font-weight: 700; }
+/* achievements: the scroll that announces one (the picture without a frame, the icons have their own shape) and the overview with its list and progress bars */
+.parchment.achievement-scene { text-align: center; max-width: min(520px, 92vw); }
+.parchment .ach-picture { display: block; width: min(256px, 50vw); height: min(256px, 50vw); object-fit: contain; margin: 4px auto 6px; filter: drop-shadow(0 3px 6px #0008); }
+.parchment.achievements { width: min(640px, 94vw); }
+.parchment .ach-list { display: flex; flex-direction: column; gap: 6px; max-height: 62vh; overflow-y: auto; padding-right: 6px; }
+.parchment .ach-row { display: flex; gap: 12px; align-items: center; padding: 6px 4px; border-bottom: 1px solid #5a3f1a55; }
+.parchment .ach-row:not(.done) .ach-icon { opacity: 0.8; }
+.parchment .ach-icon { flex: none; width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 2px 3px #0006); }
+.parchment .ach-text { flex: 1; min-width: 0; }
+.parchment .ach-name { font-family: var(--font-head); font-size: 18px; font-weight: 700; color: #4a2a08; }
+.parchment .ach-row:not(.done) .ach-name { color: #5a4a38; }
+.parchment .ach-desc { font-size: 15px; }
+.parchment .ach-progress { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.parchment .ach-bar { flex: 1; height: 10px; background: #5a3f1a33; border: 1px solid #5a3f1a; border-radius: 6px; overflow: hidden; }
+.parchment .ach-fill { height: 100%; background: linear-gradient(180deg, #c98a1c, #7a4b00); }
+.parchment .ach-count { font-size: 13px; min-width: 110px; text-align: right; }
 .parchment h2 { font-family: var(--font-head); margin: 0 0 8px; font-size: 24px; color: #4a2a08; text-align: center; letter-spacing: 0.03em; }
 .parchment p { margin: 8px 0; white-space: pre-wrap; }
 .parchment .speaker { display: block; width: min(300px, 55vw); height: min(300px, 55vw); object-fit: cover; margin: 6px auto 10px; border: 3px solid #4a2a08; border-radius: 10px; box-shadow: 0 2px 10px #0008; }
@@ -392,6 +408,10 @@ html.ending-on #game-cursor { display: none; }
 /* the picture has the name of the game in it: buttons side by side on the grey rock of the island, never over the lettering */
 .title .menu.on-rock { position: absolute; left: 50%; top: var(--rock-y, 69%); transform: translate(-50%, -50%); flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; min-width: 0; width: min(640px, 92vw); }
 .title .menu.on-rock .seedbox { flex-basis: 100%; }
+/* the main page: the three buttons side by side and the achievements under them, as wide as the three together (the stack is as wide as its widest row) */
+.title-main { display: flex; flex-direction: column; gap: 8px; align-items: stretch; width: max-content; max-width: 100%; }
+.title-row { display: flex; gap: 8px; justify-content: center; }
+.title-achievements { width: 100%; }
 /* the saves of "Load game": one button per save, label left and summary right; long lists scroll inside the menu */
 .title .list { display: flex; flex-direction: column; gap: 6px; min-width: min(520px, 90vw); max-height: 46vh; overflow-y: auto; }
 .title .opt { display: flex; justify-content: space-between; align-items: center; gap: 18px; text-align: left; }

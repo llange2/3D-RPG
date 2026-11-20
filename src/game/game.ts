@@ -84,6 +84,9 @@ import { MinimapIcons } from "./minimapIcons";
 import { MAP_OPEN_CELLS, OVERWORLD_LEGEND, type MapEvent, describeInteriorCell, describeOverworldTile, drawInteriorMap, drawOverworldMap, hasHiddenUse, interiorLegend, makeOverview } from "./minimap";
 import { FACING_VEC, PlayerRig, type MoveDir } from "./player";
 import { downloadText, pickTextFile } from "./fileTransfer";
+import { Achievements } from "./achievements";
+import { achOf, countFor, gainGold, notePassword, percentDone, progressOf } from "../sim/achievements";
+import { ACHIEVEMENTS, ACHIEVEMENT_BY_ID, CUTE_FROM_TIER, CUTE_MASCOT, DRAGON_IDS, QUEST_ACHIEVEMENT, STING_DAMAGE, TERMINATOR_ID } from "../data/achievements";
 import { DEBUG_MENU, DEBUG_GOLD, DEBUG_LEVELS, debugAllKeys, debugAllSpells, debugAllTalents, debugGold, debugLevels, maintainGod, setGodMode, teleportTargets } from "./debug";
 import { identifyLines } from "./identify";
 import { PERSONAS, personaModelId, personaYaw } from "../data/personas";
@@ -415,6 +418,13 @@ export class Game {
   private tileModels = true;
   private viewDistance: ViewDistance = "medium";
   private settings: Settings = readSettings();
+  /** The player's achievements (`game/achievements.ts`): off in the campaign and in a game in which a debug action was used. */
+  readonly achievements: Achievements = Object.assign(new Achievements(), {
+    enabled: () => !!this.state && !this.state.campaign && !this.state.party.ach?.cheated,
+    onWriteFailed: () => this.ui.toast("Achievement progress could not be saved: the browser storage is full"),
+  });
+  private achievementBusy = false;
+  private achievementRetry: ReturnType<typeof setTimeout> | null = null;
   /** `performance.now()` of the last update of the frame counter (it is redrawn four times a second). */
   private fpsShownAt = 0;
   /** The painted ground tiles of the flat mode; null when they are not built, and the ground stays 3D then. */
@@ -547,7 +557,16 @@ export class Game {
     this.audio.setAmbient(new Map());
     this.audio.playMusic(9000);
     const params = new URLSearchParams(location.search);
-    const choice = await this.ui.title({ seed: defaultSeed || randomSeed(), size: parseWorldSize(params.get("size")), saves: this.titleSaves(), onOptions: () => void this.optionsMenu() });
+    // (the title shows the figure of the file: a game that ended a moment ago has written it)
+    this.achievements.reload();
+    const choice = await this.ui.title({
+      seed: defaultSeed || randomSeed(),
+      size: parseWorldSize(params.get("size")),
+      saves: this.titleSaves(),
+      onOptions: () => void this.optionsMenu(),
+      achievementPercent: percentDone(this.achievements.profile),
+      onAchievements: () => void this.showAchievementOverview(),
+    });
     this.audio.play(9001);
     // bug_fix_59, point 7: the loading screen goes up over the title before anything else happens (reading the save, building the world, the portraits), and only then the title goes
     await this.beginLoading();
@@ -976,6 +995,8 @@ export class Game {
 
   /** Builds and shows the interior of a POI. `at` and `ret` are used when a save is restored. */
   private async openInterior(poi: Poi, at?: { x: number; y: number; facing: Facing }, ret?: { x: number; y: number; facing: Facing }): Promise<void> {
+    // "Cuteness over Function": a cave or dungeon of level 2 and more entered without the Capybara loses it for this game (a town, a castle and level 1 are free)
+    if ((poi.kind === "cave" || poi.kind === "dungeon") && poi.tier >= CUTE_FROM_TIER && this.state.party.mascot !== CUTE_MASCOT) achOf(this.state.party).mascotBroken = true;
     // the step counts of an earlier game (a load) would keep traps reloading for good
     this.trapFired.clear();
     await this.bindCrystals();
@@ -1320,7 +1341,7 @@ export class Game {
     const pile = piles[i]!;
     const party = this.state.party;
     if (pile.gold > 0) {
-      party.gold += pile.gold;
+      gainGold(party, pile.gold);
       this.ui.log(`You collect ${thousands(pile.gold)} gold.`, "loot");
     }
     const left: typeof pile.items = [];
@@ -1530,6 +1551,63 @@ export class Game {
     if (passed.interest > 0) this.ui.log(`The bank pays ${thousands(passed.interest)} gold interest.`, "good");
     this.logEnded(passed.expired);
     this.logConditions(passed.conditions);
+  }
+
+  /** The overview of the title screen: every achievement with its picture (the lock while it has not dropped), name and description, and a bar for the four counters. */
+  private async showAchievementOverview(): Promise<void> {
+    const profile = this.achievements.profile;
+    await this.ui.achievementOverview(
+      percentDone(profile),
+      ACHIEVEMENTS.map((a) => ({ id: a.id, name: a.name, description: a.description, unlocked: a.id in profile.unlocked, progress: progressOf(profile, a.id) })),
+    );
+  }
+
+  /** Drops an achievement; its dialog comes when nothing else is on the screen (`pumpAchievements`). */
+  private award(id: string): void {
+    if (this.achievements.award(id)) void this.pumpAchievements();
+  }
+
+  /** Marks the game as one that used a debug action: it earns no achievements and no counts any more. */
+  private markCheated(): void {
+    achOf(this.state.party).cheated = true;
+  }
+
+  /**
+   * Shows the dialogs of the achievements that dropped, one after the other: the picture, "Congratulation, you have unlocked the ... achievement!" and "Okay". It waits for a quiet moment
+   * (no other window, no loading, the fight's animation over, the party free) and tries again a moment later; what the player has not confirmed stays in the profile for the next game.
+   * `force` is for the end of the game, where the party is locked on purpose.
+   */
+  private async pumpAchievements(force = false): Promise<void> {
+    if (this.achievementBusy || this.mode === "title" || !this.state) return;
+    if (!this.achievements.nextUnseen()) return;
+    const quiet = !this.ui.modalOpen && !this.ui.loading.active && (force || (!this.player.locked && performance.now() >= this.volleyUntil));
+    if (!quiet) {
+      this.achievementRetry ??= setTimeout(() => {
+        this.achievementRetry = null;
+        void this.pumpAchievements();
+      }, 1500);
+      return;
+    }
+    this.achievementBusy = true;
+    try {
+      for (let id = this.achievements.nextUnseen(); id; id = this.achievements.nextUnseen()) {
+        const def = ACHIEVEMENT_BY_ID[id];
+        if (def) {
+          // the sound of a quest item found (`found_special_item`), as the user asked
+          this.audio.play(9018);
+          await this.ui.achievementScene(def.name, `Congratulation, you have unlocked the ${def.name} achievement!`, id);
+        }
+        this.achievements.markSeen(id);
+      }
+    } finally {
+      this.achievementBusy = false;
+    }
+  }
+
+  /** What the game has earned since the last look goes to the profile (counters, heroes); called after every step and service action. */
+  private syncAchievements(): void {
+    this.achievements.sync(this.state.party);
+    if (this.achievements.nextUnseen()) void this.pumpAchievements();
   }
 
   /**
@@ -2174,6 +2252,7 @@ export class Game {
     const def = MONSTERS[hut.monster]!;
     const party = this.state.party;
     this.state.opened.add(`hut:${hut.id}@burnt`);
+    this.award("eviction");
     const hutXp = scaledXp(def.hut_xp, this.state.scale);
     addXp(party, hutXp);
     const rng = rngFor(this.world.rootSeed, LAYER.LOOT, "hut", hut.id);
@@ -2349,7 +2428,8 @@ export class Game {
         "pirate_queen",
       );
       takeItems(party, PEARL);
-      party.gold += gold;
+      gainGold(party, gold);
+      this.award("pirate");
       addXp(party, xp);
       const handed = Number([...opened].find((k) => k.startsWith("pearls="))?.split("=")[1] ?? 0);
       for (const k of [...opened]) if (k.startsWith("pearls=")) opened.delete(k);
@@ -2757,6 +2837,8 @@ export class Game {
     const opening = isLastingTrap(a) && outcome.consumed && !this.state.opened.has(a.uid);
     if (opening || (outcome.consumed && ACTION_DEFS[a.kind].persistence === "once")) this.state.opened.add(a.uid);
     if (outcome.usedToday) this.state.opened.add(usedKey);
+    // "Riddle me this!": a mini quest's statue answered right (the statues that open the end room or a castle's chests are quests of their own, not riddles of the miniquests)
+    if (a.kind === "riddle" && outcome.consumed && a.params.opens === undefined && !this.interior?.campaign) countFor(this.state.party, "riddles");
     // levers and heads keep their position in the same set: a head of the ring that comes or goes opens or shuts its cell
     if (outcome.state) {
       for (const k of outcome.state.remove) this.state.opened.delete(k);
@@ -2796,7 +2878,26 @@ export class Game {
     }
     await this.applyEffects(a, outcome.effects);
     this.busy = false;
+    this.countShipSections();
     this.refresh();
+  }
+
+  /**
+   * "Perfect adventurers" counts a section of the spaceship as a completed dungeon (`shipSectionDone`, the same test the map ticks the pyramids off with). The five sections share one map, so
+   * they are looked at after every action in the ship (not per step); `Ach.sections` keeps the ones that were counted, so each counts once.
+   */
+  private countShipSections(): void {
+    const rt = this.interior;
+    if (!rt || rt.campaign || rt.map.dungeon?.quest !== "spaceship") return;
+    const crates = rt.content.actions.filter((x) => x.kind === "treasure" && x.params.quest === POWER_CRYSTAL).map((x) => x.uid);
+    const ach = achOf(this.state.party);
+    for (let section = 0; section < SECTION_NAMES.length; section++) {
+      const key = String(section);
+      if (!ach.sections.includes(key) && shipSectionDone(section, this.state.opened, crates)) {
+        ach.sections.push(key);
+        countFor(this.state.party, "dungeons");
+      }
+    }
   }
 
   private async applyEffects(a: ActionInstance, effects: Effect[]): Promise<void> {
@@ -3017,7 +3118,7 @@ export class Game {
     this.player.locked = false;
     if (!yes) return;
     takeItems(party, ORB);
-    party.gold += orbs * 1_000_000;
+    gainGold(party, orbs * 1_000_000);
     addXp(party, orbs * 1_000_000);
     const total = held + orbs;
     for (const k of [...opened]) if (k.startsWith(`king:${alignment}=`)) opened.delete(k);
@@ -3042,12 +3143,24 @@ export class Game {
   }
 
   /**
+   * What the end of a game drops: "Up, up and away", and the two that ask for a whole game. "For the king!": no king's chest (`<map>#kingchest:<n>` in the saved set once it is open) was robbed; read from
+   * the save itself, so a reload cannot undo it. "Cuteness over Function": no cave or dungeon of level 2 and more was entered without the Capybara, which is with the party now.
+   */
+  private awardEnding(): void {
+    const party = this.state.party;
+    this.award("finish");
+    if (![...this.state.opened].some((k) => k.includes("#kingchest:"))) this.award("king");
+    if (!achOf(party).mascotBroken && party.mascot === CUTE_MASCOT) this.award("capybara");
+  }
+
+  /**
    * The end of the game: the party uses the console of the bridge with life support and the engines running and the black key card. The outro of the old game plays (`public/assets/ui/outro.mp4`,
    * the old 88 MB movie re-encoded to 13 MB with x264 crf 25, PSNR 44.8 dB; committed, a missing file only skips it), then a last message.
    */
   private async playEnding(): Promise<void> {
     this.player.locked = true;
     this.state.opened.add("game:won");
+    this.awardEnding();
     // the movie has its own sound: the music and the hum of the engines stop when it starts (6. 11. 2026)
     this.audio.stopMusic();
     this.audio.setAmbient(new Map());
@@ -3071,6 +3184,8 @@ export class Game {
     });
     await this.endingScroll();
     document.documentElement.classList.remove("ending-on");
+    // the dialogs of what the ending dropped come before the title screen takes the scene away
+    await this.pumpAchievements(true);
     // the game is won: back to the title screen (the saved game stays as it is, with the flag `game:won`)
     this.player.locked = false;
     this.save("auto");
@@ -3152,7 +3267,7 @@ export class Game {
     this.player.locked = false;
     if (!yes) return;
     takeItems(party, SKULL);
-    party.gold += skulls * 1000;
+    gainGold(party, skulls * 1000);
     addXp(party, skulls * 1000);
     const total = handed + skulls;
     for (const k of [...opened]) if (k.startsWith("skulls=")) opened.delete(k);
@@ -3215,6 +3330,7 @@ export class Game {
     this.player.locked = false;
     if (!yes) return;
     takeItems(party, type);
+    countFor(party, "artifacts", carried);
     addXp(party, xp);
     for (const k of [...opened]) if (k.startsWith(prefix)) opened.delete(k);
     opened.add(`${prefix}${handed + carried}`);
@@ -3411,7 +3527,14 @@ export class Game {
     const rt = this.interior;
     const end = rt?.map.dungeon?.endRoom;
     if (!rt || !end) return;
+    // (a rune is stepped on again and again: only the first opening is the quest being solved)
+    const first = !this.state.opened.has(endFlag(rt.map.key));
     this.state.opened.add(endFlag(rt.map.key));
+    if (first && !rt.campaign) {
+      const quest = QUEST_ACHIEVEMENT[rt.map.dungeon?.quest ?? ""];
+      if (quest) this.award(quest);
+      if (rt.map.dungeon?.layout === "dungeon_3" && rt.poi.tier === 5) this.award("maze");
+    }
     if (end.seal && rt.map.cells[end.seal.y * rt.map.width + end.seal.x] !== CELL.FLOOR) {
       rt.map.cells[end.seal.y * rt.map.width + end.seal.x] = CELL.FLOOR;
       this.interiorView.refresh(rt.map);
@@ -3624,6 +3747,7 @@ export class Game {
     const flag = reachedFlag(rt.poi.id);
     if (this.state.opened.has(flag)) return;
     this.state.opened.add(flag);
+    countFor(this.state.party, "dungeons");
     this.ui.log(`Quest completed: you have reached the end of ${rt.poi.name}. See the quest log (J).`, "good");
     this.audio.play(9018);
     this.refresh();
@@ -3713,6 +3837,11 @@ export class Game {
       soldOut: this.state.opened,
       log: (t, k) => this.ui.log(t, k),
       passTime: (minutes) => this.passTime(minutes),
+      // "Drunk blabbermouth": three different passwords from the taverns in one game
+      onPassword: (riddle) => {
+        if (this.state.campaign) return;
+        if (notePassword(this.state.party, riddle)) this.award("tavern");
+      },
       // the guild houses of the endless world only let members in; the membership is sold by the guild apprentice who stands in the streets of the town
       membershipFrom: "The guild's apprentice, a young person with a heavy book, stands somewhere in the streets of this town. They sell the membership.",
     });
@@ -4031,6 +4160,8 @@ export class Game {
         case "party_attack": {
           const def = monsterById(e.defId);
           const who = e.attacker !== null ? party.characters[e.attacker]!.name : "The party";
+          // (the state is decided already: the achievement drops now, outside the delayed callback that a change of scene would cancel)
+          if (e.kind === "melee" && e.damage >= STING_DAMAGE) this.award("sting");
           // the twang of the bow is heard when the arrows leave; a spell made its sound when it was cast
           if (e.kind === "ranged") this.audio.play(9019);
           at(landing(e.uid), () => {
@@ -4065,6 +4196,8 @@ export class Game {
           // quest 5: the end boss stands before the end room, and its death opens it
           if (isEndBoss(e.uid)) this.openEndRoom();
           this.state.kills++;
+          if (DRAGON_IDS.includes(e.defId)) this.award("dragon");
+          else if (e.defId === TERMINATOR_ID) this.award("terminator");
           this.dropLoot(e.x, e.y, scaledGold(e.loot.gold, this.state.scale), e.loot.item ? [e.loot.item] : [], true);
           const epoch = this.fxEpoch;
           at(landing(e.uid), () => {
@@ -4512,7 +4645,7 @@ export class Game {
     const party = this.state.party;
     switch (outcome.type) {
       case "gold":
-        party.gold += outcome.amount;
+        gainGold(party, outcome.amount);
         this.audio.play(9020);
         this.ui.log(`Gold pours out of the rift: ${thousands(outcome.amount)}.`, "loot");
         break;
@@ -5195,6 +5328,8 @@ export class Game {
       ]);
       if (!choice) return false;
       this.audio.play(9001); // menu-selection, like every other menu click
+      // every cheat (all but looking at a place and moving saves around) takes the achievements of this game: it is no game played any more
+      if (choice !== "identify" && choice !== "export" && choice !== "import" && !(choice === "god" && cheats.god)) this.markCheated();
       switch (choice) {
         case "god":
           setGodMode(party, !cheats.god);
@@ -5790,6 +5925,7 @@ export class Game {
     if (cheats.god) maintainGod(this.state.party);
     // (a night at the inn and every other service pass through here; the notice shows once)
     this.checkOldAge();
+    this.syncAchievements();
     this.ui.updateHud(this.state.party, this.hudInfo());
     this.syncMonsterEffects();
     this.syncCrystals();

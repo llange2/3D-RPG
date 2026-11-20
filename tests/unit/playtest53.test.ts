@@ -321,9 +321,9 @@ describe("the smith lets the party buy back what it sold (point 7)", () => {
     expect(c.inventory.slot1).toBeNull();
     expect(party.gold).toBe(gold + price);
     party.gold = price - 1;
-    expect(buyBackItem(party, { item, price })).toEqual({ ok: false, reason: "gold" });
+    expect(buyBackItem(party, { item, price, counted: true })).toEqual({ ok: false, reason: "gold" });
     party.gold = gold + price;
-    expect(buyBackItem(party, { item, price })).toEqual({ ok: true });
+    expect(buyBackItem(party, { item, price, counted: true })).toEqual({ ok: true });
     expect(party.gold).toBe(gold); // exactly what the sale brought is paid again
     expect(carriedItems(party).some((i) => i.name === "Old Sword")).toBe(true);
   });

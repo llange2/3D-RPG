@@ -53,6 +53,34 @@ export interface Item {
   /** Non-zero for spell scrolls. */
   spellId: number;
   bonus: Bonus;
+  /** Bought from a shop: selling it again brings gold but does not count for the gold achievement (the shop trade is no income, `sim/achievements.ts`). */
+  bought?: boolean;
+}
+
+/** What one game has earned towards the counter achievements; each number only ever grows (the profile credits the part above its high-water mark). */
+export interface Ledger {
+  /** Gold income of every kind (loot, chests, sales, quests, bank interest), gross. */
+  goldIn: number;
+  /** Gold given back by buying a sold item back from the smith. */
+  goldBack: number;
+  artifacts: number;
+  riddles: number;
+  dungeons: number;
+}
+
+/** The per-game part of the achievements, saved with the party (`sim/achievements.ts`). Absent in older saves. */
+export interface PartyAch {
+  /** Names the game in the profile's high-water marks; set by the game when it starts, or on loading a save that has none. */
+  id: string;
+  /** A debug action was used: the game earns no achievements and no counts any more. */
+  cheated?: boolean;
+  /** The party entered a cave or dungeon of level 2 and more without the Capybara ("Cuteness over Function" is lost). */
+  mascotBroken?: boolean;
+  /** The riddles whose answer a tavern let slip (distinct). */
+  passwords: string[];
+  ledger: Ledger;
+  /** The sections of the spaceship that were counted as completed dungeons. */
+  sections: string[];
 }
 
 export const EQUIPMENT_SLOTS = ["helmet", "body_armor", "left_hand", "right_hand", "belt", "left_ring", "right_ring", "boots", "ranged_weapon"] as const;
@@ -184,6 +212,8 @@ export interface Party {
   talents: string[];
   /** Titles and feats of the party. The old game kept this list but never awarded anything, so it stays empty for now. */
   achievements: string[];
+  /** What this game contributes to the achievements of the profile (the new system; `achievements` above is the old game's list). Created on demand by `achOf`. */
+  ach?: PartyAch;
   /** Heroes waiting in the inn for a place in the party: made there, or replaced (the old `unused_characters`). */
   reserve: Character[];
   effects: TimedEffect[];

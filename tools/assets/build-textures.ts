@@ -10,6 +10,7 @@ import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
+import { buildAchievementIcons } from "./build-achievement-icons";
 import { buildFlatTerrain } from "./build-flat-terrain";
 import { buildFx } from "./build-fx";
 import { buildMinimap } from "./build-minimap";
@@ -103,6 +104,8 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
 
   // the 78 spell pictures become one sheet with a register (see build-spell-icons.ts)
   add("ui", (await buildSpellIcons()).bytes);
+  // the pictures of the achievements, one file each (see build-achievement-icons.ts)
+  add("ui", (await buildAchievementIcons()).bytes);
   await buildPlaceholderIcons();
 
   // the effect pictures (particles, impact flipbooks, water) become `fx/*.webp`, see build-fx.ts

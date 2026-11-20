@@ -5,7 +5,7 @@ import { CURE_AGE_GOLD_PER_YEAR, cureAgeCost, templeCureAge } from "../sim/aging
 import { addCondition, isAlive, xpToNextLevel } from "../sim/character";
 import { conditionEventText } from "../sim/conditions";
 import {
-  BANK_SLIDER_STEPS, bankSliderAmount, buyBackItem, buyItem, buyTavernFood, cureCost, deposit, guildLessons, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumour, sellItem, sellPrice, smithStock, spellPrice, type SmithShelf, type SoldItem,
+  BANK_SLIDER_STEPS, bankSliderAmount, buyBackItem, buyItem, buyTavernFood, cureCost, deposit, guildLessons, healCost, innCost, innRest, isGuildMember, learnSpell, reviveCost, tavernRumourWith, sellItem, sellPrice, smithStock, spellPrice, type SmithShelf, type SoldItem,
   canDonate, donationCost, templeCure, templeDonate, templeHeal, templeRevive, tavernFood, train, trainAll, trainAllPlan, trainingCap, trainingCost, withdraw, guildTalent, TRAINING_MINUTES,
 } from "../sim/economy";
 import { bonusDescription, spellScroll } from "../sim/items";
@@ -38,6 +38,8 @@ export interface ServiceContext {
   log(text: string, kind?: "info" | "good" | "bad" | "loot"): void;
   /** Campaign taverns tell the old game's gossip (and sometimes a password) instead of pointing at places of the endless world. */
   rumour?: () => string;
+  /** A tavern let a password slip (the riddle it belongs to): the game counts it for "Drunk blabbermouth". Not set for the campaign's taverns. */
+  onPassword?: (riddle: string) => void;
   /** Plays a sound of the old game (the book of heroes in the inn clicks, rolls dice and saves). */
   sound?: (id: number) => void;
   /** Lets game time pass (training takes `TRAINING_MINUTES` per hero): spells and conditions that run out in that time are reported by the game. */
@@ -198,7 +200,9 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           if (drunk.length > 0) note(`${drunk.map((c) => c.name).join(", ")} had a drink too many.`, "bad");
           // 42nd playtest, point 7: half the rumours let a password slip (an answer of the riddles of the places nearby, level by level), the other half is a funny saying
           const word = rngFor(ctx.rootSeed, LAYER.LOOT, "word-rumour", party.minutes, party.gold);
-          const r = { text: ctx.rumour ? ctx.rumour() : tavernRumour(ctx.world, ctx.tier, word) };
+          const told = ctx.rumour ? { text: ctx.rumour() } : tavernRumourWith(ctx.world, ctx.tier, word);
+          if (told.riddle !== undefined) ctx.onPassword?.(told.riddle);
+          const r = { text: told.text };
           note(r ? r.text : "Nobody here knows anything of interest.", r ? "info" : "bad");
           ctx.changed();
           void ui.message(r ? r.text : "The locals shrug. There is nothing worth telling nearby.", "A rumour").then(render);
@@ -262,7 +266,7 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
           root.append(hoverRow(row(itemLabel(item, 40), `sell for ${thousands(sellPrice(item, party))}`, () => {
             const price = sellPrice(item, party);
             if (sellItem(party, sellWho, slot)) {
-              soldHere.push({ item, price });
+              soldHere.push({ item, price, counted: !item.bought });
               ctx.sound?.(9000);
               note(`Sold ${item.name.trim()}.`, "good");
             }

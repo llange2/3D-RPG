@@ -212,7 +212,7 @@ Erzielt ein Monster keinen Schaden, hat es trotzdem eine 10% Chance die Sonderwi
 ### 5.2 Schmied
 
 - **Sortiment** je Tag aus Welt-Seed, Laden und Tag: 8 Rüstungen, 8 Waffen, 8 Ringe mit Items des Laden-Tiers (Material 1 bis Tier + 3).
-- **Kaufpreis** `max(1, round(Wert × bargain))`; **Verkaufspreis** `max(1, ⌊Wert / 2⌋)`, mit Merchant × 1,5 (gerundet). Quest-Items sind unverkäuflich. Zurückkaufen zum gezahlten Preis.
+- **Kaufpreis** `max(1, round(Wert × 2 × bargain))` (20. 11. 2026, Entscheidung des Nutzers; vorher `Wert × bargain`): Wert 100 kostet ohne Talent 200, mit Bargainer 150, mit Merchant 100. **Verkaufspreis** `max(1, ⌊Wert × (1,5 − bargain)⌋)`: 50, 75 und 100 (vorher `⌊Wert / 2⌋`, mit Merchant × 1,5, was mit dem alten Kaufpreis einen Gewinn beim Kaufen und Verkaufen ergab). Spruchrollen verkaufen immer zu `⌊Wert / 2⌋`. Quest-Items sind unverkäuflich. Zurückkaufen zum gezahlten Preis.
 
 ### 5.3 Tempel
 
