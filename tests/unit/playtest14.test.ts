@@ -26,7 +26,7 @@ describe("options (fourteenth playtest, points 1, 2 and 6)", () => {
     // (the cursor fades by default, 35th playtest: an older stored setting without the field gets the default)
     // (and, since the 37th playtest, the volumes in the middle, the keys of the game and the key names on the buttons)
     // (and, since the 54th playtest, the range target "closest")
-    expect(s).toEqual({ environment: "flat", viewDistance: "close", resolution: "low", showFps: true, music: false, musicVolume: 50, sfx: false, sfxVolume: 50, animatedTown: true, effects: "full", bloom: false, fadeCursor: true, textureQuality: "normal", keys: DEFAULT_SETTINGS.keys, showKeys: true, rangeTarget: "closest" });
+    expect(s).toEqual({ environment: "flat", viewDistance: "close", resolution: "low", showFps: true, music: false, musicVolume: 50, sfx: false, sfxVolume: 50, animatedTown: true, effects: "full", fadeCursor: true, textureQuality: "normal", keys: DEFAULT_SETTINGS.keys, showKeys: true, rangeTarget: "closest" });
     expect(parseSettings(JSON.stringify({ viewDistance: "sideways", resolution: "huge", showFps: "yes" }))).toEqual(DEFAULT_SETTINGS);
   });
 

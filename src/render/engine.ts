@@ -6,7 +6,6 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Scene } from "@babylonjs/core/scene";
-import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import "@babylonjs/core/Meshes/thinInstanceMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { NO_SIGHT_LIMIT, registerSightLimit, setSight } from "./sightLimit";
@@ -47,8 +46,6 @@ export interface Renderer {
   lamps: PointLight[];
   /** Renders at another size from now on (the page keeps running). */
   setResolution(resolution: Resolution): void;
-  /** A soft glow round the brightest things of the picture (a post process: only the High quality asks for it, `Settings.bloom`). Nothing else of the picture changes (no tone mapping, no edge smoothing). */
-  setBloom(on: boolean): void;
   setAtmosphere(a: Atmosphere): void;
 }
 
@@ -135,7 +132,6 @@ export function createRenderer(canvas: HTMLCanvasElement, resolution: Resolution
     if (m instanceof StandardMaterial) m.maxSimultaneousLights = 6;
   });
 
-  let bloom: DefaultRenderingPipeline | null = null;
   const r: Renderer = {
     engine,
     scene,
@@ -146,25 +142,6 @@ export function createRenderer(canvas: HTMLCanvasElement, resolution: Resolution
     lamps,
     setResolution(resolution) {
       engine.setHardwareScalingLevel(RESOLUTION_SCALING[resolution]);
-    },
-    setBloom(on) {
-      if (on === (bloom !== null)) return;
-      if (!on) {
-        bloom?.dispose();
-        bloom = null;
-        return;
-      }
-      // (the picture is not high dynamic range: what blooms is what is already almost white, so the threshold is high and the weight low; the sun in the sky and the bright stone of a
-      // lit town glow a little, a torch or a crystal in the dark does most)
-      const pipe = new DefaultRenderingPipeline("bloom", false, scene, [camera]);
-      pipe.fxaaEnabled = false;
-      pipe.imageProcessingEnabled = false;
-      pipe.bloomEnabled = true;
-      pipe.bloomThreshold = 0.88;
-      pipe.bloomWeight = 0.3;
-      pipe.bloomKernel = 48;
-      pipe.bloomScale = 0.5;
-      bloom = pipe;
     },
     setAtmosphere(a) {
       scene.fogColor = Color3.FromHexString(a.fogColor);

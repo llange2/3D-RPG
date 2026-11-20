@@ -131,7 +131,7 @@ function createWindow() {
     win = null;
   });
 
-  // the game uses F5 (quick save) and F9 (quick load): without a menu nothing reloads the page; F11 and Alt+Enter toggle full screen
+  // the game uses F8 (quick save) and F9 (quick load): without a menu nothing reloads the page; F11 and Alt+Enter toggle full screen
   win.webContents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
     const toggle = input.key === "F11" || (input.alt && input.key === "Enter");

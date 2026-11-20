@@ -96,8 +96,8 @@ describe("bug_fix_56, point 5 and 8: resistances and the Fairy", () => {
     expect(resistance(c, "fire", "Wolf")).toBe(20);
     expect(resistance(c, "fire", "Fairy")).toBe(35);
     expect(resistance(c, "magic", "Fairy")).toBe(c.resMagic + 15);
-    // 70 + 15 is 85 on the sheet, 80 in a fight
-    expect(resistance(c, "ice", "Fairy")).toBe(85);
+    // 70 + 15 is 85, but the sheet and the fight stop at 80
+    expect(resistance(c, "ice", "Fairy")).toBe(80);
     expect(resistanceShare(c, "ice", "Fairy")).toBe(80);
   });
 

@@ -20,8 +20,6 @@ export interface QualityParts {
   animatedTown: boolean;
   /** The water of the fountains and the impact of the spells (`render/fx.ts`). */
   effects: EffectsLevel;
-  /** The glow round the brightest things (a post process): only the High quality. */
-  bloom: boolean;
 }
 
 /** The slider's positions from left to right. */
@@ -30,21 +28,21 @@ export const QUALITY_LEVELS: readonly QualityLevel[] = ["low", "medium", "high",
 export const QUALITY_NAMES: Record<QualityLevel, string> = { low: "Low", medium: "Medium", high: "High", custom: "Custom" };
 
 export const QUALITY_PRESETS: Record<Exclude<QualityLevel, "custom">, QualityParts> = {
-  low: { environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false, effects: "low", bloom: false },
-  medium: { environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true, effects: "full", bloom: false },
-  high: { environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true, effects: "full", bloom: true },
+  low: { environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false, effects: "low" },
+  medium: { environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true, effects: "full" },
+  high: { environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true, effects: "full" },
 };
 
 /** The level whose preset the settings equal, else "custom". */
 export function qualityOf(s: QualityParts): QualityLevel {
   for (const level of ["low", "medium", "high"] as const) {
     const p = QUALITY_PRESETS[level];
-    if (p.environment === s.environment && p.textureQuality === s.textureQuality && p.viewDistance === s.viewDistance && p.resolution === s.resolution && p.animatedTown === s.animatedTown && p.effects === s.effects && p.bloom === s.bloom) return level;
+    if (p.environment === s.environment && p.textureQuality === s.textureQuality && p.viewDistance === s.viewDistance && p.resolution === s.resolution && p.animatedTown === s.animatedTown && p.effects === s.effects) return level;
   }
   return "custom";
 }
 
-/** The seven settings of a level; "custom" keeps what is there. */
+/** The six settings of a level; "custom" keeps what is there. */
 export function applyQuality(level: QualityLevel, current: QualityParts): QualityParts {
   return level === "custom" ? { ...current } : { ...QUALITY_PRESETS[level] };
 }

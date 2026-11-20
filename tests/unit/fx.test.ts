@@ -137,17 +137,6 @@ describe("effects: the setting", () => {
     expect(parseSettings(JSON.stringify({})).effects).toBe("full");
   });
 
-  it("has the glow (bloom) only on the High quality, off by default, and reads it back", () => {
-    expect(QUALITY_PRESETS.high.bloom).toBe(true);
-    expect(QUALITY_PRESETS.medium.bloom).toBe(false);
-    expect(QUALITY_PRESETS.low.bloom).toBe(false);
-    expect(DEFAULT_SETTINGS.bloom).toBe(false);
-    expect(parseSettings(JSON.stringify({ bloom: true })).bloom).toBe(true);
-    expect(parseSettings(JSON.stringify({ bloom: "yes" })).bloom).toBe(false);
-    // a custom mix: High with the glow switched off is no longer High
-    expect(qualityOf({ ...applyQuality("high", DEFAULT_SETTINGS), bloom: false })).toBe("custom");
-  });
-
   it("is part of the quality presets", () => {
     expect(QUALITY_PRESETS.low.effects).toBe("low");
     expect(QUALITY_PRESETS.medium.effects).toBe("full");

@@ -36,10 +36,11 @@ Assistent mit Zielordner (pro Benutzer oder für alle) und einer eigenen Seite �
 
 - `installer/main.mjs`: ein Fenster, das `app://game/index.html` lädt. Das eigene Protokoll liest die Dateien aus `resources/web` (Vite-Build und
   `assets/`), setzt die Dateitypen selbst (`.js` als `text/javascript`, `.glb`, `.webp` …) und beantwortet Bereichsanfragen für Audio und Video.
-- Spielstände und Einstellungen liegen im `localStorage` des Programms: `%APPDATA%\MM3 Seed RPG`. Stände aus dem Browser kommen über
-  Esc > Debug > Export/Import saves hinein.
+- Spielstände und Einstellungen liegen im `localStorage` des Programms: `%APPDATA%\MM3 Seed RPG`. Das Release hat **kein Debug-Menü** (seit v1.1, `DEBUG_MENU` = `import.meta.env.DEV`), also auch kein
+  Export/Import saves: Stände aus dem Browser kommen nur über den Dev-Server dort hinein.
+- Das Symbol ist `installer/icon.png` (v1.1, die Gruppe auf dem Felsen, Quelle `.ignore/icon.png`); `build.mjs` setzt es auf ein transparentes Quadrat von 512 px.
 - Das Programm startet **immer im Vollbild** und zeigt beim Laden keinen Mauszeiger (der Systemzeiger bleibt weg, bis das Spiel seinen eigenen hat).
-  **F11** oder **Alt+Enter** verlässt und betritt das Vollbild. Es gibt kein Menü und keinen Neuladen-Shortcut (F5 und F9 sind Quick Save und Quick Load des Spiels).
+  **F11** oder **Alt+Enter** verlässt und betritt das Vollbild. Es gibt kein Menü und keinen Neuladen-Shortcut (F8 und F9 sind Quick Save und Quick Load des Spiels).
   Entwicklerwerkzeuge sind aus (`MM3_DEVTOOLS=1` schaltet sie ein).
 - Nur eine Instanz: ein zweiter Start holt das laufende Fenster nach vorn (zwei Instanzen würden dieselben Stände schreiben).
 - `MM3_LOG_MISSING=1` schreibt jede nicht gefundene Datei auf die Konsole (zum Prüfen, ob etwas im Installer fehlt);

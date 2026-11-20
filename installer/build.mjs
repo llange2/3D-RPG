@@ -50,7 +50,8 @@ await viteBuild({ root: gameRoot, build: { outDir: webDir, emptyOutDir: true, co
 
 step("Icon");
 fs.mkdirSync(buildDir, { recursive: true });
-await sharp(path.join(here, "icon.svg"), { density: 1152 }).resize(512, 512).png().toFile(path.join(buildDir, "icon.png"));
+// v1.1: the party on its rock (icon.png, wider than tall): scaled into a transparent square, the Windows icon needs one
+await sharp(path.join(here, "icon.png")).resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(path.join(buildDir, "icon.png"));
 
 const pkg = JSON.parse(fs.readFileSync(path.join(here, "package.json"), "utf8"));
 
