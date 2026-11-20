@@ -1,6 +1,7 @@
 import { Rng, seedFromString } from "../core/rng";
 import { TALENTS } from "../data/tables";
 import { canAct, createCharacter, emptyInventory, isAlive, recalcValues, removeCondition, swapSlots } from "./character";
+import { achOf } from "./achievements";
 import { birthdays, refreshAge } from "./aging";
 import { endBoon } from "./boons";
 import { seedConditionTimers, tickConditions, type ConditionEvent } from "./conditions";
@@ -271,6 +272,8 @@ export function advanceTime(party: Party, minutes: number): TimePassed {
   const weeksPassed = Math.floor(party.minutes / MINUTES_PER_WEEK) - Math.floor(before / MINUTES_PER_WEEK);
   const interest = weeksPassed > 0 ? bankInterest(party.bankGold, weeksPassed) : 0;
   party.bankGold += interest;
+  // the interest is income for the gold achievement (it lands in the vault, so not through `gainGold`); `Game.passTime` is not the only caller of this function
+  if (interest > 0) achOf(party).ledger.goldIn += interest;
   const over = (e: TimedEffect) => e.until <= party.minutes && !(e.held && surroundings.inDeepWater);
   for (const e of party.effects) if (e.kind === "walk_on_water" && e.until <= party.minutes && surroundings.inDeepWater) e.held = true;
   const expired = party.effects.filter(over);

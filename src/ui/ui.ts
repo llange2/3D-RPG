@@ -418,6 +418,67 @@ export class UI {
     );
   }
 
+  /** The picture of an achievement (`ui/achievements/<id>.webp`); the lock for one that has not dropped (`lock`). */
+  private achievementImage(id: string): string {
+    return assetPath(`ui/achievements/${id}.webp`);
+  }
+
+  /** The scroll that tells an achievement has dropped: its picture, the text and one "Okay". Only a click on the button closes it (the dialog must be read). */
+  achievementScene(name: string, text: string, id: string): Promise<void> {
+    return this.modal<void>((close) =>
+      h(
+        "div",
+        { class: "parchment achievement-scene" },
+        h("h2", { text: "Achievement unlocked" }),
+        h("img", { class: "ach-picture", src: this.achievementImage(id), alt: name, decoding: "async" }),
+        h("p", { text }),
+        h("div", { class: "buttons" }, h("button", { class: "btn primary", text: "Okay", onclick: () => close(undefined as void) })),
+      ),
+    );
+  }
+
+  /**
+   * The overview of the title screen: one row for each achievement with its picture (the lock while it has not dropped), name and description. The four that count something over
+   * many games carry a progress bar. `percent` is the share that has dropped.
+   */
+  achievementOverview(percent: number, rows: { id: string; name: string; description: string; unlocked: boolean; progress: { value: number; target: number } | null }[]): Promise<void> {
+    return this.modal<void>(
+      (close) =>
+        h(
+          "div",
+          { class: "parchment achievements" },
+          h("h2", { text: `Achievements: ${percent}%` }),
+          h(
+            "div",
+            { class: "ach-list" },
+            ...rows.map((r) =>
+              h(
+                "div",
+                { class: `ach-row${r.unlocked ? " done" : ""}` },
+                h("img", { class: "ach-icon", src: this.achievementImage(r.unlocked ? r.id : "lock"), alt: r.unlocked ? r.name : "Locked", loading: "lazy", decoding: "async" }),
+                h(
+                  "div",
+                  { class: "ach-text" },
+                  h("div", { class: "ach-name", text: r.name }),
+                  h("div", { class: "ach-desc", text: r.description }),
+                  r.progress
+                    ? h(
+                        "div",
+                        { class: "ach-progress" },
+                        h("div", { class: "ach-bar" }, h("div", { class: "ach-fill", style: `width:${Math.min(100, (r.progress.value / r.progress.target) * 100)}%` })),
+                        h("div", { class: "ach-count", text: `${thousands(Math.floor(r.progress.value))} / ${thousands(r.progress.target)}` }),
+                      )
+                    : null,
+                ),
+              ),
+            ),
+          ),
+          h("div", { class: "buttons" }, h("button", { class: "btn primary", text: "Close", onclick: () => close(undefined as void) })),
+        ),
+      { dismissWith: undefined as void },
+    );
+  }
+
   confirm(title: string, text: string, yes = "Yes", no = "No", skin = ""): Promise<boolean> {
     return this.ask(title, text, [{ label: yes, value: true, primary: true }, { label: no, value: false }], false, undefined, skin);
   }
@@ -746,7 +807,7 @@ export class UI {
     this.titleEl = null;
   }
 
-  title<S>(options: { seed: string; size?: WorldSize; saves: Option<S>[]; onOptions?: () => void }): Promise<TitleChoice<S>> {
+  title<S>(options: { seed: string; size?: WorldSize; saves: Option<S>[]; onOptions?: () => void; achievementPercent?: number; onAchievements?: () => void }): Promise<TitleChoice<S>> {
     this.dismissTitle();
     return new Promise((resolve) => {
       const { saves } = options;
@@ -771,10 +832,20 @@ export class UI {
       });
       const backButton = () => h("button", { class: "btn", text: "Back", onclick: () => show("main") });
       const pages: Record<TitlePage, () => HTMLElement[]> = {
+        // the three buttons side by side and, as wide as all of them together, the achievements under them
         main: () => [
-          h("button", { class: `btn${saves.length === 0 ? " primary" : ""}`, text: "New game", onclick: () => show("new") }),
-          h("button", { class: `btn${saves.length > 0 ? " primary" : ""}`, text: "Load game", disabled: saves.length === 0, title: saves.length === 0 ? "No saved games yet" : undefined, onclick: () => show("load") }),
-          ...(options.onOptions ? [h("button", { class: "btn", text: "Options", onclick: () => options.onOptions!() })] : []),
+          h(
+            "div",
+            { class: "title-main" },
+            h(
+              "div",
+              { class: "title-row" },
+              h("button", { class: `btn${saves.length === 0 ? " primary" : ""}`, text: "New game", onclick: () => show("new") }),
+              h("button", { class: `btn${saves.length > 0 ? " primary" : ""}`, text: "Load game", disabled: saves.length === 0, title: saves.length === 0 ? "No saved games yet" : undefined, onclick: () => show("load") }),
+              ...(options.onOptions ? [h("button", { class: "btn", text: "Options", onclick: () => options.onOptions!() })] : []),
+            ),
+            ...(options.onAchievements ? [h("button", { class: "btn title-achievements", text: `Achievement progress: ${options.achievementPercent ?? 0}%`, onclick: () => options.onAchievements!() })] : []),
+          ),
         ],
         new: () => [
           h(

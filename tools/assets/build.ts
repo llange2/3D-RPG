@@ -21,6 +21,7 @@ function groupOf(path: string): string {
   const interior = /^tex\/tex_(dungeon|fortress|city|cyber|cave)/.exec(path);
   if (interior) return `interior:${interior[1] === "cave" ? "cave" : interior[1]}`;
   if (path.startsWith("ui/town/") || path.startsWith("ui/loading") || path === "ui/title.webp" || path === "ui/mm3_009.webp" || path === "ui/tex_main_menu.webp") return "screens";
+  if (path.startsWith("ui/achievements/")) return "screens"; // seen in the overview of the title screen and in the scroll of an unlocked achievement, not before the first frame
   if (path === "ui/outro.mp4") return "outro"; // only played at the very end of the game, so it must not count against the core budget
   if (path.startsWith("fx/")) return "fx"; // particles and water: loaded with the first scene that shows them, not before the first frame
   if (path.startsWith("campaign/")) return "campaign";

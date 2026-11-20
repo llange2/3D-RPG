@@ -5,6 +5,7 @@ import type { World } from "../world/world";
 import { isV4, RULES } from "./balance";
 import { isAlive, levelUp, recalcValues, removeCondition, xpToNextLevel } from "./character";
 import { generateItem, spellScroll } from "./items";
+import { achOf, gainGold } from "./achievements";
 import { advanceTime, MINUTES_PER_DAY, giveItem } from "./party";
 import { addCondition, type ConditionEvent } from "./conditions";
 import { isSpellImplemented, learnBlock, SPELL_SCHOOL } from "./spells";
@@ -151,10 +152,16 @@ const WORD_RUMOURS = [
  * tavern). Null if the world has none yet.
  */
 export function wordRumour(world: World, tavernTier: number, rng: Rng): string | null {
+  return passwordRumour(world, tavernTier, rng)?.text ?? null;
+}
+
+/** The same rumour with the riddle whose answer it lets slip (for the achievement "Drunk blabbermouth": a real password, not a silly saying). The draws are the same as `wordRumour`'s. */
+export function passwordRumour(world: World, tavernTier: number, rng: Rng): { text: string; riddle: string } | null {
   const near = world.riddlesOfWorld().filter((r) => r.tier <= tavernTier + 1);
   if (near.length === 0) return null;
-  const answer = RIDDLES_WORLD[String(near[rng.int(near.length)]!.riddle)]!.answer;
-  return WORD_RUMOURS[rng.int(WORD_RUMOURS.length)]!.replace(/\{a\}/g, answer);
+  const riddle = String(near[rng.int(near.length)]!.riddle);
+  const answer = RIDDLES_WORLD[riddle]!.answer;
+  return { text: WORD_RUMOURS[rng.int(WORD_RUMOURS.length)]!.replace(/\{a\}/g, answer), riddle };
 }
 
 /** A funny rumour that means nothing. */
@@ -183,8 +190,13 @@ export const SILLY_RUMOURS: readonly string[] = [
 
 /** The rumours of a tavern (42nd playtest, point 7): half the time a password of a place nearby, otherwise something funny and senseless. No distances or directions to places. */
 export function tavernRumour(world: World, tavernTier: number, rng: Rng): string {
-  const word = rng.int(2) === 0 ? wordRumour(world, tavernTier, rng) : null;
-  return word ?? SILLY_RUMOURS[rng.int(SILLY_RUMOURS.length)]!;
+  return tavernRumourWith(world, tavernTier, rng).text;
+}
+
+/** `tavernRumour` and, when it let a password slip, the riddle it belongs to (`riddle`); a silly saying has none. */
+export function tavernRumourWith(world: World, tavernTier: number, rng: Rng): { text: string; riddle?: string } {
+  const word = rng.int(2) === 0 ? passwordRumour(world, tavernTier, rng) : null;
+  return word ?? { text: SILLY_RUMOURS[rng.int(SILLY_RUMOURS.length)]! };
 }
 
 // ------------------------------------------------------------------ temple
@@ -310,20 +322,31 @@ export function smithStock(root: SeedState, poiId: string, day: number, tier: nu
   for (let tries = 0; tries < 2000 && Object.values(shelves).some((s) => s.length < SMITH_SHELF_SIZE); tries++) {
     const item = generateItem(rng, Math.max(1, tier));
     const shelf = shelfOf(item);
-    if (shelf && shelves[shelf].length < SMITH_SHELF_SIZE) shelves[shelf].push({ item, shelf, price: Math.max(1, Math.round(item.value * bargainFactor(party))) });
+    if (shelf && shelves[shelf].length < SMITH_SHELF_SIZE) shelves[shelf].push({ item, shelf, price: shopPrice(item.value, party) });
   }
   return [shelves.armor, shelves.weapons, shelves.rings].flatMap((s) => s.sort((a, b) => a.price - b.price));
 }
 
+/**
+ * What a smith asks for a piece worth `value` (20. 11. 2026, the user: a piece of 100 costs 200 without a talent, 150 with the Bargainer and 100 with the Merchant). `bargainFactor` is 1, 0.75 and 0.5,
+ * so twice that. The old game sold at the value and bought at half of it, and the Merchant's bonus on top made buying at 0.5 and selling at 0.75 a way to make gold.
+ */
+export function shopPrice(value: number, party: Party): number {
+  return Math.max(1, Math.round(value * 2 * bargainFactor(party)));
+}
+
+/** What a smith pays: 50, 75 and 100 per cent of the value without a talent, with the Bargainer and with the Merchant (`1.5 - bargainFactor`), never more than a shop asks for it. */
 export function sellPrice(item: Item, party: Party): number {
-  const base = Math.max(1, Math.floor(item.value / 2));
-  return party.talents.includes("talent_merchant") ? Math.round(base * 1.5) : base;
+  // a spell scroll is bought at the guild for `spellPrice` (the value, halved by the Merchant): selling it back for more than half would pay the Merchant to trade
+  const share = item.type === "spell" ? 0.5 : 1.5 - bargainFactor(party);
+  return Math.max(1, Math.floor(item.value * share));
 }
 
 export function buyItem(party: Party, stock: Stock): { ok: boolean; reason?: "gold" | "space" } {
   if (party.gold < stock.price) return { ok: false, reason: "gold" };
   const copy: Item = JSON.parse(JSON.stringify(stock.item)) as Item;
   copy.id = "";
+  copy.bought = true;
   if (!giveItem(party, copy)) return { ok: false, reason: "space" };
   party.gold -= stock.price;
   return { ok: true };
@@ -333,6 +356,8 @@ export function buyItem(party: Party, stock: Stock): { ok: boolean; reason?: "go
 export interface SoldItem {
   item: Item;
   price: number;
+  /** The sale counted as income for the gold achievement (the item was not bought in a shop): buying it back takes that income away again. */
+  counted: boolean;
 }
 
 /** Buys a sold item back for what the smith paid. The list of the visit is the caller's: a returned `ok` means the caller drops the entry. */
@@ -342,14 +367,18 @@ export function buyBackItem(party: Party, sold: SoldItem): { ok: boolean; reason
   copy.id = "";
   if (!giveItem(party, copy)) return { ok: false, reason: "space" };
   party.gold -= sold.price;
+  if (sold.counted) achOf(party).ledger.goldBack += sold.price;
   return { ok: true };
 }
 
+/** Sells a backpack item to a shop. What a shop sold to the party (`Item.bought`) brings gold but is no income for the gold achievement: buying and selling is a trade, not a find. */
 export function sellItem(party: Party, character: number, slot: string): boolean {
   const c = party.characters[character]!;
   const item = c.inventory[slot];
   if (!item || item.quest) return false;
-  party.gold += sellPrice(item, party);
+  const price = sellPrice(item, party);
+  if (item.bought) party.gold += price;
+  else gainGold(party, price);
   c.inventory[slot] = null;
   return true;
 }
@@ -476,6 +505,7 @@ export function buyScroll(party: Party, hero: number, spellId: number): { ok: bo
     scroll.id = `i${(party.itemCounter++).toString(36)}`;
     bag[slot] = scroll;
   } else if (!giveItem(party, scroll)) return { ok: false, reason: "space", price };
+  scroll.bought = true;
   party.gold -= price;
   return { ok: true, price };
 }

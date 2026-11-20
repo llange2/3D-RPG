@@ -9,6 +9,8 @@ export interface Props {
   alt?: string;
   /** Images: `sync` decodes the picture with the frame that shows it, so it never appears a frame or more after its box. */
   decoding?: "sync" | "async" | "auto";
+  /** Images: `lazy` loads a picture when it nears the screen (the long list of achievements). */
+  loading?: "lazy" | "eager";
   type?: string;
   value?: string;
   placeholder?: string;

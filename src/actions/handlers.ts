@@ -9,6 +9,7 @@ import { LOCK_FUMBLE_CHANCE, lockDifficulty } from "../data/locks";
 import { pickMonsterWeighted } from "../data/monsters";
 import { BASE_CLASS, CONSTANTS, SPELLS, TALENTS, TEXTS, talentInfo } from "../data/tables";
 import { attr, canAct, canBeHealed, gainAttribute, healHp, itemBonus, levelUp, thieveryRoll, thieverySkill } from "../sim/character";
+import { gainGold } from "../sim/achievements";
 import { applyHit, elementalDamage, type DamageType } from "../sim/combat";
 import { addCondition, removeCondition } from "../sim/conditions";
 import { generateItem, questItem, spellScroll } from "../sim/items";
@@ -196,7 +197,7 @@ function payOut(p: ActionInstance["params"], rng: Rng, party: Party, effects: Ef
     effects.push({ type: "text", text: lines[rng.int(lines.length)]! });
   }
   if (gold > 0) {
-    party.gold += gold;
+    gainGold(party, gold);
     effects.push({ type: "gold", amount: gold });
   }
   for (let i = 0; i < items; i++) {
@@ -1047,7 +1048,7 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
       // the old action 19 pays 100 gold for a week of work and lets ten days pass
       if (ctx.answer === undefined) return { effects: [{ type: "confirm", title: "The job master", question: TEXTS[343]!, yes: "Work", no: "Leave" }], consumed: false };
       if (ctx.answer === null) return { effects, consumed: false };
-      party.gold += WORK_GOLD;
+      gainGold(party, WORK_GOLD);
       effects.push({ type: "work", gold: WORK_GOLD, days: WORK_DAYS });
       return { effects, consumed: false };
     }
