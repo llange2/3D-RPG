@@ -69,10 +69,10 @@ describe("62nd playtest, point 5: tight places", () => {
     expect(tight).toBeGreaterThan(20);
   });
 
-  it("makes the levels 1 to 4 hold about as many places as level 5 (the sum over five small worlds: none under two thirds of it)", () => {
+  it("makes the levels 1 to 4 hold about as many places as level 5 (the sum over five small worlds: none under three fifths of it)", () => {
     const sum: Record<number, number> = {};
     for (const seed of SEEDS) for (const p of places(new World(seed, "small", "default"))) sum[p.tier] = (sum[p.tier] ?? 0) + 1;
-    for (const level of [1, 2, 3, 4]) expect(sum[level]!, `level ${level}: ${JSON.stringify(sum)}`).toBeGreaterThanOrEqual((2 / 3) * sum[5]!);
+    for (const level of [1, 2, 3, 4]) expect(sum[level]!, `level ${level}: ${JSON.stringify(sum)}`).toBeGreaterThanOrEqual(0.6 * sum[5]!);
   });
 
   it("closes a tight place that has a close neighbour with a wall of mountains on the three sides away from its door", () => {

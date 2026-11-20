@@ -139,7 +139,17 @@ const WOOD_BY_BIOME: Record<number, number> = { [BIOME.MEADOW]: 1000, [BIOME.FOR
  */
 const LAND_PER_PLACE = 60;
 /** The same on a lava island. */
-const LAVA_PER_PLACE = 100;
+const LAVA_PER_PLACE = 30;
+/**
+ * 62nd playtest, point 5b: more than half of a lava island was rock that nobody could use. Its places stand `LAVA_PLACE_DISTANCE` apart (the rock between them is the separation, a place clears
+ * one tile of lava), there are more of them (`LAVA_PER_PLACE` was 100), and the search tries `LAVA_ATTEMPTS` spots (the rock leaves few that fit, and a world has one or two such islands).
+ */
+const LAVA_PLACE_DISTANCE = 4;
+const LAVA_ATTEMPTS = 3000;
+/** Tiles of land a place of a lava island has round it (the other islands have `PLACE_ROOM`, 3): the places there stand closer to the coast, where the rock was wasted. */
+const LAVA_PLACE_ROOM = 2;
+/** The landing of a lava island keeps this far from the land of any other island, where there is a choice. */
+const LANDING_SEA = 4;
 const MIN_PLACE_DISTANCE = 6;
 /**
  * The islands of levels 1 to 4 were full at `MIN_PLACE_DISTANCE`, with half of the land left empty (62nd playtest, point 5): after the castles and the pyramids are chosen (they need the
@@ -625,14 +635,17 @@ export class World {
     // (a lava island is rock and lava, and every place clears a square of it: fewer, so that the ground stays what the user asked for)
     const wanted = Math.max(2, Math.floor(isl.area / (isl.biome === BIOME.LAVA ? LAVA_PER_PLACE : LAND_PER_PLACE)) - towns);
     let placed = 0;
-    for (let attempt = 0; attempt < 400 && placed < wanted; attempt++) {
+    const lava = isl.biome === BIOME.LAVA;
+    for (let attempt = 0; attempt < (lava ? LAVA_ATTEMPTS : 400) && placed < wanted; attempt++) {
       const rng = rngFor(this.seed, LAYER.POI, isl.index, 0, "pick", attempt);
       const x = isl.x + rng.range(isl.box.x0, isl.box.x1);
       const y = isl.y + rng.range(isl.box.y0, isl.box.y1);
-      const pos = this.findLand(isl, x, y, 1, box.x0, box.y0, box.x1, box.y1, PLACE_ROOM) ?? this.findLand(isl, x, y, 1, box.x0, box.y0, box.x1, box.y1);
+      // (a lava island keeps its places `LAVA_PLACE_ROOM` tiles from the coast, without the second try: a stream that leaves the island makes bare land that touches the next island, so the doors
+      // turn away from the coast (`planIsland`), the streams keep off the water (`roadCost`) and the landing keeps off other islands and the edge of the world, 62nd playtest, point 5b)
+      const pos = this.findLand(isl, x, y, 1, box.x0, box.y0, box.x1, box.y1, lava ? LAVA_PLACE_ROOM : PLACE_ROOM) ?? (lava ? null : this.findLand(isl, x, y, 1, box.x0, box.y0, box.x1, box.y1));
       if (!pos) continue;
       if (pois.slice(0, towns).some((p) => Math.max(Math.abs(pos.x - p.x), Math.abs(pos.y - p.y)) < TOWN_CLEARANCE)) continue;
-      if (near(pos.x, pos.y, MIN_PLACE_DISTANCE)) continue;
+      if (near(pos.x, pos.y, lava ? LAVA_PLACE_DISTANCE : MIN_PLACE_DISTANCE)) continue;
       pois.push(this.makePoi(isl, 100 + attempt, pos.x, pos.y, this.poiKind(rng, isl.biome), false));
       placed++;
     }
@@ -768,8 +781,12 @@ export class World {
     const stub = { x: front.x + 2 * dx, y: front.y + 2 * dy };
     if ((towards.x - stub.x) * dx + (towards.y - stub.y) * dy >= 0) return [front, stub];
     const across = dx === 0 ? towards.x - stub.x : towards.y - stub.y;
-    const sign = across >= 0 ? 1 : -1;
-    return [front, stub, dx === 0 ? { x: stub.x + 3 * sign, y: stub.y } : { x: stub.x, y: stub.y + 3 * sign }];
+    const sideways = (s: number): Pt => (dx === 0 ? { x: stub.x + 3 * s, y: stub.y } : { x: stub.x, y: stub.y + 3 * s });
+    let sign = across >= 0 ? 1 : -1;
+    // (on a lava island the piece goes to the side where the land reaches: it ran to the coast and made a strip of bare land there, 62nd playtest, point 5b)
+    const home = poi.biome === BIOME.LAVA ? this.islandAt(poi.x, poi.y) : null;
+    if (home && !this.landAround(sideways(sign).x, sideways(sign).y, 2, home) && this.landAround(sideways(-sign).x, sideways(-sign).y, 2, home)) sign = -sign;
+    return [front, stub, sideways(sign)];
   }
 
   /**
@@ -778,7 +795,7 @@ export class World {
    * more (a bridge, a pass), the neighbourhood of a place a lot more (a road must not run into a building that is not its goal).
    * `others` are the places that may be in the way.
    */
-  private route(a: Poi, b: Poi, seed: number, others: readonly Poi[]): RoadSeg[] {
+  private route(a: Poi, b: Poi, seed: number, others: readonly Poi[], landOnly = false): RoadSeg[] {
     const from = this.leave(a, b);
     const to = this.leave(b, a);
     const u = from[from.length - 1]!;
@@ -805,20 +822,20 @@ export class World {
     let best = shapes[0]!;
     let bestCost = Infinity;
     for (const mid of shapes) {
-      const cost = this.roadCost([u, ...mid, v], boxes);
+      const cost = this.roadCost([u, ...mid, v], boxes, landOnly);
       if (cost < bestCost) {
         best = mid;
         bestCost = cost;
       }
     }
-    return roadThrough(this.dodge([...from, ...best, ...to.slice().reverse()], boxes));
+    return roadThrough(this.dodge([...from, ...best, ...to.slice().reverse()], boxes, landOnly));
   }
 
   /**
    * A road through the footprint of a place that is not its goal would end at the building on both sides. Every straight piece (not the stubs at
    * the doors) that runs into such a place is led round it instead: to the edge of the place's cleared ground, along it and back, on the side that costs less.
    */
-  private dodge(points: Pt[], boxes: readonly Box[]): Pt[] {
+  private dodge(points: Pt[], boxes: readonly Box[], landOnly = false): Pt[] {
     // the two places the road joins are not in its way
     const zones = boxes.filter((bb) => !bb.own);
     if (zones.length === 0) return points;
@@ -857,7 +874,7 @@ export class World {
         let best = options[0]!;
         let bestCost = Infinity;
         for (const o of options) {
-          const cost = this.roadCost([a, ...o, b], zones);
+          const cost = this.roadCost([a, ...o, b], zones, landOnly);
           if (cost < bestCost) {
             best = o;
             bestCost = cost;
@@ -872,7 +889,7 @@ export class World {
   }
 
   /** What a road through these points costs: sampled every second tile, plus a little for every bend. A guide for choosing between shapes, not the terrain itself. */
-  private roadCost(points: readonly Pt[], boxes: readonly Box[]): number {
+  private roadCost(points: readonly Pt[], boxes: readonly Box[], landOnly = false): number {
     let cost = (points.length - 2) * 3;
     for (const seg of roadThrough(points)) {
       const near = boxes.filter((bb) => bb.x1 + 2 >= seg.x0 && bb.x0 - 2 <= seg.x1 && bb.y1 + 2 >= seg.y0 && bb.y0 - 2 <= seg.y1);
@@ -881,7 +898,9 @@ export class World {
         const y = seg.horizontal ? seg.y0 : i;
         // sea costs a bridge, the rock of a range a pass
         const land = this.isLand(this.wrapX(x), this.wrapY(y));
-        cost += !land ? 24 : fbm2(this.sRidge, this.wrapX(x), this.wrapY(y), RIDGE_PERIOD, 2) + this.lump(this.wrapX(x), this.wrapY(y)) > RIDGE_LEVEL ? 4 : 0;
+        cost += !land ? (landOnly ? 4000 : 24) : fbm2(this.sRidge, this.wrapX(x), this.wrapY(y), RIDGE_PERIOD, 2) + this.lump(this.wrapX(x), this.wrapY(y)) > RIDGE_LEVEL ? 4 : 0;
+        // (a stream of a lava island keeps off the water: lava beside water is made land, and a stripe of bare land along the coast meets the coast of the next island at a corner without a painted tile)
+        if (landOnly && land && !this.landAround(x, y, 2, this.islandAt(x, y) ?? this.layout.islands[0]!)) cost += 400;
         for (const bb of near) if (x >= bb.x0 - 1 && x <= bb.x1 + 1 && y >= bb.y0 - 1 && y <= bb.y1 + 1) cost += 60;
       }
     }
@@ -939,6 +958,23 @@ export class World {
       p.side = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "E" : "W") : dy > 0 ? "S" : "N";
     };
     for (let i = 1; i < roaded.length; i++) faceTowards(roaded[i]!, roaded[parent[i]!]!);
+    if (isl.biome === BIOME.LAVA) {
+      // a door on the side of the coast ends the stub of its stream in the sea (the places of a lava island stand two tiles from the coast, 62nd playtest, point 5b): it turns to the nearest side
+      // whose stub lies on land with land round it
+      const stubOk = (p: Poi, side: PoiSide): boolean => {
+        const keep = p.side;
+        p.side = side;
+        const front = poiEntrances(p)[0]!;
+        p.side = keep;
+        const d = SIDE_DELTA[side];
+        return this.landAround(front.x + 2 * d.dx, front.y + 2 * d.dy, 1, isl);
+      };
+      for (const p of roaded.slice(1)) {
+        if (stubOk(p, p.side)) continue;
+        const other = (["N", "E", "S", "W"] as PoiSide[]).find((s) => s !== p.side && stubOk(p, s));
+        if (other) p.side = other;
+      }
+    }
     for (const p of pois) {
       if (!isTower(p)) continue;
       const near = roaded.reduce((best, q) => (Math.abs(q.x - p.x) + Math.abs(q.y - p.y) < Math.abs(best.x - p.x) + Math.abs(best.y - p.y) ? q : best), roaded[0]!);
@@ -951,7 +987,7 @@ export class World {
       const width = rngFor(this.seed, LAYER.ROAD, "lava-width", isl.index, n).int(1000) < LAVA_WIDE ? 2 : 1;
       return segs.map((seg) => seg.asLava(width));
     };
-    const connectors = edges.flatMap(([a, b], i) => stream(this.route(roaded[a]!, roaded[b]!, this.roadSeed("C", isl.index, i), pois), i));
+    const connectors = edges.flatMap(([a, b], i) => stream(this.route(roaded[a]!, roaded[b]!, this.roadSeed("C", isl.index, i), pois, lava), i));
     pois.filter(isTower).forEach((tower, n) => {
       const near = roaded.reduce((best, q) => (Math.abs(q.x - tower.x) + Math.abs(q.y - tower.y) < Math.abs(best.x - tower.x) + Math.abs(best.y - tower.y) ? q : best), roaded[0]!);
       connectors.push(...this.route(tower, near, this.roadSeed("T", isl.index, n), pois).map((seg) => seg.asBare()));
@@ -1028,6 +1064,8 @@ export class World {
     const out = SIDE_DELTA[town.side];
     const stub = { x: front.x + 2 * out.dx, y: front.y + 2 * out.dy };
     let best: { k: number; end: Pt } | null = null;
+    // (a landing that lies by the coast of another island is the last choice: the bare land of a landing there meets that coast at a corner that has no painted tile, 62nd playtest, point 5b)
+    let bestFree: { k: number; end: Pt } | null = null;
     for (const s of SIDES) {
       // not back into the town
       if (s.dx === -out.dx && s.dy === -out.dy) continue;
@@ -1040,8 +1078,11 @@ export class World {
         } else gap++;
       }
       const k = last + 1;
-      if (!best || k < best.k) best = { k, end: { x: stub.x + s.dx * last, y: stub.y + s.dy * last } };
+      const end = { x: stub.x + s.dx * last, y: stub.y + s.dy * last };
+      if (!best || k < best.k) best = { k, end };
+      if ((!bestFree || k < bestFree.k) && !this.nearOtherIsland(isl, end.x, end.y, LANDING_SEA) && this.edgeSafe(end.x, end.y)) bestFree = { k, end };
     }
+    best = bestFree ?? best;
     if (!best) return [];
     const boxes: Box[] = pois.map((p) => ({ ...poiBounds(p), own: p === town }));
     return roadThrough(this.dodge([front, stub, best.end], boxes));

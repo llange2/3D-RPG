@@ -186,5 +186,7 @@
  * 78 = the 62nd playtest, point 5 (places per level): the five pyramids stand on islands of level 5 only (`World.planPyramids`, caves of level 5 become dungeons where needed); caves and dungeons are added on the
  * islands of levels 1 to 4 at four tiles from each other and on the tongues of land of the coast (`tightPlaces`, `Poi.tight`: never a castle, a pyramid or a tower), with a wall of mountains behind them where a
  * neighbour is closer than six tiles (`separators`; they clear one tile round them, `TIGHT_FLATTEN`, and keep five tiles from other islands); the orbs lie in at least four dungeons (some on level 4 where the pyramids took level 5).
+ * 79 = the 62nd playtest, point 5b (the lava island): more places on it (`LAVA_PER_PLACE` 30, four tiles apart, two tiles from the coast, 3000 tries), the doors of its places turn away from the coast, its streams keep two tiles
+ * off the water and never cross it (`route(…, landOnly)`), the piece of a stream that goes sideways at a door takes the side where the land reaches, and the landing keeps off the coast of other islands and the edge of the world.
  */
-export const GEN_VERSION = 78;
+export const GEN_VERSION = 79;

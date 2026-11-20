@@ -80,7 +80,9 @@ describe("28th playtest, point 1: the lava islands", () => {
             expect(t.deco, `${seed}: nothing grows on a lava island`).not.toBe(DECO.TREE);
           }
         }
-        expect(rock, `${seed} island ${isl.index}: mountains`).toBeGreaterThan(lava);
+        // (the rock no longer outweighs the lava by far since the 62nd playtest, point 5b: the island holds more places, each with its ring of lava, and the streams between them; it still is the biggest part
+        // of the island together with the coast wall: at least three fifths of the lava)
+        expect(rock, `${seed} island ${isl.index}: mountains`).toBeGreaterThan(lava * 0.6);
         expect(lava, `${seed} island ${isl.index}: lava`).toBeGreaterThan(isl.area / 20);
         expect(bare, `${seed} island ${isl.index}: bare ground`).toBeLessThan(isl.area / 2);
       }

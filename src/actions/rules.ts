@@ -456,7 +456,14 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
     const allowProtected = rule.kind === "transfer" || rule.anchor.startsWith("vault");
     // the middle of a room is where its monsters stand: in a small room it is also an edge cell, and a chest or a prop there left the room empty
     const keepsCentre = rule.anchor !== "roomCenter" && rule.anchor !== "bossRoom" && !rule.anchor.startsWith("vault");
-    const pool = candidatesFor(rule).filter((a) => whenOk(a, rule) && isFree(a, allowProtected) && !(keepsCentre && roomCentres.has(idx(a.x, a.y))));
+    let pool = candidatesFor(rule).filter((a) => whenOk(a, rule) && isFree(a, allowProtected) && !(keepsCentre && roomCentres.has(idx(a.x, a.y))));
+    // the guard of the deepest room stands on any free cell of that room when the ones meant for it are taken (the Oubliette of Uloa, p:0:0:1280 of "alpha", had no boss: 62nd playtest)
+    if (pool.length === 0 && rule.id === "boss_guard" && rule.anchor === "bossRoom") {
+      const free = Object.values(anchors.byKind).flat().filter((a) => isFree(a, allowProtected));
+      const inRoom = free.filter((a) => a.roomId === anchors.bossRoom);
+      // (else the free cell that lies deepest)
+      pool = inRoom.length > 0 ? inRoom : free.length > 0 ? [free.reduce((best, a) => (a.depth > best.depth ? a : best))] : [];
+    }
 
     // ----- choose anchors
     let chosen: Anchor[];
