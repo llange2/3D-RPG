@@ -282,7 +282,7 @@ const KEYS: Record<GameKind, Record<"auto" | "quick", string>> = {
 /** The single slot "Save game" wrote before there were named saves (`migrateManualSaves` turns it into one). */
 const LEGACY_MANUAL: Record<GameKind, string> = { world: "mm3-seed-rpg:manualsave:v1", campaign: "mm3-seed-rpg:campaign:manualsave:v1" };
 
-/** `auto`: written by the game itself, `quick`: F5. What "Save game" in the menu writes are the named saves below. */
+/** `auto`: written by the game itself, `quick`: F8. What "Save game" in the menu writes are the named saves below. */
 export type SaveSlot = keyof (typeof KEYS)["world"];
 export const SAVE_SLOTS: readonly SaveSlot[] = ["quick", "auto"];
 export const GAME_KINDS: readonly GameKind[] = ["world", "campaign"];

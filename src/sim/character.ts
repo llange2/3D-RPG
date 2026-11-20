@@ -180,15 +180,16 @@ const RESISTANCE_BONUS = { fire: "res_fire", ice: "res_ice", acid: "res_acid", m
  * `fairyResistance()` points to every resistance of every hero). The sheet shows this sum; the damage formulas use `resistanceShare`.
  */
 export function resistance(c: Character, element: keyof typeof RESISTANCE_FIELD, mascot?: string | null): number {
-  return baseResistance(c, RESISTANCE_FIELD[element]) + itemBonus(c, RESISTANCE_BONUS[element]) + (c.mods?.boon?.[RESISTANCE_BONUS[element]] ?? 0) + (mascot === "Fairy" ? fairyResistance() : 0);
+  // the sheet shows the capped value too (20. 11. 2026: a hero with 7 % who found 80 % read 87 %)
+  return Math.min(RESISTANCE_CAP, baseResistance(c, RESISTANCE_FIELD[element]) + itemBonus(c, RESISTANCE_BONUS[element]) + (c.mods?.boon?.[RESISTANCE_BONUS[element]] ?? 0) + (mascot === "Fairy" ? fairyResistance() : 0));
 }
 
-/** What a resistance can take off an elemental hit at the most, in percent (51st playtest, point 13): more points on the sheet do not count. */
+/** What a resistance can take off an elemental hit at the most, in percent (51st playtest, point 13): more points do not count, and the sheet never shows more. */
 export const RESISTANCE_CAP = 80;
 
-/** The share of an elemental hit that the hero's resistance takes off, in percent: the resistance, never above `RESISTANCE_CAP`. */
+/** The share of an elemental hit that the hero's resistance takes off, in percent (the resistance is capped at `RESISTANCE_CAP` already). */
 export function resistanceShare(c: Character, element: keyof typeof RESISTANCE_FIELD, mascot?: string | null): number {
-  return Math.min(RESISTANCE_CAP, resistance(c, element, mascot));
+  return resistance(c, element, mascot);
 }
 
 /** Armor of the worn items; Rage halves it, Stone Skin adds to what is left. */

@@ -112,7 +112,7 @@ describe("37th playtest, point 4: key bindings", () => {
     expect(actionOf(keys, "ArrowLeft")).toBe("turnLeft");
     expect(actionOf(keys, " ")).toBe("attack");
     expect(actionOf(keys, "c")).toBe("inventory");
-    expect(actionOf(keys, "F5")).toBe("quicksave");
+    expect(actionOf(keys, "F8")).toBe("quicksave");
     expect(actionOf(keys, "5")).toBe("mascot");
     expect(actionOf(keys, "Escape")).toBeNull();
     expect(actionOf(keys, "Shift")).toBeNull();
@@ -163,9 +163,9 @@ describe("37th playtest, point 4: key bindings", () => {
 describe("37th playtest, point 4b: the quality slider", () => {
   it("sets the seven switches of Low, Medium and High (the glow is the seventh, bug_fix_68)", () => {
     const base = { ...DEFAULT_SETTINGS };
-    expect(applyQuality("low", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false, effects: "low", bloom: false });
-    expect(applyQuality("medium", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true, effects: "full", bloom: false });
-    expect(applyQuality("high", base)).toEqual({ environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true, effects: "full", bloom: true });
+    expect(applyQuality("low", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "close", resolution: "low", animatedTown: false, effects: "low" });
+    expect(applyQuality("medium", base)).toEqual({ environment: "flat", textureQuality: "normal", viewDistance: "medium", resolution: "normal", animatedTown: true, effects: "full" });
+    expect(applyQuality("high", base)).toEqual({ environment: "full", textureQuality: "high", viewDistance: "far", resolution: "normal", animatedTown: true, effects: "full" });
     expect(QUALITY_LEVELS).toEqual(["low", "medium", "high", "custom"]);
   });
 

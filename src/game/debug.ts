@@ -9,10 +9,10 @@ import { ATTRIBUTES, type Party } from "../sim/types";
 import type { Poi, PoiKind } from "../world/types";
 
 /**
- * The debug menu (Esc > Debug). Switch this to false and the entry is gone from the menu and no cheat can be turned on; nothing else
- * has to be removed.
+ * The debug menu (Esc > Debug). When this is false the entry is gone from the menu and no cheat can be turned on; nothing else
+ * has to be removed. It is on in the dev server and the tests (`import.meta.env.DEV`) and off in every build, so the Windows release (v1.1) has none.
  */
-export const DEBUG_MENU = true;
+export const DEBUG_MENU: boolean = import.meta.env.DEV;
 
 /** Food rations a god-mode party is kept at, shown as the count in the corner. */
 const GOD_FOOD = 99;

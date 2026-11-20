@@ -320,7 +320,7 @@ const LASER_LAMP_FADE = 0.08;
 const TRAP_SOUND: Record<string, number> = { spring: 9036, guillotine: 9042, steal_gold: 9038 };
 
 /** How the save slots are named in the load lists of the title screen and of the menu. */
-const SLOT_NAMES: Record<SaveSlot, string> = { quick: "Quicksave (F5)", auto: "Autosave" };
+const SLOT_NAMES: Record<SaveSlot, string> = { quick: "Quicksave (F8)", auto: "Autosave" };
 const KIND_NAMES: Record<GameKind, string> = { world: "World", campaign: "Campaign" };
 /** What the title screen hands back for a save: the file is only read when it is chosen (the named saves can be big). */
 type SaveRef = () => SaveFile | null;
@@ -462,7 +462,6 @@ export class Game {
     this.props = new PropRenderer(this.r.scene);
     // the water of the fountains and what a spell does where it lands (Options > Graphics > Effects); the props tell it where the fountains stand
     this.effects = new Effects(this.r.scene, this.settings.effects);
-    this.r.setBloom(this.settings.bloom);
     this.props.watch(this.effects);
     this.projectiles = new Projectiles(this.props, this.r.scene, this.effects);
     const [staticInfo, monsterInfo] = await Promise.all([fetchJson<Record<string, StaticModelInfo>>(registryFile("static")), fetchJson<Record<string, MonsterModelInfo>>(registryFile("monsters"))]);
@@ -590,7 +589,7 @@ export class Game {
 
   /**
    * What "Load game" on the title screen offers. The world and the campaign are saved apart: the autosave of each is its
-   * "Continue" entry, below them come the saves made in the menu and by F5. Slots without a save are left out.
+   * "Continue" entry, below them come the saves made in the menu and by F8. Slots without a save are left out.
    */
   private titleSaves(): Option<SaveRef>[] {
     const out: Option<SaveRef>[] = [];
@@ -1558,7 +1557,9 @@ export class Game {
     const profile = this.achievements.profile;
     await this.ui.achievementOverview(
       percentDone(profile),
-      ACHIEVEMENTS.map((a) => ({ id: a.id, name: a.name, description: a.description, unlocked: a.id in profile.unlocked, progress: progressOf(profile, a.id) })),
+      ACHIEVEMENTS.map((a) => ({ id: a.id, name: a.name, description: a.description, unlocked: a.id in profile.unlocked, progress: progressOf(profile, a.id) }))
+        // the achieved ones first, then the locked ones, each group A to Z
+        .sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || a.name.localeCompare(b.name, "en")),
     );
   }
 
@@ -5544,7 +5545,6 @@ export class Game {
       { type: "toggle", label: () => `Resolution: ${draft.resolution}`, flip: () => (draft.resolution = draft.resolution === "normal" ? "low" : "normal") },
       { type: "toggle", label: () => `Animated town scenes: ${onOff(draft.animatedTown)}`, flip: () => (draft.animatedTown = !draft.animatedTown) },
       { type: "toggle", label: () => `Effects: ${EFFECT_NAMES[draft.effects]}`, flip: () => (draft.effects = EFFECT_LEVELS[(EFFECT_LEVELS.indexOf(draft.effects) + 1) % EFFECT_LEVELS.length]!) },
-      { type: "toggle", label: () => `Bloom: ${onOff(draft.bloom)}`, flip: () => (draft.bloom = !draft.bloom) },
       { type: "toggle", label: () => `Show FPS: ${onOff(draft.showFps)}`, flip: () => (draft.showFps = !draft.showFps) },
     ]);
     return picked === "apply" ? this.applyOptions(draft) : false;
@@ -5621,7 +5621,6 @@ export class Game {
     if (next.resolution !== before.resolution) this.r.setResolution(next.resolution);
     setAnimatedTown(next.animatedTown);
     this.effects.setLevel(next.effects);
-    this.r.setBloom(next.bloom);
     // (the chunks carry the foam of the shore: it comes and goes with the effects)
     if ((before.effects === "off") !== (next.effects === "off") && this.chunks && this.mode === "overworld") {
       this.chunks.rebuild();

@@ -94,8 +94,6 @@ try {
   await page.goto(`${base}?autostart=1&seed=${seed}&size=default&dungeons=default&outside=1`, { waitUntil: "load", timeout: 60000 });
   await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
   await sleep(5000);
-  // BLOOM=1 looks at the glow of the High quality (the shots of the other modes are taken with it on)
-  if (process.env.BLOOM) await page.evaluate(`__game.game.internals.r.setBloom(true)`);
   if (what === "shore") {
     // the foam of the shore (bug_fix_68): by day, at night, and with the effects off
     const spot = shoreSpot(world);

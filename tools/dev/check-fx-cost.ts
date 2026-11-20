@@ -1,8 +1,8 @@
 /**
- * What the effects cost per frame (the open points of the effects plan): the debug showcase is a hall in which every glowing object stands, so many lamps are in reach at once, and
- * the glow (bloom) can be switched on top. The game's own render loop is stopped and the frames are rendered by hand (`scene.render()` and a `finish()` so that the GPU is counted); the setups are
+ * What the effects cost per frame (the open points of the effects plan): the debug showcase is a hall in which every glowing object stands, so many lamps are in reach at once.
+ * The game's own render loop is stopped and the frames are rendered by hand (`scene.render()` and a `finish()` so that the GPU is counted); the setups are
  * measured in turns (five rounds of 40 frames each, the median of the rounds), so that a slow moment of the machine hits all of them alike. The CPU time of `Effects.update` is measured alone.
- * Setups: effects off / low / full, with and without bloom, in the hall, in the hall with 250 torches in reach (the worst case: the batches of 420 quads are full), and in the open land.
+ * Setups: effects off / low / full in the hall, in the hall with 250 torches in reach (the worst case: the batches of 420 quads are full), and in the open land.
  * Needs a dev server (`VITE_FROZEN=1 VITE_PORT=<free port> npx vite --port <free port> --strictPort`).
  *
  * Usage: GAME_URL=http://localhost:<port>/ npx tsx tools/dev/check-fx-cost.ts [seed]
@@ -16,7 +16,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 interface Setup {
   label: string;
   level: string;
-  bloom: boolean;
   /** How many fake torches are in reach (0: the lamps the scene has). */
   torches: number;
 }
@@ -43,7 +42,7 @@ async function run(page: import("puppeteer-core").Page, setups: Setup[]): Promis
       const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
       const torches = Array.from({ length: 250 }, (_, i) => ({ key: "stress:" + i, x: cam.x + (rnd() - 0.5) * 36, y: 0.5 + rnd() * 3, z: cam.z + 2 + rnd() * 28, color: [1, 0.6, 0.3], range: 8, fx: "torch" }));
       const frame = (s) => { if (s.torches > 0) g.effects.setLamps(torches.slice(0, s.torches), 0); g.effects.update(0.016); scene.render(); };
-      const apply = (s) => { g.effects.setLevel(s.level); g.r.setBloom(s.bloom); };
+      const apply = (s) => { g.effects.setLevel(s.level); };
       const times = setups.map(() => []);
       for (let round = 0; round < 5; round++) {
         setups.forEach((s, i) => {
@@ -100,22 +99,17 @@ try {
     await sleep(3000);
   }
   await run(page, [
-    { label: "hall: effects off", level: "off", bloom: false, torches: 0 },
-    { label: "hall: effects full", level: "full", bloom: false, torches: 0 },
-    { label: "hall: off + bloom", level: "off", bloom: true, torches: 0 },
-    { label: "hall: full + bloom", level: "full", bloom: true, torches: 0 },
-    { label: "250 torches: effects off", level: "off", bloom: false, torches: 250 },
-    { label: "250 torches: effects low", level: "low", bloom: false, torches: 250 },
-    { label: "250 torches: effects full", level: "full", bloom: false, torches: 250 },
-    { label: "250 torches: full + bloom", level: "full", bloom: true, torches: 250 },
+    { label: "hall: effects off", level: "off", torches: 0 },
+    { label: "hall: effects full", level: "full", torches: 0 },
+    { label: "250 torches: effects off", level: "off", torches: 250 },
+    { label: "250 torches: effects low", level: "low", torches: 250 },
+    { label: "250 torches: effects full", level: "full", torches: 250 },
   ]);
   await page.evaluate(`(async () => { await __game.leave(); })()`);
   await sleep(3500);
   await run(page, [
-    { label: "overworld: effects off", level: "off", bloom: false, torches: 0 },
-    { label: "overworld: effects full", level: "full", bloom: false, torches: 0 },
-    { label: "overworld: off + bloom", level: "off", bloom: true, torches: 0 },
-    { label: "overworld: full + bloom", level: "full", bloom: true, torches: 0 },
+    { label: "overworld: effects off", level: "off", torches: 0 },
+    { label: "overworld: effects full", level: "full", torches: 0 },
   ]);
 } finally {
   await browser.close();

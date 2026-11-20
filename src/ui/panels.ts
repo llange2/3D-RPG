@@ -1,7 +1,7 @@
 import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { fairyReduction, fairyResistance, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { averageDamageLines } from "../sim/combat";
-import { ageOf, armor, attr, baseResistance, baseValue, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, offHandRingSlot, recalcValues, replacedItems, resistance, worstCondition, xpToNextLevel } from "../sim/character";
+import { ageOf, armor, attr, baseResistance, baseValue, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, offHandRingSlot, recalcValues, replacedItems, resistance, RESISTANCE_CAP, worstCondition, xpToNextLevel } from "../sim/character";
 import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
 import { SPELL_GRID, spellCost, validTarget, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
@@ -394,7 +394,7 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
           // like the attributes: the current value (gear, a boon and the Fairy count) in green when it is above the hero's own, in red below, the own value in brackets
           ...RESISTANCES.flatMap(([key, , label]) => {
             const now = resistance(c, RESISTANCE_ELEMENT[key], party.mascot);
-            const own = baseResistance(c, key);
+            const own = Math.min(RESISTANCE_CAP, baseResistance(c, key));
             return [h("div", { text: label }), agedValue(c, now > own ? "v up" : now < own ? "v down" : "v", now, own, "%", c[key])];
           }),
           h("div", { text: "Experience" }), h("div", { class: "v", text: thousands(c.xp) }),
