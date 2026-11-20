@@ -82,7 +82,7 @@ const DIRT_TILE = "gndx_dirt";
  * the castle floor's stones lay under the quad, and the flat floor showed through them. These tiles lie with their body bottom `TILE_BASE_LIFT` above the quad, and everything that stands on
  * the floor rises with them (`PropRenderer.setRise`: chests, doors, traps, loot). The other floors stay as they were.
  */
-const TILE_BOTTOM_BY_MODEL: Readonly<Record<string, number>> = { blk_fortress_floor: -0.006 };
+const TILE_BOTTOM_BY_MODEL: Readonly<Record<string, number>> = { blk_fortress_floor: -0.006, blk_city_floor: -0.014 };
 const TILE_BASE_LIFT = 0.004;
 /** The prop owner of the loot on the floor (`Game.lootOwner`): it stands on the same floor. */
 const LOOT_OWNER = "loot";
@@ -553,6 +553,11 @@ export class InteriorView {
   }
 
   private rise = 0;
+
+  /** How high the floor of the shown map stands over the flat quad: the persons of a town stand on it (the monsters of a castle keep their 3 cm). */
+  get floorLift(): number {
+    return this.rise;
+  }
 
   /**
    * How a slab model of the user's is scaled to fill one cell (the files are normalised to about 1.9 units), and the heights of its top and bottom above its

@@ -117,6 +117,8 @@ export function openService(ui: UI, kind: ServiceKind, ctx: ServiceContext): Pro
       showCompare();
     }
     panel.classList.add("service");
+    // 61st playtest, point 2: the smithy keeps one height whatever the tab (the window grew and shrank with every list): that of the Buy list with eight items, longer lists scroll
+    if (kind === "smith") panel.classList.add("smith");
     panel.append(
       h("div", { class: "svc-head" }, h("h2", { text: `${TITLES[kind]}${ctx.poi ? ` of ${ctx.poi.name}` : ""}` }), h("button", { class: "btn", text: "Leave (Esc)", onclick: close })),
       h("div", { class: "svc-body" }, h("div", { class: "svc-art" }, townArt(scene), gold, cmp), root),

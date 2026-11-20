@@ -180,5 +180,7 @@
  * 73 = bug_fix_71: Pandora's box is a starting spell of the Arcane and Nature schools again (`isStartingSpell`), so no scroll of it lies in the world any more (`planSpellLoot`, `spellsOfTier`).
  * 74 = the 59th playtest, point 1: a place of quest_8 whose end room is farther than 5 cells from a target gets runes next to that target (`need: "crystals"`), which appear when the paths are solved and carry the party into the end room.
  * 75 = the 60th playtest, point 5: Seth Squirm's action carries `seth: true` instead of a fixed text (he names what a coin is worth in this world when he is spoken to), the statues of the machines face into the room (point 1).
+ * 76 = the 61st playtest, point 3: the quartermaster of the town of level 3 always has a place (a street with two free cells beside it first, then one, then none: Silvamere of a small world had no
+ * such street and no quartermaster), which moves the objects of that town.
  */
-export const GEN_VERSION = 75;
+export const GEN_VERSION = 76;

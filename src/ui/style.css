@@ -229,11 +229,14 @@ html.ending-on #game-cursor { display: none; }
 @media (max-width: 860px), (max-aspect-ratio: 1/1) { .service .cmp-hero { flex-basis: 64px; } }
 .service .svc-main { min-height: 0; overflow-y: auto; padding-right: 6px; scrollbar-color: var(--gold-dim) transparent; }
 .service .svc-main > :first-child { margin-top: 0; }
+/* smithy (61st playtest, point 2): a fixed height, the gold line, the two rows of tabs and eight items of 56 px (the Buy list); Sell and Buy back scroll inside it instead of resizing the window */
+.service.smith .svc-main { height: min(556px, calc(92vh - 90px)); }
 @media (max-width: 860px), (max-aspect-ratio: 1/1) {
   /* narrow or tall window: stack picture and content, the whole body scrolls under the fixed head */
   .service .svc-body { display: block; overflow-y: auto; scrollbar-color: var(--gold-dim) transparent; }
   .service .svc-art img, .service .svc-art video { max-height: 34vh; margin-bottom: 8px; }
   .service .svc-main { overflow: visible; padding-right: 0; }
+  .service.smith .svc-main { height: auto; }
 }
 /* quartermaster (56th playtest, point 1): both lists scroll on their own under the fixed head, however much the party carries or has stored */
 .service .qm-cols { flex: 1 1 auto; min-height: 0; overflow: hidden; }
