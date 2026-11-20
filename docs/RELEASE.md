@@ -53,3 +53,7 @@ Der Installer selbst: ausführen, die Seite „Shortcuts“ mit und ohne Häkche
 ## Nicht enthalten
 
 Keine Codesignatur (Windows SmartScreen zeigt beim ersten Start „Unbekannter Herausgeber“), kein automatisches Update, nur x64.
+
+## Regeln für Agenten (aus CLAUDE.md)
+
+- **Windows-Release** (16. 11. 2026, `docs/RELEASE.md`, Ordner `installer/` mit eigenen `node_modules`, kein `GEN_VERSION`): Electron-Hülle (`installer/main.mjs`, Protokoll `app://game/`, Bereichsanfragen für Video selbst beantwortet, weil `net.fetch` auf Dateien `Content-Range` weglässt) um den Vite-Build, verpackt von electron-builder als NSIS-Installer (`npm run build` in `installer/`, Ausgabe `RELEASE_DIR`, nie in `game/`); Startmenü- und Desktop-Verknüpfung wählt der Nutzer auf der eigenen Seite `installer/nsis/installer.nsh` (die Datei braucht eine UTF-8-BOM, `createStartMenuShortcut` bleibt aus; `WinShell::…` gibt es im Installer nicht). Ausgeliefert wird `public/assets` ohne den reduzierten Modellsatz (`NOT_SHIPPED` in `build.mjs`): ein neuer Asset-Ordner, den das Spiel lädt, darf dort nicht stehen. Prüfung des Programms: `tools/dev/check-desktop.ts <Ordner>`.

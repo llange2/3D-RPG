@@ -9,7 +9,11 @@ Code, Kommentare, UI-Texte und Bezeichner sind Englisch, diese Dokumentation ist
 | Dokument | Inhalt |
 |---|---|
 | `README.md` | Kurzüberblick, Spielbedienung, Befehle |
-| `CLAUDE.md` | **Arbeitsregeln für Agenten**: harte Regeln, die aus Playtests entstanden sind (Determinismus, Gründe für Maße und Werte, Fallstricke). Vor jeder Änderung die Regeln zum betroffenen Bereich lesen |
+| `CLAUDE.md` | **Arbeitsregeln für Agenten**: nur das, was für jede Änderung gilt (Determinismus, `GEN_VERSION`, generierte Dateien, Prüfungen vor dem Abschluss, Umgebung); nennt die Themendateien unten |
+| `docs/REGELN_GENERIERUNG.md` | Regeln für Generierung und Platzierung (Überwelt, Inseln, Städte, Burgen, Dungeons, Höhlen, Türme, Raumschiff, Quests, Objekte, Monster, Hütten); vor jeder Änderung am Generator lesen |
+| `docs/REGELN_RENDERING.md` | Regeln für die Darstellung (Modelle, Böden, Wände, Licht, Sicht, Texturen, Töne, Effekte) |
+| `docs/REGELN_SPIEL.md` | Regeln für das Spielsystem (Zustände, Kampf, Balance, Zauber, Spielstände, Optionen, Debug-Menü) |
+| `docs/REGELN_PLAYTESTS.md` | Regeln, die zu einem Playtest oder Bugfix entstanden sind und mehrere Themen berühren |
 | `docs/HANDOVER.md` | diese Datei: Architektur und Systembeschreibung |
 | `docs/FORMULAS_1.3.md` | **alle Rechenregeln** des Spiels (Helden, Kampf, Zauber, Wirtschaft, Schlösser, Belohnungsfaktoren) und die Herleitung der Balance (Abschnitt 10); wer eine Formel ändert, ändert die Zeile dort |
 | `docs/quests_1.10.md` | das Quest-Dokument des Nutzers (aktueller Stand): Quests, Layouts, Burg, Raumschiff, Loot |
