@@ -8,7 +8,7 @@
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import puppeteer from "puppeteer-core";
+import puppeteer, { type ElementHandle } from "puppeteer-core";
 
 const base = process.env.GAME_URL ?? "http://localhost:5173/";
 const outDir = process.argv[2] ?? "release12-shots";
@@ -96,9 +96,9 @@ try {
   await sleep(600);
   const spare = await evalJs<boolean>(`!![...document.querySelectorAll(".slot")].find((s) => s.title === "Spare Ring")`);
   expect(spare, "the inventory shows the spare ring");
-  const handle = await page.evaluateHandle(`[...document.querySelectorAll(".slot")].find((s) => s.title === "Spare Ring")`);
+  const handle = (await page.evaluateHandle(`[...document.querySelectorAll(".slot")].find((s) => s.title === "Spare Ring")`)) as ElementHandle<Element>;
   await page.keyboard.down("Control");
-  await (handle.asElement() as NonNullable<ReturnType<typeof handle.asElement>>).click();
+  await handle.click();
   await page.keyboard.up("Control");
   await sleep(400);
   const worn = await evalJs<string[]>(`(() => { const i = __game.state.party.characters[0].inventory; return [i.left_ring?.name, i.right_ring?.name, i.slot1?.name]; })()`);
