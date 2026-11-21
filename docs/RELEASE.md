@@ -30,17 +30,20 @@ Assistent mit Zielordner (pro Benutzer oder für alle) und einer eigenen Seite �
 
 - **Startmenü-Verknüpfung** (Vorgabe: an) und **Desktop-Verknüpfung** (Vorgabe: aus), je ein Häkchen.
 - Ein stiller Aufruf (`MM3-Seed-RPG-Setup-<Version>.exe /S`) legt die Startmenü-Verknüpfung an, die Desktop-Verknüpfung nicht.
-- Der Deinstaller entfernt beide Verknüpfungen. **Spielstände bleiben erhalten** (`deleteAppDataOnUninstall: false`).
+- Der Deinstaller entfernt beide Verknüpfungen und fragt (seit v1.2, eigene Seite nach dem Willkommensbild, `un.MM3DataPageCreate` in `installer/nsis/installer.nsh`) mit zwei Optionen, was mit den Daten des **Windows-Benutzers, der ihn ausführt**, geschieht:
+  **„Keep achievements and save games (Default)“** (Vorgabe; deutsches Windows: „Achievements und Spielstände behalten (Standard)“) oder **„Remove everything“** („Alles entfernen“: der Ordner `%APPDATA%\MM3 Seed RPG` wird gelöscht).
+  Ein stiller Aufruf (`/S`, auch das Entfernen der alten Fassung bei einem Update) zeigt die Seite nicht und behält die Daten; `--delete-app-data` an einem stillen Aufruf löscht sie (Schalter von electron-builder, `deleteAppDataOnUninstall` bleibt `false`).
+  Daten anderer Windows-Benutzer desselben PCs bleiben in deren Profilen, auch bei einer Installation für alle.
 
 ## Das Programm
 
 - `installer/main.mjs`: ein Fenster, das `app://game/index.html` lädt. Das eigene Protokoll liest die Dateien aus `resources/web` (Vite-Build und
   `assets/`), setzt die Dateitypen selbst (`.js` als `text/javascript`, `.glb`, `.webp` …) und beantwortet Bereichsanfragen für Audio und Video.
-- Spielstände und Einstellungen liegen im `localStorage` des Programms: `%APPDATA%\MM3 Seed RPG`. Das Release hat **kein Debug-Menü** (seit v1.1, `DEBUG_MENU` = `import.meta.env.DEV`), also auch kein
+- Spielstände, Achievements und Einstellungen liegen im `localStorage` des Programms im Datenordner **des jeweiligen Windows-Benutzers**: `%APPDATA%\MM3 Seed RPG` (seit v1.2 in `main.mjs` mit `app.setPath("userData", …)` festgelegt, unabhängig vom Namen der Programmdatei; jeder Windows-Benutzer des PCs hat eigene Stände und Achievements, ob für einen oder für alle installiert wurde). Das Release hat **kein Debug-Menü** (seit v1.1, `DEBUG_MENU` = `import.meta.env.DEV`), also auch kein
   Export/Import saves: Stände aus dem Browser kommen nur über den Dev-Server dort hinein.
 - Das Symbol ist `installer/icon.png` (v1.1, die Gruppe auf dem Felsen, Quelle `.ignore/icon.png`); `build.mjs` setzt es auf ein transparentes Quadrat von 512 px.
 - Das Programm startet **immer im Vollbild** und zeigt beim Laden keinen Mauszeiger (der Systemzeiger bleibt weg, bis das Spiel seinen eigenen hat).
-  **F11** oder **Alt+Enter** verlässt und betritt das Vollbild. Es gibt kein Menü und keinen Neuladen-Shortcut (F8 und F9 sind Quick Save und Quick Load des Spiels).
+  **F11** oder **Alt+Enter** verlässt und betritt das Vollbild. Es gibt kein Menü und keinen Neuladen-Shortcut (F5 und F9 sind Quick Save und Quick Load des Spiels; im Browser hält das Spiel das Neuladen auf F5 an).
   Entwicklerwerkzeuge sind aus (`MM3_DEVTOOLS=1` schaltet sie ein).
 - Nur eine Instanz: ein zweiter Start holt das laufende Fenster nach vorn (zwei Instanzen würden dieselben Stände schreiben).
 - `MM3_LOG_MISSING=1` schreibt jede nicht gefundene Datei auf die Konsole (zum Prüfen, ob etwas im Installer fehlt);

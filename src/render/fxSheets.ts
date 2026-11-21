@@ -79,7 +79,7 @@ export function cellUv(cell: number, grid: number): CellUv {
  * the drops leave the rim and fly in an arc into the basin, a sheet of water runs down from the rim over the faces into the basin (`flow`: height and distance from the axis, outside the stone everywhere).
  *
  * The user's Mermaid fountain (item 89, `Mermaid_Fountain.glb`, bug_fix_68) pours a stream from a jug into the basin: the model has its thin column of water in it (axis x -0.097, z 0.141, from the water
- * at 0.184 up to 0.61; 0.024 across at the top, 0.017 at the bottom, a light turquoise of (160, 210, 216), `node tools/dev/model-jet.mjs public/assets/models-original/ci_89.glb -0.097 0.141`), the effects wrap a
+ * at 0.184 up to 0.61, where the horn's lower rim starts; the stream and the drops start at 0.65 / 0.655, inside the horn's opening, so that no gap shows under it (21. 11. 2026); 0.024 across at the top, 0.017 at the bottom, a light turquoise of (160, 210, 216), `node tools/dev/model-jet.mjs public/assets/models-original/ci_89.glb -0.097 0.141`), the effects wrap a
  * thin sheet of water round it (a little below the top, narrowing downwards, in the colour of the model's water) and let drops fall from the jug. Its numbers are in file
  * coordinates (x is mirrored by the engine, `fountainPoint` in `fx.ts` does that), heights over the lowest point.
  */
@@ -126,7 +126,7 @@ const BASIN: FountainShape = {
   water: [0.3, 0.74, 0.88],
 };
 const MERMAID: FountainShape = {
-  kind: "horn", basinY: 0.184, basinR: 0.44, spoutX: -0.097, spoutZ: 0.141, mouthY: 0.62, streamTopY: 0.595, streamTopR: 0.028, streamFootR: 0.021,
+  kind: "horn", basinY: 0.184, basinR: 0.44, spoutX: -0.097, spoutZ: 0.141, mouthY: 0.655, streamTopY: 0.65, streamTopR: 0.028, streamFootR: 0.021,
   throwX: -Math.SQRT1_2, throwZ: Math.SQRT1_2, throwR: 0.12,
   // the colour of the model's own column of water
   water: [0.63, 0.82, 0.85],

@@ -45,6 +45,11 @@ protocol.registerSchemesAsPrivileged([
   { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, codeCache: true } },
 ]);
 
+// Saves, achievements and options live in the `localStorage` of the program, which Electron keeps in the data folder of the Windows user who plays:
+// `%APPDATA%\MM3 Seed RPG` (release 1.2: set here, so that the place does not depend on the name of the executable or of the package). Another Windows user
+// of the same PC has a folder, saves and achievements of their own, whether the game was installed for one user or for all. The uninstaller asks what happens to this folder (nsis/installer.nsh).
+app.setPath("userData", path.join(app.getPath("appData"), "MM3 Seed RPG"));
+
 // audio starts without a click (the title screen plays music) and the game never needs the browser's reload or developer keys
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 
@@ -131,7 +136,7 @@ function createWindow() {
     win = null;
   });
 
-  // the game uses F8 (quick save) and F9 (quick load): without a menu nothing reloads the page; F11 and Alt+Enter toggle full screen
+  // the game uses F5 (quick save) and F9 (quick load): without a menu nothing reloads the page; F11 and Alt+Enter toggle full screen
   win.webContents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
     const toggle = input.key === "F11" || (input.alt && input.key === "Enter");

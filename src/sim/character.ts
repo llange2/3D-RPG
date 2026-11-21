@@ -459,6 +459,11 @@ export function offHandRingSlot(inv: Inventory, item: Item): string | null {
   return inv[slot] && inv[other] && canEquip(inv, item, other) ? other : null;
 }
 
+/** The slot a quick equip puts `item` into; with `offHand` (Ctrl held) a ring that would replace one of two worn rings goes to the other ring slot (release 1.2). */
+export function quickEquipTarget(inv: Inventory, item: Item, offHand = false): string | undefined {
+  return (offHand ? offHandRingSlot(inv, item) : null) ?? equipTarget(inv, item);
+}
+
 /** What wearing `item` would take off: whatever sits in the slot `equipTarget` picks (`offHand`: the other ring slot, see `offHandRingSlot`), plus the shield for a two-hander. Empty when a free slot takes it. */
 export function replacedItems(inv: Inventory, item: Item, offHand = false): Item[] {
   const slot = offHand ? (offHandRingSlot(inv, item) ?? equipTarget(inv, item)) : equipTarget(inv, item);

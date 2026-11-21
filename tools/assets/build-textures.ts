@@ -187,6 +187,16 @@ export async function buildTextures(): Promise<Record<string, { files: number; b
   }
   add("ui", statSync(capyOut).size);
 
+  // the first screen of the game (`index.html`, "Game is loading…"): the user's 1440 x 1440 clip of 5 s (the logo), played once, as a 960 px VP9 file without sound. The page behind it has
+  // the colour of its background (#040404), the clip stays on its last picture until the game takes the screen over
+  const intro = join(SOURCES, "ui", "loading_intro.mp4");
+  const introOut = join(OUT, "ui", "loading_intro.webm");
+  if (!upToDate(introOut, intro)) {
+    ensureDir(introOut);
+    await promisify(execFile)(ffmpegPath!, ["-y", "-loglevel", "error", "-i", intro, "-an", "-vf", "scale=960:960", "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "20", "-deadline", "good", "-cpu-used", "4", introOut]);
+  }
+  add("screens", statSync(introOut).size);
+
   // the animated pictures of the town services (the optional "Animated town scenes"): the old 1764 x 1176 H.264 clips of 10 s (3 to 16 MB each)
   // as 640 px VP9 loops without sound, a few hundred KB each. The window shows them at 530 px at most.
   for (const name of ["bank", "guild", "inn", "smith", "tavern", "temple", "training_grounds"]) {

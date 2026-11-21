@@ -173,10 +173,18 @@ try {
     for (const spot of spots) {
       if (what === "mermaid" && spot.name !== 89) continue;
       const dist = Number(process.env.DIST ?? 3);
-      await page.evaluate(`__game.teleport(${spot.x + 1}, ${spot.y + dist}, "N")`);
+      // DX moves the party sideways (default one cell east of the object, so the shot passes beside the model; 0 looks straight at it)
+      await page.evaluate(`__game.teleport(${spot.x + Number(process.env.DX ?? 1)}, ${spot.y + dist}, ${JSON.stringify(process.env.FACE ?? "N")})`);
       await sleep(2500);
       // BRIGHT=1 lights the hall as by day (the water follows the light of the scene), CLIP=x,y,w,h cuts a part out and shows it three times larger
       if (process.env.BRIGHT) await page.evaluate(`__game.scene.lights.forEach((l) => { l.intensity = Math.max(l.intensity, 1.6); })`);
+      // CLOSE=<distance>,<yaw in degrees>[,<height>] puts the camera that far from the stream of the nearest fountain, seen from that side (0 = from +z looking north, 90 = from +x), at the given height over its water
+      if (process.env.CLOSE) {
+        const [d = 1, yaw = 0, hgt = 0.9] = process.env.CLOSE.split(",").map(Number);
+        await page.evaluate(`(() => { const g = __game; const p = g.game.internals.player; const s = [...g.game.internals.effects.sites.values()].find((q) => Math.abs(q.x - ${spot.x * 3 + 1.5}) < 2); const a = ${yaw} * Math.PI / 180; const sx = s.x, sz = s.z; p.x = sx + Math.sin(a) * ${d}; p.z = sz + Math.cos(a) * ${d}; p.yaw = a + Math.PI; p.y = s.y + ${hgt}; })()`);
+        await sleep(800);
+        console.log("camera", await page.evaluate(`JSON.stringify([__game.camera.position.x, __game.camera.position.y, __game.camera.position.z, __game.camera.rotation.y])`));
+      }
       const clip = process.env.CLIP?.split(",").map(Number);
       for (let n = 1; n <= (Number(process.env.SHOTS) || 2); n++) {
         await page.screenshot({ path: join(outDir, `dark-${spot.name}-${n}.png`), ...(clip && clip.length === 4 ? { clip: { x: clip[0]!, y: clip[1]!, width: clip[2]!, height: clip[3]!, scale: 3 } } : {}) });

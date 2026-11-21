@@ -70,7 +70,7 @@ import {
   specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, STAR_BURST_RADIUS, isPhaseProof,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
-import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
+import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, hasLight, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
 import { RIFT_TURNS, SPELL_AGING, castSpell, isAreaSpell, isAttackSpell, learnBlock, movesParty, needsAdjacent, lastCastOf, noteCast, quickCastOf, type FizzleReason, type PandoraOutcome, type SpellResult } from "../sim/spells";
 import { canCombine, combine, combineGroups, DUPLICATION_GOLD, duplicate, duplicableSlots, ringSlots, transformRing } from "../sim/itemSpells";
 import { pickGateSpot, safeCells, type Spot } from "./spellSites";
@@ -320,7 +320,7 @@ const LASER_LAMP_FADE = 0.08;
 const TRAP_SOUND: Record<string, number> = { spring: 9036, guillotine: 9042, steal_gold: 9038 };
 
 /** How the save slots are named in the load lists of the title screen and of the menu. */
-const SLOT_NAMES: Record<SaveSlot, string> = { quick: "Quicksave (F8)", auto: "Autosave" };
+const SLOT_NAMES: Record<SaveSlot, string> = { quick: "Quicksave (F5)", auto: "Autosave" };
 const KIND_NAMES: Record<GameKind, string> = { world: "World", campaign: "Campaign" };
 /** What the title screen hands back for a save: the file is only read when it is chosen (the named saves can be big). */
 type SaveRef = () => SaveFile | null;
@@ -1574,7 +1574,7 @@ export class Game {
   }
 
   /**
-   * Shows the dialogs of the achievements that dropped, one after the other: the picture, "Congratulation, you have unlocked the ... achievement!" and "Okay". It waits for a quiet moment
+   * Shows the dialogs of the achievements that dropped, one after the other: the picture, "Congratulation, you have unlocked the "..." achievement!" (the name in quotation marks) and "Okay". It waits for a quiet moment
    * (no other window, no loading, the fight's animation over, the party free) and tries again a moment later; what the player has not confirmed stays in the profile for the next game.
    * `force` is for the end of the game, where the party is locked on purpose.
    */
@@ -1596,7 +1596,7 @@ export class Game {
         if (def) {
           // the sound of a quest item found (`found_special_item`), as the user asked
           this.audio.play(9018);
-          await this.ui.achievementScene(def.name, `Congratulation, you have unlocked the ${def.name} achievement!`, id);
+          await this.ui.achievementScene(def.name, `Congratulation, you have unlocked the "${def.name}" achievement!`, id);
         }
         this.achievements.markSeen(id);
       }
@@ -5508,6 +5508,7 @@ export class Game {
         type: "button",
         label: () => "Key bindings",
         press: () =>
+          // Apply on the key page takes the whole draft of Controls into effect at once, as the Apply of the Controls window does
           this.ui.keyBindings(
             () => draft.keys,
             (action, slot, key) => {
@@ -6109,7 +6110,7 @@ export class Game {
     const hour = (party.minutes % 1440) / 60;
     const day = hour >= 7 && hour < 18 ? 1 : hour >= 5 && hour < 7 ? (hour - 5) / 2 : hour >= 18 && hour < 20 ? 1 - (hour - 18) / 2 : 0;
     this.lightLevel += (day - this.lightLevel) * Math.min(1, dt * 2);
-    const lit = hasEffect(party, "light");
+    const lit = hasLight(party);
     // the party's own light: a ring of three cells (six with the Light spell). It is all there is underground, and it takes over from the sun at night
     const ring = lit ? TORCH_LIT : TORCH;
     if (this.mode === "interior" && this.interior?.map.spaceship) {
@@ -6378,7 +6379,7 @@ export class Game {
   /** How far the party sees ahead, in cells: the ring of its light (and a cell beyond) in the dark, far in daylight. */
   private sightRadius(): number {
     if (!this.inTheDark()) return 8;
-    return hasEffect(this.state.party, "light") ? 9 : 5;
+    return hasLight(this.state.party) ? 9 : 5;
   }
 
   // ---------------------------------------------------------------- tools for tests and benchmarks
