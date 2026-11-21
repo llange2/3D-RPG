@@ -76,8 +76,95 @@
 !endif
 
 !ifdef BUILD_UNINSTALLER
+  ; What happens to the player's achievements and save games (release 1.2): they live in the data folder of the Windows user who plays (`%APPDATA%\MM3 Seed RPG`, see
+  ; `app.setPath("userData")` in main.mjs), so the question concerns the user who runs the uninstaller. Default: keep. A silent uninstall (/S, and the one an update
+  ; runs) shows no page and keeps them; `--delete-app-data` on the command line of a silent uninstall removes them (electron-builder's own switch, handled in its uninstaller).
+  Var MM3_KeepRadio
+  Var MM3_AllRadio
+  Var MM3_RemoveAll
+
+  !macro customUnInit
+    StrCpy $MM3_RemoveAll 0
+  !macroend
+
+  Function un.MM3DataPageCreate
+    ${If} $LANGUAGE == 1031
+      StrCpy $R0 "Spielstände und Achievements"
+      StrCpy $R1 "Wählen Sie, was mit Ihren Daten geschieht."
+      StrCpy $R2 "Was soll mit den Spielständen und Achievements dieses Windows-Benutzers geschehen?"
+      StrCpy $R3 "Achievements und Spielstände behalten (Standard)"
+      StrCpy $R4 "Alles entfernen"
+      StrCpy $R5 "Deinstallieren"
+    ${Else}
+      StrCpy $R0 "Achievements and save games"
+      StrCpy $R1 "Choose what happens to your data."
+      StrCpy $R2 "What should happen to the achievements and save games of this Windows user?"
+      StrCpy $R3 "Keep achievements and save games (Default)"
+      StrCpy $R4 "Remove everything"
+      StrCpy $R5 "Uninstall"
+    ${EndIf}
+    !insertmacro MUI_HEADER_TEXT "$R0" "$R1"
+    nsDialogs::Create 1018
+    Pop $0
+    ${If} $0 == error
+      Abort
+    ${EndIf}
+
+    ${NSD_CreateLabel} 0 0 100% 24u "$R2"
+    Pop $0
+
+    ; (this NSIS has no First/AdditionalRadioButton: the first radio button starts the group by its style)
+    ${NSD_CreateRadioButton} 0 34u 100% 12u "$R3"
+    Pop $MM3_KeepRadio
+    ${NSD_AddStyle} $MM3_KeepRadio ${WS_GROUP}
+    ${NSD_CreateRadioButton} 0 52u 100% 12u "$R4"
+    Pop $MM3_AllRadio
+    ${If} $MM3_RemoveAll == 1
+      ${NSD_Check} $MM3_AllRadio
+    ${Else}
+      ${NSD_Check} $MM3_KeepRadio
+    ${EndIf}
+
+    ; this page is the last one before the files go: its button says so
+    GetDlgItem $0 $HWNDPARENT 1
+    SendMessage $0 ${WM_SETTEXT} 0 "STR:$R5"
+
+    nsDialogs::Show
+  FunctionEnd
+
+  Function un.MM3DataPageLeave
+    ${NSD_GetState} $MM3_AllRadio $0
+    ${If} $0 == ${BST_CHECKED}
+      StrCpy $MM3_RemoveAll 1
+    ${Else}
+      StrCpy $MM3_RemoveAll 0
+    ${EndIf}
+  FunctionEnd
+
+  ; the page replaces nothing: it comes after the default welcome page, before the files are removed
+  !macro customUnWelcomePage
+    !insertmacro MUI_UNPAGE_WELCOME
+    UninstPage custom un.MM3DataPageCreate un.MM3DataPageLeave
+  !macroend
+
   !macro customUnInstall
     Delete "$SMPROGRAMS\${PRODUCT_NAME}.lnk"
     Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
+    ${If} $MM3_RemoveAll == 1
+      ; the data of the Windows user who plays, whatever the install mode (an installation for all users writes into the profile of each user who starts the game)
+      ${If} $installMode == "all"
+        SetShellVarContext current
+      ${EndIf}
+      RMDir /r "$APPDATA\${APP_FILENAME}"
+      !ifdef APP_PRODUCT_FILENAME
+        RMDir /r "$APPDATA\${APP_PRODUCT_FILENAME}"
+      !endif
+      !ifdef APP_PACKAGE_NAME
+        RMDir /r "$APPDATA\${APP_PACKAGE_NAME}"
+      !endif
+      ${If} $installMode == "all"
+        SetShellVarContext all
+      ${EndIf}
+    ${EndIf}
   !macroend
 !endif

@@ -95,7 +95,7 @@ try {
   const scene = await evalJs<{ text: string; img: string; button: string } | null>(`(() => { const p = document.querySelector(".achievement-scene"); return p ? { text: p.querySelector("p").textContent, img: p.querySelector("img").getAttribute("src"), button: p.querySelector(".btn").textContent } : null; })()`);
   expect(!!scene, "a drop shows the scroll");
   if (scene) {
-    expect(scene.text === "Congratulation, you have unlocked the Eviction achievement!", `the text reads as the spec (${scene.text})`);
+    expect(scene.text === 'Congratulation, you have unlocked the "Eviction" achievement!', `the text reads as the spec (${scene.text})`);
     expect(scene.img.endsWith("/eviction.webp") && scene.button === "Okay", `the picture and the Okay button (${scene.img}, ${scene.button})`);
   }
   await page.screenshot({ path: join(outDir, "scroll.png") });

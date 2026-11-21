@@ -1,7 +1,7 @@
 import { BASE_CLASS, CONSTANTS, SPELLS, TEXTS, talentInfo } from "../data/tables";
 import { fairyReduction, fairyResistance, orbSpellBonus, wolfBelow } from "../sim/balance";
 import { averageDamageLines } from "../sim/combat";
-import { ageOf, armor, attr, baseResistance, baseValue, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, offHandRingSlot, recalcValues, replacedItems, resistance, RESISTANCE_CAP, worstCondition, xpToNextLevel } from "../sim/character";
+import { ageOf, armor, attr, baseResistance, baseValue, canAct, canEquip, conditionAdjusted, equipSlots, equipTarget, itemBonus, offHandRingSlot, quickEquipTarget, recalcValues, replacedItems, resistance, RESISTANCE_CAP, worstCondition, xpToNextLevel } from "../sim/character";
 import { ARMS_MASTER, bonusLines, combineItems, isTwoHanded, makeItem, needsArmsMaster, weaponHands, type Hands } from "../sim/items";
 import { SPELL_GRID, spellCost, validTarget, castBlock, lastCastOf, isSpellImplemented, ITEM_SPELLS, learnBlock, needsBeaconChoice, needsTarget, TELEPORT_DISTANCES, type QuickCast, type QuickCastBlock } from "../sim/spells";
 import { isPlaceholderIcon, preloadSpellIcons, spellPlate } from "./spellIcons";
@@ -89,7 +89,7 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     // 53rd playtest, point 18: what a weapon or a damage ring hits for on average, from the hero's level and attributes
     ...(c ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage" }, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null)) : []),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
-    offHandRing ? h("div", { class: "small compare-hint", text: offHandRing === "on" ? "Comparing to off-hand ring." : "Press Ctrl to compare to off-hand ring." }) : null,
+    offHandRing ? h("div", { class: "small compare-hint", text: offHandRing === "on" ? "Comparing to off-hand ring. Ctrl+click wears it there." : "Press Ctrl to compare to off-hand ring." }) : null,
     c && !allowed ? h("div", { class: "small", style: "color:#e8745f", text: `A ${c.classType} cannot use this.` }) : null,
     untrained ? h("div", { class: "small", style: "color:#e8745f", text: "Requires Arms Master talent to equip" }) : null,
     shieldBlocked ? h("div", { class: "small", style: "color:#e8745f", text: "Not with a two-handed weapon in the weapon hand." }) : null,
@@ -165,7 +165,7 @@ export const MASCOTS: Record<string, { portrait: string; full?: string; text: st
   Orb: {
     portrait: "npc05",
     text: orbSpellBonus() > 0
-      ? `A floating orb of magic. Every attack spell of the party does ${Math.round(orbSpellBonus() * 100)}% more damage.`
+      ? `A floating orb of magic. Every attack spell of the party does ${Math.round(orbSpellBonus() * 100)}% more damage, and its glow works like a permanent Light spell.`
       : "A floating orb of magic. Every hero who has spell points gets 20% more of them.", // LEGACY (balance v4)
   },
 };
@@ -262,7 +262,7 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
           {},
           h("div", { class: "mascot-name", text: name }),
           h("div", { text: info?.text ?? "" }),
-          h("div", { class: "small", text: owned.length > 1 ? `Found so far: ${owned.join(", ")}. Walk up to a mascot's place to swap.` : "The only mascot found so far. The others wait near the start town and in the campaign." }),
+          h("div", { class: "small", text: owned.length > 1 ? "Walk up to a mascot's place to swap." : "The others wait near the start town and in the campaign." }),
         ),
       );
       const bag = owner();
@@ -308,11 +308,17 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
         {
           class: `slot${selected === slot ? " sel" : ""}${ok ? " ok" : ""}`,
           title: item ? item.name.trim() : label ?? "",
-          onclick: () => click(slot),
-          ondblclick: () => dbl(slot),
+          onclick: (e) => {
+            // Ctrl + click on a ring of the backpack that would replace one of two worn rings: it takes the off-hand ring's place at once
+            const bag = owner();
+            const ring = bag?.hero && slot.startsWith("slot") ? bag.inventory[slot] : null;
+            if (e.ctrlKey && selected === null && bag && ring && ring.type === "ring" && !cannotWear(bag, ring) && offHandRingSlot(bag.inventory, ring) !== null) dbl(slot, true);
+            else click(slot);
+          },
+          ondblclick: (e) => dbl(slot, e.ctrlKey),
           oncontextmenu: (e) => {
             e.preventDefault();
-            dbl(slot);
+            dbl(slot, e.ctrlKey);
           },
         },
         item ? itemIcon(item) : null,
@@ -466,8 +472,8 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       render();
     };
 
-    /** Double click / right click: use a scroll, equip into the first fitting slot, or unequip into the bag. */
-    const dbl = (slot: string) => {
+    /** Double click / right click: use a scroll, equip into the first fitting slot, or unequip into the bag. With `offHand` (Ctrl held) a ring replaces the off-hand ring instead. */
+    const dbl = (slot: string, offHand = false) => {
       const bag = owner();
       if (!bag) return;
       const item = bag.inventory[slot];
@@ -494,7 +500,8 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
         if (item.type === "spell") return void readScroll(slot, item);
         const refusal = cannotWear(bag, item);
         if (refusal) return hooks.log(refusal, "bad");
-        const target = equipTarget(bag.inventory, item);
+        // Ctrl held: a ring goes to the off-hand ring slot (release 1.2, point 8)
+        const target = quickEquipTarget(bag.inventory, item, offHand);
         if (!target) return hooks.log(item.type === "shield" && bag.inventory.left_hand && isTwoHanded(bag.inventory.left_hand) ? "A two-handed weapon leaves no hand for a shield." : "Nothing to equip that into.", "bad");
         const shield = target === "left_hand" ? bag.inventory.right_hand : null;
         const moved = equipSlots(bag.inventory, slot, target);

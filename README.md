@@ -14,7 +14,7 @@ Technical handover for the next developer or agent (architecture, determinism ru
 ## Play
 
 `npm run dev`, then open <http://localhost:5173/>. Move W A S D / arrow keys, turn Q E, attack Space, spells F,
-inventory I, rest R, map M, quest log J (campaign), menu Esc, quick save F8, quick load F9. The endless world and the campaign
+inventory I, rest R, map M, quest log J (campaign), menu Esc, quick save F5, quick load F9. The endless world and the campaign
 keep separate saves, so one of each can be played side by side (title screen: `Continue the world` / `Continue the campaign`).
 The spell menu (F) ends with the last spell cast and who cast it (quick cast), greyed out when it cannot be cast.
 

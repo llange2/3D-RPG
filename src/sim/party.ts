@@ -221,6 +221,11 @@ export function hasEffect(party: Party, kind: TimedEffect["kind"]): boolean {
   return party.effects.some((e) => e.kind === kind && (e.until > party.minutes || e.held));
 }
 
+/** The party carries a light: the Light spell, or the Orb mascot (it works like a Light spell that never runs out, 21. 11. 2026). */
+export function hasLight(party: Party): boolean {
+  return party.mascot === "Orb" || hasEffect(party, "light");
+}
+
 /**
  * What the sim must know about where the party stands, set by the game after every step: Walk on Water never runs out under the
  * party's feet (a party that sank would drown), so an expired spell holds until the party leaves the deep water.

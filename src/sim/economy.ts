@@ -140,11 +140,12 @@ export function innRest(party: Party, tier: number): { ok: boolean; cost: number
 
 /** What a tavern tells about a word (quest document 1.2, "Rätselmaster": the answers that exist in the world can turn up as rumours, with some silly ones among them). */
 const WORD_RUMOURS = [
-  "You invite a grieving peasant for a beer. He mumbles: \"My father told me on his death bed the word {a}. I have no clue what it means, but it must be important.\"",
-  "A drunk sailor grabs your sleeve. \"{a}! Say it to a statue, and the stone will listen. At least that is what my grandmother swore.\"",
-  "The barkeep wipes a mug and whispers: \"A wandering scholar left here with one word on his lips: {a}. He never came back.\"",
-  "An old woman by the fire nods to herself. \"{a}, {a}, {a}. Whoever knows it, knows what the stones want to hear.\"",
-  "A boy tugs at your cloak. \"There is a word the dead keep: {a}. Don't ask me how I know.\"",
+  // the password stands in single quotes, as in the campaign's texts (21. 11. 2026: it must stand out of the barkeep's talk)
+  "You invite a grieving peasant for a beer. He mumbles: \"My father told me on his death bed the word '{a}'. I have no clue what it means, but it must be important.\"",
+  "A drunk sailor grabs your sleeve. \"'{a}'! Say it to a statue, and the stone will listen. At least that is what my grandmother swore.\"",
+  "The barkeep wipes a mug and whispers: \"A wandering scholar left here with one word on his lips: '{a}'. He never came back.\"",
+  "An old woman by the fire nods to herself. \"'{a}', '{a}', '{a}'. Whoever knows it, knows what the stones want to hear.\"",
+  "A boy tugs at your cloak. \"There is a word the dead keep: '{a}'. Don't ask me how I know.\"",
 ];
 
 /**

@@ -73,7 +73,7 @@ export const DEFAULT_KEYS: Readonly<KeyBindings> = {
   quests: ["j"],
   map: ["m"],
   talents: ["t", "i"],
-  quicksave: ["F8"],
+  quicksave: ["F5"],
   quickload: ["F9"],
   hero1: ["1"],
   hero2: ["2"],
@@ -130,8 +130,8 @@ export function parseKeys(raw: unknown): KeyBindings {
     stored["inventory"] = [...DEFAULT_KEYS.inventory];
     stored["talents"] = [...DEFAULT_KEYS.talents];
   }
-  // F5 reloads the browser window: the untouched old quick save key moves to F8
-  if (same(stored["quicksave"], ["F5"])) stored["quicksave"] = [...DEFAULT_KEYS.quicksave];
+  // release 1.1 moved the quick save to F8, release 1.2 (21. 11. 2026) took it back to F5 (the game stops the browser's reload on that key): the untouched F8 moves back
+  if (same(stored["quicksave"], ["F8"])) stored["quicksave"] = [...DEFAULT_KEYS.quicksave];
   const taken = new Set<string>();
   const cleaned: Partial<KeyBindings> = {};
   for (const { id } of GAME_ACTIONS) {

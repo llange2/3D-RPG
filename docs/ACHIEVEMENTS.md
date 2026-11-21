@@ -1,6 +1,6 @@
 # General
 
-- Whenever the player receives an achievement, show the scroll dialog with the image of the achievement and the text "Congratulation, you have unlocked the \[achievement name\] achievement!" and an "Okay" button to confirm
+- Whenever the player receives an achievement, show the scroll dialog with the image of the achievement and the text "Congratulation, you have unlocked the "\[achievement name\]" achievement!" (the name in quotation marks, since release 1.2) and an "Okay" button to confirm
 - In the title screen under the 3 buttons, add a 4th button which spans the same size of the three and label it "Achievement progress: \[% of completed achievements\]. Clicking on the button open the achievement overview
 - Achievement overview: show the information from the section "Achievments" (column "Name", "Description" and the image (if unlocked achievement, otherwise the locked achievement playceholder). Add a progress bar, where indicated
 

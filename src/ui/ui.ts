@@ -70,8 +70,8 @@ export type SettingsRow =
   | { type: "toggle"; label: () => string; flip: () => void }
   /** A slider with whole steps from `min` to `max`; `ticks` name the positions under it. */
   | { type: "slider"; label: () => string; min: number; max: number; step?: number; value: () => number; set: (value: number) => void; ticks?: string[] }
-  /** A row that opens something (a window of its own): `press` runs on a click. */
-  | { type: "button"; label: () => string; press: () => void | Promise<void> };
+  /** A row that opens something (a window of its own): `press` runs on a click; answering "apply" closes the panel as its own Apply does. */
+  | { type: "button"; label: () => string; press: () => void | "apply" | null | Promise<void | "apply" | null> };
 
 /** DOM overlay: HUD, message log and modal dialogs. All dialogs return promises, so game code reads linearly. */
 export class UI {
@@ -648,7 +648,7 @@ export class UI {
                 class: "opt",
                 onclick: () => {
                   if (r.type === "toggle") r.flip();
-                  else void Promise.resolve(r.press()).then(refresh);
+                  else void Promise.resolve(r.press()).then((answer) => (answer === "apply" ? close("apply") : refresh()));
                   refresh();
                 },
               },
@@ -676,10 +676,11 @@ export class UI {
 
   /**
    * The key bindings window: every action with its two keys; a click on a key waits for the next key press (Escape keeps the old key, Backspace or Delete empties the slot).
-   * `get` reads the table, `assign` changes it and answers with a line to show (a key taken from another action), `reset` brings the defaults back. Resolves when closed.
+   * `get` reads the table, `assign` changes it and answers with a line to show (a key taken from another action), `reset` brings the defaults back. Resolves when closed:
+   * "apply" for Apply (the caller puts the whole draft into effect), null for Back (the keys stay in the draft of the Controls window, as before).
    */
-  keyBindings(get: () => KeyBindings, assign: (action: GameAction, slot: number, key: string | null) => string, reset: () => void): Promise<void> {
-    return this.modal<void>(
+  keyBindings(get: () => KeyBindings, assign: (action: GameAction, slot: number, key: string | null) => string, reset: () => void): Promise<"apply" | null> {
+    return this.modal<"apply" | null>(
       (close) => {
         const note = h("p", { class: "small", text: "Click a key, then press the new one. Escape keeps the old key, Backspace empties it. A key belongs to one action only." });
         const list = h("div", { class: "list keys" });
@@ -718,10 +719,16 @@ export class UI {
           h("h2", { text: "Key bindings" }),
           list,
           note,
-          h("div", { class: "buttons" }, h("button", { class: "btn", text: "Reset to defaults", onclick: () => (reset(), draw()) }), h("button", { class: "btn primary", text: "Back", onclick: () => close() })),
+          h(
+            "div",
+            { class: "buttons" },
+            h("button", { class: "btn", text: "Back", onclick: () => close(null) }),
+            h("button", { class: "btn", text: "Reset to defaults", onclick: () => (reset(), draw()) }),
+            h("button", { class: "btn primary", text: "Apply", onclick: () => close("apply") }),
+          ),
         );
       },
-      { dismissWith: undefined as void },
+      { dismissWith: null },
     );
   }
 

@@ -112,7 +112,7 @@ describe("37th playtest, point 4: key bindings", () => {
     expect(actionOf(keys, "ArrowLeft")).toBe("turnLeft");
     expect(actionOf(keys, " ")).toBe("attack");
     expect(actionOf(keys, "c")).toBe("inventory");
-    expect(actionOf(keys, "F8")).toBe("quicksave");
+    expect(actionOf(keys, "F5")).toBe("quicksave");
     expect(actionOf(keys, "5")).toBe("mascot");
     expect(actionOf(keys, "Escape")).toBeNull();
     expect(actionOf(keys, "Shift")).toBeNull();

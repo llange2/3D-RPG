@@ -99,12 +99,13 @@ describe("effects: the fountain", () => {
   it("wraps the mermaid's stream round the model's own column: narrowing downwards, the colour of the model's water", () => {
     const shape = FOUNTAIN_SHAPES.ci_89!;
     if (shape.kind !== "horn") throw new Error("the mermaid fountain is a horn");
-    // the column of the model is 0.024 across at the top and 0.017 at the bottom (`tools/dev/model-jet.mjs`): the sheet is just wider, and a little below the top of the column (0.61)
+    // the column of the model is 0.024 across at the top and 0.017 at the bottom (`tools/dev/model-jet.mjs`): the sheet is just wider. Its top starts where the horn's lower rim does (the column ends at 0.61), a little inside the opening so that no gap shows under the horn (release 1.2)
     expect(shape.streamTopR).toBeGreaterThan(0.024);
     expect(shape.streamTopR).toBeLessThan(0.04);
     expect(shape.streamFootR).toBeGreaterThan(0.017);
     expect(shape.streamFootR).toBeLessThan(shape.streamTopR);
-    expect(shape.streamTopY).toBeLessThan(0.61);
+    expect(shape.streamTopY).toBeGreaterThanOrEqual(0.61);
+    expect(shape.streamTopY).toBeLessThan(0.7);
     // light turquoise (160, 210, 216)
     expect(shape.water[0]).toBeCloseTo(160 / 255, 1);
     expect(shape.water[1]).toBeCloseTo(210 / 255, 1);
