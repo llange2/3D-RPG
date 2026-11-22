@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { Rng, seedFromString } from "../../src/core/rng";
 import { MONSTERS, SPELLS } from "../../src/data/tables";
 import { parseSettings, DEFAULT_SETTINGS } from "../../src/game/settings";
-import { PROJECTILE_MODELS, SWARM_INSECTS, SWARM_INSECTS_SHARED } from "../../src/render/projectiles";
+import { PROJECTILE_MODELS, SWARM_INSECTS, SWARM_INSECTS_BEHIND } from "../../src/render/projectiles";
 import { FANTASTIC_FREEZE_RADIUS, areaSpell, createEncounter, createMonster, type GridView } from "../../src/sim/encounter";
 import { createDefaultParty } from "../../src/sim/party";
 import { isAreaSpell, isAttackSpell } from "../../src/sim/spells";
@@ -60,7 +60,7 @@ describe("the swarm and the flowers", () => {
   it("loads the insect with the game, ten of them for one monster and five each for two", () => {
     expect(PROJECTILE_MODELS).toContain("proj_insect");
     expect(SWARM_INSECTS).toBe(10);
-    expect(SWARM_INSECTS_SHARED).toBe(5);
+    expect(SWARM_INSECTS_BEHIND).toBe(5);
     const registry = JSON.parse(readFileSync(join(root, "public", "assets", "models.static.original.json"), "utf-8")) as Record<string, { tris: number }>;
     expect(registry["proj_insect"]).toBeDefined();
     // the flowers keep their petals: the first build threw most of them away (holes) and rebuilt the normals of the open sheets (black patches)

@@ -52,7 +52,7 @@ import { PropRenderer } from "../render/props";
 import { Effects, type FxLamp } from "../render/fx";
 import { chunkTint, hitKindOf } from "../render/hitFx";
 import { EFFECT_LEVELS, EFFECT_NAMES } from "../render/fxSheets";
-import { PROJECTILE_MODELS, Projectiles, RAY_LOOKS, SWARM_INSECTS, SWARM_INSECTS_SHARED, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
+import { PROJECTILE_MODELS, Projectiles, RAY_LOOKS, SWARM_INSECTS, SWARM_INSECTS_BEHIND, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
 import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setRuinedCastleKinds, setUltraGround, tileModelKeys, caveFlameSpots, caveTorchSpots, towerFlameSpots, towerTorchSpots, type PropInstance } from "../render/terrainMesher";
@@ -4073,14 +4073,13 @@ export class Game {
       return flights;
     }
     if (spell && style === "swarm") {
-      // Deadly Swarm (bug_fix_81): ten insects fly round the monster in front of the party; with more monsters on the line five fly round each of the first two and no further swarm is drawn
+      // Deadly Swarm (bug_fix_81): ten insects fly round the monster in front of the party; with a second monster on the line five more fly round it (10 + 5) and no further swarm is drawn
       // (the hits are all there at once, the damage is not held back for the swarm)
       const spots = hits
         .map((e) => ({ uid: e.uid, spot: this.monsters.hitSpot(e.uid) }))
         .filter((h): h is { uid: string; spot: NonNullable<typeof h.spot> } => !!h.spot)
         .sort((a, b) => Math.hypot(a.spot.x - from.x, a.spot.z - from.z) - Math.hypot(b.spot.x - from.x, b.spot.z - from.z));
-      const count = spots.length > 1 ? SWARM_INSECTS_SHARED : SWARM_INSECTS;
-      for (const { spot } of spots.slice(0, 2)) this.projectiles.swarm({ x: spot.x, y: spot.y, z: spot.z }, count);
+      spots.slice(0, 2).forEach(({ spot }, i) => this.projectiles.swarm({ x: spot.x, y: spot.y, z: spot.z }, i === 0 ? SWARM_INSECTS : SWARM_INSECTS_BEHIND));
       for (const e of hits) flights.set(e.uid, 0);
       return flights;
     }

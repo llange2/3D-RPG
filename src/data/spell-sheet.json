@@ -437,7 +437,7 @@
   "name": "Deadly Swarm",
   "description": "Does 40 physical damage to all monsters in a straight line.",
   "scalesWithLevel": false,
-  "explanation": "Penetrating: hits every monster in the straight line in front of the party. When cast, ten insects (model Insect, loaded with the game) fly round the first monster in front of the party on natural, swarm-like paths. If more monsters stand on the line, five insects fly round each of the first two and no further swarm is shown (the others are hit all the same). The swarm stays for 2 s and fades to transparent within 0.5 s.",
+  "explanation": "Penetrating: hits every monster in the straight line in front of the party. When cast, ten insects (model Insect, loaded with the game) fly round the first monster in front of the party on natural, swarm-like paths. If more monsters stand on the line, five more fly round the second monster (10 + 5) and no further swarm is shown (the others are hit all the same). The swarm stays for 2 s and fades to transparent within 0.5 s.",
   "mana": 12,
   "penetrating": true,
   "damMin": 40,
