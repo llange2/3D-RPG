@@ -190,5 +190,7 @@
  * off the water and never cross it (`route(…, landOnly)`), the piece of a stream that goes sideways at a door takes the side where the land reaches, and the landing keeps off the coast of other islands and the edge of the world.
  * 80 = 22. 11. 2026 (the user's list of fixes): the statues of the quests (a lore action with an `item`) follow the rule for objects like every other statue: none in a passage (moss-mere-318/small, Shaft of Ithoa 11/12
  * stood in the only way to a chamber), and the user's Torchlight (item 334, `TORCHLIGHT_ITEM`) hangs on the walls of the castles (beside every banner along the keep's walls) and, a few at a time, in the caves (rule `torch`).
+ * 81 = bug_fix_80 (Cave of Zula, moss-mere-318/small): the light of quest_8 no longer depends on the order the crystals were set down in (`simulateCrystals`: light only runs downstream along the shortest way of light,
+ * of two crossing lines the shorter stays), so the generator proves other solutions for some puzzles (a mixing crystal between two crystals, one of them nearer to its source than to the mixing one, no longer works).
  */
-export const GEN_VERSION = 80;
+export const GEN_VERSION = 81;

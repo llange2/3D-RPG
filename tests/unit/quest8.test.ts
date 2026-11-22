@@ -45,15 +45,23 @@ describe("quest_8, the light of the crystals (quest document 1.10)", () => {
     expect(nearer.crystals.get("3,5")).toBe(1);
   });
 
-  it("two lines never cross: the crystal set down first keeps its line", () => {
-    // red along the row 3 from (0,3) to the crystal at (6,3); blue from (3,0) south would cross it at (3,3), at a crystal (3,6)
+  it("two lines never cross: the shorter line stays, whatever the order the crystals were set down in", () => {
+    // red along the row 3 from (0,3) to the crystal at (6,3) (6 long); blue from (3,0) south to a crystal (3,5) (5 long) would cross it at (3,3)
     const nodes = [source(0, 3, "E", 1), source(3, 0, "S", 4)];
-    const older = simulateCrystals(nodes, [{ x: 6, y: 3, seq: 1 }, { x: 3, y: 6, seq: 2 }], open);
-    expect(older.crystals.get("6,3")).toBe(1);
-    expect(older.crystals.get("3,6")).toBe(0);
-    const reversed = simulateCrystals(nodes, [{ x: 6, y: 3, seq: 2 }, { x: 3, y: 6, seq: 1 }], open);
-    expect(reversed.crystals.get("3,6")).toBe(4);
-    expect(reversed.crystals.get("6,3")).toBe(0);
+    for (const [a, b] of [[1, 2], [2, 1]] as const) {
+      const r = simulateCrystals(nodes, [{ x: 6, y: 3, seq: a }, { x: 3, y: 5, seq: b }], open);
+      expect(r.crystals.get("3,5")).toBe(4);
+      expect(r.crystals.get("6,3")).toBe(0);
+    }
+  });
+
+  it("two lines of the same length that cross both stay away", () => {
+    const nodes = [source(0, 3, "E", 1), source(3, 0, "S", 4)];
+    for (const [a, b] of [[1, 2], [2, 1]] as const) {
+      const r = simulateCrystals(nodes, [{ x: 6, y: 3, seq: a }, { x: 3, y: 6, seq: b }], open);
+      expect(r.crystals.get("6,3")).toBe(0);
+      expect(r.crystals.get("3,6")).toBe(0);
+    }
   });
 
   it("a ring of crystals with no source in it stays dark", () => {

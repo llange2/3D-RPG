@@ -7,9 +7,14 @@ import type { ActionInstance } from "./types";
  *
  * Wall crystals (a wall holder with a crystal in its mouth) stand on the floor cell in front of a wall and shine straight out of it: a SOURCE always shines in its colour, a TARGET waits for
  * one colour. The player puts crystals (holder and crystal) on cells of the floor, and a light line runs from a shining crystal to the next one in a straight row or column. The rule of the
- * document, as it was settled with the user: every crystal and every target takes its light from the NEAREST shining crystal or source it sees in its four directions (a target only in the
- * direction it faces); two at the same distance give it both, and the colours mix. Something in the way (a wall, an object, a monster, the party, a closed door, another crystal) stops the
- * light. Two lines never cross: where they would, the line of the crystal set down first stays and the other does not appear. Whenever something changes the whole path is worked out again.
+ * document: every crystal and every target takes its light from the NEAREST shining crystal or source it sees in its four directions (a target only in the direction it faces); two at the same
+ * distance give it both, and the colours mix. Something in the way (a wall, an object, a monster, the party, a closed door, another crystal) stops the light.
+ *
+ * The result depends on WHERE the crystals stand, never on the order they were set down in (bug_fix_80: in the Cave of Zula the row 18/17/16 was blue or purple by the order, a random factor in
+ * a puzzle). Two things used to be settled by the order and now are by distances only:
+ * - Two crystals that see each other can each be the other's nearest light. Light only runs "downstream": from the emitter with the shorter way of light (`cum`, the shortest chain of lines from
+ *   any source, summed up) to the one with the longer way; between equal ways there is no line.
+ * - Two lines never cross: where they would, the shorter line stays and the longer does not appear; two of the same length both stay away.
  */
 
 /** The colours as masks of the three base colours: a mixed light is the union of the lights that meet in a crystal. */
@@ -35,7 +40,7 @@ export interface WallNode {
   color: number;
 }
 
-/** A crystal the party has set down, `seq` counts them in the order they were set down (the older line wins where two cross). */
+/** A crystal the party has set down. `seq` counts them in the order they were set down; the save keeps it, the light does not read it (the order of the party never changes the light). */
 export interface PlacedCrystal {
   x: number;
   y: number;
@@ -63,93 +68,53 @@ const FACINGS: readonly Facing[] = ["N", "E", "S", "W"];
 const LONGEST = 200;
 const key = (x: number, y: number): string => `${x},${y}`;
 
-interface Emitter {
+interface Receiver {
   id: string;
   x: number;
   y: number;
-  source?: WallNode;
-}
-interface Receiver extends Emitter {
-  /** Order of priority: targets first (they stand from the start), then the crystals in the order they were set down. */
-  order: number;
   target?: WallNode;
   /** The only direction it sees in (a target), else all four. */
   only?: Facing;
 }
-interface Input {
+/** What a receiver sees in one direction: the emitter (a crystal or a source facing it), how far, and the cells between. */
+interface Link {
+  key: string;
   from: string;
+  to: string;
   distance: number;
-  dir: Facing;
+  cells: string[];
 }
 
 /**
  * The light of a room. `blocked(x, y)` says whether a cell stops light (wall, object, closed door, monster, the party); a crystal always does, the cell of a wall crystal does not.
  */
 export function simulateCrystals(nodes: readonly WallNode[], placed: readonly PlacedCrystal[], blocked: (x: number, y: number) => boolean): CrystalResult {
-  const crystalAt = new Map<string, PlacedCrystal>();
-  for (const c of placed) crystalAt.set(key(c.x, c.y), c);
+  const crystalAt = new Set<string>();
+  for (const c of placed) crystalAt.add(key(c.x, c.y));
   const sourceAt = new Map<string, WallNode>();
   for (const n of nodes) if (n.role === "source") sourceAt.set(key(n.x, n.y), n);
-
-  const receivers: Receiver[] = [
-    ...nodes.filter((n) => n.role === "target").map((n, i): Receiver => ({ id: `t:${n.uid}`, x: n.x, y: n.y, order: -1000 + i, target: n, only: n.dir })),
-    ...[...placed].sort((a, b) => a.seq - b.seq).map((c): Receiver => ({ id: `c:${key(c.x, c.y)}`, x: c.x, y: c.y, order: c.seq })),
-  ];
-  receivers.sort((a, b) => a.order - b.order);
-  const inputs = new Map<string, Input[]>();
-  for (const r of receivers) inputs.set(r.id, []);
   const sources = nodes.filter((n) => n.role === "source");
 
-  // the light of every emitter from the inputs as they stand: a source shines in its colour, a crystal in the union of what it takes in (a ring of crystals with no source in it stays dark)
-  const lightOf = (): Map<string, number> => {
-    const light = new Map<string, number>();
-    for (const s of sources) light.set(`s:${s.uid}`, s.color);
-    for (const c of placed) light.set(`c:${key(c.x, c.y)}`, 0);
-    for (let round = 0; round <= placed.length + 1; round++) {
-      let changed = false;
-      for (const c of placed) {
-        const id = `c:${key(c.x, c.y)}`;
-        let m = 0;
-        for (const i of inputs.get(id) ?? []) m |= light.get(i.from) ?? 0;
-        if (m !== light.get(id)) {
-          light.set(id, m);
-          changed = true;
-        }
-      }
-      if (!changed) break;
-    }
-    return light;
-  };
+  // a fixed order that comes from the places alone (targets as given, crystals row by row), so that nothing depends on the order they were set down in
+  const crystals = [...placed].sort((a, b) => a.y - b.y || a.x - b.x);
+  const receivers: Receiver[] = [
+    ...nodes.filter((n) => n.role === "target").map((n): Receiver => ({ id: `t:${n.uid}`, x: n.x, y: n.y, target: n, only: n.dir })),
+    ...crystals.map((c): Receiver => ({ id: `c:${key(c.x, c.y)}`, x: c.x, y: c.y })),
+  ];
 
-  /** Does the emitter take (even through several crystals) light from `id`? */
-  const dependsOn = (emitter: string, id: string): boolean => {
-    const seen = new Set<string>();
-    const stack = [emitter];
-    while (stack.length > 0) {
-      const e = stack.pop()!;
-      if (e === id) return true;
-      if (seen.has(e)) continue;
-      seen.add(e);
-      for (const i of inputs.get(e) ?? []) stack.push(i.from);
-    }
-    return false;
-  };
-
-  /** What `r` sees first in a direction: a crystal or a source facing it, with its distance, or nothing. */
+  /** What `r` sees first in a direction: a crystal or a source facing it, with its distance, or nothing. Light does not matter here. */
   const seen = (r: Receiver, dir: Facing): { from: string; distance: number; x: number; y: number } | null => {
     const d = FACING_DELTA[dir];
     for (let k = 1; k <= LONGEST; k++) {
       const x = r.x + d.dx * k;
       const y = r.y + d.dy * k;
-      const crystal = crystalAt.get(key(x, y));
-      if (crystal) return { from: `c:${key(x, y)}`, distance: k, x, y };
+      if (crystalAt.has(key(x, y))) return { from: `c:${key(x, y)}`, distance: k, x, y };
       const source = sourceAt.get(key(x, y));
       if (source && source.dir === OPPOSITE[dir]) return { from: `s:${source.uid}`, distance: k, x, y };
       if (blocked(x, y)) return null;
     }
     return null;
   };
-
   const cellsBetween = (a: { x: number; y: number }, b: { x: number; y: number }): string[] => {
     const out: string[] = [];
     const dx = Math.sign(b.x - a.x);
@@ -166,52 +131,100 @@ export function simulateCrystals(nodes: readonly WallNode[], placed: readonly Pl
     return { x, y };
   };
 
-  const passes = placed.length + receivers.length + 4;
-  for (let pass = 0; pass < passes; pass++) {
-    let changed = false;
-    // the cells the lines of the receivers that were settled first in this pass run over
-    const taken = new Set<string>();
-    for (const r of receivers) {
-      const light = lightOf();
-      const candidates: { id: string; distance: number; dir: Facing; cells: string[] }[] = [];
-      for (const dir of r.only ? [r.only] : FACINGS) {
-        const s = seen(r, dir);
-        if (!s || (light.get(s.from) ?? 0) === 0) continue;
-        // light that comes back from a crystal that lives on this one's light is no light (a crystal lit by a source is lit by it, not by the crystal it shines on)
-        if (dependsOn(s.from, r.id)) continue;
-        const cells = cellsBetween(r, s);
-        if (cells.some((c) => taken.has(c))) continue;
-        candidates.push({ id: s.from, distance: s.distance, dir, cells });
-      }
-      const nearest = candidates.length > 0 ? Math.min(...candidates.map((c) => c.distance)) : 0;
-      const chosen = candidates.filter((c) => c.distance === nearest);
-      const next: Input[] = chosen.map((c) => ({ from: c.id, distance: c.distance, dir: c.dir }));
-      const before = inputs.get(r.id)!;
-      if (before.length !== next.length || before.some((b, i) => b.from !== next[i]!.from)) {
-        inputs.set(r.id, next);
-        changed = true;
-      }
-      for (const c of chosen) for (const cell of c.cells) taken.add(cell);
+  // every line that could run: from what a receiver sees to the receiver
+  const links: Link[] = [];
+  for (const r of receivers) {
+    for (const dir of r.only ? [r.only] : FACINGS) {
+      const s = seen(r, dir);
+      if (s) links.push({ key: `${s.from}>${r.id}`, from: s.from, to: r.id, distance: s.distance, cells: cellsBetween(r, s) });
     }
-    if (!changed) break;
   }
 
-  const light = lightOf();
-  const links: CrystalLink[] = [];
+  interface Solution {
+    inputs: Map<string, Link[]>;
+    light: Map<string, number>;
+  }
+  /** The light with the lines in `banned` taken away. */
+  const solve = (banned: ReadonlySet<string>): Solution => {
+    const open = links.filter((l) => !banned.has(l.key));
+    // the way of light: the shortest chain of lines from any source
+    const cum = new Map<string, number>();
+    for (const s of sources) cum.set(`s:${s.uid}`, 0);
+    for (const c of crystals) cum.set(`c:${key(c.x, c.y)}`, Infinity);
+    for (let round = 0; round <= crystals.length + 1; round++) {
+      let changed = false;
+      for (const l of open) {
+        if (l.to.startsWith("t:")) continue;
+        const reach = (cum.get(l.from) ?? Infinity) + l.distance;
+        if (reach < (cum.get(l.to) ?? Infinity)) {
+          cum.set(l.to, reach);
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+    // a receiver takes the nearest of the lines that run downstream (a target takes any lit one: it shines on nothing)
+    const inputs = new Map<string, Link[]>();
+    for (const r of receivers) {
+      const mine = cum.get(r.id) ?? Infinity;
+      const fits = open.filter((l) => {
+        if (l.to !== r.id) return false;
+        const up = cum.get(l.from) ?? Infinity;
+        return up !== Infinity && (r.target !== undefined || up < mine);
+      });
+      const nearest = fits.length > 0 ? Math.min(...fits.map((l) => l.distance)) : 0;
+      inputs.set(r.id, fits.filter((l) => l.distance === nearest));
+    }
+    // the light flows down the ways: a crystal is worked out after everything it takes light from
+    const light = new Map<string, number>();
+    for (const s of sources) light.set(`s:${s.uid}`, s.color);
+    const byWay = crystals.map((c) => `c:${key(c.x, c.y)}`).sort((a, b) => (cum.get(a) ?? Infinity) - (cum.get(b) ?? Infinity));
+    for (const id of byWay) {
+      let m = 0;
+      for (const l of inputs.get(id) ?? []) m |= light.get(l.from) ?? 0;
+      light.set(id, m);
+    }
+    return { inputs, light };
+  };
+
+  // lines that cross: the shorter one stays, two of the same length both go (and stay away: a banned line is never tried again, so the result is a function of the places only)
+  const banned = new Set<string>();
+  let solution = solve(banned);
+  for (let round = 0; round <= links.length; round++) {
+    const owners = new Map<string, Link[]>();
+    for (const ls of solution.inputs.values()) for (const l of ls) for (const cell of l.cells) owners.set(cell, [...(owners.get(cell) ?? []), l]);
+    let grew = false;
+    for (const ls of owners.values()) {
+      if (ls.length < 2) continue;
+      const shortest = Math.min(...ls.map((l) => l.distance));
+      const tie = ls.filter((l) => l.distance === shortest).length > 1;
+      for (const l of ls) {
+        if ((l.distance > shortest || tie) && !banned.has(l.key)) {
+          banned.add(l.key);
+          grew = true;
+        }
+      }
+    }
+    if (!grew) break;
+    solution = solve(banned);
+  }
+
+  const { inputs, light } = solution;
+  const outLinks: CrystalLink[] = [];
   const targets = new Map<string, number>();
-  const crystals = new Map<string, number>();
+  const lit = new Map<string, number>();
   for (const r of receivers) {
     let m = 0;
-    for (const i of inputs.get(r.id) ?? []) {
-      const color = light.get(i.from) ?? 0;
+    for (const l of inputs.get(r.id) ?? []) {
+      const color = light.get(l.from) ?? 0;
       m |= color;
-      links.push({ from: position(i.from), to: { x: r.x, y: r.y }, color });
+      outLinks.push({ from: position(l.from), to: { x: r.x, y: r.y }, color });
     }
     if (r.target) targets.set(r.target.uid, m);
-    else crystals.set(key(r.x, r.y), m);
+    else lit.set(key(r.x, r.y), m);
   }
   const wanted = nodes.filter((n) => n.role === "target");
-  return { links, crystals, targets, solved: wanted.length > 0 && wanted.every((n) => targets.get(n.uid) === n.color) };
+  return { links: outLinks, crystals: lit, targets, solved: wanted.length > 0 && wanted.every((n) => targets.get(n.uid) === n.color) };
 }
 
 /** The cells that stop light whatever the party does: walls, and the cells of the actions that stand in the way (a chest, a statue, a closed door). Monsters and the party are the game's to add. */
