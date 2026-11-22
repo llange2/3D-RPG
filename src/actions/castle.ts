@@ -1,6 +1,7 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { BANNER, CASTLE_STATUES, KING, THRONE } from "../data/castles";
 import { letterHints } from "../data/letter-hints";
+import { TORCHLIGHT_ITEM } from "../data/quest-table";
 import { KEEPER_PERSONA } from "../data/keepers";
 import { lockTrapParams } from "./lockTrap";
 import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
@@ -212,8 +213,9 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
     const front = { x: c.x + dx, y: c.y + dy };
     if (!taken.has(front.y * map.width + front.x) && !floorAt(front.x + dx, front.y + dy)) banner(front.x, front.y, OPPOSITE[f]);
   }
-  // the banners of its kind along the walls of the keep
-  for (const c of bannerCells(map, taken, BANNER_SPACING)) banner(c.x, c.y, c.facing);
+  // the banners of its kind along the walls of the keep (and a torch beside each, hung at the end: `torchSpots`)
+  const torchSpots = bannerCells(map, taken, BANNER_SPACING);
+  for (const c of torchSpots) banner(c.x, c.y, c.facing);
   hideInChests(map, actions, castle.coins, 0, seed, true, castle.pearls);
   hideSpells(map, actions, castle.spells, seed, true);
 
@@ -256,6 +258,21 @@ export function buildCastleContent(map: InteriorMap, rootSeed: SeedState): MapCo
       objects.add(spot.y * map.width + spot.x);
       taken.add(spot.y * map.width + spot.x);
     }
+  }
+  // 22. 11. 2026 (the user's Torchlight.glb): the walls of the keep are lit at regular distances. A torch hangs on the next cell of the wall beside every banner along it (so that they come as regularly
+  // as the banners), on the wall side of that cell, looking into the room; a cell that something stands on, or that the banners kept free, gets none. They come last, so that nothing else moves.
+  const inKeep = new Set<number>(castle.keep);
+  const used = new Set<number>(actions.map((a) => a.y * map.width + a.x));
+  for (const c of torchSpots) {
+    const wall = FACING_DELTA[OPPOSITE[c.facing]];
+    const along = [{ dx: Math.abs(wall.dy), dy: Math.abs(wall.dx) }, { dx: -Math.abs(wall.dy), dy: -Math.abs(wall.dx) }];
+    const at = along.map((d) => ({ x: c.x + d.dx, y: c.y + d.dy })).find((n) => {
+      const i = n.y * map.width + n.x;
+      return inKeep.has(i) && floorAt(n.x, n.y) && !used.has(i) && !taken.has(i) && !floorAt(n.x + wall.dx, n.y + wall.dy);
+    });
+    if (!at) continue;
+    used.add(at.y * map.width + at.x);
+    actions.push({ uid: uid("torch"), kind: "decor", x: at.x, y: at.y, params: { item: TORCHLIGHT_ITEM, bearing: BEARING[c.facing] } });
   }
   return { mapKey: map.key, tier, actions, spawns: [] };
 }

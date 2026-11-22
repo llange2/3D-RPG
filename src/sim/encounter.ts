@@ -16,7 +16,7 @@ export const MONSTER_ACTION_RADIUS = 7;
  */
 export const SHOT_RANGE = MONSTER_ACTION_RADIUS;
 /** Share of a Clumsy monster's attacks that do not take place. */
-const CLUMSY_MISS = 0.1;
+const CLUMSY_MISS = 0.25;
 const PATH_STEP_LIMIT = 30;
 /** The search that goes round other monsters needs more room than the old game's 30 steps: a detour round a crowd is longer than the straight way. */
 const MOVE_STEP_LIMIT = 80;
@@ -565,7 +565,7 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
     for (let n = 0; n < attacks; n++) {
       let candidates = targets(party);
       if (candidates.length === 0) break;
-      // Clumsy: one attack in ten does not take place
+      // Clumsy: one attack in four does not take place (a tenth until 22. 11. 2026)
       if (s.monster.clumsy && rng.float() < CLUMSY_MISS) continue;
       if (def.preferred_enemy) {
         const matching = candidates.filter((i) => party.characters[i]!.classType.includes(def.preferred_enemy!));

@@ -54,6 +54,30 @@ export function clear(el: Element): void {
   while (el.firstChild) el.removeChild(el.firstChild);
 }
 
+/**
+ * Puts a text on the clipboard; false when nothing worked. The asynchronous API first, and where it is refused (the installed game's window asks Electron for the permission, a page without
+ * a secure context has no `navigator.clipboard`) a hidden text field and the old `copy` command.
+ */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const box = Object.assign(document.createElement("textarea"), { value: text });
+    box.setAttribute("readonly", "");
+    box.style.cssText = "position:fixed;left:-1000px;top:0;opacity:0";
+    document.body.append(box);
+    box.select();
+    try {
+      return document.execCommand("copy");
+    } catch {
+      return false;
+    } finally {
+      box.remove();
+    }
+  }
+}
+
 export const assetPath = (p: string): string => `${import.meta.env.BASE_URL}assets/${p}`;
 /** Pictures that only a CSS rule asks for (the scroll behind every message): the browser fetches those at the first use, and the first box showed without its scroll. */
 const kept: HTMLImageElement[] = [];

@@ -18,7 +18,7 @@ import type { Attribute, Character, Condition, Item, Party } from "../sim/types"
 import type { ActionInstance, MapContent } from "./types";
 import { FACING_NAMES, gongsStruck, headFacing, ringSolved, rotationSolved, runeActive, sameAnswer, turnHead } from "./quests";
 import { answerMatches } from "../data/riddles";
-import { CONSOLE_SEEN_FLAG, CRATE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL } from "../data/quest-table";
+import { CONSOLE_SEEN_FLAG, CRATE_ITEM, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL, TORCHLIGHT_ITEM } from "../data/quest-table";
 import * as SHIP from "../data/ship-texts";
 import { SUPPORT_BEAM, trapElementOf, type ServiceKind } from "./registry";
 import { coinPoints, scaleAction, type RewardScale } from "./rewardScale";
@@ -1055,7 +1055,8 @@ export function resolveAction(original: ActionInstance, ctx: ActionContext): Act
 
     case "decor": {
       // the support beam is a plain decoration: it says nothing
-      if (Number(p.item) === SUPPORT_BEAM) return { effects, consumed: false };
+      // (and so is a torch on the wall: a castle hangs one every few cells, the party would read a line at each)
+      if (Number(p.item) === SUPPORT_BEAM || Number(p.item) === TORCHLIGHT_ITEM) return { effects, consumed: false };
       // (a decoration may carry words of its own: the stacks beside the quartermaster belong to him)
       effects.push({ type: "text", text: typeof p.text === "string" && p.text !== "" ? p.text : propLine(Number(p.item), action.uid) });
       // a pile of bones that hides something (one in five, fixed by the generator): the party finds it the first time it steps on the pile (the game asks a decoration once)

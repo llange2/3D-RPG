@@ -1,3 +1,4 @@
+import { TORCHLIGHT_ITEM } from "../data/quest-table";
 import type { InteriorMap } from "../interiors/types";
 import type { ActionInstance, MapContent } from "./types";
 
@@ -11,5 +12,7 @@ export function buildShowcaseContent(map: InteriorMap): MapContent {
   const actions: ActionInstance[] = [{ uid: `${map.key}#exit:0`, kind: "transfer", x: map.exit.x, y: map.exit.y, params: { mode: "poi_exit", tier: 1 } }];
   // the party arrives from the south and looks north: the models face north at bearing 0, so they are turned to look south at it
   showcase.items.forEach((s, i) => actions.push({ uid: `${map.key}#item:${i}`, kind: "decor", x: s.x, y: s.y, params: { item: s.item, bearing: 180 } }));
+  // what hangs on a wall hangs on it (a torch, with its light and its smoke)
+  showcase.torches.forEach((t, i) => actions.push({ uid: `${map.key}#torch:${i}`, kind: "decor", x: t.x, y: t.y, params: { item: TORCHLIGHT_ITEM, bearing: t.bearing } }));
   return { mapKey: map.key, tier: 1, actions, spawns: [] };
 }

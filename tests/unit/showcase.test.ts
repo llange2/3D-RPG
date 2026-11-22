@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildMapContent } from "../../src/actions";
 import { PERSONAS } from "../../src/data/personas";
+import { TORCHLIGHT_ITEM } from "../../src/data/quest-table";
 import { DECO_MODELS } from "../../src/data/wall-deco";
 import { MONSTERS } from "../../src/data/tables";
 import { generateInterior, SHOWCASE_ID, CELL } from "../../src/interiors";
@@ -39,13 +40,14 @@ describe("the debug showcase", () => {
     const { ordinary, landmarks } = showcaseItems();
     expect(showcase.items.map((i) => i.item).sort((a, b) => a - b)).toEqual([...ordinary, ...landmarks].sort((a, b) => a - b));
     // every light of the game that belongs to an item is there to be seen
-    for (const id of Object.keys(ITEM_LAMPS).map(Number)) expect(showcase.items.some((i) => i.item === id), `item ${id} glows but is not in the showcase`).toBe(true);
+    // (the wall torch is no item of the old table: it hangs on the east wall, `showcase.torches`)
+    for (const id of Object.keys(ITEM_LAMPS).map(Number)) expect(showcase.items.some((i) => i.item === id) || (id === TORCHLIGHT_ITEM && showcase.torches.length > 0), `item ${id} glows but is not in the showcase`).toBe(true);
   });
 
   it("has nothing that does something: plain decoration and the way out", () => {
     expect(content.spawns).toEqual([]);
     for (const a of content.actions) expect(["decor", "transfer"], a.uid).toContain(a.kind);
-    expect(content.actions.filter((a) => a.kind === "decor")).toHaveLength(showcase.items.length);
+    expect(content.actions.filter((a) => a.kind === "decor")).toHaveLength(showcase.items.length + showcase.torches.length);
   });
 
   it("holds every model of the interior view that no item stands for", () => {

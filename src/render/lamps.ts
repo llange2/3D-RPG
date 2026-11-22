@@ -1,10 +1,10 @@
 import { runeActive } from "../actions/quests";
 import { heapGone } from "../actions/registry";
 import { LANTERN_BODY_TOP, LANTERN_DROP, LANTERN_ITEM, lanternOriginY } from "../data/item-tuning";
-import { ENGINE_CRYSTAL_FLAG, LIFE_FLAG } from "../data/quest-table";
+import { ENGINE_CRYSTAL_FLAG, LIFE_FLAG, TORCHLIGHT_ITEM } from "../data/quest-table";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { cellCenterX, cellCenterZ } from "./interiorMesher";
-import { shownItem } from "./interiorProps";
+import { TORCH_FLAME_Y, TORCH_TIP_Y, shownItem, torchFlameSpot } from "./interiorProps";
 import { TRAP_OBJECT, elementOf } from "./interiorTraps";
 
 /** The little things that rise round a lamp (`LampKind.fx`). */
@@ -25,6 +25,12 @@ export interface LampKind {
   /** The share of its light the lamp keeps by day outside (0 = none, the default: by day lamps add nothing). A spell's light must show in the sun as well (48th playtest, point 6). */
   daylight?: number;
 }
+
+/**
+ * The torch on the wall (item 334, 22. 11. 2026): a bright light and a halo in the colour of its flame, orange like the flames of the file's texture, sparks and a thread of smoke from the tip of the flame.
+ * The light sits at the flame, in front of the wall it hangs on (`torchFlameSpot`), not in the middle of the cell.
+ */
+export const TORCHLIGHT_LAMP: LampKind = { y: TORCH_FLAME_Y, color: [1, 0.62, 0.24], range: 9, intensity: 2.8, fx: "torch", fxY: TORCH_TIP_Y, halo: true };
 
 /** A lamp on a map: where it hangs and what it gives (`Game.updateLamps` hands the lights of the pool to the nearest ones). */
 export interface LampSource extends LampKind {
@@ -121,7 +127,8 @@ export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
   68: COMPUTER_LAMP,
   // Rustic lantern, hangs from the ceiling on its chain; since the 51st playtest (point 2) it shines like the torches of the tower: warm, weak and wide
   76: { y: 3.2 - LANTERN_DROP, color: TOWER_TORCH_LAMP.color, range: TOWER_TORCH_LAMP.range, intensity: TOWER_TORCH_LAMP.intensity },
-  71: { y: 1.4, color: [1, 0.6, 0.3], fx: "torch", fxY: 0.6 }, // Abandoned fireplace (the fire burns in the hearth, low in the model)
+  [TORCHLIGHT_ITEM]: TORCHLIGHT_LAMP,
+  71: { y: 0.8, color: [1, 0.58, 0.26], fx: "torch", fxY: 0.45 }, // the cooking pot over a fire (22. 11. 2026, `Cauldron_over_campfire.glb`: the flames stand in the ring of stones, under the pot, a good half unit high)
 };
 
 /**
@@ -194,7 +201,10 @@ export function crystalLamps(content: MapContent, opened: ReadonlySet<string> = 
     const element = elementOf(a);
     const item = element !== null ? TRAP_OBJECT[element] : shownItem(a);
     const kind = item === null ? undefined : item === LANTERN_ITEM && ceiling !== undefined ? lanternLamp(ceiling) : ITEM_LAMPS[item];
-    if (kind) out.push(lampSource(kind, cellCenterX(a.x), cellCenterZ(a.y), lampKeyOf(a)));
+    if (kind && item === TORCHLIGHT_ITEM) {
+      const spot = torchFlameSpot(a, cellCenterX(a.x), cellCenterZ(a.y));
+      out.push(lampSource(kind, spot.x, spot.z, lampKeyOf(a)));
+    } else if (kind) out.push(lampSource(kind, cellCenterX(a.x), cellCenterZ(a.y), lampKeyOf(a)));
   }
   return out;
 }

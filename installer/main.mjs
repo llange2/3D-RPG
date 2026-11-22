@@ -171,9 +171,9 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
     protocol.handle(SCHEME, serve);
-    // full screen and the pointer lock are the only things the game asks the system for
+    // full screen, the pointer lock and writing a text to the clipboard ("Copy seed" in the menu; never reading it) are the only things the game asks the system for
     session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
-      callback(permission === "fullscreen" || permission === "pointerLock");
+      callback(permission === "fullscreen" || permission === "pointerLock" || permission === "clipboard-sanitized-write");
     });
     createWindow();
     app.on("activate", () => {

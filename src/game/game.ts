@@ -5,6 +5,7 @@ import { arrival, loadCampaignMap } from "../campaign/loader";
 import type { CampaignMapModel } from "../campaign/model";
 import { crossesSlab, slabBetween, stepFacing, type SlabMap } from "../campaign/slabs";
 import { beamBetween } from "../actions/beams";
+import { SETH } from "../actions/machines";
 import { CAMPAIGN_START, facingOfRotation, mapSlugOf, type TrapKind } from "../campaign/types";
 import { CampaignView } from "../render/campaignView";
 import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, heapGone, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, isVisibleTrap, validateContent } from "../actions";
@@ -118,7 +119,7 @@ import { rewardScaleFor } from "../actions/rewardMeasure";
 import { cureEffects, protectionEffect } from "../ui/avatarFx";
 import { preloadPortraits } from "../ui/portraitSheets";
 import { cursorStepped, setCursorFade, tooltipBesidePointer } from "../ui/cursor";
-import { assetPath, h } from "../ui/dom";
+import { assetPath, copyText, h } from "../ui/dom";
 import { thousands } from "../core/format";
 import { UI, randomSeed, type HudInfo, type Option } from "../ui/ui";
 import { SUPPORT_BEAM, TRAP_RELOAD_STEPS, TREASURE_HEAP, type ServiceKind } from "../actions/registry";
@@ -670,7 +671,18 @@ export class Game {
       return;
     }
     if (at.mode === "interior" && !at.poiId.startsWith("campaign:")) s.at = { mode: "overworld", x: at.ret.x, y: at.ret.y, facing: at.ret.facing };
-    s.explored.forgetInteriors();
+    // the maps the party had explored count as explored on their new layout (22. 11. 2026: they came back blank, and the party had to walk them again)
+    s.explored.revealInteriors((key) => {
+      const [, place = "", floor = ""] = /^in:(.*):(\d+)$/.exec(key) ?? [];
+      const poi = this.world.poiById(place);
+      if (!poi) return null;
+      try {
+        const map = generateInterior(this.world, poi, Number(floor));
+        return map.width * map.height;
+      } catch {
+        return null;
+      }
+    });
   }
 
   /** The closest tile the party can stand on, for a position that is no longer free (a place was built over it). */
@@ -1179,6 +1191,8 @@ export class Game {
       // they face the longest stretch of open ground next to them, the way a person in a street looks along it
       let bearing = 0;
       let longest = -1;
+      let wallRun = 0;
+      let wallBearing: number | null = null;
       for (const [facing, degrees] of [["N", 0], ["E", 90], ["S", 180], ["W", 270]] as const) {
         const [dx, dy] = FACING_VEC[facing];
         let run = 0;
@@ -1187,7 +1201,13 @@ export class Game {
           longest = run;
           bearing = degrees;
         }
+        // Seth Squirm of the machine room stands with his back to the wall where he stands at one: of the directions with open floor in front and a wall behind him, the longer way wins
+        if (persona === SETH && run > 0 && rt.map.cells[(a.y - dy) * rt.map.width + (a.x - dx)] !== CELL.FLOOR && run > wallRun) {
+          wallRun = run;
+          wallBearing = degrees;
+        }
       }
+      if (persona === SETH && wallBearing !== null) bearing = wallBearing;
       const p = this.worldPos(a.x, a.y);
       // (61st playtest, point 1: the floor of a town lies on its 3D plates, a hand over the flat quad; the person stands on them)
       void this.monsters.add(`npc:${a.uid}`, personaModelId(persona), p.x, p.y + this.interiorView.floorLift, p.z, { yaw: personaYaw(persona, bearing), idle: PERSONAS[persona]!.idle });
@@ -2110,7 +2130,7 @@ export class Game {
         box.append(Object.assign(document.createElement("h3"), { textContent: title }));
         if (names.length === 0) box.append(Object.assign(document.createElement("p"), { textContent: empty, className: "small" }));
         for (const n of names) {
-          const p = Object.assign(document.createElement("p"), view.notes?.[n] ? { title: view.notes[n], className: "has-note" } : {});
+          const p = Object.assign(document.createElement("p"), view.notes?.[n] ? { title: `Notes\n${view.notes[n]}`, className: "has-note" } : {});
           p.append(...placeSegments(n, view.places ?? []).map((s) => (s.bold ? Object.assign(document.createElement("strong"), { textContent: s.text }) : s.text)));
           box.append(p);
         }
@@ -5272,11 +5292,11 @@ export class Game {
   private async menu(): Promise<void> {
     if (this.ui.modalOpen) return;
     for (;;) {
-      const choice = await this.ui.choose("Menu", this.state.campaign ? "The campaign of the hand-built maps." : `World seed: ${this.state.seed}\nShare the page address to share this world.`, [
+      const choice = await this.ui.choose("Menu", this.state.campaign ? "The campaign of the hand-built maps." : `World seed: ${this.state.seed}`, [
         { label: "Resume", value: "resume" },
         { label: "Save game", value: "save" },
         { label: "Load game", value: "load" },
-        { label: "Copy seed link", value: "link" },
+        ...(this.state.campaign ? [] : [{ label: "Copy seed", value: "link" }]),
         { label: "Options", value: "options" },
         ...(DEBUG_MENU ? [{ label: "Debug", value: "debug" }] : []),
         { label: "Back to title", value: "title" },
@@ -5296,12 +5316,9 @@ export class Game {
       } else if (choice === "load") {
         await this.loadMenu();
       } else if (choice === "link") {
-        try {
-          await navigator.clipboard.writeText(location.href);
-          this.ui.toast("Link copied");
-        } catch {
-          this.ui.log(location.href, "info");
-        }
+        // only the name of the seed goes to the clipboard (the address of the page is no link in the installed game)
+        if (await copyText(this.state.seed)) this.ui.toast("Seed copied");
+        else this.ui.log(`World seed: ${this.state.seed}`, "info");
       } else if (choice === "title") {
         this.save("auto");
         await this.start(this.state.seed);

@@ -67,9 +67,17 @@ export class Explored {
     return this.has(`ow:${cx},${cy}`, (y - cy * CHUNK_SIZE) * CHUNK_SIZE + (x - cx * CHUNK_SIZE));
   }
 
-  /** Forgets the bitmaps of all interiors (their layout changed with a new generator version); the overworld stays. */
-  forgetInteriors(): void {
-    for (const key of [...this.maps.keys()]) if (!key.startsWith("ow:")) this.maps.delete(key);
+  /**
+   * A save of an older generator: the cells an interior had explored mean nothing on the new layout, but the party did explore it, so the whole new map counts as explored. `cellsOf` gives the
+   * number of cells of the interior with this key (`in:<place>:<floor>`), or null where it cannot be built any more (the bitmap is dropped then); the overworld stays as it is.
+   */
+  revealInteriors(cellsOf: (key: string) => number | null): void {
+    for (const key of [...this.maps.keys()]) {
+      if (key.startsWith("ow:")) continue;
+      const cells = cellsOf(key);
+      if (cells === null || cells <= 0) this.maps.delete(key);
+      else this.maps.set(key, new Uint8Array(Math.ceil(cells / 8)).fill(0xff));
+    }
   }
 
   toJSON(): Record<string, string> {

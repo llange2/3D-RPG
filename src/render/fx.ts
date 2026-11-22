@@ -661,14 +661,24 @@ export class Effects implements PropWatcher {
   private ring(site: Site, x: number, y: number, z: number, big: boolean): void {
     // (flat on the water, so the width of the model counts, not its height; the ring of the small mermaid fountain is smaller)
     const across = (site.sx + site.sz) / 2;
-    const unit = across * (site.shape.kind === "horn" ? 0.35 : 1);
-    // a ring never spreads beyond the water: its outer edge stops at the wall of the basin
+    const horn = site.shape.kind === "horn";
+    const unit = across * (horn ? 0.35 : 1);
+    // a ring never spreads beyond the water: its outer edge stops at the wall of the basin (the ring's middle too must lie in the water, so a drop thrown far still lands inside)
     const centre = fountainPoint(site, 0, 0, 0);
-    const room = Math.max(0.02, site.shape.basinR * across * 0.96 - Math.hypot(x - centre[0], z - centre[2]));
-    const size1 = Math.min((big ? 0.6 : 0.3) * unit, room * 2);
+    const reach = site.shape.basinR * across * 0.96;
+    let rx = x;
+    let rz = z;
+    const away = Math.hypot(x - centre[0], z - centre[2]);
+    if (away > reach * 0.9) {
+      rx = centre[0] + ((x - centre[0]) / away) * reach * 0.9;
+      rz = centre[2] + ((z - centre[2]) / away) * reach * 0.9;
+    }
+    const room = Math.max(0.02, reach - Math.hypot(rx - centre[0], rz - centre[2]));
+    // the small mermaid fountain gets small, clear rings where its drops hit the water (21. 11. 2026: the big, faint ones drowned in the foam round the stream)
+    const size1 = Math.min(horn ? (big ? 0.15 : 0.3) * across : (big ? 0.6 : 0.3) * unit, room * 2);
     this.particles.push({
-      kind: "ring", cell: PARTICLE_CELLS.ripple_ring, x, y: y + 0.04, z, vx: 0, vy: 0, vz: 0, age: 0, life: big ? 1.1 : 0.7,
-      size0: Math.min((big ? 0.12 : 0.08) * unit, size1), size1, peak: big ? 0.55 : 0.4, floor: -1e9, lands: "none", scale: site.sy, site,
+      kind: "ring", cell: PARTICLE_CELLS.ripple_ring, x: rx, y: y + 0.04, z: rz, vx: 0, vy: 0, vz: 0, age: 0, life: big ? (horn ? 0.9 : 1.1) : 0.7,
+      size0: Math.min((big ? (horn ? 0.04 : 0.12) * (horn ? across : unit) : 0.08 * unit), size1), size1, peak: horn ? (big ? 0.95 : 0.6) : big ? 0.55 : 0.4, floor: -1e9, lands: "none", scale: site.sy, site,
     });
   }
 

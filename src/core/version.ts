@@ -188,5 +188,7 @@
  * neighbour is closer than six tiles (`separators`; they clear one tile round them, `TIGHT_FLATTEN`, and keep five tiles from other islands); the orbs lie in at least four dungeons (some on level 4 where the pyramids took level 5).
  * 79 = the 62nd playtest, point 5b (the lava island): more places on it (`LAVA_PER_PLACE` 30, four tiles apart, two tiles from the coast, 3000 tries), the doors of its places turn away from the coast, its streams keep two tiles
  * off the water and never cross it (`route(…, landOnly)`), the piece of a stream that goes sideways at a door takes the side where the land reaches, and the landing keeps off the coast of other islands and the edge of the world.
+ * 80 = 22. 11. 2026 (the user's list of fixes): the statues of the quests (a lore action with an `item`) follow the rule for objects like every other statue: none in a passage (moss-mere-318/small, Shaft of Ithoa 11/12
+ * stood in the only way to a chamber), and the user's Torchlight (item 334, `TORCHLIGHT_ITEM`) hangs on the walls of the castles (beside every banner along the keep's walls) and, a few at a time, in the caves (rule `torch`).
  */
-export const GEN_VERSION = 79;
+export const GEN_VERSION = 80;

@@ -63,34 +63,6 @@ class Builder {
   }
 }
 
-const GREEN_DARK: RGB = [0.1, 0.28, 0.07];
-const GREEN_LIGHT: RGB = [0.42, 0.72, 0.18];
-
-function tuft(): Builder {
-  const b = new Builder();
-  const blades = 7;
-  for (let i = 0; i < blades; i++) {
-    const a = (i / blades) * Math.PI * 2 + (i % 2) * 0.4;
-    const r = 0.1 + (i % 3) * 0.07;
-    const h = 0.55 + ((i * 37) % 5) * 0.09;
-    const lean = 0.28 + (i % 2) * 0.12;
-    const cx = Math.sin(a) * r;
-    const cz = Math.cos(a) * r;
-    const w = 0.07;
-    const px = Math.cos(a) * w;
-    const pz = -Math.sin(a) * w;
-    b.flatTriBothSides(
-      [
-        [cx - px, 0, cz - pz],
-        [cx + px, 0, cz + pz],
-        [cx + Math.sin(a) * lean, h, cz + Math.cos(a) * lean],
-      ],
-      [GREEN_DARK, GREEN_DARK, GREEN_LIGHT],
-    );
-  }
-  return b;
-}
-
 function flower(petal: RGB): Builder {
   const b = new Builder();
   const stem: RGB = [0.18, 0.4, 0.1];
@@ -116,14 +88,6 @@ function flower(petal: RGB): Builder {
       [centre, petal, petal],
     );
   }
-  return b;
-}
-
-function mushroom(): Builder {
-  const b = new Builder();
-  b.cone(0, 0, 0, 0.28, 0.07, 0.05, 6, [0.8, 0.78, 0.7], [0.9, 0.88, 0.8]);
-  b.cone(0, 0, 0.26, 0.4, 0.3, 0, 8, [0.12, 0.3, 0.7], [0.35, 0.55, 0.95]);
-  b.cone(0, 0, 0.26, 0.26, 0.3, 0.05, 8, [0.06, 0.12, 0.35], [0.06, 0.12, 0.35]);
   return b;
 }
 
@@ -197,10 +161,8 @@ export function createProceduralModels(scene: Scene): ProceduralModel[] {
   material.backFaceCulling = false;
   const make = (key: string, b: Builder, m: StandardMaterial = material): ProceduralModel => ({ key, mesh: b.build(key, scene, m) });
   return [
-    make("proc_tuft", tuft()),
     make("proc_flower_blue", flower([0.25, 0.35, 0.95])),
     make("proc_flower_pink", flower([0.95, 0.4, 0.7])),
-    make("proc_mushroom", mushroom()),
     make("lod_tree_green", lodTree([0.08, 0.3, 0.1], [0.2, 0.5, 0.16], "round")),
     make("lod_tree_snow", lodTree([0.6, 0.75, 0.85], [0.95, 0.97, 1], "cone")),
     make("lod_tree_palm", lodTree([0.25, 0.55, 0.12], [0.5, 0.75, 0.2], "palm")),
