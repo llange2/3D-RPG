@@ -4,12 +4,10 @@ import ITEM_MODELS_RAW from "./item-models.json";
 export const CAVE_ENTRANCE_SIZE = 1.3;
 
 /**
- * The user's Wolf (item 11, `Mascot_Wolf.glb`, 0.60 x 1.49 x 1.90 against the old 0.46 x 1.20 x 1.98 at the table's scale 1.2) and Blue Mushroom (item 79, `Blue_mushroom.glb`, 0.81 x 0.95 x 0.81 against
- * 2.0 x 1.25 x 2.0 at 0.5 / 0.6 / 0.5) of 22. 11. 2026: a factor on the table's scale so that they stand about as large as the old ones (the wolf a little less long, the mushroom drawn true to the
- * file's proportions, 0.85 times its size). Both rest on the ground (`GROUNDED_ITEMS`).
+ * The user's Wolf mascot (item 11, `Mascot_Wolf.glb`, 0.60 x 1.49 x 1.90 against the old 0.46 x 1.20 x 1.98 at the table's scale 1.2) of 22. 11. 2026: a factor on the table's scale so that it stands about as large
+ * as the old one (a little less long). It rests on the ground (`GROUNDED_ITEMS`).
  */
 export const WOLF_SIZE = 0.95;
-export const MUSHROOM_SIZE = 0.85;
 
 /** The lectern (item 119) is drawn 20 % smaller in all three dimensions (62nd playtest, point 3). */
 export const LECTERN_SIZE = 0.8;
@@ -19,17 +17,17 @@ export const LECTERN_SIZE = 0.8;
  * height of the model: the Rustic caravan (item 26) stands at 75 % of its old height, then 15 % higher again (41st playtest, point 3: 0.75 x 1.15). The user's Mermaid fountain (item 89, `Mermaid_Fountain.glb`) is drawn at half the size of the old one (0.94 wide against 1.9, same shape): twice the height and width gives the old size back. The cave entrance (item 42) is as high as the old game drew it
  * (a 10 % increase in the 41st playtest was taken back: it was too high); the user's new `Cave_Entrance.glb` is drawn 30 % larger in all three dimensions (15 Nov 2026, bug_fix_65: `CAVE_ENTRANCE_SIZE`). The user's new models of 8 Nov 2026 (51st playtest, point 12) are as big as the old ones again: the new rustic caravan is 1.86 high against 1.8 of the old file (the height factor takes it back), the new pyramid 1.85 high and 1.89 wide against 1.57 and 2.0.
  */
-export const HEIGHT_FACTOR: Readonly<Record<string, number>> = { "11": WOLF_SIZE, "26": 0.75 * 1.15 * (1.8 / 1.86), "42": CAVE_ENTRANCE_SIZE, "43": 1.57 / 1.85, "79": MUSHROOM_SIZE / 0.6, "89": 2, "119": LECTERN_SIZE };
+export const HEIGHT_FACTOR: Readonly<Record<string, number>> = { "11": WOLF_SIZE, "26": 0.75 * 1.15 * (1.8 / 1.86), "42": CAVE_ENTRANCE_SIZE, "43": 1.57 / 1.85, "89": 2, "119": LECTERN_SIZE };
 
 /** Factors on the width and depth of the model: the Rustic caravan is 85 % as wide as the old game drew it, the Mermaid fountain twice (see above). */
-export const WIDTH_FACTOR: Readonly<Record<string, number>> = { "11": WOLF_SIZE, "26": 0.85, "42": CAVE_ENTRANCE_SIZE, "43": 2 / 1.89, "79": MUSHROOM_SIZE / 0.5, "89": 2, "119": LECTERN_SIZE };
+export const WIDTH_FACTOR: Readonly<Record<string, number>> = { "11": WOLF_SIZE, "26": 0.85, "42": CAVE_ENTRANCE_SIZE, "43": 2 / 1.89, "89": 2, "119": LECTERN_SIZE };
 
 /**
  * Items that stand on the ground, so their lowest point rests on it: the wheels of the caravan and the barrow, the feet of the donkey, the
  * foot of the cave entrance and the burnt hut. The old game's table height (`y`) put them 0.2 to 0.4 above the ground with these models, and
  * the correction of the caravan's height (`HEIGHT_FACTOR`) lifts a model's bottom further, because the origin stays where it was.
  */
-export const GROUNDED_ITEMS: ReadonlySet<number> = new Set([8, 11, 16, 26, 42, 79, 102, 119]);
+export const GROUNDED_ITEMS: ReadonlySet<number> = new Set([8, 11, 16, 26, 42, 102, 119]);
 
 /**
  * The cottage (`obj_cottage`, the user's model) stands in the place of every third rustic caravan, and of every third caravan landmark of the open country. The file is

@@ -49,7 +49,8 @@ describe("the fixes of 22. 11. 2026", () => {
     expect(propSpec(DECO.BUSH, BIOME.FOREST, 0)!.model).toBe("obj_mushroom_blue");
     expect(propSpec(DECO.BUSH, BIOME.SWAMP, 3)!.model).toBe("obj_mushroom_blue");
     const flowers = new Set([0, 1, 2, 3].map((h) => propSpec(DECO.BUSH, BIOME.MEADOW, h)!.model));
-    expect([...flowers].sort()).toEqual(["obj_flower_red", "obj_flower_yellow", "proc_flower_blue", "proc_flower_pink"]);
+    // (only the user's models: the procedural blue and pink flowers are gone, bug_fix_78)
+    expect([...flowers].sort()).toEqual(["obj_flower_red", "obj_flower_yellow"]);
     for (const key of ["obj_grass_blades", "obj_mushroom_blue", "obj_flower_red", "obj_flower_yellow"]) expect(TILE_MODELS).toContain(key);
   });
 

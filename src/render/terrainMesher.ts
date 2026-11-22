@@ -175,12 +175,13 @@ export function doorBearing(tileOf: (dx: number, dy: number) => TileInfo, h: num
   return options[h % options.length]!.bearing;
 }
 
-/** The flowers of the meadows, one to a bush tile by its hash: blue and pink are drawn by the game (`proceduralProps.ts`), red and yellow are the user's models. */
+/**
+ * The flowers of the meadows, one to a bush tile by its hash: the user's models of the red and the yellow flower (the procedural blue and pink ones, a stem with a flat umbrella of triangles, are gone
+ * since bug_fix_78). The files are thin (0.40 and 0.65 wide at 0.95 high), so they are drawn half as large again to be seen between the tufts.
+ */
 const FLOWERS: readonly PropSpec[] = [
-  { model: "proc_flower_blue", scale: 1.3 },
-  { model: "obj_flower_red", scale: 1 },
-  { model: "proc_flower_pink", scale: 1.3 },
-  { model: "obj_flower_yellow", scale: 1 },
+  { model: "obj_flower_red", scale: 1.5 },
+  { model: "obj_flower_yellow", scale: 1.5 },
 ];
 
 export function propSpec(deco: number, biome: Biome, h: number, tileModels = false): PropSpec | null {

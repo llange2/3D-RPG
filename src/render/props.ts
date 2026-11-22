@@ -401,7 +401,9 @@ export class PropRenderer {
 
   /** Replaces the instances of one owner (a chunk). */
   setInstances(owner: string, props: PropInstance[]): void {
-    this.watcher?.set(owner, props);
+    // the watcher (the water of the fountains) must see the props where they are drawn: on the raised floor of a town the water lay `rise` higher than its rings, which were hidden under it (bug_fix_78, point 1)
+    const lifted = this.riseOf(owner);
+    this.watcher?.set(owner, lifted === 0 ? props : props.map((p) => ({ ...p, y: p.y + lifted })));
     const byModel = new Map<string, PropInstance[]>();
     for (const p of props) {
       if (!this.models.has(p.model)) continue;

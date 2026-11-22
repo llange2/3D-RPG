@@ -44,8 +44,8 @@ export const SHOWCASE_EXTRAS: readonly { model: string; scale: number; height?: 
   // the small decoration of the open country, at the scales `propSpec` draws it in
   { model: "obj_grass_blades", scale: 1.3 },
   { model: "obj_mushroom_blue", scale: 0.75 },
-  { model: "obj_flower_red", scale: 1 },
-  { model: "obj_flower_yellow", scale: 1 },
+  { model: "obj_flower_red", scale: 1.5 },
+  { model: "obj_flower_yellow", scale: 1.5 },
   // the spaceship of quest_7 (quest document 1.5): the crate of the storage bay, the broken power crystal (the intact one is item 67) and the console of the bridge
   { model: "obj_futuristic_box", scale: 1.6 },
   { model: "obj_power_crystal_broken", scale: 2.03, height: 1.03 },
