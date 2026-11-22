@@ -398,13 +398,13 @@ describe("attack spells with rules of their own", () => {
     expect(dealt("m2")?.damage).toBe(Math.floor(MONSTERS[bigUndead]!.health * 0.25));
   });
 
-  it("Mass Distortion halves the health of about a fifth of the monsters on the line and spares the level 5 ones", () => {
+  it("Mass Distortion halves the health of about a fifth of the monsters in view and spares the level 5 ones (bug_fix_81: an area spell)", () => {
     let halved = 0;
     let l5Hurt = 0;
     for (let i = 0; i < 300; i++) {
       const p = party();
       const enc = fight(0, 0, [[living, 1, 0], [l5, 2, 0]]);
-      cast(p, enc, "mass_distortion", "m0", `d${i}`);
+      areaSpell(p, open, enc, 0, 0, rng(`d${i}`), "mass_distortion", { damage: 0, type: "magic" });
       const a = enc.monsters.find((m) => m.uid === "m0");
       if (a && a.hp < MONSTERS[living]!.health) halved++;
       const b = enc.monsters.find((m) => m.uid === "m1");

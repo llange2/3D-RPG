@@ -1,7 +1,7 @@
 import type { Scene } from "@babylonjs/core/scene";
-import type { Effects } from "./fx";
+import type { Effects, RayKind } from "./fx";
 import { type ImpactKind, impactOfElement } from "./fxSheets";
-import { GlowBeams } from "./glowBeams";
+import { GlowBeams, type BeamLook } from "./glowBeams";
 import { LASER_LAMP, LaserFactory, type LaserBolt } from "./lasers";
 import type { LampKind } from "./lamps";
 import type { PropRenderer } from "./props";
@@ -13,7 +13,7 @@ import type { PropInstance } from "./terrainMesher";
  */
 export type ProjectileKind = "arrow" | "fire" | "ice" | "magic" | "physical" | "acid" | "missile" | "laser";
 
-export const PROJECTILE_MODELS = ["proj_arrow", "proj_fire", "proj_ice", "proj_magic", "proj_physical", "proj_poison", "proj_missile", "proj_snakes"];
+export const PROJECTILE_MODELS = ["proj_arrow", "proj_fire", "proj_ice", "proj_magic", "proj_physical", "proj_poison", "proj_missile", "proj_snakes", "proj_insect"];
 
 interface Pose {
   model: string;
@@ -95,6 +95,17 @@ interface Flash {
   seconds: number;
   yaw: number;
   scale: number;
+  /** It may fade in first (`fadeIn` seconds) and stand there solid for `hold` seconds before the fade-out: the snakes of Summon Snakes. */
+  fadeIn?: number;
+  hold?: number;
+}
+
+/** How long a flash lasts in all, and how solid it is `t` seconds after it appeared (1 is solid, 0 gone). */
+const flashTotal = (f: Flash): number => (f.fadeIn ?? 0) + (f.hold ?? 0) + f.seconds;
+function flashAlpha(f: Flash): number {
+  const fadeIn = f.fadeIn ?? 0;
+  if (f.t < fadeIn) return f.t / fadeIn;
+  return Math.min(1, 1 - (f.t - fadeIn - (f.hold ?? 0)) / f.seconds);
 }
 
 /**
@@ -103,11 +114,71 @@ interface Flash {
  */
 const SNAKES_POSE: Pose = { model: "proj_snakes", scale: 0.6, pitch: 0, roll: 0 };
 const SNAKES_HALF_HEIGHT = 0.81;
+/** The coil fades in within 0.3 s, stands for 0.5 s and fades out within 0.5 s (the user, bug_fix_81). */
+export const SNAKES_FADE_IN = 0.3;
+export const SNAKES_HOLD = 0.5;
 export const SNAKES_SECONDS = 0.5;
 /** The model's own turn (degrees) that makes its heads look along +z, and where the coil stands: this far in front of the monster's feet (towards the party) and this far to the viewer's left. */
 const SNAKES_YAW = 0;
 const SNAKES_FRONT = 0.9;
 const SNAKES_SIDE = 0.5;
+
+/**
+ * The swarm of Deadly Swarm (the user's `Insect.glb`, bug_fix_81): one insect with its wings spread, 0.96 across; ten of them (`SWARM_INSECTS`) fly round a monster on paths of their own, like a swarm of
+ * flies: each one runs a loop of its own width, height and speed round the monster's middle and bobs up and down on a second, quicker beat. The swarm is there at once, stays `SWARM_SECONDS` and fades out
+ * within `SWARM_FADE`. The model is loaded with the game (`PROJECTILE_MODELS`), so the ten insects show the moment the spell is cast.
+ */
+const SWARM_POSE: Pose = { model: "proj_insect", scale: 0.5, pitch: 0, roll: 0 };
+export const SWARM_SECONDS = 2;
+export const SWARM_FADE = 0.5;
+/** The insects of a swarm that flies round one monster alone, and round each of the first two when there are more monsters on the line. */
+export const SWARM_INSECTS = 10;
+export const SWARM_INSECTS_SHARED = 5;
+/** The turn (degrees) that points the model's nose along its flight: its wings spread along x, its body lies along z. */
+const SWARM_YAW = 0;
+
+interface Insect {
+  /** The loop round the monster: width, depth and speed (radians per second) on the two axes of the floor, the height and its own beat. */
+  ax: number;
+  az: number;
+  wx: number;
+  wz: number;
+  px: number;
+  pz: number;
+  ay: number;
+  wy: number;
+  py: number;
+  /** A faster wobble on top of the loop, so that no two paths look alike. */
+  wobble: number;
+  wobbleRate: number;
+}
+
+interface Swarm {
+  at: Point;
+  t: number;
+  insects: Insect[];
+}
+
+/** A little repeatable generator: the paths of the insects are only for the eye, but a screenshot should come out the same twice. */
+function swarmRng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Where an insect is `t` seconds into the flight (the monster's middle is the origin). */
+function insectOffset(i: Insect, t: number): Point {
+  return {
+    x: i.ax * Math.sin(i.wx * t + i.px) + i.wobble * Math.sin(i.wobbleRate * t + i.pz),
+    y: i.ay * Math.sin(i.wy * t + i.py) + i.wobble * 0.5 * Math.cos(i.wobbleRate * 1.3 * t + i.px),
+    z: i.az * Math.cos(i.wz * t + i.pz) + i.wobble * Math.cos(i.wobbleRate * 0.8 * t + i.py),
+  };
+}
 
 /**
  * The light that flies along with a projectile (47th playtest, point 8: like the robots' lasers, whose blue is `LASER_LAMP`). The colour follows the element: fire orange, acid green,
@@ -129,6 +200,21 @@ const BEAM_IMPACT_SIZE = 2.8;
 export function elementColor(element: string): [number, number, number] {
   const kind: ProjectileKind = element === "ice" ? "ice" : element === "fire" ? "fire" : element === "acid" || element === "poison" ? "acid" : "magic";
   return PROJECTILE_LAMPS[kind]!.color;
+}
+
+/** The look of a ray that is not a plain line of the element: its colour, the colour of its core and how thick it is (bug_fix_81). */
+export interface RayLook extends BeamLook {
+  color: [number, number, number];
+}
+/** Moon Ray: a thick white and violet ray. Sun Ray: a thick ray that glows orange all through. */
+export const RAY_LOOKS: Readonly<Record<"moon" | "sun", RayLook>> = {
+  moon: { color: [0.72, 0.5, 1], core: [1, 0.95, 1], width: 2 },
+  sun: { color: [1, 0.5, 0.06], core: [1, 0.78, 0.38], width: 2 },
+};
+
+/** The particles a ray of this element throws off (`Effects.rayParticles`): the types without a sprite of their own (physical) take the magic ones. */
+function rayKindOf(element: string): RayKind {
+  return element === "ice" ? "ice" : element === "fire" ? "fire" : element === "acid" || element === "poison" ? "acid" : "magic";
 }
 
 /** A light with no model that comes and goes (Star Burst, the impact of a meteor): where it starts, how it changes and how long it lasts. */
@@ -163,6 +249,8 @@ export interface ProjectileGlow {
 export class Projectiles {
   private flights: Flight[] = [];
   private flashes: Flash[] = [];
+  private swarms: Swarm[] = [];
+  private swarmCount = 0;
   private bursts: Burst[] = [];
   private beams: GlowBeams | null = null;
   private drawn = false;
@@ -218,8 +306,8 @@ export class Projectiles {
   }
 
   /**
-   * Summon Snakes (bug_fix_79): a coil of snakes stands on the floor at `feet` (a monster's, with the height of the floor) a little towards the party at `from` and to the left of the monster, there at once
-   * with its heads turned to the monster, and fades out within `SNAKES_SECONDS` (no burst of acid over it: the user wants to see the snakes).
+   * Summon Snakes (bug_fix_79): a coil of snakes stands on the floor at `feet` (a monster's, with the height of the floor) a little towards the party at `from` and to the left of the monster, with its heads
+   * turned to the monster. It fades in within `SNAKES_FADE_IN`, stands for `SNAKES_HOLD` and fades out within `SNAKES_SECONDS` (bug_fix_81; no burst of acid over it: the user wants to see the snakes).
    */
   snakes(feet: Point, from: Point): void {
     const dx = from.x - feet.x;
@@ -232,7 +320,24 @@ export class Projectiles {
     const lz = -ux;
     const at = { x: feet.x + ux * SNAKES_FRONT + lx * SNAKES_SIDE, y: feet.y + SNAKES_HALF_HEIGHT * SNAKES_POSE.scale, z: feet.z + uz * SNAKES_FRONT + lz * SNAKES_SIDE };
     const yaw = Math.atan2(feet.x - at.x, feet.z - at.z) + (SNAKES_YAW * Math.PI) / 180;
-    this.flashes.push({ pose: SNAKES_POSE, at, t: 0, seconds: SNAKES_SECONDS, yaw, scale: SNAKES_POSE.scale });
+    this.flashes.push({ pose: SNAKES_POSE, at, t: 0, seconds: SNAKES_SECONDS, yaw, scale: SNAKES_POSE.scale, fadeIn: SNAKES_FADE_IN, hold: SNAKES_HOLD });
+  }
+
+  /**
+   * Deadly Swarm (bug_fix_81): `count` insects fly round `middle` (a monster's body) on paths of their own for `SWARM_SECONDS` and fade out within `SWARM_FADE`. `middle` is the point the loops circle: the height of
+   * the monster's middle, so that the insects round its head and its feet alike.
+   */
+  swarm(middle: Point, count: number): void {
+    const r = swarmRng(0x1a5ec7 + this.swarmCount++ * 7919);
+    const insects: Insect[] = [];
+    for (let i = 0; i < count; i++) {
+      const dir = r() < 0.5 ? -1 : 1;
+      insects.push({
+        ax: 0.8 + r() * 0.9, az: 0.8 + r() * 0.9, wx: dir * (2.2 + r() * 2.2), wz: dir * (2.2 + r() * 2.2), px: r() * Math.PI * 2, pz: r() * Math.PI * 2,
+        ay: 0.4 + r() * 0.6, wy: 1.5 + r() * 2.5, py: r() * Math.PI * 2, wobble: 0.15 + r() * 0.25, wobbleRate: 6 + r() * 5,
+      });
+    }
+    this.swarms.push({ at: middle, t: 0, insects });
   }
 
   /** A light with no model at `at` (Star Burst at the party, the impact of a meteor): `spec` says what it does. */
@@ -241,20 +346,22 @@ export class Projectiles {
   }
 
   /**
-   * Prismatic Light: a line of light from `from` to `to` in the colour of `element`, there at once and gone after `BEAM_SECONDS`. The monster's end also shines for as long
+   * Prismatic Light, Cold Ray, Acid Spray, Moon Ray and Sun Ray: a line of light from `from` to `to` in the colour of `element` (or `options.look`), there at once and gone after `BEAM_SECONDS`. The monster's end also shines for as long
    * (a light of the pool, so only the two nearest ones show).
    */
-  beam(element: string, from: Point, to: Point, impact = false): void {
-    const color = elementColor(element);
+  beam(element: string, from: Point, to: Point, impact = false, options: { look?: RayLook; particles?: boolean } = {}): void {
+    const color = options.look?.color ?? elementColor(element);
     this.beams ??= this.scene ? new GlowBeams(this.scene) : null;
-    this.beams?.add(color, from, to, BEAM_SECONDS);
+    this.beams?.add(color, from, to, BEAM_SECONDS, options.look);
+    // every ray throws off the particles of its element, thick near the party and none beyond two fields (bug_fix_81); the rays that lie on top of each other (a line of monsters) leave them to the first
+    if (options.particles !== false) this.effects?.rayParticles(rayKindOf(element), from, to);
     // (Prismatic Light: where a line ends, the element strikes like a shot that lands; physical has no picture of its own and shows the magic one)
     if (impact) this.effects?.impact(impactOfElement(element), to, BEAM_IMPACT_SIZE);
     this.burst(to, { from: color, to: color, peak: 3.4, range: 6.5, seconds: BEAM_SECONDS, daylight: SPELL_DAYLIGHT });
   }
 
   get active(): boolean {
-    return this.flights.length > 0 || this.flashes.length > 0 || this.bursts.length > 0 || (this.beams?.active ?? false);
+    return this.flights.length > 0 || this.flashes.length > 0 || this.swarms.length > 0 || this.bursts.length > 0 || (this.beams?.active ?? false);
   }
 
   /** The lasers and the spells in flight, as moving lights (the colour of the beam or of the element), and the bursts of light. */
@@ -282,9 +389,10 @@ export class Projectiles {
       this.bursts = this.bursts.filter((b) => b.t < b.spec.seconds);
     }
     this.beams?.update(dt);
-    if (this.flights.length === 0 && this.flashes.length === 0 && !this.drawn) return;
+    if (this.flights.length === 0 && this.flashes.length === 0 && this.swarms.length === 0 && !this.drawn) return;
     for (const f of this.flights) f.t += dt;
     for (const f of this.flashes) f.t += dt;
+    for (const s of this.swarms) s.t += dt;
     for (const f of this.flights) {
       if (f.t < f.duration) continue;
       f.laser?.dispose();
@@ -293,8 +401,10 @@ export class Projectiles {
       if (f.impact && struck) this.effects?.impact(struck, f.to);
     }
     this.flights = this.flights.filter((f) => f.t < f.duration);
-    const finished = this.flashes.filter((f) => f.t >= f.seconds);
-    this.flashes = this.flashes.filter((f) => f.t < f.seconds);
+    const finished: { pose: Pose }[] = this.flashes.filter((f) => f.t >= flashTotal(f));
+    this.flashes = this.flashes.filter((f) => f.t < flashTotal(f));
+    if (this.swarms.some((s) => s.t >= SWARM_SECONDS + SWARM_FADE)) finished.push({ pose: SWARM_POSE });
+    this.swarms = this.swarms.filter((s) => s.t < SWARM_SECONDS + SWARM_FADE);
     const list: PropInstance[] = [];
     for (const f of this.flights) {
       const k = f.t / f.duration;
@@ -313,8 +423,20 @@ export class Projectiles {
     // the elements of a storm: upright, and all of one model fade together (they appear at the same moment); a model without a flash is solid again
     const fade = new Map<string, number>();
     for (const f of this.flashes) {
-      fade.set(f.pose.model, Math.min(fade.get(f.pose.model) ?? 1, 1 - f.t / f.seconds));
+      fade.set(f.pose.model, Math.min(fade.get(f.pose.model) ?? 1, flashAlpha(f)));
       list.push({ model: f.pose.model, x: f.at.x, y: f.at.y, z: f.at.z, rotY: f.yaw, rotX: 0, rotZ: 0, scale: f.scale, atOrigin: true });
+    }
+    // the swarms: every insect on its own loop, its nose along the way it flies (the difference of two moments a hair apart); all insects fade out together
+    for (const s of this.swarms) {
+      fade.set(SWARM_POSE.model, Math.min(fade.get(SWARM_POSE.model) ?? 1, Math.min(1, 1 - (s.t - SWARM_SECONDS) / SWARM_FADE)));
+      for (const i of s.insects) {
+        const now = insectOffset(i, s.t);
+        const next = insectOffset(i, s.t + 0.03);
+        const yaw = Math.atan2(next.x - now.x, next.z - now.z) + (SWARM_YAW * Math.PI) / 180;
+        // a little lean into the turn and the climb
+        const climb = Math.atan2(now.y - next.y, Math.hypot(next.x - now.x, next.z - now.z) || 1);
+        list.push({ model: SWARM_POSE.model, x: s.at.x + now.x, y: s.at.y + now.y, z: s.at.z + now.z, rotY: yaw, rotX: climb * 0.5, rotZ: Math.sin(s.t * 9 + i.px) * 0.25, scale: SWARM_POSE.scale, atOrigin: true });
+      }
     }
     for (const model of new Set([...fade.keys(), ...finished.map((f) => f.pose.model)])) this.props.setVisibility(model, fade.get(model) ?? 1);
     this.props.setInstances(Projectiles.OWNER, list);
@@ -327,9 +449,10 @@ export class Projectiles {
     this.bursts = [];
     this.beams?.clear();
     for (const f of this.flights) f.laser?.dispose();
-    for (const model of new Set(this.flashes.map((f) => f.pose.model))) this.props.setVisibility(model, 1);
+    for (const model of new Set([...this.flashes.map((f) => f.pose.model), ...(this.swarms.length > 0 ? [SWARM_POSE.model] : [])])) this.props.setVisibility(model, 1);
     this.flights = [];
     this.flashes = [];
+    this.swarms = [];
     this.props.removeOwner(Projectiles.OWNER);
     this.props.flush();
     this.drawn = false;

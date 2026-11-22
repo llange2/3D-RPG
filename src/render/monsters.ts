@@ -533,6 +533,15 @@ export class MonsterRenderer {
     setTimeout(finish, ((dead.to - dead.from) / fps) * 1000 + 600);
   }
 
+  /** How long the death clip of the monster lasts (0 for a model without one, or one that is not built yet: it is removed at once, `die`). */
+  deathSeconds(uid: string): number {
+    const v = this.views.get(uid);
+    const dead = v ? this.group(v, ["Dead"]) : undefined;
+    if (!dead) return 0;
+    const fps = dead.targetedAnimations[0]?.animation.framePerSecond || 30;
+    return (dead.to - dead.from) / fps;
+  }
+
   remove(uid: string): void {
     this.wanted.delete(uid);
     const v = this.views.get(uid);

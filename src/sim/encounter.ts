@@ -955,7 +955,7 @@ export function spellInLine(party: Party, view: GridView, enc: Encounter, px: nu
 }
 
 /** Spells with a rule of their own for whom they hit and how hard. */
-export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm" | "prismatic_light" | "dragon_breath" | "turn_undead" | "pain" | "fireball" | "toxic_cloud" | "acid_spray" | "dancing_sword";
+export type SpecialSpell = "star_burst" | "fantastic_freeze" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm" | "prismatic_light" | "dragon_breath" | "turn_undead" | "pain" | "fireball" | "toxic_cloud" | "acid_spray" | "dancing_sword";
 
 /** The elements Elemental Storm throws; every monster gets one of them at random. */
 export const ELEMENTAL_STORM_ELEMENTS: readonly string[] = ["fire", "ice", "acid"];
@@ -963,15 +963,18 @@ export const ELEMENTAL_STORM_ELEMENTS: readonly string[] = ["fire", "ice", "acid
 export const PRISMATIC_ELEMENTS: readonly string[] = ["acid", "ice", "fire", "magic"];
 /** Star Burst: everything within this many tiles of the party (a circle, not a square). */
 export const STAR_BURST_RADIUS = 3;
+/** Fantastic Freeze (bug_fix_81): everything in the square of this many tiles round the party (2 gives the 5 x 5 field with the party in the middle), through walls like the cloud. */
+export const FANTASTIC_FREEZE_RADIUS = 2;
 
 /** The spells that need no target: they work from the party outwards (`areaSpell`). */
-export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" | "star_burst" | "dragon_breath" | "toxic_cloud" | "acid_spray" | "dancing_sword";
+export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" | "star_burst" | "dragon_breath" | "toxic_cloud" | "acid_spray" | "dancing_sword" | "fantastic_freeze" | "mass_distortion";
 
 /**
  * Meteor Shower (fire), Elemental Storm (a random element for each monster) and Prismatic Light (a random one of four damage types for each monster): they need no target, they
  * hit every monster within the action radius, wall or no wall (the storm comes from the sky, the 6. 11. 2026 playtest). Prismatic Light is the exception: "hits all monsters in view"
  * (the second 8. 11. 2026 request), the monsters `inView` says the party sees; the beams end at them and do not go through a wall. Star Burst (48th playtest, point 2) goes off at the party and hits every monster within `STAR_BURST_RADIUS` tiles, also without a clear line.
  * Dragon Breath ("Hits all monsters", 8. 11. 2026) reaches every monster of the action radius like the storm, with the one element the cast rolled (`magic.type`).
+ * Fantastic Freeze (bug_fix_81) hits the 5 x 5 field round the party, Mass Distortion (bug_fix_81) every monster in view: each rolls for itself and loses half its hit points (not the level 5 ones).
  * `magic.damage` is what the spell rolled, the resistance of each monster takes its share.
  */
 export function areaSpell(party: Party, view: GridView, enc: Encounter, px: number, py: number, rng: Rng, kind: AreaSpell, magic: { damage: number; type: string }, inView?: (m: MonsterInstance) => boolean): CombatEvent[] {
@@ -981,6 +984,7 @@ export function areaSpell(party: Party, view: GridView, enc: Encounter, px: numb
     if (kind === "star_burst") return (m.x - px) ** 2 + (m.y - py) ** 2 <= STAR_BURST_RADIUS ** 2;
     // Toxic Cloud spreads from the party through every wall: it reaches monsters that are not in sight (bug_fix_79)
     if (kind === "toxic_cloud") return (m.x - px) ** 2 + (m.y - py) ** 2 <= TOXIC_RADIUS ** 2;
+    if (kind === "fantastic_freeze") return Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= FANTASTIC_FREEZE_RADIUS;
     // Prismatic Light, Acid Spray and Dancing Sword hit what the party sees ahead (their beams do not pass a wall, so a monster behind one is spared), Meteor Shower and Elemental Storm
     // what it could see in every direction (`inView` says which it is; bug_fix_79)
     if (kind !== "dragon_breath" && inView && !inView(m)) return false;
@@ -990,6 +994,14 @@ export function areaSpell(party: Party, view: GridView, enc: Encounter, px: numb
     if (kind === "toxic_cloud") {
       (m.poison ??= []).push({ turns: TOXIC_TURNS, damage: magic.damage });
       events.push({ type: "monster_poisoned", uid: m.uid, defId: m.defId, stacks: m.poison.length });
+      continue;
+    }
+    if (kind === "mass_distortion") {
+      if (monsterById(m.defId).treasure_level >= 5 || !(rng.float() < MASS_DISTORTION_CHANCE)) continue;
+      const damage = Math.max(1, Math.floor(m.hp / 2));
+      m.hp -= damage;
+      events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage, element: "magic" });
+      killIfDead(party, enc, m, rng, events);
       continue;
     }
     const element =
@@ -1019,7 +1031,7 @@ export const isPainable = (defId: number): boolean => PAIN_GROUPS.includes(monst
 export const HOLY_WORD_BIG = 600;
 export const HOLY_WORD_DAMAGE = 150;
 export const HOLY_WORD_SHARE = 0.25;
-/** Mass Distortion: the chance for each monster on the line to lose half its health. */
+/** Mass Distortion: the chance for each monster in view to lose half its health. */
 export const MASS_DISTORTION_CHANCE = 0.2;
 /** Finger of Death: the chance to kill, and the highest treasure level it works on. */
 export const FINGER_CHANCE = 0.5;
@@ -1056,12 +1068,6 @@ export function specialSpell(party: Party, view: GridView, enc: Encounter, px: n
         if (!isUndead(m.defId)) continue;
         const max = monsterById(m.defId).health;
         strike(m, max > HOLY_WORD_BIG ? Math.floor(max * HOLY_WORD_SHARE) : HOLY_WORD_DAMAGE);
-      }
-      break;
-    case "mass_distortion":
-      for (const m of monstersOnLine(view, enc, px, py, target)) {
-        if (monsterById(m.defId).treasure_level >= 5 || !(rng.float() < MASS_DISTORTION_CHANCE)) continue;
-        strike(m, Math.max(1, Math.floor(m.hp / 2)));
       }
       break;
     case "turn_undead":

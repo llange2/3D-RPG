@@ -76,6 +76,11 @@ export interface ModelSpec {
   /** Keep the triangle budget in the `original` profile too (models the game instances by the hundred). */
   capped?: boolean;
   /**
+   * Thin double-sided sheets (the petals of a flower): keep the source's own normals, simplify with the borders locked and a small error, and leave the winding alone. The generic path drops the normals,
+   * collapses the open petals (holes) and rebuilds the normals and the winding from a volume that a flat sheet does not have (black patches on the petals, bug_fix_81).
+   */
+  plant?: boolean;
+  /**
    * Rebuild the model as a grid of `cells` x `cells` squares whose heights are averaged from the source (a bumpy slab such as the
    * old dirt tile) and whose texture coordinates run flat over a window of `uvSpan` of the texture. For models whose texture is a
    * baked atlas, one island per lump: no simplifier keeps those together, triangles end up on the wrong island.
@@ -299,12 +304,12 @@ async function processDoc(doc: Document, spec: ModelSpec, profile: ModelProfile)
   await MeshoptSimplifier.ready;
   // Flat-shaded sources have one normal per face, which splits every vertex and leaves the simplifier nothing to
   // collapse. Normals are therefore dropped first and rebuilt after simplification.
-  for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) prim.setAttribute("NORMAL", null);
+  if (!spec.plant) for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) prim.setAttribute("NORMAL", null);
   await doc.transform(weld());
   const before = triCount(doc);
   const steps = [];
   // error is the largest tolerated deviation relative to the model size; a generous value lets the triangle budget decide
-  if (before > spec.maxTris) steps.push(simplify({ simplifier: MeshoptSimplifier, ratio: spec.maxTris / before, error: 0.35, lockBorder: false }));
+  if (before > spec.maxTris) steps.push(simplify({ simplifier: MeshoptSimplifier, ratio: spec.maxTris / before, error: spec.plant ? 0.02 : 0.35, lockBorder: !!spec.plant }));
   steps.push(dedup(), prune());
   await doc.transform(...steps.splice(0));
   // The simplifier stops short of the target on models with loose parts (bone piles, rubble). Models up to HEAVY triangles
@@ -335,10 +340,11 @@ async function processDoc(doc: Document, spec: ModelSpec, profile: ModelProfile)
   if (spec.animated) steps.push(resample({ tolerance: 0.001 }));
   await doc.transform(...steps);
   // a height grid is an open surface: its signed volume says nothing about which way it faces, and it was built facing up
-  if (!spec.animated && !spec.heightfield) {
+  if (!spec.animated && !spec.heightfield && !spec.plant) {
     const flipped = fixWinding(doc);
     if (flipped > 0) console.log(`  ${spec.key}: flipped winding of ${flipped} primitive(s)`);
   }
+  if (spec.plant) return;
   const mode = spec.normals ?? (spec.animated ? "smooth" : "crease");
   computeNormals(doc, mode);
   // the creased normals were written per triangle corner: vertices that came out identical are one again
@@ -815,8 +821,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   // in the original set, like the ground tiles) and smooth shading, because they are plants
   { ...S("obj_grass_blades", "new:Blades_of_grass.glb", 200, 512), normals: "smooth", capped: true },
   { ...S("obj_mushroom_blue", "new:Blue_mushroom.glb", 200, 512), normals: "smooth", capped: true },
-  { ...S("obj_flower_red", "new:Red_flower.glb", 200, 512), normals: "smooth", capped: true },
-  { ...S("obj_flower_yellow", "new:Yellow_flower.glb", 200, 512), normals: "smooth", capped: true },
+  { ...S("obj_flower_red", "new:Red_flower.glb", 1000, 1024), plant: true },
+  { ...S("obj_flower_yellow", "new:Yellow_flower.glb", 800, 1024), plant: true },
   // the torch of the castles and the caves (22. 11. 2026, the user's model: 0.22 x 0.95 x 0.26 around its middle, 4 207 triangles, the bracket at the lowest z): it hangs on a wall
   S("obj_torchlight", "new:Torchlight.glb", 1500, 512),
   // the cobblestone road (campaign block 9): 1500 triangles, kept whole, and only 90 cells of the outside map; flat shaded, so that every stone shows its facets (smooth normals made the road look flat)
@@ -934,6 +940,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("wpn_stick", "new:Wooden_Stick.glb", 1500, 512),
   // the snakes of Summon Snakes (spell 37, the user's file, 22. 11. 2026): a coil of three snakes, 1.62 high and about 2 across, middle at the origin; a projectile model (`PROJECTILE_MODELS`), so it is loaded with the game
   S("proj_snakes", "new:Snakes.glb", 3000, 512),
+  // the insects of Deadly Swarm (spell 49, the user's file, 22. 11. 2026): one flying insect, wings spread, 0.96 x 0.31 x 0.89 around its middle; ten of them fly round the monster, so it keeps 800 triangles
+  { ...S("proj_insect", "new:Insect.glb", 800, 512), capped: true },
   ...campaignItemModels(),
 ];
 

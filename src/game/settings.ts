@@ -46,6 +46,11 @@ export interface Settings {
    * hit points. A monster next to the party is always fought first. Absent in older stored settings: closest.
    */
   rangeTarget: RangeTarget;
+  /**
+   * The monsters take their turn only when the death animation of every monster that fell in this turn is over, so that none steps into a cell where a body still lies falling (Options > Controls > Wait for
+   * death animation, bug_fix_81). Off is how it was before: they move as soon as the last shot has landed. Absent in older stored settings: on.
+   */
+  waitForDeath: boolean;
 }
 
 export type RangeTarget = "closest" | "weakest";
@@ -54,7 +59,7 @@ export const RANGE_TARGETS: readonly RangeTarget[] = ["closest", "weakest"];
 const KEY = "mm3-seed-rpg:settings:v1";
 /** The defaults are the "Medium" quality (`game/quality.ts`): flat ground, normal textures, medium distance, normal resolution, animated town scenes. */
 export function defaultSettings(): Settings {
-  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, effects: "full", fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true, rangeTarget: "closest" };
+  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, effects: "full", fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true, rangeTarget: "closest", waitForDeath: true };
 }
 export const DEFAULT_SETTINGS: Settings = defaultSettings();
 
@@ -100,6 +105,7 @@ export function parseSettings(raw: string | null): Settings {
   if (EFFECT_LEVELS.includes(stored.effects as EffectsLevel)) out.effects = stored.effects as EffectsLevel;
   if (typeof stored.fadeCursor === "boolean") out.fadeCursor = stored.fadeCursor;
   if (stored.rangeTarget === "closest" || stored.rangeTarget === "weakest") out.rangeTarget = stored.rangeTarget;
+  if (typeof stored.waitForDeath === "boolean") out.waitForDeath = stored.waitForDeath;
   if (stored.textureQuality === "normal" || stored.textureQuality === "high") out.textureQuality = stored.textureQuality;
   return out;
 }
