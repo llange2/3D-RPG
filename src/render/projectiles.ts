@@ -131,9 +131,9 @@ const SNAKES_SIDE = 0.5;
 const SWARM_POSE: Pose = { model: "proj_insect", scale: 0.5, pitch: 0, roll: 0 };
 export const SWARM_SECONDS = 2;
 export const SWARM_FADE = 0.5;
-/** The insects of a swarm that flies round one monster alone, and round each of the first two when there are more monsters on the line. */
+/** The insects of the swarm round the first monster of the line, and of the smaller swarm round the second one (10 + 5, the user, bug_fix_82); no further swarm is drawn. */
 export const SWARM_INSECTS = 10;
-export const SWARM_INSECTS_SHARED = 5;
+export const SWARM_INSECTS_BEHIND = 5;
 /** The turn (degrees) that points the model's nose along its flight: its wings spread along x, its body lies along z. */
 const SWARM_YAW = 0;
 
