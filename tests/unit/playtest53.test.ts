@@ -18,7 +18,8 @@ import { makeItem } from "../../src/sim/items";
 import { createEncounter, createMonster, lineOfSight, monsterTurn, wayToPlayer, type GridView } from "../../src/sim/encounter";
 import { EQUIPMENT_SLOTS } from "../../src/sim/types";
 
-const SCALING = [8, 10, 17, 20, 25, 28, 37, 39, 44, 50, 63];
+// (Pain, 12, scales since bug_fix_79)
+const SCALING = [8, 10, 12, 17, 20, 25, 28, 37, 39, 44, 50, 63];
 
 describe("spell costs grow with the level of the caster (point 16)", () => {
   it("flags exactly the spells of column H", () => {

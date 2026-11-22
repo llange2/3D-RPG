@@ -4,545 +4,749 @@
   "description": "Awakens all sleeping members of the party.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 1
  },
  "2": {
   "name": "Pandora's box",
   "description": "Opens a dimensional rift and randomly pulls an entity into your reality. Can be cast 3 times a day.",
   "scalesWithLevel": false,
-  "explanation": "Chances:\n30%: receive 1-100 gold\n30%: receive a random L1 item\n20%: random L1 monster appears\n5%: receive 101 - 200 gold\n5%: receive a random L2 item\n5%: random L2 monster appears\n4%: receive 1000 - 10000 gold\n1%: Dragon Lord (ID 83) appears",
-  "status": "done"
+  "explanation": "Can be cast 3 times per game day (the count starts again at midnight) and not in towns. Chances:\n30%: receive 1-100 gold\n30%: receive a random L1 item\n20%: random L1 monster appears\n5%: receive 101 - 200 gold\n5%: receive a random L2 item\n5%: random L2 monster appears\n4%: receive 1000 - 10000 gold\n1%: Dragon Lord (ID 83) appears",
+  "mana": 1
  },
  "3": {
   "name": "Elemental Arrow",
   "description": "Does 8 damage of a random elemental type to one monster.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 2,
+  "penetrating": false,
+  "damMin": 8,
+  "damMax": 8,
+  "damType": [
+   "acid",
+   "ice",
+   "fire"
+  ]
  },
  "4": {
   "name": "First Aid",
   "description": "Heals one character for 6 hit points.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 1
  },
  "5": {
   "name": "Flying Fist",
-  "description": "Does 6 physical damage to one monster.",
+  "description": "Does 6-10 physical damage to one monster.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 3,
+  "penetrating": false,
+  "damMin": 6,
+  "damMax": 10,
+  "damType": [
+   "physical"
+  ]
  },
  "6": {
   "name": "Light",
   "description": "Lights up dark dungeons and caves.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 1
  },
  "7": {
   "name": "Cure Wounds",
   "description": "Heals one character for 15 hit points.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 3
  },
  "8": {
   "name": "Energy Blast",
-  "description": "Does 2-6 magical damage per caster level to one monster. Costs 2.5 mana per caster level (rounded up).",
+  "description": "Does 2-6 magical damage per caster level to one monster. Costs 2 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
-  "status": "done"
+  "mana": 4,
+  "penetrating": false,
+  "damMin": 2,
+  "damMax": 6,
+  "damType": [
+   "magic"
+  ]
  },
  "9": {
   "name": "Revitalize",
   "description": "Removes the \"Weak\" status from one character.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 2
  },
  "10": {
   "name": "Sparks",
-  "description": "Does 2 magic damage per caster level to a group of monsters. Costs 1 mana per caster level (rounded up).",
+  "description": "Does 2-3 magic damage per caster level to all monsters in a straight line. Costs 1.5 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
-  "status": "done"
+  "mana": 3,
+  "penetrating": true,
+  "damMin": 2,
+  "damMax": 3,
+  "damType": [
+   "magic"
+  ]
  },
  "11": {
   "name": "Suppress Poison",
   "description": "Doubles the time left until one character dies of poison. Holds until the character is cured.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "The timer of the condition is set back, the condition itself stays until it is cured.",
+  "mana": 3
  },
  "12": {
   "name": "Pain",
-  "description": "Does 8 physical damage to a group of monsters.",
-  "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "description": "Does 2-6 physical damage per caster level to all beasts and humanoids in a straight line. Costs 2 mana per caster level (rounded up).",
+  "scalesWithLevel": true,
+  "explanation": "Hits every monster of the groups beast, humanoid and monster_humanoid on the line through the target; other monsters on the line are passed over. Cast at another kind of monster it is refused and costs nothing.",
+  "mana": 4,
+  "penetrating": true,
+  "damMin": 2,
+  "damMax": 6,
+  "damType": [
+   "physical"
+  ]
  },
  "13": {
   "name": "Dimensional Phasing",
   "description": "Put all monsters in a 4 field radius in a different dimensional phase for 5 turns. Each monster can only be shifted once. Robots cannot be shifted.",
   "scalesWithLevel": false,
-  "explanation": "1) Stop all movement/animation for monsters in radius\n2) Color all monsters in purple and make the half transparent\n3) Monster do not/move attack and also cannot be attacked or take damage of any kind.\n4) After 5 turns return monsters to normal",
-  "status": "done"
+  "explanation": "1) Stops all movement/animation for the monsters in the radius\n2) Colors them purple and makes them half transparent\n3) They do not move or attack and cannot be attacked or take damage of any kind\n4) After 5 turns they return to normal\n5) Each monster can only be shifted once, robots never",
+  "mana": 4,
+  "penetrating": false,
+  "damMin": 0,
+  "damMax": null,
+  "damType": []
  },
  "14": {
   "name": "Toxic Cloud",
-  "description": "Does 10 acid damage to a group of monsters.",
+  "description": "Poisons all monsters in a 5 field radius for 3 turns. Each turn the poison does 10 acid damage.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "A massive green cloud rises round the party and reaches every monster within 5 fields, also those that are not visible (through walls). Each cast puts one dose of poison on every monster: a dose does 10 acid damage (reduced by the acid resistance) at the end of each of the next 3 monster turns. Doses stack when the spell is cast again, each lasts exactly 3 turns. While a monster is poisoned, a green cloud rises from its feet to its top. Monsters in another dimension take no poison damage until they return.",
+  "mana": 15,
+  "penetrating": true,
+  "damMin": 10,
+  "damMax": 10,
+  "damType": [
+   "acid"
+  ]
  },
  "15": {
   "name": "Acid Stream",
-  "description": "Does 25 acid damage to one monster.",
+  "description": "Does 25 acid damage to all monsters in a row.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 15,
+  "penetrating": true,
+  "damMin": 25,
+  "damMax": 25,
+  "damType": [
+   "acid"
+  ]
  },
  "16": {
   "name": "Jump",
   "description": "Moves the party two spaces ahead",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 4
  },
  "17": {
   "name": "Protection from Elements",
   "description": "Gives the party damage reduction to either fire, cold, magic or acid. Costs 1 mana per caster level (rounded up).",
   "scalesWithLevel": true,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Every hit of the chosen element is reduced by the caster's level in points for 8 hours.",
+  "mana": 2
  },
  "18": {
   "name": "Suppress Madness",
   "description": "Doubles the time left until one character dies of madness. Holds until the character is cured.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "The timer of the condition is set back, the condition itself stays until it is cured.",
+  "mana": 4
  },
  "19": {
   "name": "Turn Undead",
   "description": "Does 100 damage to one undead monster. Nothing reduces it.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Works only on the monster in front of the party and only on undead (nothing is spent on a living target).",
+  "mana": 5,
+  "penetrating": false,
+  "damMin": 100,
+  "damMax": 100,
+  "damType": [
+   "fire"
+  ]
  },
  "20": {
   "name": "Stone Skin",
-  "description": "Gives a character +1 AC per caster's level, but halves the target's speed for 12h Costs 1 mana per caster level (rounded up).",
+  "description": "Gives a character +1 AC per caster's level, but halves the target's speed for 12h. Costs 1 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
-  "status": "done"
+  "mana": 2
  },
  "21": {
   "name": "Levitate",
   "description": "Lets the party levitate to avoid pit traps for 4 hours",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 5
  },
  "22": {
   "name": "Gravity",
   "description": "Pulls all monsters in a 4 field radius around the party, if there is a way.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 6
  },
  "23": {
   "name": "Suppress Disease",
   "description": "Doubles the time left until one character dies of disease. Holds until the character is cured.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "The timer of the condition is set back, the condition itself stays until it is cured.",
+  "mana": 5
  },
  "24": {
   "name": "Wizard's Eye",
   "description": "Displays a map of the party's surroundings for 8h",
   "scalesWithLevel": false,
   "explanation": "1) Shows the level incl. The not explored areas\n2) Shows traps, if crow is mascot\n3) Does not show monsters (see \"36 - Detect monster\")",
-  "status": "done"
+  "mana": 7
  },
  "25": {
   "name": "Rage",
-  "description": "Gives a character +1 damage per caster's level, but halves the target's armor for 12h Costs 1 mana per caster level (rounded up).",
+  "description": "Gives a character +1 damage per caster's level, but halves the target's armor for 12h. Costs 1 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
-  "status": "done"
+  "mana": 2
  },
  "26": {
   "name": "Identify Monster",
   "description": "Shows the hit points, AC, attacks per round, and special abilities of monsters in combat range.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 5
  },
  "27": {
   "name": "Nature's Cure",
   "description": "Heals one character for 25 hit points.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 6
  },
  "28": {
   "name": "Power Cure",
   "description": "Heals one character for 2-12 hit points per caster level. Costs 2 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
-  "status": "done"
+  "mana": 4
  },
  "29": {
   "name": "Frost Bite",
   "description": "Deals 35 cold damage to one monster.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 7,
+  "penetrating": false,
+  "damMin": 35,
+  "damMax": 35,
+  "damType": [
+   "ice"
+  ]
  },
  "30": {
   "name": "Dimensional Rift",
   "description": "Target Character cannot attack or be attacked for 5 turns. If party moves the spell is cancelled.",
   "scalesWithLevel": false,
   "explanation": "1) Works similar like 13- Dimensional phasing, but on own character\n2) color character in purple\n3) Character does not receive any damage, nor does he have a turn\n4) End spell after 5 turns or if party moves a field",
-  "status": "done"
+  "mana": 2
  },
  "31": {
   "name": "Immobilize",
   "description": "Makes a monster unable to move for 3 turns. Each monster can only be immobilized once.",
   "scalesWithLevel": false,
-  "explanation": "1) The monster in front of the party cannot move. \n2) It receives damage as usual and can attack, if party is in front of it or if it has range capabilties",
-  "status": "done"
+  "explanation": "1) The monster in front of the party cannot move.\n2) It receives damage as usual and can attack, if party is in front of it or if it has range capabilties",
+  "mana": 6,
+  "penetrating": false,
+  "damMin": 0,
+  "damMax": null,
+  "damType": []
  },
  "32": {
   "name": "Lloyd's Beacon",
   "description": "Sets a teleport beacon.",
   "scalesWithLevel": false,
-  "explanation": "1) When cast the player select between \"Set\" and \"Return\"\n2) \"Set\" remembers the current position\n3)  \"Return\" moves the party back to the position\n4) Spell is cross-world (e.g. save a position in town and return to it from a dungeon)",
-  "status": "done"
+  "explanation": "1) When cast the player selects between \"Set\" and \"Return\"\n2) \"Set\" remembers the current position (for this caster)\n3) \"Return\" moves the party back to the position\n4) Spell is cross-world (e.g. save a position in town and return to it from a dungeon)",
+  "mana": 8
  },
  "33": {
   "name": "Power Shield",
   "description": "Reduces incoming damage for the party by 10% for 1h.",
   "scalesWithLevel": false,
   "explanation": "Will show a power shield icon in the top right. Use a dummy until final icon is provided",
-  "status": "done"
+  "mana": 6
  },
  "34": {
   "name": "Walk on Water",
   "description": "Allows the party to walk on water for 4h",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 7
  },
  "35": {
   "name": "Cure Poison",
   "description": "Removes \"Poisoned\" status from one character.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 8
  },
  "36": {
   "name": "Detect Monster",
   "description": "Shows monsters on mini map for 8h",
   "scalesWithLevel": false,
   "explanation": "Shows monsters on mini map (does not reveal anything unexplored - this is done via 24-wizard's eye)",
-  "status": "done"
+  "mana": 6
  },
  "37": {
-  "name": "Lightning Bolt",
-  "description": "Does 4-6 magic damage per caster level to a group of monsters. Costs 3 mana per caster level (rounded up).",
+  "name": "Summon Snakes",
+  "description": "Does 4-6 acid damage per caster level to all monsters in a straight line. Costs 5 mana per caster level (rounded up).",
   "scalesWithLevel": true,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Penetrating: hits every monster on the line through the target. Uses the new button. When cast, a coil of snakes (model Snakes) appears on the floor in front of every monster that is hit, to the left of it, with the heads turned towards the monster. The model is loaded with the game. It appears at once and fades to transparent in 0.5 s.",
+  "mana": 10,
+  "penetrating": true,
+  "damMin": 4,
+  "damMax": 6,
+  "damType": [
+   "acid"
+  ]
  },
  "38": {
   "name": "Acid Spray",
-  "description": "Does 15 acid damage to all monsters in a line.",
+  "description": "Does 15 acid damage to all monsters in view of the party and lowers target's armor.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Hits all monsters the party sees ahead (its field of view; green lines of light, no target needed). Every hit takes away 10% of the monster's original armor, the armor cannot drop below 0. The loss stays until the monster dies and counts for blows and arrows (Identify Monster shows what is left).",
+  "mana": 10,
+  "penetrating": true,
+  "damMin": 15,
+  "damMax": 15,
+  "damType": [
+   "acid"
+  ]
  },
  "39": {
   "name": "Cold Ray",
-  "description": "Does 2-4 cold damage per caster level to all monsters in a line. Costs 3 mana per caster level (rounded up).",
+  "description": "Does 2-4 cold damage per caster level to all monsters in a straight line. Costs 3 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
-  "status": "done"
+  "mana": 6,
+  "penetrating": true,
+  "damMin": 2,
+  "damMax": 4,
+  "damType": [
+   "ice"
+  ]
  },
  "40": {
   "name": "Cure Disease",
   "description": "Removes \"Diseased\" status from one character.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 10
  },
  "41": {
   "name": "Clumsy",
   "description": "Makes the monster in front of you clumsy, thus lowering its chance to hit you.",
   "scalesWithLevel": false,
-  "explanation": "1) Monster in front of the player rolls a dice when attacking.\n2) it has a 10% chance that the attack does not take place. Otherwise continue with the standard process for attacks\n3) Effect does not stack and stays with the monster until it dies",
-  "status": "done"
+  "explanation": "1) Monster in front of the player rolls a dice when attacking.\n2) it has a 25% chance that the attack does not take place. Otherwise continue with the standard process for attacks\n3) Effect does not stack and stays with the monster until it dies",
+  "mana": 8,
+  "penetrating": false,
+  "damMin": 0,
+  "damMax": null,
+  "damType": []
  },
  "42": {
   "name": "Time Distortion",
   "description": "Randomly teleports party to safety.",
   "scalesWithLevel": false,
   "explanation": "Finds the closest area to party's current location, where they are out of reach of monster attacks",
-  "status": "done"
+  "mana": 11
  },
  "43": {
   "name": "Finger of Death",
   "description": "50% chance to kill a low level monster instantly, which is next to you.",
   "scalesWithLevel": false,
   "explanation": "1) Only works on monsters adjacent to the party and only monsters the party is looking at\n2) 50% chance that a L1/L2 monster is killed instantly (L1/L2 refers to the monsters treasure level)",
-  "status": "done"
+  "mana": 14,
+  "penetrating": false,
+  "damMin": 0,
+  "damMax": 0,
+  "damType": [
+   "magic"
+  ]
  },
  "44": {
   "name": "Fireball",
-  "description": "Does 3-7 fire damage per caster level to a group of monsters. Costs 3 mana per caster level (rounded up).",
+  "description": "Does 3-7 fire damage per caster level to the target and all monsters next to it. Costs 5 mana per caster level (rounded up).",
   "scalesWithLevel": true,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Hits the monster in front of the party and all monsters next to it (also diagonally). The party is never hit.",
+  "mana": 10,
+  "penetrating": true,
+  "damMin": 3,
+  "damMax": 7,
+  "damType": [
+   "fire"
+  ]
  },
  "45": {
   "name": "Nature's Gate",
   "description": "Teleports the party to another biome. Works only outside.",
   "scalesWithLevel": false,
   "explanation": "1) selects a random biome (explored or unexplored), different from the current one\n2) places the party in a place, where no monsters are in attack range\n3) party must only be placed on freely accessible areas",
-  "status": "done"
+  "mana": 10
  },
  "46": {
   "name": "Communion",
   "description": "50% chance to remove curses from a character",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 15
  },
  "47": {
   "name": "Teleport",
   "description": "Moves party up to nine spaces.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 10
  },
  "48": {
   "name": "Cure Paralysis",
   "description": "Removes \"Paralyzed\" status from one character.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 12
  },
  "49": {
   "name": "Deadly Swarm",
   "description": "Does 40 physical damage to a group of monsters",
   "scalesWithLevel": false,
   "explanation": "Deals 40 physical damage to all monsters in direct line in front of the party",
-  "status": "done"
+  "mana": 12,
+  "penetrating": true,
+  "damMin": 40,
+  "damMax": 40,
+  "damType": [
+   "physical"
+  ]
  },
  "50": {
   "name": "Dragon Breath",
   "description": "Hits all monsters for 5 damage per caster level. Costs 7 mana per caster level (rounded up).",
   "scalesWithLevel": true,
   "explanation": "",
-  "status": "done"
+  "mana": 14,
+  "penetrating": true,
+  "damMin": 5,
+  "damMax": 5,
+  "damType": [
+   "acid",
+   "ice",
+   "fire",
+   "magic"
+  ]
  },
  "51": {
   "name": "Fiery Flail",
   "description": "Does 100 fire damage to one monster.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 25,
+  "penetrating": false,
+  "damMin": 100,
+  "damMax": 100,
+  "damType": [
+   "fire"
+  ]
  },
  "52": {
   "name": "Super Shelter",
   "description": "Lets party rest in unsafe areas.",
   "scalesWithLevel": false,
   "explanation": "1) Party can rest, even if monsters are nearby\n2) Monsters do not attack party during the rest",
-  "status": "done"
+  "mana": 20
  },
  "53": {
   "name": "Fantastic Freeze",
   "description": "Does 40 cold damage to group.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 20,
+  "penetrating": true,
+  "damMin": 40,
+  "damMax": 40,
+  "damType": [
+   "ice"
+  ]
  },
  "54": {
   "name": "Sanity",
   "description": "Removes the crazy status from a character.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 19
  },
  "55": {
   "name": "Combine",
   "description": "Combine 3 items of the same type to the next higher material level.",
   "scalesWithLevel": false,
   "explanation": "1) after casting, player must select a character\n2) Characters inventory is opened\n3) If character does not have 3 items of the same kind and material (e.g. 3 wooden short swords) the spell is cancelled (mana is still consumed)\n4) if at least one valid combination is found, player selects the 3 valid items and clicks a \"Combine\" button (button is only active, if combination is correct). Put an \"Abort\" button next to combine\n5) On successful combine replace the 3 items with 1 item of the same type, but 1 material level better. If combining rings, the ring will be 1 level better as well",
-  "status": "done"
+  "mana": 25
  },
  "56": {
   "name": "Half For Me",
   "description": "Heals one character, but damages the caster for half the hit points healed",
   "scalesWithLevel": false,
   "explanation": "1) Heals target character to the maximum or to the extend that caster has 1 HP left (e.g. target character missed 30HP, character has 11 HP> max 10HP can be taken from caster, meaning the target is healed by 20 HP)",
-  "status": "done"
+  "mana": 50
  },
  "57": {
   "name": "Emergency rations",
   "description": "Creates enough food for the party to rest.",
   "scalesWithLevel": false,
   "explanation": "Creates 1 food for the party, but cannot exceed 1 food.",
-  "status": "done"
+  "mana": 20
  },
  "58": {
   "name": "Duplication",
   "description": "Sacrifice 10'000 gold for a 50% chance to duplicate an item. There is a 25% chance that the item is destroyed.",
   "scalesWithLevel": false,
-  "explanation": "and 25% that nothing happens",
-  "status": "done"
+  "explanation": "The gold is lost in every case. 50%: the item is duplicated (nothing happens if no backpack has room), 25%: the item is destroyed, 25%: nothing happens.",
+  "mana": 70
  },
  "59": {
   "name": "Disintegrate",
   "description": "Does 250 magic damage to one monster.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 100,
+  "penetrating": false,
+  "damMin": 250,
+  "damMax": 250,
+  "damType": [
+   "magic"
+  ]
  },
  "60": {
   "name": "Moon Ray",
   "description": "Does 100 magic damage to all monsters in a line and heals the party",
   "scalesWithLevel": false,
   "explanation": "Heals each party member by up to 50 HP",
-  "status": "done"
+  "mana": 90,
+  "penetrating": true,
+  "damMin": 100,
+  "damMax": 100,
+  "damType": [
+   "magic"
+  ]
  },
  "61": {
   "name": "Stone to Flesh",
   "description": "Removes the \"Petrified\" status from one character",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 40
  },
  "62": {
   "name": "Etherealise",
   "description": "Allows party to walk through a door or wall.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "The party moves two fields ahead through the door or wall; the field beyond must be free.",
+  "mana": 38
  },
  "63": {
   "name": "Dancing Sword",
-  "description": "Does 6-14 physical damage per caster level to a group of monsters Costs 1.5 mana per caster level (rounded up).",
+  "description": "Does 6-14 physical damage per caster level to all monsters in view. Costs 7.5 mana per caster level (rounded up).",
   "scalesWithLevel": true,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Hits all monsters currently in the party's field of view (a blade flies to each of them, no target needed). Mana 15 (7.5 per caster level).",
+  "mana": 15,
+  "penetrating": true,
+  "damMin": 6,
+  "damMax": 14,
+  "damType": [
+   "physical"
+  ]
  },
  "64": {
   "name": "Mass Distortion",
   "description": "20% chance to damage a group of monsters for half their hit points",
   "scalesWithLevel": false,
   "explanation": "1) All monsters in a straight line in front of the party roll a dice individually\n2) with a 20% chance they lose 50% of their health\n3) Does not work on L5 monsters",
-  "status": "done"
+  "mana": 78,
+  "penetrating": true,
+  "damMin": 0,
+  "damMax": null,
+  "damType": []
  },
  "65": {
   "name": "Raise Dead",
   "description": "Revives a dead character",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 60
  },
  "66": {
   "name": "Town Portal",
   "description": "Teleports party to any visited town. Can only be used outside battle.",
   "scalesWithLevel": false,
   "explanation": "Functions like a regular town portal.",
-  "status": "done"
+  "mana": 50
  },
  "67": {
   "name": "Transform Ring",
   "description": "Randomly changes a ring to another one of the same level, with a 25% risk of the ring being destroyed.",
   "scalesWithLevel": false,
   "explanation": "Selection logic functions similar to 55-Combine",
-  "status": "done"
+  "mana": 25
  },
  "68": {
   "name": "Mega Volts",
   "description": "Does 200 magical damage to a group of monsters",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 45,
+  "penetrating": true,
+  "damMin": 200,
+  "damMax": 200,
+  "damType": [
+   "magic"
+  ]
  },
  "69": {
   "name": "Holy Word",
   "description": "Severely damages or destroys undead monster",
   "scalesWithLevel": false,
-  "explanation": "1) Directly reduces the HP of an undead monster by 150 HP\n2) Undead monsters with max HP > 600 instantly lose 25% of their max HP",
-  "status": "done"
+  "explanation": "1) Hits every undead monster on the line through the target and directly reduces its HP by 150\n2) Undead monsters with max HP > 600 instantly lose 25% of their max HP instead",
+  "mana": 120,
+  "penetrating": true,
+  "damMin": 0,
+  "damMax": null,
+  "damType": []
  },
  "70": {
   "name": "Resurrect",
   "description": "Revives a rotten character with 1 hit point, but permanently reduces their Endurance by 1 and caster magically ages by 5 years.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 145
  },
  "71": {
   "name": "Sun Ray",
   "description": "Does 200 fire damage to one monster.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 120,
+  "penetrating": false,
+  "damMin": 200,
+  "damMax": 200,
+  "damType": [
+   "fire"
+  ]
  },
  "72": {
   "name": "Meteor Shower",
-  "description": "Does 100 fire damage to all monsters. Works only outside.",
+  "description": "Does 100 fire damage to all monsters the party could see in every direction. Works only outside.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Hits every monster the party could see turning on the spot (no wall in the way), within the action radius.",
+  "mana": 90,
+  "penetrating": true,
+  "damMin": 100,
+  "damMax": 100,
+  "damType": [
+   "fire"
+  ]
  },
  "73": {
   "name": "Prismatic Light",
-  "description": "Hits all monsters in view. 90-110 random damage effect.",
+  "description": "Does 90-110 random damage effect to all monsters in view of the party.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Hits all monsters in the party's field of view; a beam in the color of the damage type goes to each.",
+  "mana": 70,
+  "penetrating": true,
+  "damMin": 90,
+  "damMax": 110,
+  "damType": [
+   "acid",
+   "ice",
+   "fire",
+   "magic"
+  ]
  },
  "74": {
   "name": "Incinerate",
   "description": "Does 250-500 fire damage to one monster",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 45,
+  "penetrating": false,
+  "damMin": 250,
+  "damMax": 500,
+  "damType": [
+   "fire"
+  ]
  },
  "75": {
   "name": "Elemental Storm",
-  "description": "Does 150 fire, ice or acid damage to all monsters",
+  "description": "Does 150 fire, ice or acid damage to all monsters the party could see in every direction.",
   "scalesWithLevel": false,
-  "explanation": "",
-  "status": "done"
+  "explanation": "Hits every monster the party could see turning on the spot (no wall in the way), within the action radius; each gets one of the three elements at random.",
+  "mana": 110,
+  "penetrating": true,
+  "damMin": 150,
+  "damMax": 150,
+  "damType": [
+   "acid",
+   "ice",
+   "fire"
+  ]
  },
  "76": {
   "name": "Star Burst",
-  "description": "Does 200 magical damage to all monsters in a 3 field radius.",
+  "description": "Does 200 magical damage to all monsters in a 3 field radius around the party.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 120,
+  "penetrating": true,
+  "damMin": 200,
+  "damMax": 200,
+  "damType": [
+   "magic"
+  ]
  },
  "77": {
   "name": "Implosion",
   "description": "Does 1000 magical damage to one monster",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 120,
+  "penetrating": false,
+  "damMin": 1000,
+  "damMax": 1000,
+  "damType": [
+   "magic"
+  ]
  },
  "78": {
   "name": "Divine Intervention",
   "description": "All party members are cured of all statuses (except \"Eradicated\") and restored to full hit points, but the caster ages 5 years.",
   "scalesWithLevel": false,
   "explanation": "",
-  "status": "done"
+  "mana": 220
  }
 }

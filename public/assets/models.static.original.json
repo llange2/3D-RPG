@@ -4515,5 +4515,41 @@
   "surface": 0.13,
   "fromObj": false,
   "mean": 0.316
+ },
+ "wpn_stick": {
+  "file": "models-original/wpn_stick.glb",
+  "tris": 1000,
+  "bytes": 706076,
+  "bounds": [
+   -0.05020499974489212,
+   -0.9554370045661926,
+   -0.04565000161528587,
+   0.04880199953913689,
+   0.9536889791488647,
+   0.04395399987697601
+  ],
+  "animations": [],
+  "groundTop": 0.95,
+  "surface": 0.9525,
+  "fromObj": false,
+  "mean": 0.307
+ },
+ "proj_snakes": {
+  "file": "models-original/proj_snakes.glb",
+  "tris": 10388,
+  "bytes": 1624196,
+  "bounds": [
+   -0.45504599809646606,
+   -0.8095481395721436,
+   -0.9516651034355164,
+   0.46562400460243225,
+   0.8093591332435608,
+   0.9506491422653198
+  ],
+  "animations": [],
+  "groundTop": -0.8,
+  "surface": -0.7425,
+  "fromObj": false,
+  "mean": 0.342
  }
 }

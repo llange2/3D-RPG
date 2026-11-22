@@ -117,7 +117,7 @@ describe("the tower optimisation (48th playtest, second list)", () => {
   });
 
   it("describes Prismatic Light as hitting the monsters in view, and hits none behind a wall (point 12)", () => {
-    expect(SPELLS[73]!.text).toContain("Hits all monsters in view");
+    expect(SPELLS[73]!.text).toContain("all monsters in view of the party");
     const party = createDefaultParty();
     for (const c of party.characters) c.hp = c.health = 99999;
     const open: GridView = { walkable: () => true, water: () => false, opaque: () => false };

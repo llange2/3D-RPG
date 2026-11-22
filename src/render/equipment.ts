@@ -147,10 +147,14 @@ const PALM = new Vector3(0, 6, 0);
  * (up and towards the sword's left, 41 to 48 degrees), the cross guard just above the fist, the middle of the grip behind the hand (shifted 6 centimetres along the fingers and 6 behind the palm), the
  * pommel looking out below it. A blade in the other clips follows the hand.
  */
-export const MIXAMO_GRIP: Record<string, { rotation: readonly [number, number, number, number]; position: readonly [number, number, number] }> = {
+export const MIXAMO_GRIP: Record<string, { rotation: readonly [number, number, number, number]; position: readonly [number, number, number]; scale?: number }> = {
   wpn_sword1: { rotation: [0.8245, 0, 0.4157, 0.3838], position: [-9.96, -12.01, 15.75] },
   wpn_sword2: { rotation: [0.8245, 0, 0.4157, 0.3838], position: [-9.96, -12.01, 15.75] },
   wpn_sword3: { rotation: [0.8245, 0, 0.4157, 0.3838], position: [-9.96, -12.01, 15.75] },
+  // bug_fix_79: the Evil Ranger's staff (`wpn_stick`, middle at the origin, long axis along y) stands upright in the closed fist, its middle exactly in the palm (6 centimetres along the fingers).
+  // The rotation puts its axis vertical on the screen in his Alert pose seen from the front (`SCREEN=1 VARIANTS="0,1,0:0,0,0:0.8" check-stick.ts`); scale 0.8 (the fit's 0.4 would make a walking stick of 0.76
+  // in the rig's metres) gives 1.5, about his height.
+  wpn_stick: { rotation: [0.7164, 0, 0.5974, 0.3604], position: [0, 6, 0], scale: 0.8 },
 };
 
 /**
@@ -163,7 +167,7 @@ export function holdInHand(item: TransformNode, joint: TransformNode, hand: Hand
   if (fixed) {
     item.position.set(fixed.position[0] * unit, fixed.position[1] * unit, fixed.position[2] * unit);
     item.rotationQuaternion = new Quaternion(...fixed.rotation);
-    item.scaling.setAll(t.scale * unit);
+    item.scaling.setAll(fixed.scale ?? t.scale * unit);
     return;
   }
   item.position.copyFrom(t.position.scale(unit));

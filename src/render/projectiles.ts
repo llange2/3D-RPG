@@ -13,7 +13,7 @@ import type { PropInstance } from "./terrainMesher";
  */
 export type ProjectileKind = "arrow" | "fire" | "ice" | "magic" | "physical" | "acid" | "missile" | "laser";
 
-export const PROJECTILE_MODELS = ["proj_arrow", "proj_fire", "proj_ice", "proj_magic", "proj_physical", "proj_poison", "proj_missile"];
+export const PROJECTILE_MODELS = ["proj_arrow", "proj_fire", "proj_ice", "proj_magic", "proj_physical", "proj_poison", "proj_missile", "proj_snakes"];
 
 interface Pose {
   model: string;
@@ -86,12 +86,28 @@ interface Flight {
 // (a spell of the physical type has no picture of its own and shows the magic one, like the lines of Prismatic Light; 19. 11. 2026: every attack spell leaves an impact)
 const IMPACT_OF: Readonly<Partial<Record<ProjectileKind, ImpactKind>>> = { fire: "fire", ice: "ice", acid: "acid", magic: "magic", physical: "magic" };
 
-/** An element that appears where it strikes and fades out (Elemental Storm): standing upright, not flying. */
+/** An element that appears where it strikes and fades out (Elemental Storm, the snakes of Summon Snakes): standing upright, not flying. */
 interface Flash {
   pose: Pose;
   at: Point;
   t: number;
+  /** How long it takes to fade out, the turn about the vertical axis and the size of the model as it stands there. */
+  seconds: number;
+  yaw: number;
+  scale: number;
 }
+
+/**
+ * The coil of snakes of Summon Snakes (the user's `Snakes.glb`, bug_fix_79): 1.62 high and about 2 across, its middle at the origin. Drawn at 0.6 it is a bit under a metre high, about
+ * as tall as a monster's knee, as in the user's mock-up. `yaw` turns the model so that the heads look along +z (found with `tools/dev/check-snakes.ts`).
+ */
+const SNAKES_POSE: Pose = { model: "proj_snakes", scale: 0.6, pitch: 0, roll: 0 };
+const SNAKES_HALF_HEIGHT = 0.81;
+export const SNAKES_SECONDS = 0.5;
+/** The model's own turn (degrees) that makes its heads look along +z, and where the coil stands: this far in front of the monster's feet (towards the party) and this far to the viewer's left. */
+const SNAKES_YAW = 0;
+const SNAKES_FRONT = 0.9;
+const SNAKES_SIDE = 0.5;
 
 /**
  * The light that flies along with a projectile (47th playtest, point 8: like the robots' lasers, whose blue is `LASER_LAMP`). The colour follows the element: fire orange, acid green,
@@ -193,12 +209,30 @@ export class Projectiles {
 
   /** An element appears at `at` and fades out over `FLASH_SECONDS` (Elemental Storm). Only the three elements have a picture. */
   flash(kind: "fire" | "ice" | "acid", at: Point): void {
-    this.flashes.push({ pose: POSES[kind], at, t: 0 });
+    this.flashes.push({ pose: POSES[kind], at, t: 0, seconds: FLASH_SECONDS, yaw: 0, scale: POSES[kind].scale * FLASH_SCALE });
     // (the element bursts where it appears, like a shot that lands: the picture of its impact, bug_fix_68)
     this.effects?.impact(kind, at);
     // the element shines for as long as it stands there (48th playtest, point 6: the storm had no light)
     const color = PROJECTILE_LAMPS[kind]!.color;
     this.burst(at, { from: color, to: color, peak: 4, range: 8, seconds: FLASH_SECONDS, daylight: SPELL_DAYLIGHT });
+  }
+
+  /**
+   * Summon Snakes (bug_fix_79): a coil of snakes stands on the floor at `feet` (a monster's, with the height of the floor) a little towards the party at `from` and to the left of the monster, there at once
+   * with its heads turned to the monster, and fades out within `SNAKES_SECONDS` (no burst of acid over it: the user wants to see the snakes).
+   */
+  snakes(feet: Point, from: Point): void {
+    const dx = from.x - feet.x;
+    const dz = from.z - feet.z;
+    const d = Math.hypot(dx, dz) || 1;
+    // (towards the party, and to the left of someone who looks from the party at the monster: Babylon's x is to the right of +z)
+    const ux = dx / d;
+    const uz = dz / d;
+    const lx = uz;
+    const lz = -ux;
+    const at = { x: feet.x + ux * SNAKES_FRONT + lx * SNAKES_SIDE, y: feet.y + SNAKES_HALF_HEIGHT * SNAKES_POSE.scale, z: feet.z + uz * SNAKES_FRONT + lz * SNAKES_SIDE };
+    const yaw = Math.atan2(feet.x - at.x, feet.z - at.z) + (SNAKES_YAW * Math.PI) / 180;
+    this.flashes.push({ pose: SNAKES_POSE, at, t: 0, seconds: SNAKES_SECONDS, yaw, scale: SNAKES_POSE.scale });
   }
 
   /** A light with no model at `at` (Star Burst at the party, the impact of a meteor): `spec` says what it does. */
@@ -259,8 +293,8 @@ export class Projectiles {
       if (f.impact && struck) this.effects?.impact(struck, f.to);
     }
     this.flights = this.flights.filter((f) => f.t < f.duration);
-    const finished = this.flashes.filter((f) => f.t >= FLASH_SECONDS);
-    this.flashes = this.flashes.filter((f) => f.t < FLASH_SECONDS);
+    const finished = this.flashes.filter((f) => f.t >= f.seconds);
+    this.flashes = this.flashes.filter((f) => f.t < f.seconds);
     const list: PropInstance[] = [];
     for (const f of this.flights) {
       const k = f.t / f.duration;
@@ -279,8 +313,8 @@ export class Projectiles {
     // the elements of a storm: upright, and all of one model fade together (they appear at the same moment); a model without a flash is solid again
     const fade = new Map<string, number>();
     for (const f of this.flashes) {
-      fade.set(f.pose.model, Math.min(fade.get(f.pose.model) ?? 1, 1 - f.t / FLASH_SECONDS));
-      list.push({ model: f.pose.model, x: f.at.x, y: f.at.y, z: f.at.z, rotY: 0, rotX: 0, rotZ: 0, scale: f.pose.scale * FLASH_SCALE, atOrigin: true });
+      fade.set(f.pose.model, Math.min(fade.get(f.pose.model) ?? 1, 1 - f.t / f.seconds));
+      list.push({ model: f.pose.model, x: f.at.x, y: f.at.y, z: f.at.z, rotY: f.yaw, rotX: 0, rotZ: 0, scale: f.scale, atOrigin: true });
     }
     for (const model of new Set([...fade.keys(), ...finished.map((f) => f.pose.model)])) this.props.setVisibility(model, fade.get(model) ?? 1);
     this.props.setInstances(Projectiles.OWNER, list);

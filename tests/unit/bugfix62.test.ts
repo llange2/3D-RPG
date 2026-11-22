@@ -28,7 +28,8 @@ describe("the Evil Paladin and the Evil Wizard (points 1 and 2)", () => {
   });
 
   it("both models are the user's files, built into both registries as animated models", () => {
-    expect(Object.keys(USER_MONSTER_MODELS).map(Number).sort((a, b) => a - b)).toEqual([PALADIN, WIZARD]);
+    // (the Black Knight 3 and the Evil Ranger 24 joined them in bug_fix_79)
+    expect(Object.keys(USER_MONSTER_MODELS).map(Number).sort((a, b) => a - b)).toEqual([3, 24, PALADIN, WIZARD]);
     for (const file of ["models.monsters.original.json"]) {
       const registry = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "assets", file), "utf-8")) as Record<string, { animated: boolean; file: string; animations: string[]; scale: number }>;
       for (const id of [PALADIN, WIZARD]) {
