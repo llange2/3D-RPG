@@ -52,7 +52,7 @@ import { PropRenderer } from "../render/props";
 import { Effects, type FxLamp } from "../render/fx";
 import { chunkTint, hitKindOf } from "../render/hitFx";
 import { EFFECT_LEVELS, EFFECT_NAMES } from "../render/fxSheets";
-import { PROJECTILE_MODELS, Projectiles, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
+import { PROJECTILE_MODELS, Projectiles, RAY_LOOKS, SWARM_INSECTS, SWARM_INSECTS_SHARED, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
 import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setRuinedCastleKinds, setUltraGround, tileModelKeys, caveFlameSpots, caveTorchSpots, towerFlameSpots, towerTorchSpots, type PropInstance } from "../render/terrainMesher";
@@ -68,7 +68,7 @@ import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
   alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, phaseReach, phaseTargets, pullMonsters, weakestInCone,
-  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, STAR_BURST_RADIUS, TOXIC_RADIUS, isPainable, isPhaseProof,
+  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, FANTASTIC_FREEZE_RADIUS, STAR_BURST_RADIUS, TOXIC_RADIUS, isPainable, isPhaseProof,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, hasLight, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
@@ -157,8 +157,11 @@ const ATTACK_SOUND: Record<string, number> = { acid: 9025, fire: 9027, ice: 9026
 /** What a spell of an element throws (old items 9018 to 9022). A monster's physical shot is an arrow, a spell's is the "physical attack". */
 /** How often the wisps of Toxic Cloud rise from a poisoned monster (seconds). */
 const POISON_WISP_EVERY = 0.15;
-/** How a spell that hits several monsters is drawn: Cold Ray lines of light, Summon Snakes a coil of snakes at each monster, Fireball one bolt that bursts on the neighbours (bug_fix_79). */
-type SpellStyle = "line" | "snakes" | "splash";
+/**
+ * How a spell that hits several monsters is drawn: Cold Ray lines of light, Summon Snakes a coil of snakes at each monster, Fireball one bolt that bursts on the neighbours (bug_fix_79); Moon Ray and Sun Ray
+ * a thick ray instead of a projectile, Deadly Swarm a swarm of insects round the first monsters of the line (bug_fix_81).
+ */
+type SpellStyle = "line" | "snakes" | "splash" | "moon" | "sun" | "swarm";
 const SPELL_PROJECTILE: Record<string, ProjectileKind> = { acid: "acid", poison: "acid", fire: "fire", ice: "ice", magic: "magic", physical: "physical" };
 const monsterProjectile = (damageType: string): ProjectileKind => (damageType === "physical" ? "arrow" : SPELL_PROJECTILE[damageType] ?? "magic");
 
@@ -184,6 +187,11 @@ const METEOR_FALL_SECONDS = 0.5;
 const STORM_FRONT = 1.2;
 /** Star Burst (48th playtest, point 2): a bright light at the party that dies down within 0.7 s, white first and then orange. Strong and wide, and it shows by day too. */
 const STAR_BURST_LIGHT: BurstSpec = { from: [1, 1, 1], to: [1, 0.45, 0.08], peak: 14, range: 40, seconds: 0.7, daylight: 1 };
+/** Fantastic Freeze (bug_fix_81): the cold light of the cloud at the party, and the light blue of the cloud itself. */
+const FREEZE_LIGHT: BurstSpec = { from: [0.7, 0.9, 1], to: [0.35, 0.65, 1], peak: 6, range: 16, seconds: 0.9, daylight: 0.7 };
+const FREEZE_CLOUD: readonly [number, number, number] = [0.55, 0.8, 1];
+/** Mass Distortion (bug_fix_81): a flash of violet where a monster loses half its health. */
+const DISTORTION_LIGHT: BurstSpec = { from: [1, 0.8, 1], to: [0.6, 0.25, 0.9], peak: 5, range: 10, seconds: 0.6, daylight: 0.7 };
 /** The flash where a meteor lands: it must show (point 3), so it is strong and also there by day. */
 const METEOR_IMPACT_LIGHT: BurstSpec = { from: [1, 0.85, 0.5], to: [1, 0.4, 0.08], peak: 7, range: 12, seconds: 0.5, daylight: 0.8 };
 
@@ -554,6 +562,9 @@ export class Game {
     return true;
   }
 
+  /** How often the title screen has been shown: only the first one may take the seed of the address (`?seed=`), every later one rolls a new one (bug_fix_81). */
+  private titleShown = 0;
+
   /** Shows the title screen and starts or continues a game. */
   async start(defaultSeed: string): Promise<void> {
     this.mode = "title";
@@ -564,7 +575,8 @@ export class Game {
     // (the title shows the figure of the file: a game that ended a moment ago has written it)
     this.achievements.reload();
     const choice = await this.ui.title({
-      seed: defaultSeed || randomSeed(),
+      // (the callers that come back to the title pass the seed of the game that has just ended: it is not offered again)
+      seed: (this.titleShown++ === 0 && defaultSeed) || randomSeed(),
       size: parseWorldSize(params.get("size")),
       saves: this.titleSaves(),
       onOptions: () => void this.optionsMenu(),
@@ -3957,15 +3969,40 @@ export class Game {
       return flights;
     }
     if (area === "star_burst") {
-      // no projectile: a bright light at the party that dies down through orange within 0.7 s, and the same over the whole picture (48th playtest, point 2)
+      // no projectile: a bright light at the party that dies down through orange within 0.7 s, and the same over the whole picture (48th playtest, point 2); a ball of fire flies out of the party
+      // and fire strikes every monster it hits (bug_fix_81: the burst had no fire in it)
       const { x, y, z } = this.player;
       this.projectiles.burst({ x, y, z }, STAR_BURST_LIGHT);
+      this.effects.fireNova({ x, y, z }, STAR_BURST_RADIUS * 3);
       this.ui.lightFlash(STAR_BURST_LIGHT.seconds);
       for (const e of hits) {
         flights.set(e.uid, 0);
         // (every attack spell leaves an impact on what it hits, 19. 11. 2026, playtest 59 point 5)
         const at = this.monsters.anchor(e.uid);
-        if (at) this.projectiles.impactAt("magic", at);
+        if (at) this.projectiles.impactAt("fire", at);
+      }
+      return flights;
+    }
+    if (area === "fantastic_freeze") {
+      // no projectile: a massive light blue cloud that wells up at the party and drifts out over the 5 x 5 field, and frost where it hits (bug_fix_81)
+      const { x, y, z } = this.player;
+      this.effects.cloud({ x, y, z }, (FANTASTIC_FREEZE_RADIUS + 0.5) * 3, FREEZE_CLOUD);
+      this.projectiles.burst({ x, y, z }, FREEZE_LIGHT);
+      for (const e of hits) {
+        flights.set(e.uid, 0);
+        const at = this.monsters.anchor(e.uid);
+        if (at) this.projectiles.impactAt("ice", at);
+      }
+      return flights;
+    }
+    if (area === "mass_distortion") {
+      // the monsters that lose half their health flash violet where they stand (bug_fix_81: the spell has no projectile any more, it reaches everything in view)
+      for (const e of hits) {
+        flights.set(e.uid, 0);
+        const at = this.monsters.anchor(e.uid);
+        if (!at) continue;
+        this.projectiles.impactAt("magic", at);
+        this.projectiles.burst(at, DISTORTION_LIGHT);
       }
       return flights;
     }
@@ -4001,9 +4038,12 @@ export class Game {
           const delay = (i % 8) * 0.06;
           const start = { x: at.x, y: at.y + METEOR_HEIGHT, z: at.z };
           this.later(delay, () => this.projectiles.launch("fire", start, at, 1, METEOR_FALL_SECONDS));
+          const floor = this.monsters.hitSpot(e.uid)?.floor ?? at.y - 1.5;
           this.later(delay + METEOR_FALL_SECONDS, () => {
             this.projectiles.burst(at, METEOR_IMPACT_LIGHT);
             this.effects.impact("fire", at);
+            // big grey clouds of dust and brown splinters of earth where it lands (bug_fix_81)
+            this.effects.meteorImpact(at, floor);
           });
           flights.set(e.uid, delay + METEOR_FALL_SECONDS);
           return;
@@ -4017,14 +4057,31 @@ export class Game {
       });
       return flights;
     }
-    if (spell && style === "line") {
-      // Cold Ray: one blue line to every monster of the line it hits (the lines lie on top of each other), gone within 0.7 s
+    if (spell && (style === "line" || style === "moon" || style === "sun")) {
+      // Cold Ray: one blue line to every monster of the line it hits (the lines lie on top of each other), gone within 0.7 s. Moon Ray (white and violet) and Sun Ray (glowing orange) are thicker rays of the
+      // same kind, no projectile any more (bug_fix_81); only the first of the rays on top of each other throws off particles
+      const element = style === "moon" ? "magic" : style === "sun" ? "fire" : "ice";
+      const look = style === "moon" ? RAY_LOOKS.moon : style === "sun" ? RAY_LOOKS.sun : undefined;
+      let first = true;
       for (const e of hits) {
         const at = this.monsters.anchor(e.uid);
         // (the frost strikes where every line ends, like Prismatic Light)
-        if (at) this.projectiles.beam("ice", from, at, true);
+        if (at) this.projectiles.beam(element, from, at, true, { look, particles: first });
+        if (at) first = false;
         flights.set(e.uid, 0);
       }
+      return flights;
+    }
+    if (spell && style === "swarm") {
+      // Deadly Swarm (bug_fix_81): ten insects fly round the monster in front of the party; with more monsters on the line five fly round each of the first two and no further swarm is drawn
+      // (the hits are all there at once, the damage is not held back for the swarm)
+      const spots = hits
+        .map((e) => ({ uid: e.uid, spot: this.monsters.hitSpot(e.uid) }))
+        .filter((h): h is { uid: string; spot: NonNullable<typeof h.spot> } => !!h.spot)
+        .sort((a, b) => Math.hypot(a.spot.x - from.x, a.spot.z - from.z) - Math.hypot(b.spot.x - from.x, b.spot.z - from.z));
+      const count = spots.length > 1 ? SWARM_INSECTS_SHARED : SWARM_INSECTS;
+      for (const { spot } of spots.slice(0, 2)) this.projectiles.swarm({ x: spot.x, y: spot.y, z: spot.z }, count);
+      for (const e of hits) flights.set(e.uid, 0);
       return flights;
     }
     if (spell && style === "snakes") {
@@ -4136,10 +4193,13 @@ export class Game {
     const party = this.state.party;
     const flights = this.launchPartyShots(events, spell, area, style);
     // the monsters answer when the party's last shot has landed
-    const answer = Math.max(0, ...flights.values());
+    let answer = Math.max(0, ...flights.values());
     // Toxic Cloud's poison works at the end of the monsters' turn, after the party's shots have landed (and not for a monster none of them hit)
     const poisoned = new Set(events.flatMap((e) => (e.type === "party_attack" && e.poison ? [e.uid] : [])));
     const landing = (uid: string) => flights.get(uid) ?? (poisoned.has(uid) ? answer : 0);
+    // "Wait for death animation" (bug_fix_81): the monsters answer, and with them the party is free again, only when every body that fell in this turn has finished its clip; the simulation freed the cell
+    // at once, so without the wait a monster stepped into it while the body was still falling
+    if (this.settings.waitForDeath) for (const e of events) if (e.type === "monster_dead") answer = Math.max(answer, landing(e.uid) + this.monsters.deathSeconds(e.uid));
     let end = answer;
     const at = (seconds: number, run: () => void) => {
       end = Math.max(end, seconds);
@@ -4456,10 +4516,12 @@ export class Game {
       if (spellId === 72 && !(this.outsideNow() || this.interior?.map.theme.open)) return "Meteor Shower only works outside.";
       // Star Burst goes off at the party and reaches three tiles (a circle), the others the whole action radius
       if (spellId === 76) return near(STAR_BURST_RADIUS).length > 0 ? null : "There is no monster in range.";
+      // Fantastic Freeze reaches the 5 x 5 field round the party, walls or not (bug_fix_81)
+      if (spellId === 53) return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= FANTASTIC_FREEZE_RADIUS) ? null : "There is no monster in range.";
       // Toxic Cloud spreads through walls: anything within five tiles is poisoned, seen or not
       if (spellId === 14) return near(TOXIC_RADIUS).length > 0 ? null : "There is no monster in range.";
       // Prismatic Light, Acid Spray and Dancing Sword hit what the party sees, and their beams do not pass a wall; Meteor Shower and Elemental Storm what it could see in every direction
-      if (spellId === 73 || spellId === 38 || spellId === 63 || spellId === 72 || spellId === 75) {
+      if (spellId === 73 || spellId === 38 || spellId === 63 || spellId === 72 || spellId === 75 || spellId === 64) {
         const seen = this.monsterSeen(spellId === 72 || spellId === 75);
         return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS && seen(m)) ? null : "There is no monster in view.";
       }
@@ -4882,7 +4944,7 @@ export class Game {
             : partyAttack(party, this.gridView(), this.enc, tx, ty, this.combatRng(), { kind: "magic", targetUid: target.uid, magic });
         // Cold Ray is a blue line of light from the party through the monsters it hits, like the lines of Prismatic Light (the user, 8. 11. 2026), not a flying bolt
         // Summon Snakes sends no bolt: a coil of snakes rises in front of every monster it hits (bug_fix_79); Fireball flies at its target and bursts on the monsters next to it
-        this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic", undefined, result.spellId === 39 ? "line" : result.spellId === 37 ? "snakes" : result.spellId === 44 ? "splash" : undefined);
+        this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic", undefined, result.spellId === 39 ? "line" : result.spellId === 37 ? "snakes" : result.spellId === 44 ? "splash" : result.spellId === 60 ? "moon" : result.spellId === 71 ? "sun" : result.spellId === 49 ? "swarm" : undefined);
         for (const healed of result.healed ?? []) this.ui.avatarEffect(healed.target, "cure_hp");
         if (result.healed?.length) this.ui.log("Moonlight washes over the party and heals it.", "good");
         break;
@@ -5606,6 +5668,7 @@ export class Game {
       { type: "toggle", label: () => `Fade out cursor, if unused: ${onOff(draft.fadeCursor)}`, flip: () => (draft.fadeCursor = !draft.fadeCursor) },
       { type: "toggle", label: () => `Show action keys in GUI: ${onOff(draft.showKeys)}`, flip: () => (draft.showKeys = !draft.showKeys) },
       { type: "toggle", label: () => `Range attack targets: ${draft.rangeTarget}`, flip: () => (draft.rangeTarget = RANGE_TARGETS[(RANGE_TARGETS.indexOf(draft.rangeTarget) + 1) % RANGE_TARGETS.length]!) },
+      { type: "toggle", label: () => `Wait for death animation: ${onOff(draft.waitForDeath)}`, flip: () => (draft.waitForDeath = !draft.waitForDeath) },
     ]);
     return picked === "apply" ? this.applyOptions(draft) : false;
   }

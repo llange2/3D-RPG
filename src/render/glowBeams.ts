@@ -9,6 +9,12 @@ import type { Scene } from "@babylonjs/core/scene";
 const CORE_DIAMETER = 0.07;
 const HALO_DIAMETER = 0.3;
 
+/** How a beam differs from the plain one: a core of its own colour (the glow of the sun is orange all through, not white-hot) and a width (Moon Ray and Sun Ray are thicker than a line of Prismatic Light). */
+export interface BeamLook {
+  core?: readonly [number, number, number];
+  width?: number;
+}
+
 interface Beam {
   core: Mesh;
   halo: Mesh;
@@ -27,8 +33,8 @@ export class GlowBeams {
 
   constructor(private readonly scene: Scene) {}
 
-  private materialsFor(color: readonly [number, number, number]): { core: StandardMaterial; halo: StandardMaterial } {
-    const key = color.join(",");
+  private materialsFor(color: readonly [number, number, number], coreColor?: readonly [number, number, number]): { core: StandardMaterial; halo: StandardMaterial } {
+    const key = coreColor ? `${color.join(",")}/${coreColor.join(",")}` : color.join(",");
     let pair = this.materials.get(key);
     if (!pair) {
       const make = (name: string, emissive: Color3, alpha: number): StandardMaterial => {
@@ -45,7 +51,7 @@ export class GlowBeams {
       const [r, g, b] = color;
       // the core is nearly white in the colour, the halo the colour itself
       pair = {
-        core: make("core", new Color3(0.55 + r * 0.45, 0.55 + g * 0.45, 0.55 + b * 0.45), 1),
+        core: make("core", coreColor ? new Color3(...coreColor) : new Color3(0.55 + r * 0.45, 0.55 + g * 0.45, 0.55 + b * 0.45), 1),
         halo: make("halo", new Color3(r, g, b), 0.7),
       };
       this.materials.set(key, pair);
@@ -54,14 +60,15 @@ export class GlowBeams {
   }
 
   /** A line from `from` to `to` in `color` that fades out over `seconds`. */
-  add(color: readonly [number, number, number], from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }, seconds: number): void {
+  add(color: readonly [number, number, number], from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }, seconds: number, look: BeamLook = {}): void {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const dz = to.z - from.z;
     const flat = Math.hypot(dx, dz);
     const length = Math.hypot(flat, dy);
     if (length < 0.01) return;
-    const pair = this.materialsFor(color);
+    const pair = this.materialsFor(color, look.core);
+    const width = look.width ?? 1;
     const make = (name: string, diameter: number, material: StandardMaterial): Mesh => {
       // one unit long along z (a cylinder stands along y), stretched to the distance by the scaling
       const mesh = CreateCylinder(name, { height: 1, diameter, tessellation: 8 }, this.scene);
@@ -70,8 +77,8 @@ export class GlowBeams {
       mesh.isPickable = false;
       return mesh;
     };
-    const core = make("beam:core", CORE_DIAMETER, pair.core);
-    const halo = make("beam:halo", HALO_DIAMETER, pair.halo);
+    const core = make("beam:core", CORE_DIAMETER * width, pair.core);
+    const halo = make("beam:halo", HALO_DIAMETER * width, pair.halo);
     halo.parent = core;
     halo.alphaIndex = 10;
     core.alphaIndex = 11;

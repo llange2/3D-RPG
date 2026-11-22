@@ -47,6 +47,39 @@ const TOXIC_MIN_LIGHT = 0.55;
 /** Never more particles alive than this when Toxic Cloud adds its own (a crowd of poisoned monsters sends wisps every 0.15 s): what does not fit into the smoke batch (320 quads) is skipped when drawn. */
 const MAX_PARTICLES = 1200;
 
+/** The elements a ray has particles for (Cold Ray ice, Moon Ray magic, Sun Ray fire, Acid Spray acid; Prismatic Light every one of them). */
+export type RayKind = "ice" | "magic" | "fire" | "acid";
+/** The particles stop this far from the party: two fields (bug_fix_81). */
+const RAY_REACH = 6;
+/** The first particle stands this far from the party's eyes (the ray starts at the muzzle, right under the camera). */
+const RAY_START = 0.9;
+interface RaySprite {
+  cell: number;
+  /** The sheet is white and grey: this makes it the colour of the element. */
+  tint: readonly [number, number, number];
+  /** World units across at the start, and how many times that at the end (clouds swell, crystals keep their size). */
+  size: number;
+  grow: number;
+  /** How often it is picked among the others of its element. */
+  weight: number;
+}
+const MIST = [PARTICLE_CELLS.mist_a, PARTICLE_CELLS.mist_b, PARTICLE_CELLS.mist_c];
+const RAY_SPRITES: Readonly<Record<RayKind, readonly RaySprite[]>> = {
+  // light blue ice crystals (the snowflake) and small white clouds
+  ice: [{ cell: PARTICLE_CELLS.snowflake, tint: [0.55, 0.8, 1], size: 0.5, grow: 1, weight: 3 }, ...MIST.map((cell) => ({ cell, tint: [0.95, 0.97, 1] as const, size: 0.45, grow: 2.2, weight: 1 }))],
+  // the sparks, the wisp and the glint of the magic sheet and the crescent
+  magic: [PARTICLE_CELLS.magic_spark_8, PARTICLE_CELLS.magic_wisp, PARTICLE_CELLS.cross_glint, PARTICLE_CELLS.slash_crescent].map((cell) => ({ cell, tint: [0.88, 0.6, 1] as const, size: 0.5, grow: 1.1, weight: 1 })),
+  // the two puffs and the first cloud of the fire row in light grey (smoke), the second cloud in the colour of the flame
+  fire: [
+    ...[PARTICLE_CELLS.fire_puff_a, PARTICLE_CELLS.fire_puff_b, PARTICLE_CELLS.flame_cloud_a].map((cell) => ({ cell, tint: [0.72, 0.72, 0.74] as const, size: 0.55, grow: 2, weight: 1 })),
+    { cell: PARTICLE_CELLS.flame_cloud_b, tint: [1, 0.5, 0.12], size: 0.6, grow: 1.8, weight: 2 },
+  ],
+  // the acid bubble and small clouds in the green of poison
+  acid: [{ cell: PARTICLE_CELLS.acid_bubble, tint: [0.5, 1, 0.3], size: 0.4, grow: 1, weight: 2 }, ...MIST.map((cell) => ({ cell, tint: [0.4, 0.88, 0.16] as const, size: 0.45, grow: 2.2, weight: 1 }))],
+};
+/** The colours of the earth and of the dust that a meteor throws up. */
+const EARTH_BROWN: readonly [number, number, number] = [0.42, 0.28, 0.14];
+
 /** A tiny deterministic generator: the effects are only to look at, but a screenshot should come out the same twice. */
 function rng(seed: number): () => number {
   let a = seed >>> 0;
@@ -439,7 +472,7 @@ export class Effects implements PropWatcher {
    * Toxic Cloud (bug_fix_79): a massive green cloud round the party at `at` (its eyes). Puffs of green smoke well up round it and drift outwards over about `radius` world units, thinning out,
    * for two to three seconds.
    */
-  cloud(at: { x: number; y: number; z: number }, radius: number): void {
+  cloud(at: { x: number; y: number; z: number }, radius: number, tint: readonly [number, number, number] = TOXIC_GREEN): void {
     if (this.level === "off") return;
     this.ensure();
     const r = this.random;
@@ -453,9 +486,98 @@ export class Effects implements PropWatcher {
       const speed = (radius * (0.35 + 0.65 * r())) / life;
       this.particles.push({
         kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: at.x + Math.cos(a) * start, y: at.y - 1.5 + r() * 1.6, z: at.z + Math.sin(a) * start, vx: Math.cos(a) * speed, vy: 0.15 + r() * 0.35, vz: Math.sin(a) * speed,
-        age: 0, life, size0: 1.2 + r() * 0.8, size1: 3.4 + r() * 2, peak: 0.8, floor: -1e9, lands: "none", scale: 1, site: null, tint: TOXIC_GREEN, lit,
+        age: 0, life, size0: 1.2 + r() * 0.8, size1: 3.4 + r() * 2, peak: 0.8, floor: -1e9, lands: "none", scale: 1, site: null, tint, lit,
       });
     }
+  }
+
+  /**
+   * Particles along a ray from `from` to `to` (bug_fix_81): sprites of the ray's element start on the line, many close to the party and fewer and fewer further out, none beyond `RAY_REACH` (two fields).
+   * They start one after the other over the first fifth of a second, drift a little and fade, so the ray seems to throw them off as it flashes up.
+   */
+  rayParticles(kind: RayKind, from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }): void {
+    if (this.level === "off") return;
+    this.ensure();
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const dz = to.z - from.z;
+    const length = Math.hypot(dx, dy, dz);
+    if (length < 0.5) return;
+    const sprites = RAY_SPRITES[kind];
+    const total = sprites.reduce((sum, s) => sum + s.weight, 0);
+    const reach = Math.min(RAY_REACH, length);
+    const r = this.random;
+    const count = this.level === "full" ? 26 : 10;
+    for (let i = 0; i < count && this.particles.length < MAX_PARTICLES; i++) {
+      // the density falls off linearly with the distance: the inverse of that distribution
+      const d = Math.min(reach, RAY_START + (reach - RAY_START) * (1 - Math.sqrt(1 - r())));
+      let pick = r() * total;
+      const sprite = sprites.find((s) => (pick -= s.weight) < 0) ?? sprites[0]!;
+      const k = d / length;
+      const life = 0.55 + r() * 0.45;
+      const size = sprite.size * (0.7 + r() * 0.6);
+      this.particles.push({
+        kind: "puff", cell: sprite.cell, x: from.x + dx * k + (r() - 0.5) * 0.3, y: from.y + dy * k + (r() - 0.5) * 0.3, z: from.z + dz * k + (r() - 0.5) * 0.3,
+        vx: (r() - 0.5) * 0.7, vy: (r() - 0.3) * 0.6, vz: (r() - 0.5) * 0.7,
+        // (a negative age is a wait: the particle shows when it has run up to zero)
+        age: -(d / reach) * 0.2 - r() * 0.05, life, size0: size, size1: size * sprite.grow, peak: 0.95, floor: -1e9, lands: "none", scale: 1, site: null, tint: sprite.tint,
+      });
+    }
+  }
+
+  /**
+   * Star Burst (bug_fix_81): a ball of fire round the party at `at`. Flame puffs fly out of its middle in every direction over about `radius` world units and burn out within a second, the way the light of the spell dies down.
+   */
+  fireNova(at: { x: number; y: number; z: number }, radius: number): void {
+    if (this.level === "off") return;
+    this.ensure();
+    const r = this.random;
+    const count = this.level === "full" ? 70 : 28;
+    const cells = [PARTICLE_CELLS.fire_puff_a, PARTICLE_CELLS.fire_puff_b, PARTICLE_CELLS.flame_cloud_a, PARTICLE_CELLS.flame_cloud_b];
+    for (let i = 0; i < count && this.particles.length < MAX_PARTICLES; i++) {
+      const a = r() * Math.PI * 2;
+      const up = (r() - 0.35) * 0.6;
+      const life = 0.6 + r() * 0.4;
+      const speed = (radius * (0.45 + 0.55 * r())) / life;
+      const cell = cells[Math.floor(r() * cells.length)]!;
+      // white-yellow in the middle of the picture, orange on the way out: the colour of the sprite is a flame's
+      this.particles.push({
+        kind: "puff", cell, x: at.x + Math.cos(a) * 0.5, y: at.y - 1 + r() * 0.8, z: at.z + Math.sin(a) * 0.5, vx: Math.cos(a) * speed, vy: up * speed * 0.4, vz: Math.sin(a) * speed,
+        age: 0, life, size0: 1.1 + r() * 0.8, size1: 2.8 + r() * 1.6, peak: 0.95, floor: -1e9, lands: "none", scale: 1, site: null, tint: r() < 0.5 ? [1, 0.55, 0.14] : [1, 0.72, 0.3],
+      });
+    }
+  }
+
+  /**
+   * A meteor lands at `at`; `floor` is the height of the ground there (bug_fix_81): big grey clouds of dust billow up and out, and brown splinters of earth are thrown up and fall back to the ground.
+   */
+  meteorImpact(at: { x: number; y: number; z: number }, floor: number): void {
+    if (this.level === "off") return;
+    this.ensure();
+    const r = this.random;
+    const lit = Math.min(1, Math.max(TOXIC_MIN_LIGHT, lightAt(this.scene, at.x, floor + 1, at.z)));
+    const clouds = this.level === "full" ? 9 : 4;
+    for (let i = 0; i < clouds && this.particles.length < MAX_PARTICLES; i++) {
+      const a = r() * Math.PI * 2;
+      const life = 1.4 + r() * 0.9;
+      const drift = 0.5 + r() * 1.3;
+      this.particles.push({
+        kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: at.x + Math.cos(a) * 0.4, y: floor + 0.3 + r() * 0.5, z: at.z + Math.sin(a) * 0.4, vx: Math.cos(a) * drift, vy: 0.5 + r() * 0.8, vz: Math.sin(a) * drift,
+        age: 0, life, size0: 1.6 + r() * 1, size1: 4.4 + r() * 2.2, peak: 0.85, floor: -1e9, lands: "none", scale: 1, site: null, lit,
+      });
+    }
+    const bits = this.level === "full" ? 26 : 12;
+    for (let i = 0; i < bits; i++) {
+      const a = r() * Math.PI * 2;
+      const speed = 2.5 + r() * 4;
+      const tone = 0.8 + r() * 0.35;
+      this.debris.push({
+        sheet: "chips", cell: PARTICLE_CELLS.dust, x: at.x + Math.cos(a) * 0.3, y: floor + 0.3, z: at.z + Math.sin(a) * 0.3, vx: Math.cos(a) * speed, vy: 4 + r() * 5, vz: Math.sin(a) * speed,
+        age: 0, life: 2.2, floor, landed: -1, rest: 0.5, size: 0.3 + r() * 0.35, angle: r() * Math.PI * 2, spin: (r() < 0.5 ? -1 : 1) * (2 + r() * 5), pointed: false,
+        colour: jitter(EARTH_BROWN, tone), lit,
+      });
+    }
+    if (this.debris.length > 220) this.debris.splice(0, this.debris.length - 220);
   }
 
   /** A wisp of Toxic Cloud's green on a poisoned monster: it rises from its feet at `foot` to `height` over its life and thins out on the way. */
@@ -933,6 +1055,11 @@ export class Effects implements PropWatcher {
     for (const p of this.particles) {
       p.age += dt;
       if (p.age >= p.life) continue;
+      // a particle that has not started yet (the particles of a ray come one after the other) waits where it is and is not drawn
+      if (p.age < 0) {
+        live.push(p);
+        continue;
+      }
       if (p.kind === "drop") {
         p.vy -= GRAVITY * dt;
         p.x += p.vx * dt;
