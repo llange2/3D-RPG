@@ -82,6 +82,8 @@ export interface SpellDef {
   dam_min?: number;
   dam_max?: number;
   dam_type?: string[];
+  /** The table's column "Penetrating": the spell hits everything on its line (or in its area), not one monster. */
+  penetrating?: boolean;
   /** Name and description as the user's spell sheet has them (the old text table still carries the names of spells that were never built). */
   title: string;
   text: string;
@@ -263,15 +265,32 @@ export const MONSTERS: Record<number, MonsterDef> = Object.fromEntries(
 );
 export const MONSTER_IDS: number[] = Object.keys(MONSTERS).map(Number).sort((a, b) => a - b);
 
-const SHEET = SPELL_SHEET as Record<string, { name: string; description: string; explanation: string; scalesWithLevel?: boolean }>;
-/** Mana the user changed after the sheet (57th playtest, point 2): Power Cure costs 2 SP per level (4 at the rate of `SCALING_COST_SHARE`); `MANA_OVERRIDES` in `export_spell_sheet.py` is the same table. */
-const MANA_OVERRIDES: Record<number, number> = { 28: 4 };
+/** A row of `spell-sheet.json` (generated from `docs/SPELLS.md`, `npm run data:spells`); the damage columns exist for the offensive spells only. */
+interface SheetRow {
+  name: string;
+  description: string;
+  explanation: string;
+  scalesWithLevel?: boolean;
+  mana?: number;
+  penetrating?: boolean;
+  damMin?: number | null;
+  damMax?: number | null;
+  damType?: string[];
+}
+const SHEET = SPELL_SHEET as Record<string, SheetRow>;
 export const SPELLS: Record<number, SpellDef> = Object.fromEntries(
   Object.entries(SPELLS_RAW as unknown as Record<string, Omit<SpellDef, "id" | "title" | "text" | "explanation">>).map(([id, s]) => {
     const sheet = SHEET[id];
-    // column H "Scales with level" of the sheet decides (the raw table also flags Dimensional Rift and Power Shield, which the sheet does not)
+    // column "Scales with level" of the table decides (the raw table also flags Dimensional Rift and Power Shield, which the table does not)
     const scales = sheet?.scalesWithLevel ?? s.scales_with_level;
-    return [Number(id), { ...s, mana: MANA_OVERRIDES[Number(id)] ?? s.mana, scales_with_level: scales, id: Number(id), title: sheet?.name ?? textsRaw[s.name] ?? `Spell ${id}`, text: sheet?.description ?? textsRaw[s.description] ?? "", explanation: sheet?.explanation ?? "" } as SpellDef];
+    // bug_fix_79: the numbers the user changes after the old game (mana, damage, damage types, penetrating) are the table's, the raw `SPELLS.json` carries the old game's
+    const numbers: Partial<SpellDef> = {};
+    if (sheet?.mana !== undefined) numbers.mana = sheet.mana;
+    if (sheet?.penetrating !== undefined) numbers.penetrating = sheet.penetrating;
+    if (sheet?.damMin != null) numbers.dam_min = sheet.damMin;
+    if (sheet?.damMax != null) numbers.dam_max = sheet.damMax;
+    if (sheet?.damType && sheet.damType.length > 0) numbers.dam_type = sheet.damType;
+    return [Number(id), { ...s, ...numbers, scales_with_level: scales, id: Number(id), title: sheet?.name ?? textsRaw[s.name] ?? `Spell ${id}`, text: sheet?.description ?? textsRaw[s.description] ?? "", explanation: sheet?.explanation ?? "" } as SpellDef];
   }),
 );
 

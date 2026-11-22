@@ -930,6 +930,10 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("wpn_hammer", "Battle Hammer.glb", 600, 256),
   // the Archer's bow (the user's file, 8. 11. 2026): it comes slanted, its long axis along (-1, 1) with the belly towards (1, 1); turned by -45 degrees about z it stands upright with the belly towards +x
   { ...S("wpn_bow", "new:Bow.glb", 1500, 512), rotateZ: -45 },
+  // the Evil Ranger's staff (the user's file, 22. 11. 2026): 1.91 long, its middle at the origin, its long axis along y, a plain cylinder of 0.05 radius
+  S("wpn_stick", "new:Wooden_Stick.glb", 1500, 512),
+  // the snakes of Summon Snakes (spell 37, the user's file, 22. 11. 2026): a coil of three snakes, 1.62 high and about 2 across, middle at the origin; a projectile model (`PROJECTILE_MODELS`), so it is loaded with the game
+  S("proj_snakes", "new:Snakes.glb", 3000, 512),
   ...campaignItemModels(),
 ];
 

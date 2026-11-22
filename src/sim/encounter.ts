@@ -60,6 +60,10 @@ export interface MonsterInstance {
   wasImmobilized?: boolean;
   /** Clumsy: some of the monster's attacks fail, until it dies. */
   clumsy?: boolean;
+  /** Toxic Cloud: one entry for each cast that still works on the monster (they stack): the monster turns left and what the poison does each of them. */
+  poison?: { turns: number; damage: number }[];
+  /** Acid Spray: how many times it has eaten into the monster's armor (`monsterArmor`). */
+  armorCuts?: number;
   /** Gravity drew the monster to the party this turn: it spent the turn on that and does not strike until the next one. */
   pulled?: boolean;
   /** The share (in percent) of the sheet's XP this monster gives; 100 when unset. The monsters of a Monster Hut give more or less by world size. */
@@ -97,7 +101,11 @@ export type CombatEvent =
   | { type: "monster_attack"; uid: string; target: number; damage: number; ranged: boolean; damageType: DamageType; conditions: Condition[]; drained?: number; aged?: number; agedToDeath?: boolean }
   /** A Troll or a Vampire heals a share of its health at the end of a monster turn. */
   | { type: "monster_regen"; uid: string; amount: number }
-  | { type: "party_attack"; attacker: number | null; kind: "melee" | "ranged" | "magic"; uid: string; defId: number; damage: number; shots?: number; /** The element of an area spell's hit on this monster (Elemental Storm: one for each). */ element?: string }
+  | { type: "party_attack"; attacker: number | null; kind: "melee" | "ranged" | "magic"; uid: string; defId: number; damage: number; shots?: number; /** The element of an area spell's hit on this monster (Elemental Storm: one for each). */ element?: string; /** The hit is Toxic Cloud's poison working at the end of a monster turn. */ poison?: boolean }
+  /** Toxic Cloud has reached this monster (`stacks`: the casts that work on it now). */
+  | { type: "monster_poisoned"; uid: string; defId: number; stacks: number }
+  /** Acid Spray has eaten into this monster's armor: what is left of it. */
+  | { type: "monster_armor"; uid: string; defId: number; armor: number }
   /** The Wolf mascot finishes off a monster the party has wounded below `WOLF_EXECUTE_BELOW` of its health. */
   | { type: "wolf_kill"; uid: string; defId: number }
   | { type: "monster_dead"; uid: string; defId: number; x: number; y: number; xp: number; loot: { gold: number; item: Item | null } }
@@ -379,9 +387,42 @@ function targets(party: Party): number[] {
   return party.characters.map((c, i) => (isRifted(c) || c.conditions.some((x) => x === "Dead" || x === "Rotten" || x === "Unconscious" || x === "Petrified") ? -1 : i)).filter((i) => i >= 0);
 }
 
-/** What a monster turn counts down: Dimensional Phasing, Immobilize and the Dimensional Rift last a number of monster turns. */
-function endMonsterTurn(party: Party, enc: Encounter, events: CombatEvent[]): void {
-  for (const m of enc.monsters) {
+/** Acid Spray: every hit takes this share of the monster's own armor away, and the armor never goes below nothing. */
+export const ACID_SPRAY_ARMOR_SHARE = 0.1;
+
+/** The armor a monster has now: its table value less what Acid Spray has eaten (10 % of the table value for each hit, rounded to whole points). */
+export function monsterArmor(m: Pick<MonsterInstance, "defId" | "armorCuts">): number {
+  const armor = monsterById(m.defId).armor;
+  return Math.max(0, armor - Math.round(armor * ACID_SPRAY_ARMOR_SHARE * (m.armorCuts ?? 0)));
+}
+
+/** The monster's table entry with the armor it has now: what blows and arrows are worked out against. */
+function armoredDef(m: MonsterInstance): MonsterDef {
+  const def = monsterById(m.defId);
+  const armor = monsterArmor(m);
+  return armor === def.armor ? def : { ...def, armor };
+}
+
+/** Toxic Cloud: the radius round the party (a circle, in tiles), how many monster turns each cast poisons for, and how hard it hurts each turn. */
+export const TOXIC_RADIUS = 5;
+export const TOXIC_TURNS = 3;
+
+/**
+ * What a monster turn counts down: Dimensional Phasing, Immobilize and the Dimensional Rift last a number of monster turns, and Toxic Cloud's poison hurts every poisoned monster once for each
+ * cast that is still working (bug_fix_79: they stack, each lasts exactly three monster turns). A monster in another dimension takes nothing, and its poison waits.
+ */
+function endMonsterTurn(party: Party, enc: Encounter, events: CombatEvent[], rng: Rng): void {
+  for (const m of [...enc.monsters]) {
+    if (m.poison && m.hp > 0 && !isPhased(m)) {
+      const def = monsterById(m.defId);
+      const damage = m.poison.reduce((sum, p) => sum + spellDamageToMonster(def, p.damage, "acid"), 0);
+      m.poison = m.poison.map((p) => ({ ...p, turns: p.turns - 1 })).filter((p) => p.turns > 0);
+      if (m.poison.length === 0) delete m.poison;
+      m.hp -= damage;
+      events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage, element: "acid", poison: true });
+      killIfDead(party, enc, m, rng, events);
+      if (m.hp <= 0) continue;
+    }
     const regen = monsterById(m.defId).regen;
     if (regen > 0 && m.hp > 0) {
       const def = monsterById(m.defId);
@@ -591,13 +632,13 @@ export function monsterTurn(party: Party, view: GridView, enc: Encounter, px: nu
         });
         if (hit.defeated) {
           events.push({ type: "defeat" });
-          endMonsterTurn(party, enc, events);
+          endMonsterTurn(party, enc, events, rng);
           return events;
         }
       }
     }
   }
-  endMonsterTurn(party, enc, events);
+  endMonsterTurn(party, enc, events, rng);
   return events;
 }
 
@@ -796,7 +837,8 @@ export function partyAttack(party: Party, view: GridView, enc: Encounter, px: nu
   if (!target) return [{ type: "denied", reason: "no_target" }];
   // arrows and spells need a clear line like the monsters' shots do: walls and closed gates stop them (melee has no distance)
   if (attack.kind !== "melee" && !lineOfSight(view, enc, px, py, target.x, target.y)) return [{ type: "denied", reason: "no_target" }];
-  const def = monsterById(target.defId);
+  // (Acid Spray has eaten into its armor: blows and arrows are worked out against what is left)
+  const def = armoredDef(target);
   const distance = Math.max(Math.abs(target.x - px), Math.abs(target.y - py));
 
   const attackerIndex = beginTurn(party, enc);
@@ -913,7 +955,7 @@ export function spellInLine(party: Party, view: GridView, enc: Encounter, px: nu
 }
 
 /** Spells with a rule of their own for whom they hit and how hard. */
-export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm" | "prismatic_light" | "dragon_breath" | "turn_undead";
+export type SpecialSpell = "star_burst" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm" | "prismatic_light" | "dragon_breath" | "turn_undead" | "pain" | "fireball" | "toxic_cloud" | "acid_spray" | "dancing_sword";
 
 /** The elements Elemental Storm throws; every monster gets one of them at random. */
 export const ELEMENTAL_STORM_ELEMENTS: readonly string[] = ["fire", "ice", "acid"];
@@ -923,7 +965,7 @@ export const PRISMATIC_ELEMENTS: readonly string[] = ["acid", "ice", "fire", "ma
 export const STAR_BURST_RADIUS = 3;
 
 /** The spells that need no target: they work from the party outwards (`areaSpell`). */
-export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" | "star_burst" | "dragon_breath";
+export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" | "star_burst" | "dragon_breath" | "toxic_cloud" | "acid_spray" | "dancing_sword";
 
 /**
  * Meteor Shower (fire), Elemental Storm (a random element for each monster) and Prismatic Light (a random one of four damage types for each monster): they need no target, they
@@ -937,24 +979,42 @@ export function areaSpell(party: Party, view: GridView, enc: Encounter, px: numb
   const caught = enc.monsters.filter((m) => {
     if (m.hp <= 0 || isPhased(m)) return false;
     if (kind === "star_burst") return (m.x - px) ** 2 + (m.y - py) ** 2 <= STAR_BURST_RADIUS ** 2;
-    // Prismatic Light hits what the party sees (48th playtest, tower optimisation): its beams do not pass a wall, so a monster behind one is spared
-    if (kind === "prismatic_light" && inView && !inView(m)) return false;
+    // Toxic Cloud spreads from the party through every wall: it reaches monsters that are not in sight (bug_fix_79)
+    if (kind === "toxic_cloud") return (m.x - px) ** 2 + (m.y - py) ** 2 <= TOXIC_RADIUS ** 2;
+    // Prismatic Light, Acid Spray and Dancing Sword hit what the party sees ahead (their beams do not pass a wall, so a monster behind one is spared), Meteor Shower and Elemental Storm
+    // what it could see in every direction (`inView` says which it is; bug_fix_79)
+    if (kind !== "dragon_breath" && inView && !inView(m)) return false;
     return Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= MONSTER_ACTION_RADIUS;
   });
   for (const m of caught) {
+    if (kind === "toxic_cloud") {
+      (m.poison ??= []).push({ turns: TOXIC_TURNS, damage: magic.damage });
+      events.push({ type: "monster_poisoned", uid: m.uid, defId: m.defId, stacks: m.poison.length });
+      continue;
+    }
     const element =
       kind === "meteor_shower" ? "fire"
       : kind === "elemental_storm" ? ELEMENTAL_STORM_ELEMENTS[rng.int(ELEMENTAL_STORM_ELEMENTS.length)]!
       : kind === "prismatic_light" ? PRISMATIC_ELEMENTS[rng.int(PRISMATIC_ELEMENTS.length)]!
+      : kind === "dancing_sword" ? "physical"
+      : kind === "acid_spray" ? "acid"
       : magic.type;
     const damage = spellDamageToMonster(monsterById(m.defId), magic.damage, element);
     m.hp -= damage;
     events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage, element });
     killIfDead(party, enc, m, rng, events);
+    if (kind === "acid_spray" && m.hp > 0) {
+      // every hit takes a tenth of the armor the monster started with (`monsterArmor`)
+      m.armorCuts = (m.armorCuts ?? 0) + 1;
+      events.push({ type: "monster_armor", uid: m.uid, defId: m.defId, armor: monsterArmor(m) });
+    }
   }
   finishSpell(party, view, enc, px, py, rng, events);
   return events;
 }
+/** Pain only hurts these groups of the monster sheet (beasts, humanoids and the humanoid monsters). */
+export const PAIN_GROUPS: readonly string[] = ["beast", "humanoid", "monster_humanoid"];
+export const isPainable = (defId: number): boolean => PAIN_GROUPS.includes(monsterGroup(defId));
 /** Holy Word: undead with more health than this lose a share of it instead of a fixed amount. */
 export const HOLY_WORD_BIG = 600;
 export const HOLY_WORD_DAMAGE = 150;
@@ -980,7 +1040,17 @@ export function specialSpell(party: Party, view: GridView, enc: Encounter, px: n
     events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage });
     killIfDead(party, enc, m, rng, events);
   };
+  // what the monster's resistance leaves of a roll (Pain, Fireball)
+  const resisted = (m: MonsterInstance, type: string): void => strike(m, spellDamageToMonster(monsterById(m.defId), magic.damage, type));
   switch (kind) {
+    case "pain":
+      // everything of the three groups on the line through the target (bug_fix_79); the others on it are passed over
+      for (const m of monstersOnLine(view, enc, px, py, target)) if (isPainable(m.defId)) resisted(m, "physical");
+      break;
+    case "fireball":
+      // the target and every monster next to it, diagonals too; the party stands in none of their tiles, so it is never hit (bug_fix_79)
+      for (const m of [target, ...enc.monsters.filter((o) => o !== target && o.hp > 0 && !isPhased(o) && Math.max(Math.abs(o.x - target.x), Math.abs(o.y - target.y)) <= 1)]) resisted(m, "fire");
+      break;
     case "holy_word":
       for (const m of monstersOnLine(view, enc, px, py, target)) {
         if (!isUndead(m.defId)) continue;
@@ -1117,6 +1187,6 @@ export function identifyMonsters(enc: Encounter, px: number, py: number): Monste
     .map((m) => {
       const def = monsterById(m.defId);
       const resistances = { physical: def.res_physical, fire: def.res_fire, ice: def.res_ice, acid: def.res_acid, magic: def.res_magic };
-      return { uid: m.uid, defId: m.defId, name: def.name, hp: m.hp, maxHp: def.health, armor: def.armor, attacks: def.no_of_attacks, damageMin: Math.min(def.damage_min, def.damage_max), damageMax: Math.max(def.damage_min, def.damage_max), damageType: def.attack_type.toLowerCase(), abilities: def.special_abilties ?? "", resistances };
+      return { uid: m.uid, defId: m.defId, name: def.name, hp: m.hp, maxHp: def.health, armor: monsterArmor(m), attacks: def.no_of_attacks, damageMin: Math.min(def.damage_min, def.damage_max), damageMax: Math.max(def.damage_min, def.damage_max), damageType: def.attack_type.toLowerCase(), abilities: def.special_abilties ?? "", resistances };
     });
 }

@@ -137,8 +137,9 @@ describe("the texts of the sheet", () => {
   it("say what the spells do", () => {
     expect(SPELLS[14]!.text).toContain("acid damage");
     expect(SPELLS[19]!.text).toBe("Does 100 damage to one undead monster. Nothing reduces it.");
-    expect(SPELLS[38]!.text).toContain("in a line");
-    expect(SPELLS[39]!.text).toContain("in a line");
+    // (Acid Spray hits everything in view since bug_fix_79, no longer a line)
+    expect(SPELLS[38]!.text).toContain("in view of the party");
+    expect(SPELLS[39]!.text).toContain("in a straight line");
     expect(SPELLS[60]!.text).toContain("in a line");
     expect(SPELLS[45]!.text).toContain("Works only outside");
     expect(SPELLS[62]!.text).toContain("a door or wall");

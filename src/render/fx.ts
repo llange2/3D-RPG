@@ -41,6 +41,11 @@ const LAMP_FX_EMIT = 20;
 /** How far the burst of a hit is moved towards the eye (it must stand in front of the body, not in it), and the least light the bits take (they are never quite black in a dark place). */
 const HIT_TOWARDS_EYE = 0.45;
 const HIT_MIN_LIGHT = 0.35;
+/** Toxic Cloud's gas: the green of the poison (the same as the acid light, `PROJECTILE_LAMPS`), never darker than a half of the light of the place (it is a magic cloud and must show in a dungeon). */
+const TOXIC_GREEN: readonly [number, number, number] = [0.42, 0.95, 0.2];
+const TOXIC_MIN_LIGHT = 0.55;
+/** Never more particles alive than this when Toxic Cloud adds its own (a crowd of poisoned monsters sends wisps every 0.15 s): what does not fit into the smoke batch (320 quads) is skipped when drawn. */
+const MAX_PARTICLES = 1200;
 
 /** A tiny deterministic generator: the effects are only to look at, but a screenshot should come out the same twice. */
 function rng(seed: number): () => number {
@@ -431,6 +436,42 @@ export class Effects implements PropWatcher {
   }
 
   /**
+   * Toxic Cloud (bug_fix_79): a massive green cloud round the party at `at` (its eyes). Puffs of green smoke well up round it and drift outwards over about `radius` world units, thinning out,
+   * for two to three seconds.
+   */
+  cloud(at: { x: number; y: number; z: number }, radius: number): void {
+    if (this.level === "off") return;
+    this.ensure();
+    const r = this.random;
+    const count = this.level === "full" ? 150 : 60;
+    const lit = Math.min(1, Math.max(TOXIC_MIN_LIGHT, lightAt(this.scene, at.x, at.y, at.z)));
+    for (let i = 0; i < count && this.particles.length < MAX_PARTICLES; i++) {
+      const a = r() * Math.PI * 2;
+      const life = 2 + r() * 1.2;
+      const start = Math.sqrt(r()) * 1.2;
+      // out to the rim of the radius within its life (the nearer ones slower), a little upwards
+      const speed = (radius * (0.35 + 0.65 * r())) / life;
+      this.particles.push({
+        kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: at.x + Math.cos(a) * start, y: at.y - 1.5 + r() * 1.6, z: at.z + Math.sin(a) * start, vx: Math.cos(a) * speed, vy: 0.15 + r() * 0.35, vz: Math.sin(a) * speed,
+        age: 0, life, size0: 1.2 + r() * 0.8, size1: 3.4 + r() * 2, peak: 0.8, floor: -1e9, lands: "none", scale: 1, site: null, tint: TOXIC_GREEN, lit,
+      });
+    }
+  }
+
+  /** A wisp of Toxic Cloud's green on a poisoned monster: it rises from its feet at `foot` to `height` over its life and thins out on the way. */
+  wisp(foot: { x: number; y: number; z: number }, height: number): void {
+    if (this.level === "off" || this.particles.length >= MAX_PARTICLES) return;
+    this.ensure();
+    const r = this.random;
+    const life = 1.1 + r() * 0.5;
+    const lit = Math.min(1, Math.max(TOXIC_MIN_LIGHT, lightAt(this.scene, foot.x, foot.y + height / 2, foot.z)));
+    this.particles.push({
+      kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: foot.x + (r() - 0.5) * 0.6, y: foot.y + 0.05, z: foot.z + (r() - 0.5) * 0.6, vx: (r() - 0.5) * 0.12, vy: height / life, vz: (r() - 0.5) * 0.12,
+      age: 0, life, size0: 0.35, size1: 0.9, peak: 0.85, floor: -1e9, lands: "none", scale: 1, site: null, tint: TOXIC_GREEN, lit,
+    });
+  }
+
+  /**
    * A monster is hit by a blow or an arrow at `at` (the middle of its body); `floor` is the height of the ground under it. By what it is made of (`hitKindOf`) drops of blood, cogwheels or chunks of its own
    * colour (`tint`) burst out of the point of impact in all directions and fall to the floor, or grey smoke stands where it was hit and thins out (the user, 18. 11. 2026).
    */
@@ -519,7 +560,8 @@ export class Effects implements PropWatcher {
     this.ready = true;
     this.main = new QuadBatch(this.scene, "fx:particles", sheetTexture(this.scene, FX_FILES.particles, false), 420);
     this.drops = new QuadBatch(this.scene, "fx:drops", sheetTexture(this.scene, FX_FILES.drop, false), 200, "combine", true);
-    this.smoke = new QuadBatch(this.scene, "fx:smoke", sheetTexture(this.scene, FX_FILES.smoke, false), 80, "combine", true);
+    // (Toxic Cloud puts a few hundred puffs in the air at once)
+    this.smoke = new QuadBatch(this.scene, "fx:smoke", sheetTexture(this.scene, FX_FILES.smoke, false), 320, "combine", true);
     this.chips = new QuadBatch(this.scene, "fx:chips", sheetTexture(this.scene, FX_FILES.particles, false), 160, "combine", true);
     this.cogs = new QuadBatch(this.scene, "fx:cogs", sheetTexture(this.scene, FX_FILES.cog, false), 48, "combine", true);
     for (const kind of IMPACT_KINDS) this.impactBatches.set(kind, new QuadBatch(this.scene, `fx:impact:${kind}`, sheetTexture(this.scene, FX_FILES.impact[kind], false), 12, "combine"));

@@ -68,7 +68,7 @@ import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
   alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, phaseReach, phaseTargets, pullMonsters, weakestInCone,
-  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, STAR_BURST_RADIUS, isPhaseProof,
+  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, STAR_BURST_RADIUS, TOXIC_RADIUS, isPainable, isPhaseProof,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, hasLight, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
@@ -155,6 +155,10 @@ const PORTAL_KEY = "portal@";
 
 const ATTACK_SOUND: Record<string, number> = { acid: 9025, fire: 9027, ice: 9026, magic: 9029, physical: 9015, poison: 9025 };
 /** What a spell of an element throws (old items 9018 to 9022). A monster's physical shot is an arrow, a spell's is the "physical attack". */
+/** How often the wisps of Toxic Cloud rise from a poisoned monster (seconds). */
+const POISON_WISP_EVERY = 0.15;
+/** How a spell that hits several monsters is drawn: Cold Ray lines of light, Summon Snakes a coil of snakes at each monster, Fireball one bolt that bursts on the neighbours (bug_fix_79). */
+type SpellStyle = "line" | "snakes" | "splash";
 const SPELL_PROJECTILE: Record<string, ProjectileKind> = { acid: "acid", poison: "acid", fire: "fire", ice: "ice", magic: "magic", physical: "physical" };
 const monsterProjectile = (damageType: string): ProjectileKind => (damageType === "physical" ? "arrow" : SPELL_PROJECTILE[damageType] ?? "magic");
 
@@ -3940,10 +3944,18 @@ export class Game {
    * has to wait for the shot to arrive. `spell` is the kind of a cast spell: it is one projectile aimed at the farthest
    * monster it hits; without it every ranged attack is a volley of arrows.
    */
-  private launchPartyShots(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell, line = false): Map<string, number> {
+  private launchPartyShots(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell, style?: SpellStyle): Map<string, number> {
     const flights = new Map<string, number>();
-    const hits = events.filter((e): e is PartyAttackEvent => e.type === "party_attack" && e.kind !== "melee");
+    // (the poison of Toxic Cloud has no flight: it works when the monsters have had their turn)
+    const hits = events.filter((e): e is PartyAttackEvent => e.type === "party_attack" && e.kind !== "melee" && !e.poison);
     const from = this.muzzle();
+    if (area === "toxic_cloud") {
+      // a massive green cloud round the party (the monsters in reach get theirs when the poison is on them)
+      const { x, y, z } = this.player;
+      this.effects.cloud({ x, y, z }, TOXIC_RADIUS * 3);
+      for (const e of events) if (e.type === "monster_poisoned") flights.set(e.uid, 0);
+      return flights;
+    }
     if (area === "star_burst") {
       // no projectile: a bright light at the party that dies down through orange within 0.7 s, and the same over the whole picture (48th playtest, point 2)
       const { x, y, z } = this.player;
@@ -3973,6 +3985,17 @@ export class Game {
           flights.set(e.uid, this.projectiles.launch(kind, from, at));
           return;
         }
+        if (area === "acid_spray") {
+          // a green line from the party to every monster it sees, like the lines of Prismatic Light (bug_fix_79)
+          this.projectiles.beam("acid", from, at, true);
+          flights.set(e.uid, 0);
+          return;
+        }
+        if (area === "dancing_sword") {
+          // a blade flies to every monster in view, side by side like the breath of the dragon (bug_fix_79)
+          flights.set(e.uid, this.projectiles.launch("physical", from, at));
+          return;
+        }
         if (area === "meteor_shower") {
           // fireballs fall out of the sky onto every monster, straight down with the tail up (48th playtest, point 3), one after the other; where one lands it flashes
           const delay = (i % 8) * 0.06;
@@ -3994,7 +4017,7 @@ export class Game {
       });
       return flights;
     }
-    if (spell && line) {
+    if (spell && style === "line") {
       // Cold Ray: one blue line to every monster of the line it hits (the lines lie on top of each other), gone within 0.7 s
       for (const e of hits) {
         const at = this.monsters.anchor(e.uid);
@@ -4004,12 +4027,22 @@ export class Game {
       }
       return flights;
     }
+    if (spell && style === "snakes") {
+      // Summon Snakes (bug_fix_79): a coil of snakes stands in front of every monster of the line, there at once, its heads turned to the monster, and fades out in half a second
+      for (const e of hits) {
+        const at = this.monsters.hitSpot(e.uid);
+        if (at) this.projectiles.snakes({ x: at.x, y: at.floor, z: at.z }, from);
+        flights.set(e.uid, 0);
+      }
+      return flights;
+    }
     if (spell) {
       let far: { uid: string; at: Point; dist: number } | null = null;
       for (const e of hits) {
         const at = this.monsters.anchor(e.uid);
         const dist = at ? Math.hypot(at.x - from.x, at.z - from.z) : -1;
-        if (at && (!far || dist > far.dist)) far = { uid: e.uid, at, dist };
+        // Fireball flies at its target (the first hit) and bursts on the monsters next to it when it lands; a line of monsters is flown at to its far end
+        if (at && (style === "splash" ? !far : !far || dist > far.dist)) far = { uid: e.uid, at, dist };
       }
       if (!far) return flights;
       const seconds = this.projectiles.launch(spell, from, far.at);
@@ -4018,7 +4051,7 @@ export class Game {
         // the bolt strikes the farthest monster where it lands; every other monster of a line it passes through gets its impact when the bolt reaches it
         const at = this.monsters.anchor(e.uid);
         if (!at || e.uid === far.uid) continue;
-        const reach = Math.hypot(at.x - from.x, at.z - from.z) / (far.dist || 1);
+        const reach = style === "splash" ? 1 : Math.hypot(at.x - from.x, at.z - from.z) / (far.dist || 1);
         this.later(seconds * Math.min(1, reach), () => this.projectiles.impactAt(spell, at));
       }
       return flights;
@@ -4063,6 +4096,25 @@ export class Game {
     return this.audio.audibleDurationOf(ROBOT_SOUND.step, 0.5) * steps + ROBOT_STEP_PAUSE * (steps - 1);
   }
 
+  private poisonClock = 0;
+
+  /**
+   * Toxic Cloud (bug_fix_79): green wisps rise from the feet of every poisoned monster up to its top for as long as the poison works, one wisp per dose and monster every 0.15 s.
+   * The poison itself is in `MonsterInstance.poison` (the simulation counts its turns down).
+   */
+  private poisonFx(dt: number): void {
+    this.poisonClock += dt;
+    if (this.poisonClock < POISON_WISP_EVERY) return;
+    this.poisonClock = 0;
+    for (const m of this.enc.monsters) {
+      if (!m.poison || m.hp <= 0 || isPhased(m)) continue;
+      const spot = this.monsters.hitSpot(m.uid);
+      if (!spot) continue;
+      // (the middle of the body and the floor give the height: twice what lies between them)
+      for (let i = 0; i < m.poison.length && i < 3; i++) this.effects.wisp({ x: spot.x, y: spot.floor, z: spot.z }, Math.max(0.6, (spot.y - spot.floor) * 2));
+    }
+  }
+
   /** Runs `run` after `seconds` unless the scene has changed by then. */
   private later(seconds: number, run: () => void): void {
     if (seconds <= 0) {
@@ -4080,12 +4132,14 @@ export class Game {
    * the party's arrows and spells fly first and their hits show when they arrive, then the monsters answer (their shots
    * fly as well). Melee has no flight, so it all shows at once.
    */
-  private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell, line = false): void {
+  private handleEvents(events: CombatEvent[], spell?: ProjectileKind, area?: AreaSpell, style?: SpellStyle): void {
     const party = this.state.party;
-    const flights = this.launchPartyShots(events, spell, area, line);
-    const landing = (uid: string) => flights.get(uid) ?? 0;
+    const flights = this.launchPartyShots(events, spell, area, style);
     // the monsters answer when the party's last shot has landed
     const answer = Math.max(0, ...flights.values());
+    // Toxic Cloud's poison works at the end of the monsters' turn, after the party's shots have landed (and not for a monster none of them hit)
+    const poisoned = new Set(events.flatMap((e) => (e.type === "party_attack" && e.poison ? [e.uid] : [])));
+    const landing = (uid: string) => flights.get(uid) ?? (poisoned.has(uid) ? answer : 0);
     let end = answer;
     const at = (seconds: number, run: () => void) => {
       end = Math.max(end, seconds);
@@ -4187,7 +4241,7 @@ export class Game {
           if (e.kind === "ranged") this.audio.play(9019);
           at(landing(e.uid), () => {
             if (e.damage > 0) {
-              this.ui.log(`${who} ${e.kind === "magic" ? "burns" : e.kind === "ranged" ? "shoots" : "hits"} ${def.name} for ${e.damage}.`, "combat");
+              this.ui.log(e.poison ? `${def.name} suffers ${e.damage} from the poison.` : `${who} ${e.kind === "magic" ? "burns" : e.kind === "ranged" ? "shoots" : "hits"} ${def.name} for ${e.damage}.`, "combat");
               if (e.kind === "melee") this.audio.play(9016);
               // (a robot that is hit clangs instead of crying out)
               this.audio.play(isRobot(e.defId) ? ROBOT_SOUND.hit : 9033, 0.6);
@@ -4200,6 +4254,12 @@ export class Game {
           });
           break;
         }
+        case "monster_poisoned":
+          at(0, () => this.ui.log(`${monsterById(e.defId).name} is poisoned${e.stacks > 1 ? ` (${e.stacks} doses)` : ""}.`, "combat"));
+          break;
+        case "monster_armor":
+          at(landing(e.uid), () => this.ui.log(`The acid eats into the armor of ${monsterById(e.defId).name}: ${e.armor} left.`, "combat"));
+          break;
         case "wolf_kill":
           // zombie_attack is a stand-in until the Wolf gets a sound of its own
           at(landing(e.uid), () => {
@@ -4396,9 +4456,11 @@ export class Game {
       if (spellId === 72 && !(this.outsideNow() || this.interior?.map.theme.open)) return "Meteor Shower only works outside.";
       // Star Burst goes off at the party and reaches three tiles (a circle), the others the whole action radius
       if (spellId === 76) return near(STAR_BURST_RADIUS).length > 0 ? null : "There is no monster in range.";
-      // Prismatic Light hits what the party sees, and its beams do not pass a wall
-      if (spellId === 73) {
-        const seen = this.monsterSeen();
+      // Toxic Cloud spreads through walls: anything within five tiles is poisoned, seen or not
+      if (spellId === 14) return near(TOXIC_RADIUS).length > 0 ? null : "There is no monster in range.";
+      // Prismatic Light, Acid Spray and Dancing Sword hit what the party sees, and their beams do not pass a wall; Meteor Shower and Elemental Storm what it could see in every direction
+      if (spellId === 73 || spellId === 38 || spellId === 63 || spellId === 72 || spellId === 75) {
+        const seen = this.monsterSeen(spellId === 72 || spellId === 75);
         return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS && seen(m)) ? null : "There is no monster in view.";
       }
       return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS) ? null : "There is no monster in range.";
@@ -4409,6 +4471,8 @@ export class Game {
       if (needsAdjacent(spellId) && !isAdjacent(m.x, m.y, tx, ty, view)) return "That spell only works on a monster next to the party.";
       // Turn Undead strikes the one monster in front of the party, and only an undead one; nothing is spent on a living target
       if (spellId === 19 && !isUndead(m.defId)) return "Turn Undead only works on the undead.";
+      // Pain only hurts beasts and humanoids (bug_fix_79)
+      if (spellId === 12 && !isPainable(m.defId)) return "Pain only works on beasts and humanoids.";
       return null;
     }
     switch (spellId) {
@@ -4795,13 +4859,15 @@ export class Game {
       case "attack": {
         // Meteor Shower, Elemental Storm, Prismatic Light and Dragon Breath hit every monster in the action radius, Star Burst every one within three tiles of the party: nothing to aim at
         // (6. 11. 2026, 48th playtest points 2 and 5)
-        if (result.special === "meteor_shower" || result.special === "elemental_storm" || result.special === "prismatic_light" || result.special === "star_burst" || result.special === "dragon_breath") {
+        if (isAreaSpell(result.spellId)) {
           const { tx, ty } = this.player;
-          const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), result.special, { damage: result.damage, type: result.type }, this.monsterSeen());
+          const area = result.special as AreaSpell;
+          // Meteor Shower and Elemental Storm hit what the party could see in every direction, Prismatic Light, Acid Spray and Dancing Sword what it sees ahead (bug_fix_79)
+          const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), area, { damage: result.damage, type: result.type }, this.monsterSeen(area === "meteor_shower" || area === "elemental_storm"));
           // the sound of every element that falls (the storm throws all three)
           const elements = new Set(events.flatMap((e) => (e.type === "party_attack" && e.element ? [e.element] : [])));
           for (const element of elements.size > 0 ? elements : [result.type]) this.audio.play(ATTACK_SOUND[element] ?? 9029);
-          this.handleEvents(events, undefined, result.special);
+          this.handleEvents(events, undefined, area);
           break;
         }
         const target = this.focusMonster();
@@ -4815,7 +4881,8 @@ export class Game {
             ? spellInLine(party, this.gridView(), this.enc, tx, ty, this.combatRng(), target.uid, magic, result.undead)
             : partyAttack(party, this.gridView(), this.enc, tx, ty, this.combatRng(), { kind: "magic", targetUid: target.uid, magic });
         // Cold Ray is a blue line of light from the party through the monsters it hits, like the lines of Prismatic Light (the user, 8. 11. 2026), not a flying bolt
-        this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic", undefined, result.spellId === 39);
+        // Summon Snakes sends no bolt: a coil of snakes rises in front of every monster it hits (bug_fix_79); Fireball flies at its target and bursts on the monsters next to it
+        this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic", undefined, result.spellId === 39 ? "line" : result.spellId === 37 ? "snakes" : result.spellId === 44 ? "splash" : undefined);
         for (const healed of result.healed ?? []) this.ui.avatarEffect(healed.target, "cure_hp");
         if (result.healed?.length) this.ui.log("Moonlight washes over the party and heals it.", "good");
         break;
@@ -5971,10 +6038,11 @@ export class Game {
   }
 
   /** Whether the party sees a monster now: it stands in a cell of the viewing cone that no wall hides (the cells of `mappedMonsters`, without Wizard's Eye). */
-  private monsterSeen(): (m: { x: number; y: number }) => boolean {
+  private monsterSeen(allAround = false): (m: { x: number; y: number }) => boolean {
     const { tx, ty, facing } = this.player;
     const seen = new Set<string>();
-    for (const [x, y] of visibleCells(this.gridView().opaque, tx, ty, facing, this.sightRadius())) seen.add(`${x},${y}`);
+    // (`allAround`: what the party could see turning on the spot, Meteor Shower and Elemental Storm; bug_fix_79)
+    for (const way of allAround ? (["N", "E", "S", "W"] as const) : [facing]) for (const [x, y] of visibleCells(this.gridView().opaque, tx, ty, way, this.sightRadius())) seen.add(`${x},${y}`);
     if (this.mode === "interior") return (m) => seen.has(`${m.x},${m.y}`);
     // outside the world wraps: a monster stands at its place in the world, the cone at the copy next to the party
     return (m) => seen.has(`${tx + wrapDelta(tx, m.x, this.world.width)},${ty + wrapDelta(ty, m.y, this.world.height)}`);
@@ -6063,6 +6131,7 @@ export class Game {
       this.pruneMonsterViews();
     }
     this.projectiles.update(dt);
+    this.poisonFx(dt);
     this.effects.update(dt);
     this.campaignView.tick(dt);
     this.syncMascots();

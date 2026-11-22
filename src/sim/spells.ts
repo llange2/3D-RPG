@@ -10,16 +10,19 @@ import type { SpecialSpell } from "./encounter";
 import type { Character, ClassName, Condition, Item, LastCast, Party, Place, TimedEffect } from "./types";
 
 /** Single-target projectile spells (the old "non-penetrating" list). */
-const SINGLE_TARGET = new Set([3, 5, 8, 15, 29, 51, 59, 71, 74, 77]);
-/** Spells that hit everything on the line through the target (the sheet says "group" or "all monsters in a line"). Pain has its own entry in `castSpell`. */
-const PENETRATING = new Set([10, 14, 37, 38, 39, 44, 49, 53, 60, 63, 68]);
-/** Spells whose rule for whom they hit is in `specialSpell` (`sim/encounter.ts`); Meteor Shower, Elemental Storm, Prismatic Light, Star Burst and Dragon Breath are area spells (`areaSpell`). */
-const SPECIAL: Record<number, SpecialSpell> = { 43: "finger_of_death", 64: "mass_distortion", 69: "holy_word", 76: "star_burst", 72: "meteor_shower", 75: "elemental_storm", 73: "prismatic_light", 50: "dragon_breath", 19: "turn_undead" };
+const SINGLE_TARGET = new Set([3, 5, 8, 29, 51, 59, 71, 74, 77]);
+/** Spells that hit everything on the line through the target (the table says "all monsters in a straight line" or "in a row"). Pain has its own entry (`specialSpell`): it only hurts some groups. */
+const PENETRATING = new Set([10, 15, 37, 39, 49, 53, 60, 68]);
 /**
- * Meteor Shower, Elemental Storm, Prismatic Light and Dragon Breath hit every monster in the action radius, Star Burst every one within three tiles of the party: they need nothing
- * to aim at (`areaSpell`).
+ * Spells whose rule for whom they hit is in `specialSpell` (`sim/encounter.ts`); Meteor Shower, Elemental Storm, Prismatic Light, Star Burst, Dragon Breath, Acid Spray and Dancing Sword are
+ * area spells (`areaSpell`). Toxic Cloud (14) poisons everything around the party for three turns (`toxicCloud`), Fireball (44) hits the target and the monsters next to it.
  */
-export const isAreaSpell = (id: number): boolean => id === 72 || id === 75 || id === 73 || id === 76 || id === 50;
+const SPECIAL: Record<number, SpecialSpell> = { 43: "finger_of_death", 64: "mass_distortion", 69: "holy_word", 76: "star_burst", 72: "meteor_shower", 75: "elemental_storm", 73: "prismatic_light", 50: "dragon_breath", 19: "turn_undead", 12: "pain", 44: "fireball", 14: "toxic_cloud", 38: "acid_spray", 63: "dancing_sword" };
+/**
+ * Meteor Shower and Elemental Storm hit every monster the party sees in all four directions, Prismatic Light, Acid Spray and Dancing Sword every one it sees ahead (in its view), Dragon Breath
+ * every one in the action radius, Star Burst every one within three tiles, Toxic Cloud every one within five tiles of the party: they need nothing to aim at (`areaSpell`).
+ */
+export const isAreaSpell = (id: number): boolean => id === 72 || id === 75 || id === 73 || id === 76 || id === 50 || id === 14 || id === 38 || id === 63;
 /** Spells that change the monster the party is looking at (no damage). */
 const MONSTER_EFFECTS = new Set([31, 41]);
 

@@ -92,10 +92,16 @@ export function warmGrayIcon(data: Buffer, width: number, height: number): Buffe
   return out;
 }
 
+/** Pictures of the user's own (`tools/assets/sources/ui`) that take the place of the old game's `mm3_spell_<id>.png`: spell id to file. */
+const OWN_PICTURES: Readonly<Record<number, string>> = {
+  // bug_fix_79: Summon Snakes (formerly Lightning Bolt)
+  37: join(import.meta.dirname, "sources", "ui", "spell_summon_snakes.png"),
+};
+
 export async function buildSpellIcons(): Promise<{ files: number; bytes: number }> {
   const sheetOut = join(OUT, "ui", "spells.webp");
   const registerOut = join(OUT, "ui", "spells.json");
-  const sources = Array.from({ length: SPELLS }, (_, i) => join(TEX, `mm3_spell_${i + 1}.png`));
+  const sources = Array.from({ length: SPELLS }, (_, i) => OWN_PICTURES[i + 1] ?? join(TEX, `mm3_spell_${i + 1}.png`));
   if (upToDate(sheetOut, ...sources, import.meta.filename) && upToDate(registerOut, ...sources, import.meta.filename)) return { files: 2, bytes: statSync(sheetOut).size + statSync(registerOut).size };
 
   const cells: Buffer[] = [];

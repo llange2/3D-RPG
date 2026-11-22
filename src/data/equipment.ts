@@ -23,7 +23,14 @@ export const BOW_MODEL = "wpn_bow";
 /** The monsters that shoot with a bow: the Archer (1), the only model with the clip `Archery_Shot_1`. */
 export const BOW_MONSTERS: ReadonlySet<number> = new Set([1]);
 
-export const EQUIPMENT_MODELS: readonly string[] = [...Object.values(MODEL_OF_FILE), BOW_MODEL];
+/**
+ * The Evil Ranger's staff (the user's `Wooden_Stick.glb`, bug_fix_79): his new model has a weapon the old table never gave him (`anim_weapon` is empty), so the model is named here.
+ * Monsters of this table hold it in the right hand in place of `anim_weapon`.
+ */
+export const STICK_MODEL = "wpn_stick";
+export const STICK_MONSTERS: ReadonlySet<number> = new Set([24]);
+
+export const EQUIPMENT_MODELS: readonly string[] = [...Object.values(MODEL_OF_FILE), BOW_MODEL, STICK_MODEL];
 
 /** The registry key of an old equipment path (`resources/objects/Sword 2.glb`), or null for none or an unknown model. */
 export function equipmentModel(path: string | undefined | null): string | null {
