@@ -175,6 +175,14 @@ export function doorBearing(tileOf: (dx: number, dy: number) => TileInfo, h: num
   return options[h % options.length]!.bearing;
 }
 
+/** The flowers of the meadows, one to a bush tile by its hash: blue and pink are drawn by the game (`proceduralProps.ts`), red and yellow are the user's models. */
+const FLOWERS: readonly PropSpec[] = [
+  { model: "proc_flower_blue", scale: 1.3 },
+  { model: "obj_flower_red", scale: 1 },
+  { model: "proc_flower_pink", scale: 1.3 },
+  { model: "obj_flower_yellow", scale: 1 },
+];
+
 export function propSpec(deco: number, biome: Biome, h: number, tileModels = false): PropSpec | null {
   if (deco === DECO.LANDMARK) return landmarkSpec(h);
   if (tileModels && deco === DECO.TREE) {
@@ -187,11 +195,12 @@ export function propSpec(deco: number, biome: Biome, h: number, tileModels = fal
       if (biome === BIOME.DESERT) return { model: "veg_palms", scale: 1.45, lod: { model: "lod_tree_palm", scale: 1.1 } };
       if (biome === BIOME.SWAMP) return { model: "veg_old_tree", scale: 1.6, lod: { model: "lod_tree_dead", scale: 1.1 } };
       return { model: "veg_trees", scale: 1.45, lod: { model: "lod_tree_green", scale: 1.1 } };
+    // the small decoration of the open country (22. 11. 2026): the user's models of the blue mushroom, the blades of grass and the red and the yellow flower; the blue and the pink flower are still drawn by the game
     case DECO.BUSH:
-      if (biome === BIOME.SWAMP || biome === BIOME.FOREST) return { model: "proc_mushroom", scale: 1.3 };
-      return { model: h % 2 === 0 ? "proc_flower_blue" : "proc_flower_pink", scale: 1.3 };
+      if (biome === BIOME.SWAMP || biome === BIOME.FOREST) return { model: "obj_mushroom_blue", scale: 0.75 };
+      return FLOWERS[h % FLOWERS.length]!;
     case DECO.TUFT:
-      return { model: "proc_tuft", scale: 1.3 };
+      return { model: "obj_grass_blades", scale: 1.3 };
     default:
       return null;
   }
@@ -275,6 +284,7 @@ const ULTRA_GROUND = new Set(["gnd_grass", "gnd_snow", "gnd_swamp", "gnd_desert"
 export const TILE_MODELS = [
   "veg_trees", "veg_snowy_forest", "veg_palms", "veg_old_tree", "veg_forest_tile", "mtn_mountain", "mtn_snowy", "mtn_desert", "mtn_swamp", "mtn_lava",
   "gnd_grass", "gnd_snow", "gnd_swamp", "gnd_desert", "gnd_dirt", "gnd_cobble",
+  "obj_grass_blades", "obj_mushroom_blue", "obj_flower_red", "obj_flower_yellow",
 ];
 
 /** `TILE_MODELS` at the current quality: the full ground tiles replace the reduced ones in ultra. */

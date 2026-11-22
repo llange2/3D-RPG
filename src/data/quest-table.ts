@@ -121,6 +121,11 @@ export const QUEST_PROP: Readonly<Record<string, number>> = {
  */
 export const WALL_CRYSTAL_ITEM = 332;
 export const CRYSTAL_HOLDER_ITEM = 333;
+/**
+ * The torch that hangs on a wall (22. 11. 2026, the user's `Torchlight.glb`, `obj_torchlight`): a pseudo item like the wall holder, plain decoration on a floor cell next to a wall, facing the room
+ * (`bearing`). The castles hang them between the banners, the caves hang a few. It has smoke and a light in the colour of its flame (`ITEM_LAMPS`).
+ */
+export const TORCHLIGHT_ITEM = 334;
 /** The quest item: a crystal in its holder. Every one of them is bound to the place it was found in (`Game.bindCrystals`). */
 export const CRYSTAL_HOLDER = "quest_crystal_holder";
 

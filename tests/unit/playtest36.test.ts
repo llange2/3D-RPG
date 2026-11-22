@@ -111,7 +111,7 @@ describe("36th playtest, point 19: the card names the condition that kills first
     addCondition(c, "Crazy", party.minutes); // 4 days
     expect(shownCondition(c, party.minutes)).toBe("Poisoned");
     expect(conditionClass(c, party.minutes)).toBe("cond-bad");
-    expect(conditionTitle(c, party.minutes)).toBe("Poisoned: Dies in >48 hours\nCrazy: Dies in >96 hours");
+    expect(conditionTitle(c, party.minutes)).toBe("Conditions\nPoisoned: Dies in >48 hours\nCrazy: Dies in >96 hours");
     // a hero out of action shows that, whatever else
     addCondition(c, "Paralyzed", party.minutes);
     expect(shownCondition(c, party.minutes)).toBe("Paralyzed");

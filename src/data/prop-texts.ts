@@ -43,7 +43,8 @@ const PROP_LINES: Record<number, readonly string[]> = {
   68: ["A computer terminal. Its screen shows only: \"AWAITING INPUT\"."],
   69: ["A grindstone. The sparks are long gone; the dust is not."],
   70: ["A pile of gnawed bones."],
-  71: ["An abandoned fireplace. The ashes are cold."],
+  // (22. 11. 2026: the model is a cooking pot over a burning fire)
+  71: ["A fire crackles under a cooking pot. The pot is hot, and whatever is in it smells better than it looks.", "A pot hangs over a burning fire. It is far too hot to touch, so you leave the stew alone."],
   73: ["Runes on the floor flicker softly. You decide not to read them aloud."],
   75: ["A bookshelf full of dusty books. The only legible title is \"Cooking with Dragons\".", "Books, books, books. One of them is the diary of a very bored wizard."],
   76: ["A rustic lantern. It burns steadily without any oil."],

@@ -5,7 +5,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import { hash2 } from "../core/noise";
-import { CRATE_ITEM, QUEST_PROP, WALL_CRYSTAL_ITEM } from "../data/quest-table";
+import { CRATE_ITEM, QUEST_PROP, TORCHLIGHT_ITEM, WALL_CRYSTAL_ITEM } from "../data/quest-table";
 import { CAVE_HOLDER_OUT, CRYSTAL_MID, CRYSTAL_SCALE, FLOOR_HOLDER_SCALE, GLOW_LIT, HALO_OUT, HALO_SIZE, HALO_SIZE_WAITING, STAND_LIFT, WALL_CRYSTAL_ALONG, WALL_CRYSTAL_SCALE, WALL_CRYSTAL_TIP } from "./crystalLook";
 import { headFacing } from "../actions/quests";
 import { heapGone } from "../actions/registry";
@@ -873,7 +873,7 @@ export class InteriorView {
       if (themed && shownItem(a) === SUPPORT_BEAM) this.setOnCellEdge(themed, a);
       if (themed) {
         // a banner or a carving hangs a hand's breadth from the flat wall: with the 3D wall pieces on it stands out of the wall by their depth too, or their stones cut through the cloth
-        if (shownItem(a) === WALL_CRYSTAL_ITEM) {
+        if (shownItem(a) === WALL_CRYSTAL_ITEM || shownItem(a) === TORCHLIGHT_ITEM) {
           // the wall holder of quest_8 stands out of whatever the wall is made of: the rock of a cave, the 3D pieces of a dungeon wall, or nothing at all on a flat wall (the crystal in its mouth moves along, `setCrystals`)
           const out = this.holderOut();
           themed.x += Math.sin(themed.rotY) * out;

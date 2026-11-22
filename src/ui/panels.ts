@@ -87,7 +87,8 @@ export function itemTooltip(c: Character | null, item: Item | null, replaced: It
     // 40th playtest, point 9: up to 14 lines (a ring against a ring with other stats) run in two columns, so that the window stays a size that fits the screen
     h("div", { class: `bonus-lines${lines.length > 6 ? " many" : ""}` }, ...lines.map((l) => h("div", {}, `${l.label}: ${l.value}${l.unit ?? ""}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change}${l.unit ?? ""})` }) : null))),
     // 53rd playtest, point 18: what a weapon or a damage ring hits for on average, from the hero's level and attributes
-    ...(c ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage" }, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null)) : []),
+    // (only for an item the hero wears or could put on: `replaced` is null for one their class cannot use, and its damage was then added on top of the weapon in hand, "37 (+8)" for a Wooden Katana of 4 to 12 beside a Golden Scimitar of 13 to 21)
+    ...(c && (worn || (replaced && allowed)) ? averageDamageLines(c, item, replaced, worn).map((l) => h("div", { class: "avg-damage" }, `${l.label}: ${l.value}`, l.change ? h("span", { class: l.change > 0 ? "delta up" : "delta down", text: ` (${l.change > 0 ? "+" : ""}${l.change})` }) : null)) : []),
     replaced && lines.length > 0 ? h("div", { class: "small", text: replaced.name ? `Change if worn instead of ${replaced.name.trim()}` : "Change if worn" }) : null,
     offHandRing ? h("div", { class: "small compare-hint", text: offHandRing === "on" ? "Comparing to off-hand ring. Ctrl+click wears it there." : "Press Ctrl to compare to off-hand ring." }) : null,
     c && !allowed ? h("div", { class: "small", style: "color:#e8745f", text: `A ${c.classType} cannot use this.` }) : null,

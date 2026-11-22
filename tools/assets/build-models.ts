@@ -714,6 +714,11 @@ const REPLACED_ITEMS: Record<number, Pick<ModelSpec, "source" | "rotateY">> = {
   47: { source: "new:Village (poi_town).glb" },
   76: { source: "new:Rustic lantern (obj_lantern).glb" },
   89: { source: "new:Mermaid_Fountain.glb" },
+  // the mascots of 22. 11. 2026: the Wolf (item 11: 0.60 x 1.49 x 1.90, 10 148 triangles, long along z) and the Blue Mushroom (item 79: 0.81 x 0.95 x 0.81, the same file as the mushrooms of the open country, `obj_mushroom_blue`)
+  11: { source: "new:Mascot_Wolf.glb" },
+  79: { source: "new:Blue_mushroom.glb" },
+  // the cooking pot over a fire (item 71, 22. 11. 2026: 1.63 x 1.90 x 1.63, the fire burns and the pot is hot)
+  71: { source: "new:Cauldron_over_campfire.glb" },
   // the power crystal of quest_7 (quest document 1.5): the file has the old model's bounds (0.87 x 2.0 x 0.86), so it takes its place without a size correction
   67: { source: "new:Power_crystal.glb" },
 };
@@ -806,6 +811,15 @@ export const STATIC_MODELS: ModelSpec[] = [
   { ...S("gnd_desert", "Desert.glb", 220, 512), normals: "smooth", capped: true },
   // the dirt tile's texture is a baked atlas that no simplifier keeps together: a 9 x 9 height grid with the texture laid flat over it
   { ...S("gnd_dirt", "Dirt.obj", 220, 512), normals: "smooth", capped: true, heightfield: { cells: 9, uvSpan: 0.34 } },
+  // the small decoration of the open country (22. 11. 2026, the user's models, each normalised to 0.95 high around its middle: blades of grass 0.67 wide, the blue mushroom 0.81, the red flower 0.40,
+  // the yellow flower 0.65): they replace the procedural tuft and mushroom and join the blue and the pink flower. A view holds hundreds of them, so every one keeps about 200 triangles (`capped`, also
+  // in the original set, like the ground tiles) and smooth shading, because they are plants
+  { ...S("obj_grass_blades", "new:Blades_of_grass.glb", 200, 512), normals: "smooth", capped: true },
+  { ...S("obj_mushroom_blue", "new:Blue_mushroom.glb", 200, 512), normals: "smooth", capped: true },
+  { ...S("obj_flower_red", "new:Red_flower.glb", 200, 512), normals: "smooth", capped: true },
+  { ...S("obj_flower_yellow", "new:Yellow_flower.glb", 200, 512), normals: "smooth", capped: true },
+  // the torch of the castles and the caves (22. 11. 2026, the user's model: 0.22 x 0.95 x 0.26 around its middle, 4 207 triangles, the bracket at the lowest z): it hangs on a wall
+  S("obj_torchlight", "new:Torchlight.glb", 1500, 512),
   // the cobblestone road (campaign block 9): 1500 triangles, kept whole, and only 90 cells of the outside map; flat shaded, so that every stone shows its facets (smooth normals made the road look flat)
   { ...S("gnd_cobble", "Cobblestone.obj", 1600, 1024), normals: "flat", capped: true },
   // the ground tiles in full, for the quality "ultra" (2250 to 5800 triangles each, 1024 px textures; the original set keeps 4096 px)

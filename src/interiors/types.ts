@@ -246,6 +246,8 @@ export interface ShowcaseLayout {
   /** The old items that have a model (shown as decoration, `item`), and the models of the interior view that no item stands for. */
   items: { item: number; x: number; y: number }[];
   extras: { model: string; scale: number; height?: number; lift?: number; x: number; y: number }[];
+  /** The objects that hang on a wall (the torch of the castles and caves): a floor cell next to the wall and the bearing they look to. */
+  torches: { x: number; y: number; bearing: number }[];
   /** Lines of light over the floor, on cells that hold nothing else (the test of the showcase checks it). */
   lines: LightLine[];
 }

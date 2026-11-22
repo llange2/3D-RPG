@@ -14,7 +14,7 @@ import { BOOKSHELVES, isBookshelf } from "../data/spell-loot";
 import { sellerParams } from "../data/talent-sellers";
 import { QUARTERMASTER_GOODS, QUARTERMASTER_PERSONA, STORAGE_EQUIPMENT, sethHintText } from "../data/town-people";
 import { WALL_DECO_ITEMS, WALL_DECO_SPACING, pickWallDeco } from "../data/wall-deco";
-import { FORT_DOOR_ITEM, STAIRCASE_ITEM, WALL_CRYSTAL_ITEM, type MonsterGroup } from "../data/quest-table";
+import { FORT_DOOR_ITEM, STAIRCASE_ITEM, TORCHLIGHT_ITEM, WALL_CRYSTAL_ITEM, type MonsterGroup } from "../data/quest-table";
 import { monsterGroup } from "../data/tables";
 import { allowedIn, isFunctional } from "../data/item-rules";
 import { placeOf } from "../interiors/place";
@@ -22,7 +22,7 @@ import { TRAP_DAMAGE } from "../data/rules";
 import { stairLinks, towerFloorAt } from "../interiors/stairs";
 import { analyzeTopology, type Topology } from "../interiors/topology";
 import { blocksPassage } from "../interiors/passage";
-import { CELL, FACING_DELTA, type InteriorMap } from "../interiors/types";
+import { CELL, FACING_DELTA, type Facing, type InteriorMap } from "../interiors/types";
 import { computeAnchors, type AnchorSet } from "./anchors";
 import { themeBoss, themeMonsters } from "./monsterPool";
 import { finishQuest, placeQuest, type QuestEnv, type QuestResult } from "./questGen";
@@ -44,10 +44,15 @@ export interface ContentContext {
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** The banners (old items 103 to 105) and the wall decorations of the dungeons (the carving of the moose king, 125, and the reliefs of `data/wall-deco.ts`) hang on the wall: the cell in front of one stays as free as it was. */
-export const WALL_HUNG_ITEMS: readonly number[] = [103, 104, 105, ...WALL_DECO_ITEMS, WALL_CRYSTAL_ITEM];
-/** Actions that stand on their cell as an object, blocking it or not (a lore message is one only when it shows a statue or a person). */
+export const WALL_HUNG_ITEMS: readonly number[] = [103, 104, 105, ...WALL_DECO_ITEMS, WALL_CRYSTAL_ITEM, TORCHLIGHT_ITEM];
+/**
+ * Actions that stand on their cell as an object, blocking it or not (a lore message is one only when it shows a statue, a signpost or a person: `object`, `item` or `persona`, the same
+ * test as `hasObject` in the registry; the statues of the quests carry an `item`, and without it one stood in the only way to a chamber of the Shaft of Ithoa, moss-mere-318/small 11/12).
+ */
 const isObject = (a: { kind: ActionKind; params: Record<string, unknown> }): boolean =>
-  a.kind === "lore" ? a.params.object !== undefined || a.params.persona !== undefined : a.kind === "decor" && WALL_HUNG_ITEMS.includes(Number(a.params.item)) ? false : ["decor", "treasure", "shrine", "fountain", "riddle", "gong", "lever", "head", "teleporter", "talent", "work", "portal"].includes(a.kind);
+  a.kind === "lore" ? a.params.object !== undefined || a.params.persona !== undefined || (typeof a.params.item === "number" && !WALL_HUNG_ITEMS.includes(a.params.item)) : a.kind === "decor" && WALL_HUNG_ITEMS.includes(Number(a.params.item)) ? false : ["decor", "treasure", "shrine", "fountain", "riddle", "gong", "lever", "head", "teleporter", "talent", "work", "portal"].includes(a.kind);
+/** The wall a torch hangs on, and the compass bearing (degrees) it looks to: away from it, into the room. */
+const TORCH_SIDES: readonly (readonly [Facing, number])[] = [["N", 180], ["E", 270], ["S", 0], ["W", 90]];
 /** Cells between two banners on a wall, counting one banner (the old castles hang theirs every second or third cell). */
 const BANNER_SPACING = 3;
 /** Shortest stretch of straight wall that gets a banner, and the number of banners below which a castle hangs them closer together. */
@@ -446,11 +451,11 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   for (const rule of ruleList) {
     if (rule.when?.theme && !dt) continue;
     if (rule.when?.klass && dt?.klass !== rule.when.klass) continue;
-    if (rule.kind === "decor" && !dt && map.kind !== "town" && rule.id !== "banner") continue;
+    if (rule.kind === "decor" && !dt && map.kind !== "town" && rule.id !== "banner" && rule.id !== "torch") continue;
     // quest 5 has exactly one end boss, the one that stands before the end room
     if (rule.id === "boss_guard" && map.dungeon?.quest === "quest_5" && spawns.some((s) => s.boss)) continue;
     // a theme whose props are all chests, shrines and things that must be of use has no decoration
-    if (rule.kind === "decor" && dt && plainProps(dt).length === 0) continue;
+    if (rule.kind === "decor" && rule.id !== "torch" && dt && plainProps(dt).length === 0) continue;
     if (dt && ((rule.kind === "trap" && dt.trap === "none") || (rule.kind === "shrine" && dt.shrine === null))) continue;
     const rng = new Rng(derive(mapSeed, rule.id));
     const allowProtected = rule.kind === "transfer" || rule.anchor.startsWith("vault");
@@ -494,7 +499,13 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
       const raw: Record<string, ParamValue> = { ...(rule.params ?? {}), ...(a.params ?? {}), ...pickVariant(rule, local) };
       const params: Record<string, ParamValue> = {};
       for (const [k, v] of Object.entries(raw)) params[k] = resolveParam(v, vars, local);
-      if (dt && rule.id !== "lantern") themeParams(rule.kind, params, dt, vars, local, !!map.dungeon?.tower);
+      if (dt && rule.id !== "lantern" && rule.id !== "torch") themeParams(rule.kind, params, dt, vars, local, !!map.dungeon?.tower);
+      // a torch hangs on a wall of its cell and looks away from it (22. 11. 2026): a cell without a wall beside it gets none, one with two walls (a corridor) takes one of them by chance
+      if (rule.id === "torch") {
+        const walls = TORCH_SIDES.filter(([f]) => map.cells[idx(a.x + FACING_DELTA[f].dx, a.y + FACING_DELTA[f].dy)] !== CELL.FLOOR);
+        if (walls.length === 0) return;
+        params.bearing = walls[local.int(walls.length)]![1];
+      }
       if (dt && rule.kind === "trap" && map.dungeon?.tower) towerTrap(params, towerFloorAt(map.dungeon.tower, a.x), dt, vars, local);
       // a barrel must be of use: wherever a theme stands one as a prop it is a container with a few coins or a joke in it
       let kind: ActionKind = rule.kind === "spawn" ? "legacy" : rule.kind;

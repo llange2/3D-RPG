@@ -337,7 +337,7 @@ describe("spells that change monsters", () => {
     expect(immobilize(m)).toBe(false);
   });
 
-  it("Clumsy makes a tenth of a monster's attacks fail, and does not stack", () => {
+  it("Clumsy makes a quarter of a monster's attacks fail, and does not stack", () => {
     const [many] = ids((m) => m.no_of_attacks >= 1 && m.speed > 0 && m.terrain === "land" && !m.special_abilties?.includes("Causes"));
     const strikes = (clumsy: boolean) => {
       let n = 0;
@@ -353,7 +353,8 @@ describe("spells that change monsters", () => {
     const normal = strikes(false);
     const clumsy = strikes(true);
     expect(clumsy).toBeLessThan(normal);
-    expect(clumsy).toBeGreaterThan(normal * 0.8);
+    expect(clumsy).toBeGreaterThan(normal * 0.65);
+    expect(clumsy).toBeLessThan(normal * 0.85);
     const enc = fight(0, 0, [[many!, 1, 0]]);
     expect(makeClumsy(enc.monsters[0]!)).toBe(true);
     expect(makeClumsy(enc.monsters[0]!)).toBe(false);

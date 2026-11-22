@@ -68,6 +68,7 @@
       "when": { "excludeEntranceRoom": true, "minRoomSize": 40 },
       "count": { "perMap": [0, 1] },
       "params": { "pool": "cave", "line": "=rand(0,19)" }
-    }
+    },
+    { "id": "torch", "kind": "decor", "anchor": "roomEdge", "when": { "minRoomSize": 12 }, "count": { "perMap": [0, 5] }, "params": { "item": 334 } }
   ]
 }

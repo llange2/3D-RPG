@@ -2,7 +2,7 @@ import { headFacing, ringHeadPresent, runeActive } from "../actions/quests";
 import { WALL_HUNG_ITEMS } from "../actions/rules";
 import { LANTERN_ITEM, lanternOriginY } from "../data/item-tuning";
 import { DECO_MODELS, DECO_PLATE, DECO_SCALE } from "../data/wall-deco";
-import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM, TEMPORAL_ITEM, TEMPORAL_SCALE, WALL_CRYSTAL_ITEM } from "../data/quest-table";
+import { BROKEN_CRYSTAL_ITEM, CONSOLE_ITEM, CONSOLE_SCALE, CRATE_ITEM, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, POWER_CRYSTAL_ITEM, STAIRCASE_ITEM, TEMPORAL_ITEM, TEMPORAL_SCALE, TORCHLIGHT_ITEM, WALL_CRYSTAL_ITEM } from "../data/quest-table";
 import { CRYSTAL_BURY, CRYSTAL_SCALE, WALL_HOLDER_MID } from "./crystalLook";
 import type { ActionInstance, MapContent } from "../actions/types";
 import type { StaticModelInfo } from "./assets";
@@ -39,6 +39,28 @@ const DECO_SINK_SHARE_OF: Readonly<Record<string, number>> = { obj_deco_lion: 0 
 /** Half the width of a cell (`CELL_SIZE` 3): where the wall stands. */
 const WALL_AT = 1.5;
 
+/**
+ * The torch on the wall (item 334, `obj_torchlight`, the user's `Torchlight.glb` of 22. 11. 2026): 0.22 x 0.95 x 0.26 around its middle, with the clamp of its bracket at the lowest z (-0.13) and the
+ * flame on top (its middle 0.3, its tip 0.48 over the middle of the file, 0.03 in front of it). It is drawn 1.3 times the file's size, its middle 2.1 above the floor, the clamp lying 0.03 inside the wall.
+ */
+export const TORCH_SCALE = 1.3;
+export const TORCH_MID = 2.1;
+const TORCH_BACK = 0.13;
+const TORCH_FLAME_AT = 0.03;
+/** Height of the flame's middle and of its tip over the floor, for the light and the smoke (`ITEM_LAMPS`). */
+export const TORCH_FLAME_Y = TORCH_MID + 0.3 * TORCH_SCALE;
+export const TORCH_TIP_Y = TORCH_MID + 0.46 * TORCH_SCALE;
+/** How far from the middle of its cell the torch's middle lies, towards the wall it hangs on. */
+const TORCH_PUSH = WALL_AT + DECO_BURY - TORCH_BACK * TORCH_SCALE;
+
+/** Where the flame of a torch stands on the floor plan (world x and z): in front of the wall it hangs on, at the bearing its action gives. The cell's middle for an action without one. */
+export function torchFlameSpot(a: Pick<ActionInstance, "params">, cx: number, cz: number): { x: number; z: number } {
+  if (typeof a.params.bearing !== "number") return { x: cx, z: cz };
+  const rot = (a.params.bearing * Math.PI) / 180;
+  const toward = TORCH_PUSH - TORCH_FLAME_AT * TORCH_SCALE;
+  return { x: cx - Math.sin(rot) * toward, z: cz - Math.cos(rot) * toward };
+}
+
 /** Old item id -> the interior view's own model and its scale, for the objects it has had since before the themes. */
 export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?: [number, number, number]; lift?: number }> = {
   1: { model: "obj_chest", scale: 0.85 },
@@ -60,6 +82,8 @@ export const OWN_MODELS: Record<number, { model: string; scale: number; scale3?:
   [STAIRCASE_ITEM]: { model: "obj_wooden_stairs", scale: 1 },
   // the wall holder of quest_8 (quest document 1.10): it hangs on the wall like a relief with its middle at the height of the crystals' light; the crystal in its mouth is drawn apart (`InteriorView.setCrystals`)
   [WALL_CRYSTAL_ITEM]: { model: "obj_wall_crystal_holder", scale: CRYSTAL_SCALE, lift: WALL_HOLDER_MID - 0.95 * CRYSTAL_SCALE },
+  // the torch of the castles and the caves hangs on the wall like a relief (the lowest point of the file lies 0.48 under its middle)
+  [TORCHLIGHT_ITEM]: { model: "obj_torchlight", scale: TORCH_SCALE, lift: TORCH_MID - 0.48 * TORCH_SCALE },
   // the wall reliefs of the dungeons (45th playtest, point 4): the files are 1.3 x 1.9 around their middle, as big as the moose king's carving (scale 1.2); the middle hangs at the height of the
   // moose's (2.0), so the lowest point is 2.0 - 0.95 * 1.2 above the floor
   ...Object.fromEntries(Object.entries(DECO_MODELS).map(([item, model]) => [item, { model, scale: DECO_SCALE, lift: DECO_LIFT }])),
@@ -187,6 +211,11 @@ export function themedProp(a: ActionInstance, x: number, z: number, bearing: num
     const rotY = (bearing * Math.PI) / 180;
     const push = wallHolderDistance(staticInfo);
     return { model: own.model, x: x - Math.sin(rotY) * push, y: own.lift ?? 0, z: z - Math.cos(rotY) * push, rotY, scale: own.scale };
+  }
+  if (own && item === TORCHLIGHT_ITEM) {
+    // the clamp of the bracket (the lowest z of the file) lies in the wall: the middle is pushed back from the cell's middle until it does (the view moves it out of rock or wall pieces, `InteriorView.holderOut`)
+    const rotY = (bearing * Math.PI) / 180;
+    return { model: own.model, x: x - Math.sin(rotY) * TORCH_PUSH, y: own.lift ?? 0, z: z - Math.cos(rotY) * TORCH_PUSH, rotY, scale: own.scale };
   }
   if (own && item in DECO_MODELS) {
     // the files are centred on their middle: the relief is pushed back so that its back plane lies in the wall (the moose's carving has its origin in front of it)

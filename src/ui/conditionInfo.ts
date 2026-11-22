@@ -65,7 +65,8 @@ export function conditionTitle(c: Character, now: number): string {
   if (c.conditions.length > 1) {
     const timers = deadlyTimers(c, now);
     const others = CONDITIONS.filter((cond) => c.conditions.includes(cond) && !timers.some((t) => t.condition === cond));
-    return [...timers.map((t) => `${t.condition}: ${deathNote(t.left)}`), ...others].join("\n");
+    // (the first line of a mouse-over is its head: "Conditions", not the first condition)
+    return ["Conditions", ...timers.map((t) => `${t.condition}: ${deathNote(t.left)}`), ...others].join("\n");
   }
   const left = minutesToDeath(c, now);
   return left !== null ? deathNote(left) : "";
