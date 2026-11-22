@@ -714,9 +714,8 @@ const REPLACED_ITEMS: Record<number, Pick<ModelSpec, "source" | "rotateY">> = {
   47: { source: "new:Village (poi_town).glb" },
   76: { source: "new:Rustic lantern (obj_lantern).glb" },
   89: { source: "new:Mermaid_Fountain.glb" },
-  // the mascots of 22. 11. 2026: the Wolf (item 11: 0.60 x 1.49 x 1.90, 10 148 triangles, long along z) and the Blue Mushroom (item 79: 0.81 x 0.95 x 0.81, the same file as the mushrooms of the open country, `obj_mushroom_blue`)
+  // the Wolf mascot of 22. 11. 2026 (item 11: 0.60 x 1.49 x 1.90, 10 148 triangles, long along z). The Blue Mushroom mascot (item 79) keeps its old model: the new file is only the mushroom of the open country (`obj_mushroom_blue`, bug_fix_78)
   11: { source: "new:Mascot_Wolf.glb" },
-  79: { source: "new:Blue_mushroom.glb" },
   // the cooking pot over a fire (item 71, 22. 11. 2026: 1.63 x 1.90 x 1.63, the fire burns and the pot is hot)
   71: { source: "new:Cauldron_over_campfire.glb" },
   // the power crystal of quest_7 (quest document 1.5): the file has the old model's bounds (0.87 x 2.0 x 0.86), so it takes its place without a size correction
