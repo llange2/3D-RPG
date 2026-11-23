@@ -304,25 +304,30 @@ export function openInventory(ui: UI, party: Party, start: CharacterView, hooks:
       const item = bag.inventory[slot];
       const sel = selected ? bag.inventory[selected] : null;
       const ok = !!sel && selected !== slot && !slot.startsWith("slot") && canEquip(bag.inventory, sel, slot) && !cannotWear(bag, sel);
+      // bug_fix_83: a two-hander also fills the shield hand; its picture stands there at half strength and cannot be touched (the shield slot of a hero with a two-hander is empty for real)
+      const ghost = slot === "right_hand" && !item && bag.inventory.left_hand && isTwoHanded(bag.inventory.left_hand) ? bag.inventory.left_hand : null;
       const el = h(
         "div",
         {
-          class: `slot${selected === slot ? " sel" : ""}${ok ? " ok" : ""}`,
-          title: item ? item.name.trim() : label ?? "",
+          class: `slot${selected === slot ? " sel" : ""}${ok ? " ok" : ""}${ghost ? " ghost" : ""}`,
+          title: item ? item.name.trim() : ghost ? `${ghost.name.trim()} (two-handed)` : label ?? "",
           onclick: (e) => {
+            if (ghost) return;
             // Ctrl + click on a ring of the backpack that would replace one of two worn rings: it takes the off-hand ring's place at once
             const bag = owner();
             const ring = bag?.hero && slot.startsWith("slot") ? bag.inventory[slot] : null;
             if (e.ctrlKey && selected === null && bag && ring && ring.type === "ring" && !cannotWear(bag, ring) && offHandRingSlot(bag.inventory, ring) !== null) dbl(slot, true);
             else click(slot);
           },
-          ondblclick: (e) => dbl(slot, e.ctrlKey),
+          ondblclick: (e) => {
+            if (!ghost) dbl(slot, e.ctrlKey);
+          },
           oncontextmenu: (e) => {
             e.preventDefault();
-            dbl(slot, e.ctrlKey);
+            if (!ghost) dbl(slot, e.ctrlKey);
           },
         },
-        item ? itemIcon(item) : null,
+        item ? itemIcon(item) : ghost ? itemIcon(ghost) : null,
         label ? h("div", { class: "label", text: label }) : null,
       );
       el.addEventListener("mouseenter", () => {

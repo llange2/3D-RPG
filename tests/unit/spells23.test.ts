@@ -384,14 +384,20 @@ describe("attack spells with rules of their own", () => {
     return specialSpell(p, open, enc, 0, 0, rng(seed), kind, target, { damage: 200, type: "magic" });
   };
 
-  it("Holy Word hurts only the undead on the line: 150, or a quarter of the maximum for the big ones", () => {
+  it("Holy Word hurts every undead monster in view in all directions, only the undead: 150, or a quarter of the maximum for the big ones (bug_fix_83)", () => {
     const p = party();
-    const enc = fight(0, 0, [[living, 1, 0], [skeleton, 2, 0], [bigUndead, 3, 0], [skeleton, 2, 5]]);
-    const events = cast(p, enc, "holy_word", "m0");
+    for (const c of p.characters) c.hp = c.health = 99999;
+    const enc = fight(0, 0, [[living, 1, 0], [skeleton, 2, 0], [bigUndead, 3, 0], [skeleton, -2, 5]]);
+    expect(isAreaSpell(69)).toBe(true);
+    const events = areaSpell(p, open, enc, 0, 0, rng("hw"), "holy_word", { damage: 0, type: "magic" });
     const hits = events.filter((e) => e.type === "party_attack");
-    expect(hits).toHaveLength(2);
+    // (the second skeleton stands behind the party, off the line: it is struck as well)
+    expect(hits).toHaveLength(3);
     expect(enc.monsters.find((m) => m.uid === "m0")!.hp).toBe(MONSTERS[living]!.health);
-    expect(enc.monsters.find((m) => m.uid === "m3")!.hp).toBe(MONSTERS[skeleton]!.health);
+    // what the party cannot see is spared
+    const hidden = fight(0, 0, [[skeleton, 2, 0], [skeleton, -2, 0]]);
+    const seen = areaSpell(p, open, hidden, 0, 0, rng("hw2"), "holy_word", { damage: 0, type: "magic" }, (m) => m.x > 0).filter((e) => e.type === "party_attack");
+    expect(seen).toHaveLength(1);
     const dealt = (uid: string) => hits.find((e) => e.type === "party_attack" && e.uid === uid) as { damage: number } | undefined;
     // the skeleton may be gone (150 is more than its health): then it is no longer in the fight
     expect(dealt("m1")?.damage).toBe(150);

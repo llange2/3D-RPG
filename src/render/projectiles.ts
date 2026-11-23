@@ -13,6 +13,9 @@ import type { PropInstance } from "./terrainMesher";
  */
 export type ProjectileKind = "arrow" | "fire" | "ice" | "magic" | "physical" | "acid" | "missile" | "laser";
 
+/** The swords of Dancing Sword (bug_fix_83): the monsters' weapon models, one of them at random for each monster. */
+export const SWORD_MODELS = ["wpn_sword1", "wpn_sword2", "wpn_sword3"];
+
 export const PROJECTILE_MODELS = ["proj_arrow", "proj_fire", "proj_ice", "proj_magic", "proj_physical", "proj_poison", "proj_missile", "proj_snakes", "proj_insect"];
 
 interface Pose {
@@ -27,6 +30,9 @@ interface Pose {
 }
 
 const ICE_SPIN = 45;
+/** Dancing Sword (bug_fix_83): the size of a flying sword (they are 1.9 long, a bit under a tile and a half then) and how fast it whirls about its length, radians per second. */
+const SWORD_SCALE = 0.75;
+const SWORD_WHIRL = 22;
 
 const POSES: Record<Exclude<ProjectileKind, "laser">, Pose> = {
   // the fletching is a flat vane (0.54 high, 0.17 wide): rolled by 90 degrees it lies flat, so the party sees the feathers from behind
@@ -56,6 +62,11 @@ const TILE = 3;
 /** The flash of Elemental Storm: how long it fades out (the user, 6. 11. 2026), and how much bigger than a flying one the element is drawn. */
 export const FLASH_SECONDS = 0.3;
 const FLASH_SCALE = 2.2;
+/** Elemental Storm (bug_fix_83): the size of a hit against a flying element, how long it stands and how long it takes to fade out (two seconds in all), and the size of its impact picture. */
+const STORM_SCALE = 1.25;
+export const STORM_HOLD = 1.5;
+export const STORM_FADE = 0.5;
+const STORM_IMPACT_SIZE = 1.6;
 /** How much of its light a spell keeps by day outside. */
 const SPELL_DAYLIGHT = 0.55;
 /** Prismatic Light: the lines fade out over this long (the user, 8. 11. 2026). */
@@ -78,6 +89,8 @@ interface Flight {
   yaw: number;
   t: number;
   duration: number;
+  /** A turn about the model's long axis in radians per second, added to the pose's own: the whirl of a Dancing Sword. */
+  whirl?: number;
   /** The element strikes where the flight ends (`Effects.impact`): not for the shots of monsters, which end at the party's eyes. */
   impact: boolean;
 }
@@ -289,6 +302,20 @@ export class Projectiles {
     return duration;
   }
 
+  /**
+   * A sword of Dancing Sword (bug_fix_83) flies from `from` to `to`, point first and whirling about its long axis; `model` is one of `SWORD_MODELS`. It leaves no picture of its own where it lands (the hit
+   * of the monster is the game's). Returns the seconds until it arrives.
+   */
+  launchSword(model: string, from: Point, to: Point): number {
+    const dx = to.x - from.x;
+    const dz = to.z - from.z;
+    const duration = flightSeconds(Math.hypot(dx, dz) / TILE);
+    // (the blade's tip is its +y end, like the icicle's: pitched by 90 degrees it flies point first)
+    const pose: Pose = { model, scale: SWORD_SCALE, pitch: 90, roll: 0 };
+    this.flights.push({ id: Projectiles.flights++, kind: "physical", pose, laser: null, from, to, yaw: Math.atan2(dx, dz), t: 0, duration, impact: false, whirl: SWORD_WHIRL * (Math.random() < 0.5 ? -1 : 1) });
+    return duration;
+  }
+
   /** The impact of a spell of `kind` at `at` without a flight of its own: the other monsters a bolt passes through (Acid Spray, Moon Ray) and the monsters of Star Burst. */
   impactAt(kind: ProjectileKind, at: Point): void {
     const struck = IMPACT_OF[kind];
@@ -303,6 +330,18 @@ export class Projectiles {
     // the element shines for as long as it stands there (48th playtest, point 6: the storm had no light)
     const color = PROJECTILE_LAMPS[kind]!.color;
     this.burst(at, { from: color, to: color, peak: 4, range: 8, seconds: FLASH_SECONDS, daylight: SPELL_DAYLIGHT });
+  }
+
+  /**
+   * One of the three hits of Elemental Storm (bug_fix_83): the element's model stands at `at` a little smaller than a storm element used to (so that the three on one monster do not overlap), solid for
+   * `STORM_HOLD` seconds and gone `STORM_FADE` seconds later, with its sprites and its small cloud (`Effects.stormHit`) and its own light for as long.
+   */
+  stormHit(kind: "fire" | "ice" | "acid", at: Point): void {
+    this.flashes.push({ pose: POSES[kind], at, t: 0, seconds: STORM_FADE, yaw: 0, scale: POSES[kind].scale * STORM_SCALE, hold: STORM_HOLD });
+    this.effects?.impact(kind, at, STORM_IMPACT_SIZE);
+    this.effects?.stormHit(kind, at);
+    const color = PROJECTILE_LAMPS[kind]!.color;
+    this.burst(at, { from: color, to: color, peak: 3, range: 6, seconds: STORM_HOLD + STORM_FADE, daylight: SPELL_DAYLIGHT });
   }
 
   /**
@@ -418,7 +457,7 @@ export class Projectiles {
         continue;
       }
       const pose = f.pose!;
-      list.push({ model: pose.model, x, y, z, rotY: f.yaw, rotX: (pose.pitch * Math.PI) / 180 + tilt, rotZ: (pose.roll * Math.PI) / 180, ...(pose.spin ? { spin: (pose.spin * Math.PI) / 180 } : {}), scale: pose.scale, atOrigin: true });
+      list.push({ model: pose.model, x, y, z, rotY: f.yaw, rotX: (pose.pitch * Math.PI) / 180 + tilt, rotZ: (pose.roll * Math.PI) / 180, ...(pose.spin || f.whirl ? { spin: ((pose.spin ?? 0) * Math.PI) / 180 + (f.whirl ?? 0) * f.t } : {}), scale: pose.scale, atOrigin: true });
     }
     // the elements of a storm: upright, and all of one model fade together (they appear at the same moment); a model without a flash is solid again
     const fade = new Map<string, number>();

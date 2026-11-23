@@ -8,7 +8,7 @@ import { TORCH_FLAME_Y, TORCH_TIP_Y, shownItem, torchFlameSpot } from "./interio
 import { TRAP_OBJECT, elementOf } from "./interiorTraps";
 
 /** The little things that rise round a lamp (`LampKind.fx`). */
-export type LampFx = "torch" | "lava" | "acid" | "magic" | "crystal" | "portal" | "gold" | "pool" | "lantern" | "rune";
+export type LampFx = "torch" | "lava" | "acid" | "magic" | "crystal" | "portal" | "gold" | "pool" | "lantern" | "rune" | "campfire";
 
 /** A kind of map object that gives light. `y` is the height of the light; `range` and `intensity` replace the usual ones for a lamp that shines further or stronger. */
 export interface LampKind {
@@ -128,7 +128,7 @@ export const ITEM_LAMPS: Readonly<Record<number, LampKind>> = {
   // Rustic lantern, hangs from the ceiling on its chain; since the 51st playtest (point 2) it shines like the torches of the tower: warm, weak and wide
   76: { y: 3.2 - LANTERN_DROP, color: TOWER_TORCH_LAMP.color, range: TOWER_TORCH_LAMP.range, intensity: TOWER_TORCH_LAMP.intensity },
   [TORCHLIGHT_ITEM]: TORCHLIGHT_LAMP,
-  71: { y: 0.8, color: [1, 0.58, 0.26], fx: "torch", fxY: 0.45 }, // the cooking pot over a fire (22. 11. 2026, `Cauldron_over_campfire.glb`: the flames stand in the ring of stones, under the pot, a good half unit high)
+  71: { y: 0.8, color: [1, 0.58, 0.26], fx: "campfire", fxY: 0.45 }, // the cooking pot over a fire (22. 11. 2026; bug_fix_83: flame tongues rise from the fire, since the flames of the model do not move; `Cauldron_over_campfire.glb`: the flames stand in the ring of stones, under the pot, a good half unit high)
 };
 
 /**

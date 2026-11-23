@@ -44,6 +44,12 @@ const HIT_MIN_LIGHT = 0.35;
 /** Toxic Cloud's gas: the green of the poison (the same as the acid light, `PROJECTILE_LAMPS`), never darker than a half of the light of the place (it is a magic cloud and must show in a dungeon). */
 const TOXIC_GREEN: readonly [number, number, number] = [0.42, 0.95, 0.2];
 const TOXIC_MIN_LIGHT = 0.55;
+/** What the three hits of Elemental Storm are made of: the sprites of the particle sheet with their colour, and the colour of the small cloud beside them (bug_fix_83). */
+const STORM_LOOKS: Readonly<Record<"fire" | "ice" | "acid", { cells: readonly number[]; tint: readonly [number, number, number]; cloud: readonly [number, number, number] }>> = {
+  fire: { cells: [PARTICLE_CELLS.flame_tongue, PARTICLE_CELLS.fire_puff_a, PARTICLE_CELLS.fire_puff_b], tint: [1, 0.55, 0.2], cloud: [0.5, 0.5, 0.5] },
+  ice: { cells: [PARTICLE_CELLS.ice_shard_a, PARTICLE_CELLS.ice_shard_b, PARTICLE_CELLS.frost_glint], tint: [0.7, 0.9, 1], cloud: [0.65, 0.88, 1] },
+  acid: { cells: [PARTICLE_CELLS.acid_blob, PARTICLE_CELLS.acid_bubble], tint: [0.5, 1, 0.25], cloud: [0.42, 0.95, 0.2] },
+};
 /** Never more particles alive than this when Toxic Cloud adds its own (a crowd of poisoned monsters sends wisps every 0.15 s): what does not fit into the smoke batch (320 quads) is skipped when drawn. */
 const MAX_PARTICLES = 1200;
 
@@ -594,6 +600,31 @@ export class Effects implements PropWatcher {
   }
 
   /**
+   * One of the three hits of Elemental Storm (bug_fix_83): at `at` on a monster's body the element's sprites (flames, shards of ice, acid) and a small cloud (smoky grey, icy light blue, toxic green) stand
+   * for two seconds and thin out within the last half second, so the three hits at different places of one monster can be told apart.
+   */
+  stormHit(element: "fire" | "ice" | "acid", at: { x: number; y: number; z: number }): void {
+    if (this.level === "off") return;
+    this.ensure();
+    const r = this.random;
+    const full = this.level === "full";
+    const look = STORM_LOOKS[element];
+    const lit = Math.min(1, Math.max(TOXIC_MIN_LIGHT, lightAt(this.scene, at.x, at.y, at.z)));
+    for (let i = 0; i < (full ? 7 : 3) && this.particles.length < MAX_PARTICLES; i++) {
+      this.particles.push({
+        kind: "puff", cell: look.cells[Math.floor(r() * look.cells.length)]!, x: at.x + (r() - 0.5) * 0.4, y: at.y + (r() - 0.5) * 0.4, z: at.z + (r() - 0.5) * 0.4, vx: (r() - 0.5) * 0.12, vy: 0.05 + r() * 0.2, vz: (r() - 0.5) * 0.12,
+        age: 0, life: 1.7 + r() * 0.5, size0: 0.28 + r() * 0.1, size1: 0.22, peak: 0.95, floor: -1e9, lands: "none", scale: 1, site: null, tint: look.tint,
+      });
+    }
+    for (let i = 0; i < (full ? 5 : 2) && this.particles.length < MAX_PARTICLES; i++) {
+      this.particles.push({
+        kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: at.x + (r() - 0.5) * 0.4, y: at.y + (r() - 0.5) * 0.3, z: at.z + (r() - 0.5) * 0.4, vx: (r() - 0.5) * 0.08, vy: 0.08 + r() * 0.12, vz: (r() - 0.5) * 0.08,
+        age: 0, life: 1.8 + r() * 0.4, size0: 0.25, size1: 0.7 + r() * 0.2, peak: 0.6, floor: -1e9, lands: "none", scale: 1, site: null, tint: look.cloud, lit,
+      });
+    }
+  }
+
+  /**
    * A monster is hit by a blow or an arrow at `at` (the middle of its body); `floor` is the height of the ground under it. By what it is made of (`hitKindOf`) drops of blood, cogwheels or chunks of its own
    * colour (`tint`) burst out of the point of impact in all directions and fall to the floor, or grey smoke stands where it was hit and thins out (the user, 18. 11. 2026).
    */
@@ -963,6 +994,21 @@ export class Effects implements PropWatcher {
           this.particles.push({
             kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: l.x + (r() - 0.5) * 0.1, y: y0 + 0.2, z: l.z + (r() - 0.5) * 0.1, vx: (r() - 0.5) * 0.25, vy: 0.5 + r() * 0.3, vz: (r() - 0.5) * 0.25,
             age: 0, life: 2.6 + r() * 1.2, size0: 0.22, size1: 1.1, peak: 0.34, floor: -1e9, lands: "none", scale: 1, site: null, lit,
+          });
+        }
+        break;
+      }
+      case "campfire": {
+        // the fire under the pot (bug_fix_83): the flames of its model stand still, so flame tongues (row 1, no. 3 of the particle sheet) rise and flicker between the stones and hide it, with the sparks and the smoke of a torch
+        if (roll(7)) {
+          const [ox, oz] = around(0.22);
+          add(PARTICLE_CELLS.flame_tongue, l.x + ox, y0 - 0.1, l.z + oz, (r() - 0.5) * 0.12, 0.45 + r() * 0.5, (r() - 0.5) * 0.12, 0.45 + r() * 0.35, 0.34 + r() * 0.12, 0.08, 0.95, [1, 0.62, 0.22]);
+        }
+        if (roll(1.6)) add(PARTICLE_CELLS.spark, l.x + (r() - 0.5) * 0.3, y0 + 0.1, l.z + (r() - 0.5) * 0.3, (r() - 0.5) * 0.3, 0.8 + r() * 0.9, (r() - 0.5) * 0.3, 0.7 + r() * 0.7, 0.12, 0.03, 0.95, [1, 0.72, 0.36]);
+        if (roll(0.55) && !this.smoke!.full) {
+          this.particles.push({
+            kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: l.x + (r() - 0.5) * 0.2, y: y0 + 0.5, z: l.z + (r() - 0.5) * 0.2, vx: (r() - 0.5) * 0.25, vy: 0.5 + r() * 0.3, vz: (r() - 0.5) * 0.25,
+            age: 0, life: 2.6 + r() * 1.2, size0: 0.22, size1: 1.1, peak: 0.34, floor: -1e9, lands: "none", scale: 1, site: null, lit: lightAt(this.scene, l.x, y0 + 0.9, l.z),
           });
         }
         break;

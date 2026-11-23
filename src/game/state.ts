@@ -143,6 +143,11 @@ export interface GameState {
   pirate: PirateState | null;
   /** dropped loot per map key (`ow` for the overworld, the interior key otherwise) */
   loot: Record<string, LootPile[]>;
+  /**
+   * What a chest still holds after the party took what fitted into its backpacks (bug_fix_83), by the chest's action uid. The chest stays shut for the map (not in `opened`): it is open, unlocked and
+   * its trap has gone off, and the next use hands out what is left.
+   */
+  chestLeft: Record<string, Item[]>;
   explored: Explored;
   visited: Set<string>;
   steps: number;
@@ -164,6 +169,7 @@ export function newGameState(seed: string, start: { x: number; y: number; facing
     hutSlots: {},
     pirate: null,
     loot: {},
+    chestLeft: {},
     explored: new Explored(spanOf(size)),
     visited: new Set(),
     steps: 0,
@@ -207,6 +213,8 @@ export interface SaveFile {
     /** Absent in saves from before the pirate ship. */
     pirate?: PirateState | null;
     loot: Record<string, LootPile[]>;
+    /** Absent in saves from before the chests kept what did not fit (bug_fix_83). */
+    chestLeft?: Record<string, Item[]>;
     explored: Record<string, string>;
     visited: string[];
     steps: number;
@@ -234,6 +242,7 @@ export function toSaveFile(state: GameState): SaveFile {
       hutSlots: state.hutSlots,
       pirate: state.pirate,
       loot: state.loot,
+      chestLeft: state.chestLeft,
       explored: state.explored.toJSON(),
       visited: [...state.visited],
       steps: state.steps,
@@ -269,6 +278,7 @@ export function fromSaveFile(file: SaveFile): GameState {
     hutSlots: s.hutSlots ?? {},
     pirate: s.pirate ?? null,
     loot: s.loot,
+    chestLeft: s.chestLeft ?? {},
     explored: Explored.fromJSON(s.explored, spanOf(size)),
     visited: new Set(s.visited),
     steps: s.steps,
