@@ -19,11 +19,11 @@ const PENETRATING = new Set([10, 15, 37, 39, 49, 60, 68]);
  */
 const SPECIAL: Record<number, SpecialSpell> = { 43: "finger_of_death", 64: "mass_distortion", 53: "fantastic_freeze", 69: "holy_word", 76: "star_burst", 72: "meteor_shower", 75: "elemental_storm", 73: "prismatic_light", 50: "dragon_breath", 19: "turn_undead", 12: "pain", 44: "fireball", 14: "toxic_cloud", 38: "acid_spray", 63: "dancing_sword" };
 /**
- * Meteor Shower and Elemental Storm hit every monster the party sees in all four directions, Prismatic Light, Acid Spray and Dancing Sword every one it sees ahead (in its view), Dragon Breath
+ * Meteor Shower and Holy Word (bug_fix_83: the undead only) hit every monster the party sees in all four directions, Prismatic Light, Acid Spray and Dancing Sword every one it sees ahead (in its view), Dragon Breath
  * every one in the action radius, Star Burst every one within three tiles, Toxic Cloud every one within five tiles of the party, Fantastic Freeze every one in the 5 x 5 field round it and Mass Distortion every one
  * in view (bug_fix_81): they need nothing to aim at (`areaSpell`).
  */
-export const isAreaSpell = (id: number): boolean => id === 72 || id === 75 || id === 73 || id === 76 || id === 50 || id === 14 || id === 38 || id === 63 || id === 53 || id === 64;
+export const isAreaSpell = (id: number): boolean => id === 72 || id === 69 || id === 73 || id === 76 || id === 50 || id === 14 || id === 38 || id === 63 || id === 53 || id === 64;
 /** Spells that change the monster the party is looking at (no damage). */
 const MONSTER_EFFECTS = new Set([31, 41]);
 

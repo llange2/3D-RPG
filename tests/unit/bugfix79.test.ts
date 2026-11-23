@@ -280,10 +280,10 @@ describe("Dancing Sword (63)", () => {
   });
 });
 
-describe("Meteor Shower (72) and Elemental Storm (75)", () => {
-  it("hit what the party could see in every direction: a monster behind a wall is spared", () => {
-    expect(isAreaSpell(72) && isAreaSpell(75)).toBe(true);
-    for (const kind of ["meteor_shower", "elemental_storm"] as const) {
+describe("Meteor Shower (72) and Holy Word (69)", () => {
+  it("hit what the party could see in every direction: a monster behind a wall is spared (Holy Word only the undead, bug_fix_83)", () => {
+    expect(isAreaSpell(72) && isAreaSpell(69)).toBe(true);
+    for (const kind of ["meteor_shower"] as const) {
       const enc = fight([[tough, 2, 0], [tough, -3, 0], [tough, 0, 5]]);
       // the party sees all but the monster at (-3, 0)
       const events = areaSpell(party(), open, enc, 0, 0, rng(kind), kind, { damage: 100, type: "fire" }, (m) => m.x > -3);

@@ -101,6 +101,9 @@ export const SOUNDS: Record<number, SoundEntry> = {
   9063: "robot_hit",
   // the key card put into the slot of a pyramid (the user's own file, 12. 11. 2026)
   9064: "pyramid_unlock",
+  // Deadly Swarm (the user's own file, 23. 11. 2026, bug_fix_83) and the whirr of a Dancing Sword in flight (looped until it has reached its monster)
+  9065: "deadly_swarm",
+  9066: "swoosh",
 };
 
 /** Every file name a sound entry can play. */

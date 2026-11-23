@@ -375,6 +375,10 @@ html.ending-on #game-cursor { display: none; }
 .slot .item-icon { width: 50px; height: 50px; }
 .slot .label { position: absolute; left: 2px; bottom: 0; font-size: 10px; opacity: 0.7; pointer-events: none; text-shadow: 0 1px 1px #000; }
 .slot.ok { border-color: var(--good); }
+/* the picture of a two-hander in the shield hand: half strength, nothing to click (bug_fix_83) */
+.slot.ghost { cursor: default; }
+.slot.ghost:hover { border-color: #5a4020; }
+.slot.ghost .item-icon { opacity: 0.5; pointer-events: none; }
 .equip-grid { display: grid; grid-template-columns: repeat(3, 58px); gap: 6px; justify-content: center; margin: 8px 0; }
 .tooltip { margin-top: 8px; min-height: 90px; padding: 8px 10px; background: #00000044; border: 1px solid var(--gold-dim); border-radius: 6px; font-size: 15px; white-space: pre-wrap; }
 /* Combine, Duplication, Transform Ring: the details of the item under the pointer, in a box that keeps its height (bug_fix_59, point 2) */

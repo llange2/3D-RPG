@@ -9,7 +9,7 @@ import { SETH } from "../actions/machines";
 import { CAMPAIGN_START, facingOfRotation, mapSlugOf, type TrapKind } from "../campaign/types";
 import { CampaignView } from "../render/campaignView";
 import { ACTION_DEFS, actionTrigger, blocksCell, buildMapContent, heapGone, isLastingTrap, isReloadingTrap, isSpent, isTrapAction, isVisibleTrap, validateContent } from "../actions";
-import { resolveAction, type ActionContext, type Effect, type WallSide } from "../actions/handlers";
+import { resolveAction, type ActionContext, type ActionOutcome, type Effect, type WallSide } from "../actions/handlers";
 import type { ActionInstance, MapContent } from "../actions/types";
 import { AudioManager } from "../audio/audio";
 import { LAYER, Rng, rngFor, seedFromString } from "../core/rng";
@@ -52,7 +52,7 @@ import { PropRenderer } from "../render/props";
 import { Effects, type FxLamp } from "../render/fx";
 import { chunkTint, hitKindOf } from "../render/hitFx";
 import { EFFECT_LEVELS, EFFECT_NAMES } from "../render/fxSheets";
-import { PROJECTILE_MODELS, Projectiles, RAY_LOOKS, SWARM_INSECTS, SWARM_INSECTS_BEHIND, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
+import { PROJECTILE_MODELS, Projectiles, RAY_LOOKS, SWARM_INSECTS, SWORD_MODELS, SWARM_INSECTS_BEHIND, flightSeconds, type BurstSpec, type Point, type ProjectileKind } from "../render/projectiles";
 import { afterFrames, whenDrawable } from "../render/ready";
 import { SkyDome } from "../render/sky";
 import { CASTLE_RUIN_MODEL, LANDMARK_MODELS, doorBearing, groundPropLift, landmarkIsCottageAt, landmarkItemAt, setFlatGround, setRuinedCastleKinds, setUltraGround, tileModelKeys, caveFlameSpots, caveTorchSpots, towerFlameSpots, towerTorchSpots, type PropInstance } from "../render/terrainMesher";
@@ -68,7 +68,7 @@ import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
   alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, phaseReach, phaseTargets, pullMonsters, weakestInCone,
-  specialSpell, spellInLine, spellRound, updateBattleMode, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, FANTASTIC_FREEZE_RADIUS, STAR_BURST_RADIUS, TOXIC_RADIUS, isPainable, isPhaseProof,
+  specialSpell, spellInLine, spellRound, updateBattleMode, ELEMENTAL_STORM_ELEMENTS, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, FANTASTIC_FREEZE_RADIUS, STAR_BURST_RADIUS, TOXIC_RADIUS, isPainable, isPhaseProof,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, hasLight, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
@@ -161,7 +161,7 @@ const POISON_WISP_EVERY = 0.15;
  * How a spell that hits several monsters is drawn: Cold Ray lines of light, Summon Snakes a coil of snakes at each monster, Fireball one bolt that bursts on the neighbours (bug_fix_79); Moon Ray and Sun Ray
  * a thick ray instead of a projectile, Deadly Swarm a swarm of insects round the first monsters of the line (bug_fix_81).
  */
-type SpellStyle = "line" | "snakes" | "splash" | "moon" | "sun" | "swarm";
+type SpellStyle = "line" | "snakes" | "splash" | "moon" | "sun" | "swarm" | "storm";
 const SPELL_PROJECTILE: Record<string, ProjectileKind> = { acid: "acid", poison: "acid", fire: "fire", ice: "ice", magic: "magic", physical: "physical" };
 const monsterProjectile = (damageType: string): ProjectileKind => (damageType === "physical" ? "arrow" : SPELL_PROJECTILE[damageType] ?? "magic");
 
@@ -192,6 +192,16 @@ const FREEZE_LIGHT: BurstSpec = { from: [0.7, 0.9, 1], to: [0.35, 0.65, 1], peak
 const FREEZE_CLOUD: readonly [number, number, number] = [0.55, 0.8, 1];
 /** Mass Distortion (bug_fix_81): a flash of violet where a monster loses half its health. */
 const DISTORTION_LIGHT: BurstSpec = { from: [1, 0.8, 1], to: [0.6, 0.25, 0.9], peak: 5, range: 10, seconds: 0.6, daylight: 0.7 };
+/** The whirr of a flying Dancing Sword (bug_fix_83, sound 9066): full beside the party and fainter with every tile the monster is away, never silent. */
+const SWOOSH_SOUND = 9066;
+const SWOOSH_TILE = 3;
+const swooshVolume = (tiles: number): number => Math.max(0.1, 1 - tiles / 9);
+/** Deadly Swarm's own sound (the user's file, sound 9065). */
+const SWARM_SOUND = 9065;
+/** Holy Word (bug_fix_83): a flash of white gold where an undead monster is struck. */
+const HOLY_LIGHT: BurstSpec = { from: [1, 0.97, 0.8], to: [1, 0.78, 0.35], peak: 6, range: 12, seconds: 0.8, daylight: 0.7 };
+/** Elemental Storm (bug_fix_83): where the three hits stand on the monster (sideways in half a body, up in half a body; the first is high and to the left, the third low) and when each one starts. */
+const STORM_SPOTS: readonly { side: number; up: number; delay: number }[] = [{ side: -0.55, up: 0.5, delay: 0 }, { side: 0.55, up: 0.05, delay: 0.15 }, { side: -0.1, up: -0.5, delay: 0.3 }];
 /** The flash where a meteor lands: it must show (point 3), so it is strong and also there by day. */
 const METEOR_IMPACT_LIGHT: BurstSpec = { from: [1, 0.85, 0.5], to: [1, 0.4, 0.08], peak: 7, range: 12, seconds: 0.5, daylight: 0.8 };
 
@@ -494,7 +504,7 @@ export class Game {
       this.minimapIcons = icons;
       this.minimapDirty = true;
     });
-    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", CASTLE_RUIN_MODEL, "poi_dungeon", "poi_cave", "poi_pyramid", "poi_tower", "obj_loot", ...PROJECTILE_MODELS], (share) => progress?.(0.15 + 0.8 * share));
+    await this.props.preload(staticInfo, [...tileModelKeys(), ...LANDMARK_MODELS, ...MASCOT_MODELS, ...HUT_MODELS, ...(itemModelKey(RAFT_ITEM) ? [itemModelKey(RAFT_ITEM)!] : []), "poi_town", "poi_castle", CASTLE_RUIN_MODEL, "poi_dungeon", "poi_cave", "poi_pyramid", "poi_tower", "obj_loot", ...PROJECTILE_MODELS, ...SWORD_MODELS], (share) => progress?.(0.15 + 0.8 * share));
     this.sceneInst = new SceneInstrumentation(this.r.scene);
     this.sceneInst.captureFrameTime = true;
 
@@ -2833,8 +2843,8 @@ export class Game {
       if (this.trapReloading(a.uid)) return;
       this.trapFired.set(a.uid, this.state.steps);
     }
-    // a trap that has gone off stays on the map and the minimap (without the Crow too)
-    if (isTrapAction(a)) this.state.opened.add(`${a.uid}@fired`);
+    // a trap that has gone off stays on the map and the minimap (without the Crow too); a pit that a levitating party hovers over has not gone off (bug_fix_83), it stays hidden
+    if (isTrapAction(a) && !(isLastingTrap(a) && hasEffect(this.state.party, "levitate"))) this.state.opened.add(`${a.uid}@fired`);
     this.busy = true;
     // a fountain works once a day: the day it was used is part of the key, so nothing else has to be saved or reset
     const usedKey = `${a.uid}@${Math.floor(this.state.party.minutes / MINUTES_PER_DAY)}`;
@@ -2843,7 +2853,8 @@ export class Game {
     const retries = lockable ? this.lockTries.get(a.uid) ?? 0 : 0;
     if (lockable) this.lockTries.set(a.uid, retries + 1);
     const ctx = { ...this.actionContext(), content: this.interior?.content, opened: this.state.opened, attempt: this.state.steps * 7 + this.state.opened.size, retries, usedToday: this.state.opened.has(usedKey), ...(a.kind === "breakable_wall" ? { wallSide: this.wallSide(a.x, a.y) } : {}) };
-    let outcome = resolveAction(a, ctx);
+    // a chest that kept what did not fit is open already: it hands out what is left (bug_fix_83)
+    let outcome = a.kind === "treasure" && this.state.chestLeft[a.uid] ? this.resumeChest(a) : resolveAction(a, ctx);
     // a statue asks its question; the answer is the player's, and the statue decides on it
     const ask = outcome.effects.find((e) => e.type === "ask");
     if (ask?.type === "ask") {
@@ -2870,6 +2881,7 @@ export class Game {
       this.player.locked = false;
       outcome = resolveAction(a, { ...ctx, answer: yes ? "yes" : null });
     }
+    if (a.kind === "treasure" && typeof a.params.quest !== "string") outcome = this.keepInChest(a, outcome);
     // a pit that goes off for the first time opens (its uid in `opened` means "open"); it hurts again every time after that
     const opening = isLastingTrap(a) && outcome.consumed && !this.state.opened.has(a.uid);
     if (opening || (outcome.consumed && ACTION_DEFS[a.kind].persistence === "once")) this.state.opened.add(a.uid);
@@ -2937,6 +2949,27 @@ export class Game {
     }
   }
 
+  /**
+   * bug_fix_83: what a chest holds and the backpacks have no room for stays in the chest. It is open and unlocked then (its trap has gone off, its alarm rung, its gold paid), so the leftovers
+   * are saved in `state.chestLeft` and the chest does not count as used up: the next use hands them out, until nothing is left.
+   */
+  private keepInChest(a: ActionInstance, outcome: ActionOutcome): ActionOutcome {
+    const left = outcome.effects.flatMap((e) => (e.type === "item" && !e.stored ? [e.item] : []));
+    if (left.length === 0) return outcome;
+    this.state.chestLeft[a.uid] = left;
+    return { ...outcome, consumed: false, effects: outcome.effects.map((e) => (e.type === "item" && !e.stored ? { ...e, kept: true } : e)) };
+  }
+
+  /** The next use of a chest that kept something: whatever fits into a backpack now is taken (as the outcome of an action), the rest stays. */
+  private resumeChest(a: ActionInstance): ActionOutcome {
+    const items = this.state.chestLeft[a.uid] ?? [];
+    const effects: Effect[] = items.map((item) => ({ type: "item", item, stored: giveItem(this.state.party, item) }));
+    const rest = items.filter((_, i) => !(effects[i] as { stored: boolean }).stored);
+    if (rest.length === 0) delete this.state.chestLeft[a.uid];
+    else this.state.chestLeft[a.uid] = rest;
+    return { effects: effects.map((e) => (e.type === "item" && !e.stored ? { ...e, kept: true } : e)), consumed: rest.length === 0 };
+  }
+
   private async applyEffects(a: ActionInstance, effects: Effect[]): Promise<void> {
     const ui = this.ui;
     const rt = this.interior;
@@ -2953,8 +2986,8 @@ export class Game {
           if (e.amount > 0) ui.log(`You find ${thousands(e.amount)} gold.`, "loot");
           break;
         case "item":
-          ui.log(e.stored ? `You find ${e.item.type === "spell" ? "the spell scroll " : ""}${e.item.name.trim()}.` : `You find ${e.item.name.trim()}, but every backpack is full. It stays behind.`, e.stored ? "loot" : "bad");
-          if (!e.stored) {
+          ui.log(e.stored ? `You find ${e.item.type === "spell" ? "the spell scroll " : ""}${e.item.name.trim()}.` : `You find ${e.item.name.trim()}, but every backpack is full. It stays ${e.kept ? "in the chest" : "behind"}.`, e.stored ? "loot" : "bad");
+          if (!e.stored && !e.kept) {
             this.audio.play(9005);
             this.dropLoot(this.player.tx, this.player.ty, 0, [e.item]);
           }
@@ -4006,6 +4039,17 @@ export class Game {
       }
       return flights;
     }
+    if (area === "holy_word") {
+      // a flash of white gold on every undead monster that was struck (bug_fix_83)
+      for (const e of hits) {
+        flights.set(e.uid, 0);
+        const at = this.monsters.anchor(e.uid);
+        if (!at) continue;
+        this.projectiles.impactAt("magic", at);
+        this.projectiles.burst(at, HOLY_LIGHT);
+      }
+      return flights;
+    }
     if (area) {
       hits.forEach((e, i) => {
         const at = this.monsters.anchor(e.uid);
@@ -4029,8 +4073,11 @@ export class Game {
           return;
         }
         if (area === "dancing_sword") {
-          // a blade flies to every monster in view, side by side like the breath of the dragon (bug_fix_79)
-          flights.set(e.uid, this.projectiles.launch("physical", from, at));
+          // a sword of a random model flies whirling to every monster in view, side by side like the breath of the dragon (bug_fix_79, bug_fix_83)
+          const seconds = this.projectiles.launchSword(SWORD_MODELS[Math.floor(Math.random() * SWORD_MODELS.length)]!, from, at);
+          flights.set(e.uid, seconds);
+          // its whirr loops until it has reached the monster, fainter the farther away that monster is
+          this.audio.playFor(SWOOSH_SOUND, seconds, swooshVolume(Math.hypot(at.x - from.x, at.z - from.z) / SWOOSH_TILE));
           return;
         }
         if (area === "meteor_shower") {
@@ -4048,11 +4095,6 @@ export class Game {
           flights.set(e.uid, delay + METEOR_FALL_SECONDS);
           return;
         }
-        // the element appears in front of the monster (on its tile, towards the party, so that it is not inside the monster) and fades out
-        const away = Math.hypot(from.x - at.x, from.z - at.z) || 1;
-        const front = { x: at.x + ((from.x - at.x) / away) * STORM_FRONT, y: at.y, z: at.z + ((from.z - at.z) / away) * STORM_FRONT };
-        const element = e.element === "ice" ? "ice" : e.element === "acid" ? "acid" : "fire";
-        this.projectiles.flash(element, front);
         flights.set(e.uid, 0);
       });
       return flights;
@@ -4069,6 +4111,27 @@ export class Game {
         if (at) this.projectiles.beam(element, from, at, true, { look, particles: first });
         if (at) first = false;
         flights.set(e.uid, 0);
+      }
+      return flights;
+    }
+    if (spell && style === "storm") {
+      // Elemental Storm (bug_fix_83): the three hits of the monster stand on its body at different places, a little towards the party, and fade out after two seconds
+      const taken = new Map<string, number>();
+      for (const e of hits) {
+        flights.set(e.uid, 0);
+        const spot = this.monsters.hitSpot(e.uid);
+        const element = e.element === "ice" ? "ice" : e.element === "acid" ? "acid" : "fire";
+        const n = taken.get(e.uid) ?? 0;
+        taken.set(e.uid, n + 1);
+        const slot = STORM_SPOTS[n % STORM_SPOTS.length]!;
+        if (!spot) continue;
+        const away = Math.hypot(from.x - spot.x, from.z - spot.z) || 1;
+        const ux = (from.x - spot.x) / away;
+        const uz = (from.z - spot.z) / away;
+        // (the left of someone who looks from the party at the monster: Babylon's x is to the right of +z)
+        const body = Math.max(0.5, spot.y - spot.floor);
+        const at = { x: spot.x + ux * STORM_FRONT + uz * slot.side * body, y: spot.y + slot.up * body, z: spot.z + uz * STORM_FRONT - ux * slot.side * body };
+        this.later(slot.delay, () => this.projectiles.stormHit(element, at));
       }
       return flights;
     }
@@ -4198,7 +4261,11 @@ export class Game {
     const landing = (uid: string) => flights.get(uid) ?? (poisoned.has(uid) ? answer : 0);
     // "Wait for death animation" (bug_fix_81): the monsters answer, and with them the party is free again, only when every body that fell in this turn has finished its clip; the simulation freed the cell
     // at once, so without the wait a monster stepped into it while the body was still falling
-    if (this.settings.waitForDeath) for (const e of events) if (e.type === "monster_dead") answer = Math.max(answer, landing(e.uid) + this.monsters.deathSeconds(e.uid));
+    // (bug_fix_83: only when a monster steps onto the field of the body; a monster that moves to a free field, or that does not move at all, does not wait for the clip)
+    if (this.settings.waitForDeath) {
+      const entered = new Set(events.flatMap((e) => (e.type === "monster_move" ? [`${e.to[0]},${e.to[1]}`] : [])));
+      for (const e of events) if (e.type === "monster_dead" && entered.has(`${e.x},${e.y}`)) answer = Math.max(answer, landing(e.uid) + this.monsters.deathSeconds(e.uid));
+    }
     let end = answer;
     const at = (seconds: number, run: () => void) => {
       end = Math.max(end, seconds);
@@ -4305,7 +4372,8 @@ export class Game {
               // (a robot that is hit clangs instead of crying out)
               this.audio.play(isRobot(e.defId) ? ROBOT_SOUND.hit : 9033, 0.6);
               // what flies off the monster depends on what it is made of; spells have their own bursts
-              if (e.kind !== "magic") this.monsterHitFx(e.uid, e.defId);
+              // (a spell of physical damage, the swords of Dancing Sword, hits like a blow: bug_fix_83)
+              if (e.kind !== "magic" || e.element === "physical") this.monsterHitFx(e.uid, e.defId);
             } else {
               this.ui.log(`${who} misses.`, "combat");
               this.audio.play(9017);
@@ -4519,10 +4587,12 @@ export class Game {
       if (spellId === 53) return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= FANTASTIC_FREEZE_RADIUS) ? null : "There is no monster in range.";
       // Toxic Cloud spreads through walls: anything within five tiles is poisoned, seen or not
       if (spellId === 14) return near(TOXIC_RADIUS).length > 0 ? null : "There is no monster in range.";
-      // Prismatic Light, Acid Spray and Dancing Sword hit what the party sees, and their beams do not pass a wall; Meteor Shower and Elemental Storm what it could see in every direction
-      if (spellId === 73 || spellId === 38 || spellId === 63 || spellId === 72 || spellId === 75 || spellId === 64) {
-        const seen = this.monsterSeen(spellId === 72 || spellId === 75);
-        return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS && seen(m)) ? null : "There is no monster in view.";
+      // Prismatic Light, Acid Spray and Dancing Sword hit what the party sees, and their beams do not pass a wall; Meteor Shower and Holy Word what it could see in every direction
+      // (Holy Word only the undead, bug_fix_83)
+      if (spellId === 73 || spellId === 38 || spellId === 63 || spellId === 72 || spellId === 69 || spellId === 64) {
+        const seen = this.monsterSeen(spellId === 72 || spellId === 69);
+        const only = (m: { defId: number }): boolean => spellId !== 69 || isUndead(m.defId);
+        return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS && only(m) && seen(m)) ? null : spellId === 69 ? "There is no undead monster in view." : "There is no monster in view.";
       }
       return this.enc.monsters.some((m) => m.hp > 0 && !isPhased(m) && Math.max(Math.abs(m.x - tx), Math.abs(m.y - ty)) <= MONSTER_ACTION_RADIUS) ? null : "There is no monster in range.";
     }
@@ -4924,16 +4994,20 @@ export class Game {
           const { tx, ty } = this.player;
           const area = result.special as AreaSpell;
           // Meteor Shower and Elemental Storm hit what the party could see in every direction, Prismatic Light, Acid Spray and Dancing Sword what it sees ahead (bug_fix_79)
-          const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), area, { damage: result.damage, type: result.type }, this.monsterSeen(area === "meteor_shower" || area === "elemental_storm"));
+          const events = areaSpell(party, this.gridView(), this.enc, tx, ty, this.combatRng(), area, { damage: result.damage, type: result.type }, this.monsterSeen(area === "meteor_shower" || area === "holy_word"));
           // the sound of every element that falls (the storm throws all three)
           const elements = new Set(events.flatMap((e) => (e.type === "party_attack" && e.element ? [e.element] : [])));
-          for (const element of elements.size > 0 ? elements : [result.type]) this.audio.play(ATTACK_SOUND[element] ?? 9029);
+          // (the swords of Dancing Sword whirr on their own, one for each monster: `launchPartyShots`)
+          if (area !== "dancing_sword") for (const element of elements.size > 0 ? elements : [result.type]) this.audio.play(ATTACK_SOUND[element] ?? 9029);
           this.handleEvents(events, undefined, area);
           break;
         }
         const target = this.focusMonster();
         if (!target) break; // checked before the spell was paid for; only a monster that vanished in between gets here
-        this.audio.play(ATTACK_SOUND[result.type] ?? 9029);
+        // Deadly Swarm has a sound of its own (bug_fix_83); Elemental Storm throws its three elements one after the other, the sounds with them
+        if (result.spellId === 49) this.audio.play(SWARM_SOUND);
+        else if (result.spellId === 75) ELEMENTAL_STORM_ELEMENTS.forEach((element, i) => this.later(STORM_SPOTS[i]!.delay, () => this.audio.play(ATTACK_SOUND[element] ?? 9029)));
+        else this.audio.play(ATTACK_SOUND[result.type] ?? 9029);
         const magic = { damage: result.damage, type: result.type };
         const { tx, ty } = this.player;
         const events = result.special
@@ -4943,7 +5017,7 @@ export class Game {
             : partyAttack(party, this.gridView(), this.enc, tx, ty, this.combatRng(), { kind: "magic", targetUid: target.uid, magic });
         // Cold Ray is a blue line of light from the party through the monsters it hits, like the lines of Prismatic Light (the user, 8. 11. 2026), not a flying bolt
         // Summon Snakes sends no bolt: a coil of snakes rises in front of every monster it hits (bug_fix_79); Fireball flies at its target and bursts on the monsters next to it
-        this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic", undefined, result.spellId === 39 ? "line" : result.spellId === 37 ? "snakes" : result.spellId === 44 ? "splash" : result.spellId === 60 ? "moon" : result.spellId === 71 ? "sun" : result.spellId === 49 ? "swarm" : undefined);
+        this.handleEvents(events, SPELL_PROJECTILE[result.type] ?? "magic", undefined, result.spellId === 39 ? "line" : result.spellId === 37 ? "snakes" : result.spellId === 44 ? "splash" : result.spellId === 60 ? "moon" : result.spellId === 71 ? "sun" : result.spellId === 49 ? "swarm" : result.spellId === 75 ? "storm" : undefined);
         for (const healed of result.healed ?? []) this.ui.avatarEffect(healed.target, "cure_hp");
         if (result.healed?.length) this.ui.log("Moonlight washes over the party and heals it.", "good");
         break;

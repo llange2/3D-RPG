@@ -27,7 +27,8 @@ export type Effect =
   /** `tone`: how the log shows it when the action is no trap itself (the trap of a chest says "bad" for its hit and "good" for a miss). */
   | { type: "text"; text: string; tone?: "bad" | "good" }
   | { type: "gold"; amount: number }
-  | { type: "item"; item: Item; stored: boolean }
+  /** `stored` false: the backpacks were full. `kept`: the item stays in the chest it came from (`Game.keepInChest`, bug_fix_83) instead of lying on the floor. */
+  | { type: "item"; item: Item; stored: boolean; kept?: boolean }
   | { type: "damage"; character: number; amount: number; damageType: DamageType; conditions: Condition[] }
   | { type: "attribute"; character: number; attribute: Attribute; amount: number }
   | { type: "resistance"; character: number; element: "fire" | "ice" | "acid" | "magic"; amount: number }

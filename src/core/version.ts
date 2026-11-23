@@ -192,5 +192,6 @@
  * stood in the only way to a chamber), and the user's Torchlight (item 334, `TORCHLIGHT_ITEM`) hangs on the walls of the castles (beside every banner along the keep's walls) and, a few at a time, in the caves (rule `torch`).
  * 81 = bug_fix_80 (Cave of Zula, moss-mere-318/small): the light of quest_8 no longer depends on the order the crystals were set down in (`simulateCrystals`: light only runs downstream along the shortest way of light,
  * of two crossing lines the shorter stays), so the generator proves other solutions for some puzzles (a mixing crystal between two crystals, one of them nearer to its source than to the mixing one, no longer works).
+ * 82 = bug_fix_83: the streets of every town are lit at regular distances (`townTorches`: the user's Torchlight, item 334, on the wall of every fourth street cell along a straight stretch of house wall, looking into the street), as the walls of a castle are.
  */
-export const GEN_VERSION = 81;
+export const GEN_VERSION = 82;

@@ -17,7 +17,7 @@ describe("effects: what rises from the lamps", () => {
     expect(ITEM_LAMPS[92]!.fx).toBe("acid");
     expect(ITEM_LAMPS[121]!.fx).toBe("magic");
     expect(ITEM_LAMPS[3]!.fx).toBe("portal");
-    expect(ITEM_LAMPS[71]!.fx).toBe("torch");
+    expect(ITEM_LAMPS[71]!.fx).toBe("campfire");
     expect(ITEM_LAMPS[4]!.fx).toBe("gold");
   });
 

@@ -3,7 +3,7 @@ import { Rng, seedFromString } from "../../src/core/rng";
 import { resistanceTone } from "../../src/data/resistance-tone";
 import { firesLaser } from "../../src/data/robot-sounds";
 import { MONSTERS, SPELLS } from "../../src/data/tables";
-import { ELEMENTAL_STORM_ELEMENTS, areaSpell, createEncounter, createMonster, identifyMonsters, type GridView } from "../../src/sim/encounter";
+import { ELEMENTAL_STORM_ELEMENTS, areaSpell, createEncounter, createMonster, identifyMonsters, specialSpell, type GridView } from "../../src/sim/encounter";
 import { MONSTER_ACTION_RADIUS } from "../../src/sim/encounter";
 import { createDefaultParty } from "../../src/sim/party";
 import { castSpell, isAreaSpell, isAttackSpell } from "../../src/sim/spells";
@@ -19,33 +19,31 @@ const rng = (s: string) => new Rng(seedFromString(s));
 const GOBLIN = Object.values(MONSTERS).find((m) => m.name === "Goblin")!.id;
 
 describe("the 6. 11. 2026 playtest: spells", () => {
-  it("lets Meteor Shower and Elemental Storm hit every monster in the action radius, with no target", () => {
-    expect(isAreaSpell(72) && isAreaSpell(75)).toBe(true);
-    expect(isAttackSpell(72) || isAttackSpell(75)).toBe(false);
+  it("lets Meteor Shower hit every monster in the action radius, with no target (Elemental Storm aims at one monster since bug_fix_83)", () => {
+    expect(isAreaSpell(72)).toBe(true);
+    expect(isAreaSpell(75)).toBe(false);
+    expect(isAttackSpell(72)).toBe(false);
+    expect(isAttackSpell(75)).toBe(true);
     const party = createDefaultParty();
     const enc = createEncounter();
     // three monsters in different directions, one of them out of the radius
     enc.monsters.push(createMonster("a", GOBLIN, 5, 0), createMonster("b", GOBLIN, 0, -4), createMonster("c", GOBLIN, -3, 3), createMonster("far", GOBLIN, 0, MONSTER_ACTION_RADIUS + 3));
-    const events = areaSpell(party, open, enc, 0, 0, rng("storm"), "elemental_storm", { damage: 1, type: "fire" });
-    const hit = events.filter((e) => e.type === "party_attack");
-    expect(hit.map((e) => (e.type === "party_attack" ? e.uid : "")).sort()).toEqual(["a", "b", "c"]);
-    for (const e of hit) if (e.type === "party_attack") expect(ELEMENTAL_STORM_ELEMENTS).toContain(e.element);
     const meteors = areaSpell(party, open, enc, 0, 0, rng("meteor"), "meteor_shower", { damage: 1, type: "fire" });
     for (const e of meteors) if (e.type === "party_attack") expect(e.element).toBe("fire");
   });
 
-  it("gives every monster its own element in the storm", () => {
+  it("hits the one monster of the storm three times, once with each element (bug_fix_83)", () => {
     const party = createDefaultParty();
-    const seen = new Set<string>();
-    for (let n = 0; n < 12; n++) {
-      const enc = createEncounter();
-      for (let i = 0; i < 6; i++) enc.monsters.push(createMonster(`m${i}`, GOBLIN, 1 + i, 1));
-      for (const e of areaSpell(party, open, enc, 0, 0, rng(`s${n}`), "elemental_storm", { damage: 1, type: "fire" })) if (e.type === "party_attack" && e.element) seen.add(e.element);
-    }
-    expect([...seen].sort()).toEqual([...ELEMENTAL_STORM_ELEMENTS].sort());
+    const enc = createEncounter();
+    enc.monsters.push(createMonster("a", GOBLIN, 3, 0), createMonster("b", GOBLIN, 0, 3));
+    const events = specialSpell(party, open, enc, 0, 0, rng("storm"), "elemental_storm", "a", { damage: 1, type: "fire" });
+    const hits = events.filter((e) => e.type === "party_attack");
+    expect(hits.map((e) => (e.type === "party_attack" ? e.uid : ""))).toEqual(["a", "a", "a"]);
+    expect(hits.map((e) => (e.type === "party_attack" ? e.element : ""))).toEqual([...ELEMENTAL_STORM_ELEMENTS]);
+    expect(enc.monsters.find((m) => m.uid === "b")!.hp).toBe(MONSTERS[GOBLIN]!.health);
   });
 
-  it("casts the two as attacks that need nothing to aim at, and says that Meteor Shower works only outside", () => {
+  it("casts Meteor Shower as an attack that needs nothing to aim at, and says that it works only outside", () => {
     const party = createDefaultParty();
     const druid = party.characters[3]!;
     druid.spells = [72, 75];

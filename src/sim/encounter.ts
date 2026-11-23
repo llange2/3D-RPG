@@ -957,7 +957,7 @@ export function spellInLine(party: Party, view: GridView, enc: Encounter, px: nu
 /** Spells with a rule of their own for whom they hit and how hard. */
 export type SpecialSpell = "star_burst" | "fantastic_freeze" | "holy_word" | "mass_distortion" | "finger_of_death" | "meteor_shower" | "elemental_storm" | "prismatic_light" | "dragon_breath" | "turn_undead" | "pain" | "fireball" | "toxic_cloud" | "acid_spray" | "dancing_sword";
 
-/** The elements Elemental Storm throws; every monster gets one of them at random. */
+/** The elements Elemental Storm throws: three hits at the monster, one of each (bug_fix_83; before, every monster of the action radius got one of them at random). */
 export const ELEMENTAL_STORM_ELEMENTS: readonly string[] = ["fire", "ice", "acid"];
 /** The damage types of Prismatic Light (the spell sheet's list); every monster gets one of them at random, and its beam shines in that colour. */
 export const PRISMATIC_ELEMENTS: readonly string[] = ["acid", "ice", "fire", "magic"];
@@ -967,11 +967,12 @@ export const STAR_BURST_RADIUS = 3;
 export const FANTASTIC_FREEZE_RADIUS = 2;
 
 /** The spells that need no target: they work from the party outwards (`areaSpell`). */
-export type AreaSpell = "meteor_shower" | "elemental_storm" | "prismatic_light" | "star_burst" | "dragon_breath" | "toxic_cloud" | "acid_spray" | "dancing_sword" | "fantastic_freeze" | "mass_distortion";
+export type AreaSpell = "meteor_shower" | "holy_word" | "prismatic_light" | "star_burst" | "dragon_breath" | "toxic_cloud" | "acid_spray" | "dancing_sword" | "fantastic_freeze" | "mass_distortion";
 
 /**
- * Meteor Shower (fire), Elemental Storm (a random element for each monster) and Prismatic Light (a random one of four damage types for each monster): they need no target, they
- * hit every monster within the action radius, wall or no wall (the storm comes from the sky, the 6. 11. 2026 playtest). Prismatic Light is the exception: "hits all monsters in view"
+ * Meteor Shower (fire) and Prismatic Light (a random one of four damage types for each monster): they need no target, they
+ * hit every monster within the action radius, wall or no wall (the storm comes from the sky, the 6. 11. 2026 playtest). Holy Word (bug_fix_83) hits every undead monster the party could see in every direction.
+ * Elemental Storm used to be one of them; it hits one monster three times now (`specialSpell`). Prismatic Light is the exception: "hits all monsters in view"
  * (the second 8. 11. 2026 request), the monsters `inView` says the party sees; the beams end at them and do not go through a wall. Star Burst (48th playtest, point 2) goes off at the party and hits every monster within `STAR_BURST_RADIUS` tiles, also without a clear line.
  * Dragon Breath ("Hits all monsters", 8. 11. 2026) reaches every monster of the action radius like the storm, with the one element the cast rolled (`magic.type`).
  * Fantastic Freeze (bug_fix_81) hits the 5 x 5 field round the party, Mass Distortion (bug_fix_81) every monster in view: each rolls for itself and loses half its hit points (not the level 5 ones).
@@ -985,6 +986,7 @@ export function areaSpell(party: Party, view: GridView, enc: Encounter, px: numb
     // Toxic Cloud spreads from the party through every wall: it reaches monsters that are not in sight (bug_fix_79)
     if (kind === "toxic_cloud") return (m.x - px) ** 2 + (m.y - py) ** 2 <= TOXIC_RADIUS ** 2;
     if (kind === "fantastic_freeze") return Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= FANTASTIC_FREEZE_RADIUS;
+    if (kind === "holy_word" && !isUndead(m.defId)) return false;
     // Prismatic Light, Acid Spray and Dancing Sword hit what the party sees ahead (their beams do not pass a wall, so a monster behind one is spared), Meteor Shower and Elemental Storm
     // what it could see in every direction (`inView` says which it is; bug_fix_79)
     if (kind !== "dragon_breath" && inView && !inView(m)) return false;
@@ -1004,9 +1006,17 @@ export function areaSpell(party: Party, view: GridView, enc: Encounter, px: numb
       killIfDead(party, enc, m, rng, events);
       continue;
     }
+    if (kind === "holy_word") {
+      // whatever the undead resists: a share of the big ones, 150 points of the rest
+      const max = monsterById(m.defId).health;
+      const damage = max > HOLY_WORD_BIG ? Math.floor(max * HOLY_WORD_SHARE) : HOLY_WORD_DAMAGE;
+      m.hp -= damage;
+      events.push({ type: "party_attack", attacker: null, kind: "magic", uid: m.uid, defId: m.defId, damage, element: "magic" });
+      killIfDead(party, enc, m, rng, events);
+      continue;
+    }
     const element =
       kind === "meteor_shower" ? "fire"
-      : kind === "elemental_storm" ? ELEMENTAL_STORM_ELEMENTS[rng.int(ELEMENTAL_STORM_ELEMENTS.length)]!
       : kind === "prismatic_light" ? PRISMATIC_ELEMENTS[rng.int(PRISMATIC_ELEMENTS.length)]!
       : kind === "dancing_sword" ? "physical"
       : kind === "acid_spray" ? "acid"
@@ -1063,11 +1073,14 @@ export function specialSpell(party: Party, view: GridView, enc: Encounter, px: n
       // the target and every monster next to it, diagonals too; the party stands in none of their tiles, so it is never hit (bug_fix_79)
       for (const m of [target, ...enc.monsters.filter((o) => o !== target && o.hp > 0 && !isPhased(o) && Math.max(Math.abs(o.x - target.x), Math.abs(o.y - target.y)) <= 1)]) resisted(m, "fire");
       break;
-    case "holy_word":
-      for (const m of monstersOnLine(view, enc, px, py, target)) {
-        if (!isUndead(m.defId)) continue;
-        const max = monsterById(m.defId).health;
-        strike(m, max > HOLY_WORD_BIG ? Math.floor(max * HOLY_WORD_SHARE) : HOLY_WORD_DAMAGE);
+    case "elemental_storm":
+      // bug_fix_83: one monster, three hits, one of each element, each as hard as the spell rolled (200) after the monster's resistance
+      for (const element of ELEMENTAL_STORM_ELEMENTS) {
+        if (target.hp <= 0) break;
+        const damage = spellDamageToMonster(monsterById(target.defId), magic.damage, element);
+        target.hp -= damage;
+        events.push({ type: "party_attack", attacker: null, kind: "magic", uid: target.uid, defId: target.defId, damage, element });
+        killIfDead(party, enc, target, rng, events);
       }
       break;
     case "turn_undead":

@@ -1,6 +1,7 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
 import { QUEST_PROP, SHRINE_EFFECT, type DungeonTheme } from "../data/dungeon-themes";
 import { buildCastleContent } from "./castle";
+import { townTorches } from "./townTorches";
 import { buildShowcaseContent } from "./showcase";
 import { buildSpaceshipContent } from "./spaceship";
 import { eligibleChests, hideArtifacts, hideInChests, placeMachines } from "./machines";
@@ -637,6 +638,8 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
   if (map.dungeon?.artifacts?.length) hideArtifacts(map, actions, map.dungeon.artifacts, mapSeed, baseTier);
 
   quest.finish?.();
+  // the streets of a town are lit at regular distances, like the walls of a castle (bug_fix_83); they come last, so that nothing else moves
+  if (map.kind === "town") actions.push(...townTorches(map, actions, spawns));
 
 
   // every produced action must satisfy its schema; a failure here is a bug in the rule data

@@ -356,6 +356,36 @@ export class AudioManager {
   }
 
   /**
+   * A sound effect that plays over and over for `seconds` and then stops (bug_fix_83: the whirr of a Dancing Sword until it has hit its monster); a short file loops without a gap. Without Web Audio it plays once.
+   */
+  playFor(id: number, seconds: number, volume = 1): void {
+    this.requests++;
+    if (!this.supported || !this.unlocked) return;
+    const entry = SOUNDS[id];
+    const name = typeof entry === "string" ? entry : null;
+    if (!name) return;
+    const ctx = this.context;
+    if (!ctx) {
+      this.play(id, volume);
+      return;
+    }
+    const level = Math.max(0, Math.min(1, this.sfxVolume * volume));
+    const run = (buffer: AudioBuffer): void => {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const gain = ctx.createGain();
+      gain.gain.value = level;
+      source.connect(gain).connect(ctx.destination);
+      source.start();
+      source.stop(ctx.currentTime + Math.max(0.05, seconds));
+    };
+    const ready = this.buffers.get(name);
+    if (ready) run(ready);
+    else void this.buffer(name).then((b) => b && run(b));
+  }
+
+  /**
    * The sound of a step while the party levitates: the wind of `short_wind`, played once in full and never laid over itself. The next step starts it again only
    * when it has played out (the user's wish of 10. 11. 2026); the footsteps stay silent meanwhile.
    */
