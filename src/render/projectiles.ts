@@ -63,7 +63,7 @@ const TILE = 3;
 export const FLASH_SECONDS = 0.3;
 const FLASH_SCALE = 2.2;
 /** Elemental Storm (bug_fix_83): the size of a hit against a flying element, how long it stands and how long it takes to fade out (two seconds in all), and the size of its impact picture. */
-const STORM_SCALE = 1.5;
+const STORM_SCALE = 1.25;
 export const STORM_HOLD = 1.5;
 export const STORM_FADE = 0.5;
 const STORM_IMPACT_SIZE = 1.6;

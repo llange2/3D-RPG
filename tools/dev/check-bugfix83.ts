@@ -78,8 +78,8 @@ try {
     const at = JSON.parse(spot) as { x: number; y: number } | null;
     if (at) {
       const frames: Buffer[] = [];
-      for (const f of ["N", "E", "S", "W"]) {
-        await evalJs(`__game.teleport(${at.x}, ${at.y}, "${f}")`);
+      for (const [dx, dy, f] of [[0, 0, "N"], [0, -4, "S"], [2, -2, "W"], [-2, -2, "E"]] as const) {
+        await evalJs(`__game.teleport(${at.x + dx}, ${at.y + dy}, "${f}")`);
         await sleep(1500);
         frames.push((await page.screenshot({ clip })) as Buffer);
       }
@@ -89,7 +89,7 @@ try {
     await sleep(3500);
   }
   if (wanted.includes("town")) {
-    await evalJs(`(async () => { const g = __game; await g.enter(g.firstPoi("town").id); })()`);
+    await evalJs(`(async () => { const g = __game; await g.enter(g.firstPoi("town")); })()`);
     await sleep(7000);
     const frames: Buffer[] = [];
     for (const f of ["N", "E", "S", "W"]) {
