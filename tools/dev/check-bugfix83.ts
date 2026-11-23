@@ -12,7 +12,7 @@ import sharp from "sharp";
 
 const base = process.env.GAME_URL ?? "http://localhost:5183/";
 const outDir = process.argv[2] ?? "bugfix83-shots";
-const wanted = (process.argv[3] ?? "storm,holy,sword,pot,town").split(",");
+const wanted = (process.argv[3] ?? "storm,follow,holy,sword,pot,town").split(",");
 const monster = Number(process.env.MONSTER ?? "24");
 mkdirSync(outDir, { recursive: true });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -38,7 +38,7 @@ try {
       .png()
       .toFile(join(outDir, `${name}.png`));
   };
-  if (["storm", "holy", "sword"].some((w) => wanted.includes(w))) {
+  if (["storm", "follow", "holy", "sword"].some((w) => wanted.includes(w))) {
     const spot = await evalJs<{ x: number; y: number }>(
       `(() => { const g = __game.game; const w = g.world; const p = g.player; for (let r = 0; r < 40; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = p.tx + dx, y = p.ty + dy; if (w.isLandWalkable && w.isLandWalkable(x, y)) return { x, y }; } return { x: p.tx, y: p.ty }; })()`,
     ).catch(() => ({ x: 0, y: 0 }));
@@ -62,6 +62,7 @@ try {
     const storm = (kind: string, side: number, up: number) => `{ const body = Math.max(0.5, spot.y - spot.floor); const away = Math.hypot(from.x - spot.x, from.z - spot.z) || 1; const ux = (from.x - spot.x) / away, uz = (from.z - spot.z) / away; P.stormHit('${kind}', { x: spot.x + ux * 0.5 + uz * ${side} * body, y: spot.y + ${up} * body, z: spot.z + uz * 0.5 - ux * ${side} * body }); }`;
     const jobs: Record<string, [string, number[]]> = {
       storm: [`${storm("fire", -0.55, 0.5)} ${storm("ice", 0.55, 0.05)} ${storm("acid", -0.1, -0.5)}`, [150, 600, 1200, 1900, 2400]],
+      follow: ["P.swarm({ x: spot.x, y: spot.y, z: spot.z }, 10, () => i.monsters.hitSpot('m')); i.monsters.moveTo('m', cam.x + 3, cam.y - 1.7, cam.z + 9, 1.5);", [100, 700, 1300, 1900]],
       holy: ["P.impactAt('magic', at); P.burst(at, { from: [1, 0.97, 0.8], to: [1, 0.78, 0.35], peak: 6, range: 12, seconds: 0.8, daylight: 0.7 });", [60, 250, 600]],
       sword: ["P.launchSword('wpn_sword2', from, at); P.launchSword('wpn_sword1', { x: from.x - 1, y: from.y + 0.4, z: from.z }, at); P.launchSword('wpn_sword3', { x: from.x + 1, y: from.y, z: from.z }, at);", [60, 140, 220, 300]],
     };
