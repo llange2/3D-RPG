@@ -372,6 +372,8 @@ export class Game {
    * `pruneMonsterViews` leaves them alone.
    */
   private readonly fallen = new Set<string>();
+  /** The particle groups of the Elemental Storm hits that stand on a monster (by its uid): they go at once when it dies (bug_fix_84). */
+  private readonly stormGroups = new Map<string, number[]>();
   /** The monsters whose view the game itself asked for (`addMonsterView`); tools that put views into the renderer by hand are not the game's business. */
   private readonly viewed = new Set<string>();
   private pruneIn = 1;
@@ -1135,6 +1137,7 @@ export class Game {
   private sceneChanged(): void {
     this.fxEpoch++;
     this.fallen.clear();
+    this.stormGroups.clear();
     this.viewed.clear();
     this.lootHeld.clear();
     this.volleyUntil = 0;
@@ -4115,8 +4118,10 @@ export class Game {
       return flights;
     }
     if (spell && style === "storm") {
-      // Elemental Storm (bug_fix_83): the three hits of the monster stand on its body at different places, a little towards the party, and fade out after two seconds
+      // Elemental Storm (bug_fix_83): the three hits of the monster stand on its body at different places, a little towards the party: the impact picture of the element, which fades as every impact does,
+      // and its particles, which stay two seconds and fade out slowly; at once when the monster is dead (bug_fix_84)
       const taken = new Map<string, number>();
+      const dying = new Set(events.flatMap((e) => (e.type === "monster_dead" ? [e.uid] : [])));
       for (const e of hits) {
         flights.set(e.uid, 0);
         const spot = this.monsters.hitSpot(e.uid);
@@ -4131,7 +4136,11 @@ export class Game {
         // (the left of someone who looks from the party at the monster: Babylon's x is to the right of +z)
         const body = Math.max(0.5, spot.y - spot.floor);
         const at = { x: spot.x + ux * STORM_FRONT + uz * slot.side * body, y: spot.y + slot.up * body, z: spot.z + uz * STORM_FRONT - ux * slot.side * body };
-        this.later(slot.delay, () => this.projectiles.stormHit(element, at));
+        this.later(slot.delay, () => {
+          const group = this.projectiles.stormHit(element, at);
+          if (dying.has(e.uid)) this.effects.fadeGroup(group);
+          else this.stormGroups.set(e.uid, [...(this.stormGroups.get(e.uid) ?? []), group]);
+        });
       }
       return flights;
     }
@@ -4142,7 +4151,8 @@ export class Game {
         .map((e) => ({ uid: e.uid, spot: this.monsters.hitSpot(e.uid) }))
         .filter((h): h is { uid: string; spot: NonNullable<typeof h.spot> } => !!h.spot)
         .sort((a, b) => Math.hypot(a.spot.x - from.x, a.spot.z - from.z) - Math.hypot(b.spot.x - from.x, b.spot.z - from.z));
-      spots.slice(0, 2).forEach(({ spot }, i) => this.projectiles.swarm({ x: spot.x, y: spot.y, z: spot.z }, i === 0 ? SWARM_INSECTS : SWARM_INSECTS_BEHIND));
+      // (bug_fix_84: the swarm moves with its monster, which may walk on or flee while the insects fly)
+      spots.slice(0, 2).forEach(({ uid, spot }, i) => this.projectiles.swarm({ x: spot.x, y: spot.y, z: spot.z }, i === 0 ? SWARM_INSECTS : SWARM_INSECTS_BEHIND, () => this.monsters.hitSpot(uid)));
       for (const e of hits) flights.set(e.uid, 0);
       return flights;
     }
@@ -4400,6 +4410,8 @@ export class Game {
           const def = monsterById(e.defId);
           this.state.killed.add(e.uid);
           this.fallen.add(e.uid);
+          for (const group of this.stormGroups.get(e.uid) ?? []) this.effects.fadeGroup(group);
+          this.stormGroups.delete(e.uid);
           this.noteHutDeath(e.uid);
           // quest 5: the end boss stands before the end room, and its death opens it
           if (isEndBoss(e.uid)) this.openEndRoom();

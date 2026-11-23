@@ -44,6 +44,8 @@ const HIT_MIN_LIGHT = 0.35;
 /** Toxic Cloud's gas: the green of the poison (the same as the acid light, `PROJECTILE_LAMPS`), never darker than a half of the light of the place (it is a magic cloud and must show in a dungeon). */
 const TOXIC_GREEN: readonly [number, number, number] = [0.42, 0.95, 0.2];
 const TOXIC_MIN_LIGHT = 0.55;
+/** How fast the particles of a storm hit go when the monster dies (seconds). */
+const GROUP_FADE = 0.2;
 /** What the three hits of Elemental Storm are made of: the sprites of the particle sheet with their colour, and the colour of the small cloud beside them (bug_fix_83). */
 const STORM_LOOKS: Readonly<Record<"fire" | "ice" | "acid", { cells: readonly number[]; tint: readonly [number, number, number]; cloud: readonly [number, number, number] }>> = {
   fire: { cells: [PARTICLE_CELLS.flame_tongue, PARTICLE_CELLS.fire_puff_a, PARTICLE_CELLS.fire_puff_b], tint: [1, 0.55, 0.2], cloud: [0.5, 0.5, 0.5] },
@@ -246,6 +248,10 @@ interface Particle {
   /** The colour of a particle that is not pale water, and the light that smoke takes at its place. */
   tint?: readonly [number, number, number];
   lit?: number;
+  /** The hit of Elemental Storm it belongs to (`Effects.stormHit`), so that it can be taken away at once (`fadeGroup`). */
+  group?: number;
+  /** Seconds since it was told to go (`fadeGroup`): it fades out within `GROUP_FADE` seconds, whatever its life was. */
+  kill?: number;
 }
 
 /** A bit that flies off a monster that is hit (`Effects.hit`): a drop of blood, a cogwheel or a chunk, thrown out of the point of impact and falling to the floor. */
@@ -396,6 +402,8 @@ export class Effects implements PropWatcher {
   private flowMaterial: StandardMaterial | null = null;
   private readonly sites = new Map<string, Site>();
   private particles: Particle[] = [];
+  /** Counts the hits of Elemental Storm (`stormHit`), whose particles can be taken away together (`fadeGroup`). */
+  private groups = 0;
   private impacts: Impact[] = [];
   private clock = 0;
   private readonly random = rng(0x5eed);
@@ -603,8 +611,9 @@ export class Effects implements PropWatcher {
    * One of the three hits of Elemental Storm (bug_fix_83): at `at` on a monster's body the element's sprites (flames, shards of ice, acid) and a small cloud (smoky grey, icy light blue, toxic green) stand
    * for two seconds and thin out within the last half second, so the three hits at different places of one monster can be told apart.
    */
-  stormHit(element: "fire" | "ice" | "acid", at: { x: number; y: number; z: number }): void {
-    if (this.level === "off") return;
+  stormHit(element: "fire" | "ice" | "acid", at: { x: number; y: number; z: number }): number {
+    const group = ++this.groups;
+    if (this.level === "off") return group;
     this.ensure();
     const r = this.random;
     const full = this.level === "full";
@@ -613,15 +622,21 @@ export class Effects implements PropWatcher {
     for (let i = 0; i < (full ? 7 : 3) && this.particles.length < MAX_PARTICLES; i++) {
       this.particles.push({
         kind: "puff", cell: look.cells[Math.floor(r() * look.cells.length)]!, x: at.x + (r() - 0.5) * 0.4, y: at.y + (r() - 0.5) * 0.4, z: at.z + (r() - 0.5) * 0.4, vx: (r() - 0.5) * 0.12, vy: 0.05 + r() * 0.2, vz: (r() - 0.5) * 0.12,
-        age: 0, life: 1.7 + r() * 0.5, size0: 0.28 + r() * 0.1, size1: 0.22, peak: 0.95, floor: -1e9, lands: "none", scale: 1, site: null, tint: look.tint,
+        age: 0, life: 1.7 + r() * 0.5, size0: 0.28 + r() * 0.1, size1: 0.22, peak: 0.95, floor: -1e9, lands: "none", scale: 1, site: null, tint: look.tint, group,
       });
     }
     for (let i = 0; i < (full ? 5 : 2) && this.particles.length < MAX_PARTICLES; i++) {
       this.particles.push({
         kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: at.x + (r() - 0.5) * 0.4, y: at.y + (r() - 0.5) * 0.3, z: at.z + (r() - 0.5) * 0.4, vx: (r() - 0.5) * 0.08, vy: 0.08 + r() * 0.12, vz: (r() - 0.5) * 0.08,
-        age: 0, life: 1.8 + r() * 0.4, size0: 0.25, size1: 0.7 + r() * 0.2, peak: 0.6, floor: -1e9, lands: "none", scale: 1, site: null, tint: look.cloud, lit,
+        age: 0, life: 1.8 + r() * 0.4, size0: 0.25, size1: 0.7 + r() * 0.2, peak: 0.6, floor: -1e9, lands: "none", scale: 1, site: null, tint: look.cloud, lit, group,
       });
     }
+    return group;
+  }
+
+  /** The particles of a storm hit fade out at once (the monster they stand on has died). */
+  fadeGroup(group: number): void {
+    for (const p of this.particles) if (p.group === group && p.kind !== "drop" && p.kind !== "ring" && p.kill === undefined) p.kill = 0;
   }
 
   /**
@@ -1101,6 +1116,7 @@ export class Effects implements PropWatcher {
     for (const p of this.particles) {
       p.age += dt;
       if (p.age >= p.life) continue;
+      if (p.kill !== undefined && (p.kill += dt) >= GROUP_FADE) continue;
       // a particle that has not started yet (the particles of a ray come one after the other) waits where it is and is not drawn
       if (p.age < 0) {
         live.push(p);
@@ -1127,7 +1143,7 @@ export class Effects implements PropWatcher {
       if (p.kind === "smoke") {
         // grey smoke, drawn by its alpha: darker where the place is dark, it thins out as it rises
         if (this.smoke!.full) continue;
-        const a = p.peak * smooth(0, 0.2, t) * (1 - smooth(0.4, 1, t));
+        const a = p.peak * smooth(0, 0.2, t) * (1 - smooth(0.4, 1, t)) * (p.kill === undefined ? 1 : 1 - p.kill / GROUP_FADE);
         const size = p.size0 + (p.size1 - p.size0) * t;
         const h = size / 2;
         const grey = 0.62 * lit;
@@ -1157,7 +1173,7 @@ export class Effects implements PropWatcher {
       }
       if (main.full) continue;
       const fade = smooth(0, 0.18, t) * (1 - smooth(0.45, 1, t));
-      const k = p.peak * fade * (p.site ? lit : 1);
+      const k = p.peak * fade * (p.site ? lit : 1) * (p.kill === undefined ? 1 : 1 - p.kill / GROUP_FADE);
       const size = p.size0 + (p.size1 - p.size0) * t;
       const uv = cellUv(p.cell, PARTICLE_GRID);
       const [cr, cg, cb] = p.tint ?? WATER;

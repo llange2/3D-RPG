@@ -62,11 +62,9 @@ const TILE = 3;
 /** The flash of Elemental Storm: how long it fades out (the user, 6. 11. 2026), and how much bigger than a flying one the element is drawn. */
 export const FLASH_SECONDS = 0.3;
 const FLASH_SCALE = 2.2;
-/** Elemental Storm (bug_fix_83): the size of a hit against a flying element, how long it stands and how long it takes to fade out (two seconds in all), and the size of its impact picture. */
-const STORM_SCALE = 1.25;
-export const STORM_HOLD = 1.5;
-export const STORM_FADE = 0.5;
-const STORM_IMPACT_SIZE = 1.6;
+/** Elemental Storm (bug_fix_83, bug_fix_84): the size of the impact picture of a hit and how long the light of a hit shines. */
+const STORM_IMPACT_SIZE = 2.4;
+const STORM_LIGHT_SECONDS = 0.7;
 /** How much of its light a spell keeps by day outside. */
 const SPELL_DAYLIGHT = 0.55;
 /** Prismatic Light: the lines fade out over this long (the user, 8. 11. 2026). */
@@ -89,7 +87,7 @@ interface Flight {
   yaw: number;
   t: number;
   duration: number;
-  /** A turn about the model's long axis in radians per second, added to the pose's own: the whirl of a Dancing Sword. */
+  /** The turn about the vertical in radians per second of a Dancing Sword (the sword lies flat and turns like a rotor); its own `yaw` is the start of the turn. */
   whirl?: number;
   /** The element strikes where the flight ends (`Effects.impact`): not for the shots of monsters, which end at the party's eyes. */
   impact: boolean;
@@ -168,6 +166,8 @@ interface Insect {
 
 interface Swarm {
   at: Point;
+  /** Where the monster the swarm flies round is now (bug_fix_84: the swarm moves with it); null: it is gone, the swarm stays where it was. */
+  follow?: () => Point | null;
   t: number;
   insects: Insect[];
 }
@@ -310,9 +310,9 @@ export class Projectiles {
     const dx = to.x - from.x;
     const dz = to.z - from.z;
     const duration = flightSeconds(Math.hypot(dx, dz) / TILE);
-    // (the blade's tip is its +y end, like the icicle's: pitched by 90 degrees it flies point first)
+    // (the blade's long axis is y: pitched by 90 degrees it lies flat; it turns about the vertical like the blade of a helicopter, bug_fix_84, and does not point at the monster; `yaw` is where its turn starts)
     const pose: Pose = { model, scale: SWORD_SCALE, pitch: 90, roll: 0 };
-    this.flights.push({ id: Projectiles.flights++, kind: "physical", pose, laser: null, from, to, yaw: Math.atan2(dx, dz), t: 0, duration, impact: false, whirl: SWORD_WHIRL * (Math.random() < 0.5 ? -1 : 1) });
+    this.flights.push({ id: Projectiles.flights++, kind: "physical", pose, laser: null, from, to, yaw: Math.random() * Math.PI * 2, t: 0, duration, impact: false, whirl: SWORD_WHIRL * (Math.random() < 0.5 ? -1 : 1) });
     return duration;
   }
 
@@ -333,15 +333,15 @@ export class Projectiles {
   }
 
   /**
-   * One of the three hits of Elemental Storm (bug_fix_83): the element's model stands at `at` a little smaller than a storm element used to (so that the three on one monster do not overlap), solid for
-   * `STORM_HOLD` seconds and gone `STORM_FADE` seconds later, with its sprites and its small cloud (`Effects.stormHit`) and its own light for as long.
+   * One of the three hits of Elemental Storm (bug_fix_83, bug_fix_84): the impact picture of the element (it plays and fades out as every impact does, no projectile model) at `at`, and the sprites and the
+   * small cloud of the element (`Effects.stormHit`), which stay for two seconds and fade out slowly. Returns the group of those particles (`Effects.fadeGroup` takes them away at once, when the monster is dead).
    */
-  stormHit(kind: "fire" | "ice" | "acid", at: Point): void {
-    this.flashes.push({ pose: POSES[kind], at, t: 0, seconds: STORM_FADE, yaw: 0, scale: POSES[kind].scale * STORM_SCALE, hold: STORM_HOLD });
+  stormHit(kind: "fire" | "ice" | "acid", at: Point): number {
     this.effects?.impact(kind, at, STORM_IMPACT_SIZE);
-    this.effects?.stormHit(kind, at);
+    const group = this.effects?.stormHit(kind, at) ?? 0;
     const color = PROJECTILE_LAMPS[kind]!.color;
-    this.burst(at, { from: color, to: color, peak: 3, range: 6, seconds: STORM_HOLD + STORM_FADE, daylight: SPELL_DAYLIGHT });
+    this.burst(at, { from: color, to: color, peak: 3, range: 6, seconds: STORM_LIGHT_SECONDS, daylight: SPELL_DAYLIGHT });
+    return group;
   }
 
   /**
@@ -366,7 +366,7 @@ export class Projectiles {
    * Deadly Swarm (bug_fix_81): `count` insects fly round `middle` (a monster's body) on paths of their own for `SWARM_SECONDS` and fade out within `SWARM_FADE`. `middle` is the point the loops circle: the height of
    * the monster's middle, so that the insects round its head and its feet alike.
    */
-  swarm(middle: Point, count: number): void {
+  swarm(middle: Point, count: number, follow?: () => Point | null): void {
     const r = swarmRng(0x1a5ec7 + this.swarmCount++ * 7919);
     const insects: Insect[] = [];
     for (let i = 0; i < count; i++) {
@@ -376,7 +376,7 @@ export class Projectiles {
         ay: 0.4 + r() * 0.6, wy: 1.5 + r() * 2.5, py: r() * Math.PI * 2, wobble: 0.15 + r() * 0.25, wobbleRate: 6 + r() * 5,
       });
     }
-    this.swarms.push({ at: middle, t: 0, insects });
+    this.swarms.push({ at: middle, t: 0, insects, ...(follow ? { follow } : {}) });
   }
 
   /** A light with no model at `at` (Star Burst at the party, the impact of a meteor): `spec` says what it does. */
@@ -431,7 +431,11 @@ export class Projectiles {
     if (this.flights.length === 0 && this.flashes.length === 0 && this.swarms.length === 0 && !this.drawn) return;
     for (const f of this.flights) f.t += dt;
     for (const f of this.flashes) f.t += dt;
-    for (const s of this.swarms) s.t += dt;
+    for (const s of this.swarms) {
+      s.t += dt;
+      const now = s.follow?.();
+      if (now) s.at = { x: now.x, y: now.y, z: now.z };
+    }
     for (const f of this.flights) {
       if (f.t < f.duration) continue;
       f.laser?.dispose();
@@ -457,7 +461,8 @@ export class Projectiles {
         continue;
       }
       const pose = f.pose!;
-      list.push({ model: pose.model, x, y, z, rotY: f.yaw, rotX: (pose.pitch * Math.PI) / 180 + tilt, rotZ: (pose.roll * Math.PI) / 180, ...(pose.spin || f.whirl ? { spin: ((pose.spin ?? 0) * Math.PI) / 180 + (f.whirl ?? 0) * f.t } : {}), scale: pose.scale, atOrigin: true });
+      const rotor = f.whirl !== undefined;
+      list.push({ model: pose.model, x, y, z, rotY: rotor ? f.yaw + f.whirl! * f.t : f.yaw, rotX: (pose.pitch * Math.PI) / 180 + (rotor ? 0 : tilt), rotZ: (pose.roll * Math.PI) / 180, ...(pose.spin ? { spin: (pose.spin * Math.PI) / 180 } : {}), scale: pose.scale, atOrigin: true });
     }
     // the elements of a storm: upright, and all of one model fade together (they appear at the same moment); a model without a flash is solid again
     const fade = new Map<string, number>();
