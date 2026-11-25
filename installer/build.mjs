@@ -71,6 +71,8 @@ const result = await packBuild({
     extraResources: [
       { from: webDir, to: "web", filter: ["**/*"] },
       { from: path.join(gameRoot, "public", "assets"), to: "web/assets", filter: ["**/*", ...NOT_SHIPPED.map((p) => `!${p}`)] },
+      // the files of the other versions of the game (Fantastic Islands), below the same root as the assets (`assets/pack.ts`: `assets-packs/<id>/`)
+      { from: path.join(gameRoot, "public", "assets-packs"), to: "web/assets-packs", filter: ["**/*"] },
     ],
     asar: true,
     // 600 MB of assets that are compressed already: the default level costs minutes for little

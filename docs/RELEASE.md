@@ -22,7 +22,8 @@ npm run build:dir            # nur das entpackte Programm (win-unpacked), zum sc
   **Nicht ausgeliefert** werden die Teile, die das Spiel nicht lädt (`NOT_SHIPPED` in `build.mjs`): `manifest.json`,
   `textures.stats.json` (der reduzierte Modellsatz ist seit bug_fix_68 gelöscht). Die Originalmodelle (`models-original`, im Git) gehören
   dazu; **haben sich Modelle geändert, vorher `npm run assets:originals` laufen lassen**.
-- Keine Original-MM3-Dateien und nicht `MATURASC.TTF` im Installer (der Build kopiert nur `public/assets`).
+- **Zwei Versionen in einem Installer** (25. 11. 2026): neben `public/assets` nimmt `build.mjs` auch `public/assets-packs` (die Dateien von Fantastic Islands, `npm run assets:pack`) als `extraResources` nach `web/assets-packs`; gewechselt wird im Spiel (Options > Controls > Version). **Vor dem Bauen `npm run assets:pack` laufen lassen**, wenn sich Quellen unter `tools/assets/sources-packs/` geändert haben.
+- Keine Original-MM3-Dateien und nicht `MATURASC.TTF` im Installer (der Build kopiert nur `public/assets` und `public/assets-packs`).
 
 ## Was der Installer fragt
 

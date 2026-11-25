@@ -1,6 +1,6 @@
 # Plan: zwei Versionen, „Classic“ und „Fantastic Islands“
 
-Stand: 25. 11. 2026. **Status: Plan, nichts umgesetzt.** Die Befunde stammen aus dem Code von `main` (Commit `e5578c4a`). Die Entscheidungen des Nutzers vom 25. 11. 2026 (Abschnitt 8) sind eingearbeitet.
+Stand: 25. 11. 2026. **Status: Phasen 1 bis 4 umgesetzt (25. 11. 2026, siehe Abschnitt 10); Phase 5 (zusätzliche Monster) ist offen.** Die Befunde stammen aus dem Code von `main` (Commit `e5578c4a`). Die Entscheidungen des Nutzers vom 25. 11. 2026 (Abschnitt 8) sind eingearbeitet.
 
 ## 1. Ziel
 
@@ -28,6 +28,9 @@ Ein Wechsel lädt das Spiel in der anderen Version neu (wie heute der Wechsel de
 | Weltform | derselbe Seed = dieselbe Inselwelt (Nutzer, 25. 11.) | Inseln, Orte und Wege hängen nicht von der Version ab (Test in Phase 5) |
 | Namen | Monsternamen können je Version abweichen; Ids bleiben gleich | Namen sind Anzeige (`def.name`), die Ids sind die Schlüssel |
 | Inhalt | Phasen 1 bis 4 liefern Assets und Namen; **zusätzliche Monster** kommen in Phase 5, die zum Umfang gehört | Monster ändern die Generierung und brauchen eigene Golden-Werte |
+| Standard für Erweiterungen | **Fantastic Islands** (Nutzer, 25. 11.) | Classic bleibt, wie es ist; nur Fehlerbehebungen |
+| Weltform und Monster | die einfachere Lesart: gleiche Inseln, Orte und Wege, die Monster dürfen abweichen (Nutzer, 25. 11.) | Fantastic ist keine Obermenge von Classic |
+| Ort des Schalters | **Options > Controls > Version** (Nutzer, 25. 11.) | kein eigenes Fenster |
 
 ## 3. Befunde im Code
 
@@ -101,7 +104,7 @@ Ein Wechsel lädt das Spiel in der anderen Version neu (wie heute der Wechsel de
 
 Jede Phase ist für sich fertig und lässt Classic unverändert.
 
-**Phase 0: Entscheidungen** (Abschnitt 8): erledigt am 25. 11. 2026, eine Frage ist noch offen (Abschnitt 8, Frage A).
+**Phase 0: Entscheidungen** (Abschnitt 8): erledigt am 25. 11. 2026, auch Frage A (die einfachere Lesart).
 
 **Phase 1: Pack-Schicht ohne neuen Inhalt** (klein bis mittel)
 - Modul `pack.ts`, `assetUrl`/`assetPath`/Kampagnenlader/CSS darauf umstellen, `initPack` am Anfang von `main()`, Einstellung `pack`, `?pack=`.
@@ -149,7 +152,7 @@ Jede Phase ist für sich fertig und lässt Classic unverändert.
 | Namen werden irgendwo als Schlüssel benutzt | Bestandsaufnahme in Phase 3, Test `names.test.ts` |
 | Ein gemeinsames Erfolgsprofil nennt ein Monster, das es in Classic nicht gibt | Erfolge nur an Ids, die in beiden Versionen existieren (4.4) |
 
-## 8. Entscheidungen des Nutzers (25. 11. 2026) und offene Frage
+## 8. Entscheidungen des Nutzers (25. 11. 2026)
 
 | # | Frage | Entscheidung | Wirkung im Plan |
 |---|---|---|---|
@@ -160,7 +163,9 @@ Jede Phase ist für sich fertig und lässt Classic unverändert.
 | 5 | Installer | am Anfang **ein Installer** mit Wechsel im Spiel | 4.7 |
 | 6 | Wechsel im Spiel | erlaubt; die Spielstände sind nicht kompatibel, **das Spiel lädt beim Wechsel neu** | 4.3 |
 
-**Offene Frage A:** Bei Frage 3 und 4 zusammen: „dieselbe Welt“ gilt für **Inseln, Orte und Wege**. Zusätzliche Monster ändern aber, was in einem Ort steht (wo Fantastic ein altes Monster durch ein neues ersetzt, sieht derselbe Ort anders aus). Ist das gewollt, oder soll jeder Ort **dieselben alten Monster an denselben Stellen** behalten und die neuen Monster nur **zusätzlich** dort stehen, wo Classic keines hat? Die zweite Lesart ist strenger und aufwendiger (Fantastic wäre eine Obermenge von Classic); die erste ist einfacher. Bis zur Antwort plant 4.6 die erste Lesart und nur die Weltform als gleich.
+**Entscheidung zu Frage A (25. 11. 2026): die einfachere Lesart.** „Dieselbe Welt“ gilt für **Inseln, Orte und Wege**. Was in einem Ort steht, darf sich unterscheiden: wo Fantastic ein altes Monster durch ein neues ersetzt, sieht derselbe Ort anders aus. Fantastic Islands ist **keine Obermenge** von Classic, die alte Monster an denselben Stellen behalten müsste.
+
+**Standard für Erweiterungen:** **Fantastic Islands ist der Standardort für jede weitere Erweiterung** (neue Monster, Objekte, Assets, geänderte Namen, neue Inhalte). Classic bleibt, wie es ist, und bekommt nur Fehlerbehebungen. Die Regel steht in `CLAUDE.md`, `docs/HANDOVER.md` (Abschnitt 4, „Versionen“) und in den Themendateien.
 
 ## 9. Regeln, die nach der Umsetzung in die Themendateien gehören
 
@@ -169,3 +174,23 @@ Jede Phase ist für sich fertig und lässt Classic unverändert.
 - `docs/REGELN_GENERIERUNG.md`: `ruleset`, Erweiterungstabellen nur hinten anhängen, eigener Strom je Ziehung, Classic bytegleich.
 - `docs/RELEASE.md`: `assets-packs` als zweiter Eintrag der `extraResources`.
 - `docs/HANDOVER.md`: Abschnitt „Assets und Versionen“ mit der Pack-Schicht.
+
+## 10. Stand der Umsetzung (25. 11. 2026)
+
+Zweig `fantastic_islands_1`. Phasen 1 bis 4 sind umgesetzt und geprüft (`npm run typecheck`, `tests/unit/pack.test.ts`, `tools/dev/check-pack-switch.ts`, das Pack mit einer Testdatei im Browser).
+
+| Phase | Stand | Wo |
+|---|---|---|
+| 1 Pack-Schicht | fertig | `src/assets/pack.ts` (`initPack`, `resolveAsset`, `packBrings`, `packKey`, `packMonsterNames`); `assetUrl` (`render/assets.ts`), `assetPath` (`ui/dom.ts`) und der Kampagnenlader laufen darüber; CSS-Bilder über Variablen (`ui/packStyle.ts`, `ui/style.css`); `initPack` als Erstes in `main()` |
+| 2 Schalter und Spielstände | fertig | Zeile „Version“ in Options > Controls (`Game.controlsOptions`), `Settings.pack`, `Game.switchPack`, `packKey` in `state.ts`, `SaveFile.pack`, Versionsname auf dem Titelbild |
+| 3 Pipeline, Namen | größtenteils | `tools/assets/build-pack.ts` (`npm run assets:pack`), `tools/assets/packRules.ts`, `fetchMergedJson` für die Modellregister, `data/monsterNames.ts` und `BASE_MONSTER_NAMES`; **noch nicht:** ein `--pack`-Schalter für die Umwandlungsstufen (`build-models` …), `tuning.json` für Größe, Höhe und Licht |
+| 4 Release | fertig, nicht gebaut | `installer/build.mjs` nimmt `public/assets-packs` mit; den Installer selbst hat niemand gebaut (`npm run build:dir` in `installer/` steht aus) |
+| 5 zusätzliche Monster | offen | `ruleset`, Erweiterungstabelle, Modelle, Balance, Showcase (Abschnitt 4.6) |
+
+**Abweichungen vom Plan:**
+- Das Pack **liefert fertige Dateien** (`tools/assets/sources-packs/fantastic/assets/**` → `public/assets-packs/fantastic/**`). Die Umwandlungsstufen für Rohmaterial (Modelle aus Quelldateien, Texturen, HD-Texturen) bleiben Classic, bis ein Pack sie braucht.
+- Das Fantastic-Pack ist **leer** (`pack.json` mit leerer Dateiliste und leeren Namen): es gibt noch keine eigenen Assets. Mit einer Testdatei im Pack (ein anderes `ui/title.webp` und ein leeres Modellregister) lief die Prüfung im Browser durch; die Testdateien sind wieder entfernt.
+- Das Bewegtbild der ersten Ladeseite (`index.html`, `loading_intro.webm`) bleibt in beiden Versionen Classics: die Seite fragt es an, bevor ein Skript läuft.
+- Ein Dev-Server mit `VITE_FROZEN=1` kennt neue Dateien in `public/` erst nach einem Neustart (sonst liefert er `index.html` statt der Datei).
+
+**Für Phase 5 (zusätzliche Monster) gilt:** Classics Tabellen, Ziehungen und Golden-Werte bleiben bytegleich; neue Ids hinten anhängen; Weltform gleich (Test über mehrere Seeds); die Namen der Erweiterung stehen in `names.json`; Modelle, Töne und Bilder der neuen Monster kommen als Dateien ins Pack (`tools/assets/sources-packs/fantastic/assets/`); Showcase-Level und Balance nehmen sie mit.

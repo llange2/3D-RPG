@@ -1,10 +1,11 @@
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import type { Scene } from "@babylonjs/core/scene";
 
-export const ASSET_ROOT = `${import.meta.env.BASE_URL}assets/`;
+import { activePackId, classicRoot, packBrings, resolveAsset } from "../assets/pack";
 
+/** The URL of a file below `assets/`, in the version being played (the pack's own file when it brings one, else Classic's: `assets/pack.ts`). */
 export function assetUrl(path: string): string {
-  return `${ASSET_ROOT}${path}`;
+  return resolveAsset(path);
 }
 
 export interface StaticModelInfo {
@@ -49,7 +50,8 @@ export class TextureCache {
     let tex = this.cache.get(key);
     if (!tex) {
       // a high texture that was not built falls back to the normal one
-      const high = textureQuality === "high" && path.startsWith("tex/");
+      // (a pack that brings its own `tex/X` brings `hd/tex/X` too, or Classic's high picture would show under the new one: the pack file test checks it, this is the net)
+      const high = textureQuality === "high" && path.startsWith("tex/") && (!packBrings(path) || packBrings(`hd/${path}`));
       const created: Texture = new Texture(assetUrl(high ? `hd/${path}` : path), this.scene, !(options.mipmaps ?? true), true, Texture.TRILINEAR_SAMPLINGMODE, null, high ? () => created.updateURL(assetUrl(path)) : null);
       tex = created;
       tex.anisotropicFilteringLevel = options.anisotropy ?? 4;
@@ -66,6 +68,20 @@ export class TextureCache {
   async ready(): Promise<void> {
     await Promise.all([...this.cache.values()].map((t) => new Promise<void>((resolve) => (t.isReady() ? resolve() : t.onLoadObservable.addOnce(() => resolve())))));
   }
+}
+
+/**
+ * A register that a pack adds to instead of replacing (the model registries): Classic's file, then the pack's own entries over it (`{ ...classic, ...pack }`). A pack's file holds
+ * only the models that differ or are new; without a pack file it is Classic's alone.
+ */
+export async function fetchMergedJson<T extends object>(path: string): Promise<T> {
+  const res = await fetch(`${classicRoot()}${path}`);
+  if (!res.ok) throw new Error(`could not load ${path}: ${res.status}`);
+  const base = (await res.json()) as T;
+  if (!packBrings(path)) return base;
+  const own = await fetch(resolveAsset(path));
+  if (!own.ok) throw new Error(`could not load ${path} of the version ${activePackId()}: ${own.status}`);
+  return { ...base, ...((await own.json()) as T) };
 }
 
 export async function fetchJson<T>(path: string): Promise<T> {

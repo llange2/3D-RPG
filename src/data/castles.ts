@@ -4,7 +4,7 @@
  */
 import type { Rng } from "../core/rng";
 import type { MonsterGroup } from "./quest-table";
-import { MONSTER_IDS, MONSTERS, monsterGroup, walksOnLand } from "./tables";
+import { BASE_MONSTER_NAMES, MONSTER_IDS, MONSTERS, monsterGroup, walksOnLand } from "./tables";
 
 export const ALIGNMENTS = ["good", "neutral", "evil"] as const;
 export type Alignment = (typeof ALIGNMENTS)[number];
@@ -44,7 +44,7 @@ const level = (id: number): number => MONSTERS[id]?.treasure_level ?? 5;
 
 /** The land monsters of a kind of castle, weakest first (the bosses of quest 5 are no guards). */
 export function guardPool(alignment: Alignment): number[] {
-  return MONSTER_IDS.filter((id) => monsterGroup(id) === GUARD_GROUP[alignment] && walksOnLand(MONSTERS[id]!) && !MONSTERS[id]!.name.includes("King") && !MONSTERS[id]!.name.includes("Master") && !MONSTERS[id]!.name.includes("Lord") && !MONSTERS[id]!.name.includes("Leader")).sort((a, b) => level(a) - level(b) || a - b);
+  return MONSTER_IDS.filter((id) => monsterGroup(id) === GUARD_GROUP[alignment] && walksOnLand(MONSTERS[id]!) && !BASE_MONSTER_NAMES[id]!.includes("King") && !BASE_MONSTER_NAMES[id]!.includes("Master") && !BASE_MONSTER_NAMES[id]!.includes("Lord") && !BASE_MONSTER_NAMES[id]!.includes("Leader")).sort((a, b) => level(a) - level(b) || a - b);
 }
 
 /**

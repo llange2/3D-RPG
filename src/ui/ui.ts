@@ -1,3 +1,4 @@
+import { activePack, activePackId } from "../assets/pack";
 import "./style.css";
 import { resistanceTone } from "../data/resistance-tone";
 import { clockText } from "../sim/party";
@@ -899,7 +900,8 @@ export class UI {
         const top = (window.innerHeight - TITLE_IMAGE.h * scale) / 2;
         el.style.setProperty("--rock-y", `${Math.round(top + TITLE_IMAGE.h * scale * TITLE_ROCK_Y)}px`);
       };
-      const el = h("div", { class: "title" }, menu);
+      // Classic's title is as it always was; another version names itself in the corner
+      const el = h("div", { class: "title" }, menu, ...(activePackId() === "classic" ? [] : [h("div", { class: "title-version", text: activePack().name })]));
       // Esc steps back from the second page; the title is no modal, so it has to listen itself
       const onKey = (e: KeyboardEvent) => {
         if (e.key === "Escape" && page !== "main") show("main");
