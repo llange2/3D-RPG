@@ -33,6 +33,7 @@
     "check:inn": "tsx tools/dev/check-inn.ts",
     "check:melee": "tsx tools/dev/check-melee.ts",
     "check:options": "tsx tools/dev/check-options.ts",
+    "check:pack": "tsx tools/dev/check-pack-switch.ts",
     "check:spells": "tsx tools/dev/check-spells.ts",
     "sheet:tiles": "tsx tools/dev/tile-sheet.ts",
     "bench": "tsx tools/dev/bench.ts",

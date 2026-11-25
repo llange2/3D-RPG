@@ -77,6 +77,7 @@ Der normale Dev-Server lädt die Seite bei jeder gespeicherten Datei neu und bri
 | `?outside=1` | neues Spiel auf der Überwelt statt vor dem Inn (für Werkzeuge, die die Überwelt messen) |
 | `?campaign=1` / `?campaign=<slug>` | Kampagne, ggf. direkt auf einer Karte (Slugs: `public/assets/campaign/index.json`) |
 | `?view=close\|medium\|far` | Sehdistanz (übersteuert das Menü) |
+| `?pack=classic\|fantastic` | Version des Spiels für diese Sitzung (übersteuert Options > Controls > Version, ohne sie zu speichern) |
 | `?debug=1` | FPS-, Draw-Call- und Dreieck-Overlay |
 | `?bench=1&scenario=overworld\|interior\|campaign` | skriptierter Kamerapfad, Ergebnis in `window.__bench.result` |
 
@@ -153,7 +154,9 @@ Die reinen Module importieren weder `document`/`window` noch `@babylonjs/*` (nur
 | `tools/assets/` | Pipeline (Abschnitt 12) und `sources/` (handgemalte und vom Nutzer gelieferte Quellen: Bodenkacheln, Modelle, Töne, UI-Bilder, Symbole) |
 | `tools/dev/`, `tools/balance/` | Browser- und Messwerkzeuge (Abschnitt 13); Balance-Simulator |
 | `tests/` | `unit/*.test.ts` (ca. 120 Dateien), `golden/world-hashes.json`, `helpers/` |
-| `public/assets/` | **Pipeline-Ausgabe**, vom Browser geladen, nicht von Hand ändern (Ausnahmen: siehe Abschnitt 12) |
+| `public/assets/` | **Pipeline-Ausgabe**, vom Browser geladen, nicht von Hand ändern (Ausnahmen: siehe Abschnitt 12); die Assets von **Classic** |
+| `public/assets-packs/fantastic/` | **Pipeline-Ausgabe** von `npm run assets:pack`: nur die Dateien, die **Fantastic Islands** anders hat, plus `pack.json`; Quellen in `tools/assets/sources-packs/fantastic/` |
+| `src/assets/pack.ts` | die Versionen des Spiels: `resolveAsset`, `initPack`, `packKey` (Abschnitt 4, „Versionen“) |
 
 ### Spielstand (`game/state.ts`, `game/saveCodec.ts`)
 
@@ -161,6 +164,18 @@ Die reinen Module importieren weder `document`/`window` noch `@babylonjs/*` (nur
 - **Zwei Spielarten, zwei Speicherstände:** `GameKind` `world`/`campaign` (`kindOfState`, `readSave(kind, slot)`); neue Stellen, die laden oder neu starten, nehmen die Art des laufenden Spiels (`markResume(kind)`).
 - **Plätze:** Quicksave (F5) und Autosave je ein Platz, dazu beliebig viele **benannte** Stände (`writeNamedSave`, `listNamedSaves`; Kampagnenstände erscheinen nicht in der Liste). Alles ist gepackt (`lz1:`): **jeder Lesezugriff auf den Rohstand geht durch `unpackSave`**, auch Werkzeuge. Stände ohne Indexeintrag kommen als „Recovered …“ zurück, Fehler beim Speichern zeigt ein Fenster. Debug > Export/Import saves überträgt alle Plätze als eine JSON-Datei.
 - **Passwörter und Merker** der Quests, Fallen (`<uid>@fired`), Besuche (`<uid>@visited`), Hinweise (`clue:…`), Endräume (`<Karte>@end`) liegen als Strings in `opened`; nichts Eigenes im Format ergänzen, wenn ein Merker reicht.
+
+### Versionen: Classic und Fantastic Islands (`src/assets/pack.ts`)
+
+Ein Code, eine Generierung, zwei Versionen (25. 11. 2026, Plan und Entscheidungen: `docs/PLAN_FANTASTIC_ISLANDS.md`). **Classic** ist das Spiel, wie es war; **Fantastic Islands** hat eigene oder andere Assets, teilweise andere Monsternamen und (Phase 5) zusätzliche Monster. **Standard für alle weiteren Erweiterungen ist Fantastic Islands**; Classic bleibt, wie es ist, und bekommt nur Fehlerbehebungen.
+
+- **Auswahl:** `Settings.pack` (Options > Controls > Version), `?pack=` für eine Sitzung. `main()` ruft **als Erstes** `initPack` (lädt `assets-packs/<id>/pack.json`, nichts für Classic), dann `applyPackStyles` (CSS-Bilder) und `applyMonsterNames`. Ein Wechsel lädt neu (`Game.switchPack`).
+- **Dateien:** `resolveAsset(path)` gibt die Datei des Packs, wenn `pack.json` sie nennt, sonst die von Classic. Ein Pack enthält nur Abweichendes (Regeln: `docs/REGELN_RENDERING.md`).
+- **Spielstände:** getrennte Schlüssel (`packKey`), Classics Schlüssel unverändert; Einstellungen und Erfolge gemeinsam (`docs/REGELN_SPIEL.md`).
+- **Namen:** `names` in `pack.json` (Monster-Id → Name), nur Anzeige (`docs/REGELN_GENERIERUNG.md`).
+- **Bauen:** `npm run assets:pack` kopiert `tools/assets/sources-packs/<id>/assets/**` (Dateien in der Form, wie das Spiel sie lädt, gleiche Pfade wie unter `assets/`) nach `public/assets-packs/<id>/`, übernimmt `names.json`, prüft `tools/assets/packRules.ts` und schreibt `pack.json`. Die Umwandlungsstufen (`build-models` …) bleiben Classic; sie bekommen eine `--pack`-Fassung, wenn ein Pack Rohmaterial statt fertiger Dateien liefert.
+- **Prüfung:** `tests/unit/pack.test.ts`, `tools/dev/check-pack-switch.ts <Ordner>` (Browser: Schalter, Neuladen, Titelbild, getrennte Stände). Ein Dev-Server mit `VITE_FROZEN=1` kennt neue Dateien in `public/` erst nach einem Neustart.
+- **Noch offen:** zusätzliche Monster (`ruleset` in der Weltgenerierung, Phase 5 des Plans); Tabellen pro Version für Größe, Höhe, Licht (`tuning.json`, Phase 3), sobald ein Pack ein Modell mit anderen Maßen bringt.
 
 ---
 
@@ -331,6 +346,7 @@ Alles ist reines, JSON-serialisierbares TypeScript (`Party` und `Character` sind
 
 Quelle: `../old_code/resources` (`OLD` in `tools/assets/lib.ts`) und `tools/assets/sources/` (handgemalte oder vom Nutzer gelieferte Dateien: Bodenkacheln, Modelle, Töne, UI-Bilder, Statussymbole, Kartensymbole, Itembilder; **im Git, nie aus `.ignore` oder von Hand nach `public` legen**). Ausgabe: `public/assets` (`OUT`), **generiert, nicht von Hand ändern**. Werkzeuge: `sharp` (Texturen → WebP), `@gltf-transform/*` und `obj2gltf` (OBJ → GLB), `meshoptimizer`, `ffmpeg-static` (Audio → Opus/WebM). Kein Blender, kein ImageMagick.
 
+- **Zweite Version (Fantastic Islands):** `npm run assets:pack` (`build-pack.ts`), Abschnitt 4, „Versionen“; die Stufen unten bauen Classic.
 - **Stufen:** `build-textures.ts`, `build-models.ts`, `build-audio.ts` (dazu `build-flat-terrain.ts`, `build-minimap.ts`, `build-item-icons.ts`, `build-spell-icons.ts`, `build-portrait-sheets.ts`, `build-placeholder-icons.ts`, `build-hd-textures.ts`, `gen-mixed-tiles.py`, `gen-space-doors.ts`); `build.ts` ruft sie auf (die Modelle nicht: das ist `assets:originals`), schreibt `manifest.json` (Gruppen mit Dateiliste und Bytes) und bricht ab, wenn der Kern 40 MB oder alles 250 MB übersteigt. Gruppen: `core` (vor dem ersten Frame), `campaign`, `interior:*`, `music:*` (lazy), `screens`, `terrain-flat`, `fx`, `outro` (nur am Spielende, außerhalb des Kerns).
 - **Das Spiel lädt nur die Originalmodelle** (`npm run assets:originals`, `models-original/` mit eigenen Registern `models.*.original.json`, optional, zählt nicht zum Größenbudget). Der reduzierte Satz (`assets:models`, `models/`, `PROFILES.reduced`) ist seit bug_fix_68 gelöscht: es gibt nur dieses Profil, `--original` ist nur noch ein Name. **Ein neues Modell bauen** (`--only=<Schlüssel>`; `npm run assets:originals`), sonst „Unexpected magic“ beim Laden; ein eingefrorener Vite-Server liefert neue Dateien erst nach einem Neustart.
 - **Teilbauten:** `assets:build` schreibt ein Manifest neu (die Modelle baut es nicht mehr). Nach Änderungen an `build-models.ts` den Zeitstempel zurücksetzen (sonst baut alles neu); für ein neues Modell nur `--only=<Schlüssel> [--original] [--force]` laufen lassen und das eingecheckte Manifest um die neuen Dateien ergänzen. Der Worktree braucht für die Pipeline eine Junction `.claude/worktrees/old_code`, danach mit `cmd /c rmdir` entfernen. Die Pipeline liest nur die ersten 60 000 Zeichen von `add_monster` (`readStaticMonsterMap`): Fälle am Ende bekommen Maßstab 1 (`SIZE_FACTOR` in `render/monsters.ts`).

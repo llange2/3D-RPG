@@ -26,11 +26,11 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1280, height: 720 },
 });
 
-/** The game is in play when the loading picture and its percentage are gone (the first load of a dev server takes a while). */
+/** The game is in play once the loading picture is gone. */
 const settle = async (page: Page) => {
   await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
-  await page.waitForFunction("!/^\\s*\\d+%\\s*$/m.test(document.body.innerText)", { timeout: 120000 });
-  await sleep(1500);
+  // (the loading picture has no sign that a script can read; a first start on a cold dev server needs the longest)
+  await sleep(20000);
 };
 const evalJs = <T>(page: Page, code: string) => page.evaluate(code) as Promise<T>;
 const shot = async (page: Page, name: string) => {
@@ -76,6 +76,8 @@ try {
   await clickRow(page, "Version");
 
   // ---- Apply: the game is saved in Classic, the page reloads to the title of Fantastic Islands
+  // (a player has no `?autostart=1` in the address, which a reload would keep and start a new game from)
+  await evalJs(page, `history.replaceState(null, "", location.pathname)`);
   const reloaded = page.waitForNavigation({ waitUntil: "load", timeout: 60000 });
   await clickButton(page, "Apply");
   await reloaded;
@@ -106,6 +108,8 @@ try {
   await sleep(500);
   expect((await rowText(page, "Version")) === "Version: Fantastic Islands", `the window shows the version in use (${await rowText(page, "Version")})`);
   await clickRow(page, "Version");
+  // (a player has no `?autostart=1` in the address, which a reload would keep and start a new game from)
+  await evalJs(page, `history.replaceState(null, "", location.pathname)`);
   const back = page.waitForNavigation({ waitUntil: "load", timeout: 60000 });
   await clickButton(page, "Apply");
   await back;
