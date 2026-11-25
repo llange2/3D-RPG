@@ -168,10 +168,47 @@ Gib genau ein Bild aus.
 
 **Wenn die Zellen trotzdem hochformatig kommen:** als Folgenachricht senden: „Die Porträts sind hochformatig. Erzeuge dasselbe Bild neu mit exakt quadratischen Porträts (288 × 288 px) und lasse unter dem Raster eine einfarbig graue Fläche von etwa 400 px frei. Gleiche Figur, gleiche Zustände.“
 
+**Kommen die Zellen hochformatig und das Neuwürfeln hilft nicht:** nicht stauchen, sondern die Zellen einzeln links und rechts ergänzen lassen, siehe Abschnitt 5b.
+
 **Nach der Erzeugung:**
 1. Das Raster oben herausschneiden: 1536 × 624 px ab Oberkante (liegt es mittig statt oben, den tatsächlichen Raster-Ausschnitt nehmen).
 2. Die Zellen ausschneiden: Zelle (Spalte c, Zeile r, jeweils ab 0) hat die Ecke x = 16 + c × 304, y = 16 + r × 304 und die Größe 288 × 288; weicht das Ergebnis um einige Pixel ab, die graue Fläche als Maß nehmen.
 3. Jede Zelle auf 192 × 192 px verkleinern und gemäß Abschnitt 1 benennen; Abnahme nach Abschnitt 6.
+
+## 5b. Hochformatige Zellen quadratisch machen (Governor „Image Reference“)
+
+Stand 25. 11. 2026. Liefert ChatGPT trotz Prompt hochformatige Zellen (so geschehen bei beiden ersten Ergebnissen: Raster 1536 × 1024, Zellen rund 291 × 487 px), muss man nicht neu würfeln: Die Zellen werden einzeln ausgeschnitten und vom Modell **links und rechts um die fehlenden Teile ergänzt**. Die Zustände, die Gesichter und der Malstil bleiben dabei erhalten; das hat bei beiden Helden funktioniert.
+
+**Werkzeug:** App „Image Reference“ des Governors (`POST /app/image_reference/generate`, Modell Flux.2 Klein 4B, ein Referenzbild je Auftrag, Ergebnis 1024 × 1024 bei `resolution=square-1024`). Anbindung: `tools/assets/fx/gov_ref.py` (Geschwister von `gov.py`, multipart wegen der Bilddatei; Token und Adresse nur über `GOV_TOKEN` und `GOV_URL`, nie ins Repository). Zuschnitt und Raster: `tools/assets/fx/state_sheet.py`. Ein Auftrag dauert 40 bis 60 s, die Aufträge laufen nacheinander (20 Zellen ≈ 15 min); Aufruf mit `run_in_background`.
+
+**Ablauf:**
+1. Zellen ausschneiden: `python -I tools/assets/fx/state_sheet.py cut <ergebnis.png> <ordner> <präfix>` erkennt die grauen Zwischenräume selbst und schreibt `<präfix>_01_normal.png` … `<präfix>_10_sleeping.png` (2 px Rand weg, damit kein Grau mitkommt).
+2. Je Zelle ein Auftrag, `jobs.json` im Format von `gov_ref.py` (`name`, `reference`, `prompt`, `resolution`, `seed`), danach `GOV_TOKEN=… GOV_URL=http://sam:8080 python -I tools/assets/fx/gov_ref.py <jobs.json> <ausgabe>`. **Immer derselbe Seed** (hier 1) für alle Zellen eines Helden.
+3. Raster zusammensetzen (Zelle 288 px, 16 px Zwischenraum `#7F7F7F`, also 1536 × 624 wie in 5a): `python -I tools/assets/fx/state_sheet.py sheet <ordner> <präfix> <ausgabe.png>`.
+
+**Prompt (Grundform, wirkt mit dem Original-Hochformat als Referenz):**
+
+```
+Extend the missing parts of the picture left and right. Keep the person, hair, jewellery and background unchanged.
+Both shoulders and upper arms are covered by the same dark teal garment with a wide V-neckline, no bare shoulders.
+```
+
+Der erste Satz stammt vom Nutzer („Extend the missing parts of the picture left and right“) und genügt für das Gesicht. Die Kleidungsangabe (zweiter und dritter Satz, Farbe und Schnitt des jeweiligen Helden einsetzen) ist **nötig**, siehe Befunde. Zustandsabhängige Zusätze:
+
+| Zustand | Änderung am Prompt |
+|---|---|
+| Blessed | anhängen: `Keep the golden halo above the head complete.` (der Ring blieb ohne Zusatz nicht immer vollständig) |
+| Petrified | Kleidungssatz ersetzen: `Both shoulders and upper arms are covered by short sleeves of the same wide V-neck garment as in the other portraits, carved in the same grey-beige stone as the face. No bare shoulders, no bare arms, no sleeveless top.` |
+| alle anderen | Grundform |
+
+**Befunde (Versuche am selben Tag):**
+- **Nur der Satz des Nutzers, ohne Kleidung:** das Modell erfindet die Seiten jedes Mal neu. Bei Held 1 hatten 7 von 10 Bildern **nackte Schultern** (ärmelloses Oberteil), drei dagegen bedeckte; dazu schwankte die Kopfgröße (zwei Bilder deutlich näher herangezoomt). Das ist die Inkonsistenz, die der Prompt mit Kleidungsangabe beseitigt.
+- **Kleidung im Prompt:** alle Zellen haben denselben V-Ausschnitt mit bedeckten Schultern, gleiche Kopfgröße, Augenlinie bei etwa 35 % der Höhe (die Vorgabe von Abschnitt 2 ist 40 %; die Augen stehen aber in allen zehn Bildern gleich hoch).
+- **Versteinert** bekam mit dem allgemeinen Kleidungssatz blanke Steinschultern und -arme (Kleidung als ärmelloses Steinhemd); erst „short sleeves … carved in stone“ passt zu den anderen neun.
+- **Selbst auf ein Quadrat gepolsterte Zelle als Referenz** (Zelle in der Mitte, Seiten aus verschmierten Randstreifen, auch mit Kleidungsprompt): schlechter. Die Streifen bleiben als dunkle Balken stehen. Nicht verwenden; die unveränderte Hochformat-Zelle ist die Referenz.
+- Das Modell malt das Bild **neu** (nicht nur die Seiten): Kopf und Schmuck stimmen im Wesentlichen, Einzelheiten (Locken, Perlenkette, Hautstruktur) weichen vom Original ab. Wer das Original genau halten muss, braucht einen Raster-Satz ohne diesen Schritt (siehe 5a, Quadrate gleich beim ersten Mal).
+
+**Ergebnis:** `zielbild/beispiel_handgemalt_held1.png` (lockige schwarze Haare, Perlenkette als Stirnschmuck über dem linken Auge) und `zielbild/beispiel_handgemalt_held2.png` (lange, wellige dunkle Haare, schlichte Kette mit türkisem Stein); beide 1536 × 624, zehn quadratische Zellen. Die 20 Zellen in voller Größe (1024 × 1024) liegen im Arbeitsordner `.ignore/zustaende/quadrat_final/` (Namen `h1_NN_<zustand>.png`, `h2_…`); der Ordner ist nicht im Repository.
 
 ## 6. Abnahme (Checkliste)
 
