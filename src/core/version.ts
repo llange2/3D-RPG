@@ -202,5 +202,6 @@ export const GEN_VERSION = 82;
  * places, ways) is `GEN_VERSION`'s in both rule sets.
  * History: 1 = the 25 monsters of `docs/MONSTER_1.2.xlsx` (ids 92 to 116) in the wild groups, huts, caves, dungeons and castles of Fantastic Islands; cold monsters stay out of the desert and off lava, fire monsters
  * out of the snow (`world/biomeRules.ts`), the very strong ones (Vulture Roc, Great Hydra, Void Horror, Frost Wyrm) are drawn a quarter as often.
+ * 2 = the Frost Giant King (106), the boss of the Frost Giant, no longer stands in the wild (user, 25. 11. 2026: the sheet's column "entity 9" is empty for him); he is only the end boss of a place.
  */
-export const FANTASTIC_GEN_VERSION = 1;
+export const FANTASTIC_GEN_VERSION = 2;

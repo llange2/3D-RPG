@@ -60,6 +60,8 @@ describe("the tables of the two rule sets", () => {
     expect(monsterGroup(byName("Crypt Rat"))).toBe("undead");
     expect(MONSTERS[byName("Frost Imp")]!.outside).toBe("hut");
     expect(MONSTERS[byName("Venom Bloom")]!.outside).toBe("hut");
+    // the bosses of Fantastic Islands never stand in the wild or in a hut (user, 25. 11. 2026)
+    for (const boss of FANTASTIC_BOSS_PAIRS.map((p) => p.boss)) expect(MONSTERS[boss]!.outside, MONSTERS[boss]!.name).toBeNull();
     expect(FANTASTIC_BOSS_PAIRS).toEqual([{ population: byName("Frost Giant"), boss: byName("Frost Giant King") }, { population: byName("Elder Treant"), boss: byName("Treant King") }]);
     expect(bossPairsOf("classic")).toBe(BOSS_PAIRS);
     expect(bossPairsOf("fantastic")).toHaveLength(BOSS_PAIRS.length + 2);
