@@ -21,7 +21,7 @@ Code, Kommentare, UI-Texte und Bezeichner sind Englisch, diese Dokumentation ist
 | `docs/WELT_BELOHNUNGEN.md` | was eine Welt verteilt und wie die Belohnungsfaktoren je Weltgröße gesetzt sind |
 | `docs/THIEVERY_SCHLOESSER.md` | Schlösser: Regeln, Herleitung und Werte (`src/data/locks.ts`) |
 | `docs/SPELLS.md` | die Zaubertabelle des Nutzers (78 Zeilen, Spalten des Blatts „Spells“ plus „Explanation“): **Quelle** von Name, Beschreibung, Mana, Skalierung, Schaden, Schadensarten und „Penetrating“ der Zauber (`npm run data:spells` → `src/data/spell-sheet.json`); seit `bug_fix_79` beschreibt die Spalte „Explanation“ das, was das Spiel tut |
-| `docs/PLAN_FANTASTIC_ISLANDS.md` | **Plan** (noch nicht umgesetzt): zwei Versionen „Classic“ und „Fantastic Islands“ als Asset-Pack-Schicht über einer Engine, Wechsel in den Optionen, getrennte Spielstände, Phasen und offene Fragen |
+| `docs/PLAN_FANTASTIC_ISLANDS.md` | **Plan** (noch nicht umgesetzt): zwei Versionen „Classic“ und „Fantastic Islands“ als Asset-Pack-Schicht über einer Engine, Wechsel in den Optionen mit Neuladen, getrennte Spielstände, gemeinsame Erfolge, Phasen und Entscheidungen des Nutzers |
 | `docs/RPG_0.1.xlsx` | Tabelle des Nutzers; Quelle der Monsterwerte (`npm run data:monsters`) und der Monstergruppen der Zauber (`npm run data:spells`) |
 
 ## 0. Kurzfassung
