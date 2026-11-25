@@ -202,7 +202,7 @@ const EQUIPMENT_OVERRIDES: Readonly<Record<number, Pick<OldMonster, "anim_weapon
 };
 
 /**
- * A monster of the user's sheet (`docs/RPG_0.1.xlsx`, exported by `npm run data:monsters`) laid over the old table: stats, resistances, XP
+ * A monster of the user's sheet (`docs/MONSTER_1.2.xlsx`, exported by `npm run data:monsters`) laid over the old table: stats, resistances, XP
  * (the sheet's new XP column; the old one is not used any more), treasure level, abilities and the Monster Hut come from the sheet, the
  * animation and sound entries only the old table has stay.
  */

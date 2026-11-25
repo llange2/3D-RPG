@@ -27,7 +27,7 @@ import { ARTIFACT_TYPE, ARTIFACT_XP, KEEPERS } from "../data/keepers";
 import { sectionAt } from "../interiors/spaceship";
 import { ENDING_TEXT, TERMINAL_CURSOR, TERMINAL_TEXT, TERMINAL_TITLE } from "../data/ship-texts";
 import { BLACK_CARD, COMPUTER_ITEM, CONSOLE_ITEM, TEMPORAL_ITEM, SECTION_NAMES, ENGINES_FLAG, ENGINE_CRYSTAL_FLAG, LIFE_FLAG, ENGINE_HUM_LEVEL, ENGINE_HUM_SOUND, ORB, ORBS_FOR_KING, PEARL, PEARL_GOLD, PEARL_XP, POWER_CRYSTAL, SKULL, SKULLS_FOR_RING, STORAGE_BAY } from "../data/quest-table";
-import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, monsterGroup, talentInfo } from "../data/tables";
+import { CONSTANTS, MAP_ITEMS, MONSTERS, QUEST_ITEMS, RIDDLES_MASTER, RUMORS, SPELLS, TEXTS, isUndead, monsterGroup, monsterIdsOf, talentInfo } from "../data/tables";
 import { CELL, FACING_DELTA, SHOWCASE_ID, generateInterior, showcaseLabelAt, hasQuartermaster, planDungeon, type Facing, type InteriorMap } from "../interiors";
 import { inEndRoom } from "../interiors/endRoom";
 import { hasRoundWalls } from "../interiors/roundCorners";
@@ -43,7 +43,7 @@ import { ENVIRONMENTS, ENVIRONMENT_NAMES, hasGroundModels } from "../render/envi
 import { INTERIOR_MODELS, InteriorView, brokenWallModelKeys, castleGateModelKeys, caveModelKeys, pillarModelKeys, roundModelKeys } from "../render/interiorView";
 import { themeModelKeys } from "../render/interiorProps";
 import { trapKindOf, trapModelKeys } from "../render/interiorTraps";
-import { CRYSTAL_LAMP_REACH, CRYSTAL_PATH_LINE, CRYSTAL_PATH_LIT, CRYSTAL_PATH_WAITING, ITEM_LAMPS, LINE_LAMP_EVERY, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, TOWER_TORCH_LAMP, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
+import { CRYSTAL_LAMP_REACH, CRYSTAL_PATH_LINE, CRYSTAL_PATH_LIT, CRYSTAL_PATH_WAITING, FANTASTIC_MONSTER_LAMPS, ITEM_LAMPS, LINE_LAMP_EVERY, LOOT_LAMP, MASCOT_ORB_KEY, MASCOT_ORB_LAMP, MONSTER_LAMPS, TOWER_TORCH_LAMP, crystalLamps, lampSource, objectTaken, type LampKind, type LampSource, type MonsterLamp } from "../render/lamps";
 import { cellsOfLine } from "../render/glowLineGeometry";
 import { ceilingHeightOf, cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
@@ -328,7 +328,14 @@ const TORCH_LIT = { range: 25, intensity: 2.7 };
  */
 const LAMPS: Readonly<Record<number, LampKind>> = ITEM_LAMPS;
 /** The monsters that glow, by the number in the monster table (`MONSTER_LAMPS` names them). */
-const MONSTER_GLOW: ReadonlyMap<number, MonsterLamp> = new Map(Object.values(MONSTERS).flatMap((m) => (MONSTER_LAMPS[m.name] ? [[m.id, MONSTER_LAMPS[m.name]!] as [number, MonsterLamp]] : [])));
+const MONSTER_GLOW: ReadonlyMap<number, MonsterLamp> = new Map(
+  monsterIdsOf("fantastic")
+    .map((id) => MONSTERS[id]!)
+    .flatMap((m) => {
+      const lamp = MONSTER_LAMPS[m.name] ?? FANTASTIC_MONSTER_LAMPS[m.name];
+      return lamp ? [[m.id, lamp] as [number, MonsterLamp]] : [];
+    }),
+);
 /** Lamps farther from the party than this are ignored (units); the pool serves the nearest ones. */
 const LAMP_REACH = 18;
 /** The lava fields round the party that glow and throw embers: how far (in fields) they are looked for and how many at the most (bug_fix_68). */

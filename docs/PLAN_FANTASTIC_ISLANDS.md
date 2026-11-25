@@ -1,6 +1,6 @@
 # Plan: zwei Versionen, „Classic“ und „Fantastic Islands“
 
-Stand: 25. 11. 2026. **Status: Phasen 1 bis 4 umgesetzt (25. 11. 2026, siehe Abschnitt 10); Phase 5 (zusätzliche Monster) ist offen.** Die Befunde stammen aus dem Code von `main` (Commit `e5578c4a`). Die Entscheidungen des Nutzers vom 25. 11. 2026 (Abschnitt 8) sind eingearbeitet.
+Stand: 25. 11. 2026. **Status: Phasen 1 bis 4 umgesetzt (25. 11. 2026, siehe Abschnitt 10); Phase 5 (zusätzliche Monster) umgesetzt am 25. 11. 2026 im Zweig `monster_1_2` (25 Monster aus `docs/MONSTER_1.2.xlsx`, `Ruleset`, Erweiterungstabelle, Golden-Werte `world-hashes-fantastic.json`, Modelle im Pack; Beschreibung in `docs/HANDOVER.md` Abschnitt „Versionen“).** Die Befunde stammen aus dem Code von `main` (Commit `e5578c4a`). Die Entscheidungen des Nutzers vom 25. 11. 2026 (Abschnitt 8) sind eingearbeitet.
 
 ## 1. Ziel
 
@@ -185,7 +185,7 @@ Zweig `fantastic_islands_1`. Phasen 1 bis 4 sind umgesetzt und geprüft (`npm ru
 | 2 Schalter und Spielstände | fertig | Zeile „Version“ in Options > Controls (`Game.controlsOptions`), `Settings.pack`, `Game.switchPack`, `packKey` in `state.ts`, `SaveFile.pack`, Versionsname auf dem Titelbild |
 | 3 Pipeline, Namen | größtenteils | `tools/assets/build-pack.ts` (`npm run assets:pack`), `tools/assets/packRules.ts`, `fetchMergedJson` für die Modellregister, `data/monsterNames.ts` und `BASE_MONSTER_NAMES`; **noch nicht:** ein `--pack`-Schalter für die Umwandlungsstufen (`build-models` …), `tuning.json` für Größe, Höhe und Licht |
 | 4 Release | fertig, nicht gebaut | `installer/build.mjs` nimmt `public/assets-packs` mit; den Installer selbst hat niemand gebaut (`npm run build:dir` in `installer/` steht aus) |
-| 5 zusätzliche Monster | offen | `ruleset`, Erweiterungstabelle, Modelle, Balance, Showcase (Abschnitt 4.6) |
+| 5 zusätzliche Monster | fertig (`monster_1_2`) | `Ruleset` (`core/ruleset.ts`) als vierter Parameter von `World`, Erweiterungstabelle (`MONSTERS` mit nicht aufzählbaren Einträgen, `monsterIdsOf`), eigener Zähler `FANTASTIC_GEN_VERSION` und eigene Golden-Werte, Modelle im Pack (`build-models.ts --pack`), Showcase je Version; Balance: das XP-Ziel bleibt (`reward-survey` mit `RULESET=fantastic`) |
 
 **Abweichungen vom Plan:**
 - Das Pack **liefert fertige Dateien** (`tools/assets/sources-packs/fantastic/assets/**` → `public/assets-packs/fantastic/**`). Die Umwandlungsstufen für Rohmaterial (Modelle aus Quelldateien, Texturen, HD-Texturen) bleiben Classic, bis ein Pack sie braucht.

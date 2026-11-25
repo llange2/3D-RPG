@@ -164,6 +164,22 @@ export const MONSTER_LAMPS: Readonly<Record<string, MonsterLamp>> = {
   Wizard: { color: [0.78, 0.8, 0.82], range: 5, intensity: 2 }, // greyish
 };
 
+/**
+ * The glowing monsters of Fantastic Islands (`docs/MONSTER_1.2.xlsx`), by name: the lava and frost creatures, the storm and the void. A table of its own, for the names are not in Classic's
+ * monster table (`MONSTER_LAMPS` only holds names that are).
+ */
+export const FANTASTIC_MONSTER_LAMPS: Readonly<Record<string, MonsterLamp>> = {
+  "Cinder Beetle": { color: [1, 0.45, 0.15], range: 4.5, intensity: 2 },
+  "Magma Crawler": { color: [1, 0.4, 0.12], range: 5, intensity: 2.2 },
+  "Magma Titan": { color: [1, 0.4, 0.1], range: 6, intensity: 2.8 },
+  Hellhound: { color: [1, 0.35, 0.1], range: 5, intensity: 2.2 },
+  "Frost Golem": { color: [0.4, 0.9, 1], range: 5, intensity: 2.2 },
+  "Frost Shade": { color: [0.65, 0.85, 1], range: 5, intensity: 1.8 },
+  "Winter Queen": { color: [0.7, 0.9, 1], range: 5, intensity: 1.8 },
+  "Storm Giant": { color: [0.55, 0.75, 1], range: 5, intensity: 2.2 },
+  "Void Horror": { color: [0.8, 0.35, 1], range: 5.5, intensity: 2.2 },
+};
+
 /** The lamp a cell of the old maps gives, or null. */
 export function lampSource(kind: LampKind, x: number, z: number, key = `${x.toFixed(2)},${z.toFixed(2)}`): LampSource {
   return { x, z, key, y: kind.y, color: kind.color, ...(kind.range !== undefined ? { range: kind.range } : {}), ...(kind.intensity !== undefined ? { intensity: kind.intensity } : {}), ...(kind.fx ? { fx: kind.fx } : {}), ...(kind.fxY !== undefined ? { fxY: kind.fxY } : {}), ...(kind.halo ? { halo: true } : {}) };

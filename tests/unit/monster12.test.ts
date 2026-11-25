@@ -1,5 +1,9 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_RULESET, parseRuleset } from "../../src/core/ruleset";
+import { FANTASTIC_MONSTER_MODELS } from "../../src/data/monster-models";
+import { BREATH_EVERY, BREATH_MOUTHS } from "../../src/render/breath";
 import { FANTASTIC_GEN_VERSION } from "../../src/core/version";
 import { FANTASTIC_BOSS_PAIRS, bossPairsOf, BOSS_PAIRS } from "../../src/data/quest-table";
 import { hutScene } from "../../src/data/hut-texts";
@@ -206,6 +210,40 @@ describe("where the monsters stand (Fantastic Islands)", () => {
     for (const name of ["Hellhound", "Magma Crawler", "Magma Titan", "Cinder Beetle", "Ash Cultist"]) expect(isFireKin(MONSTERS[byName(name)]!), name).toBe(true);
     expect(isColdKin(MONSTERS[byName("Thorn Creeper")]!)).toBe(false);
     expect(isFireKin(MONSTERS[byName("Frost Golem")]!)).toBe(false);
+  });
+});
+
+describe("the models of Fantastic Islands", () => {
+  const pack = JSON.parse(readFileSync("public/assets-packs/fantastic/pack.json", "utf-8")) as { files: string[] };
+  const registry = JSON.parse(readFileSync("public/assets-packs/fantastic/models.monsters.original.json", "utf-8")) as Record<string, { file: string; scale: number; animated: boolean; bounds: number[] }>;
+
+  it("has a model for each of the 25 monsters, in the pack only, with the scale of the table", () => {
+    expect(Object.keys(registry).map(Number).sort((a, b) => a - b)).toEqual(FANTASTIC_MONSTER_IDS);
+    for (const id of FANTASTIC_MONSTER_IDS) {
+      const entry = registry[String(id)]!;
+      expect(pack.files, MONSTERS[id]!.name).toContain(entry.file);
+      expect(existsSync(join("public", "assets-packs", "fantastic", entry.file)), entry.file).toBe(true);
+      expect(entry.scale, MONSTERS[id]!.name).toBe(FANTASTIC_MONSTER_MODELS[id]!.scale);
+      // (the bounds of a figure that stands on the floor: a skeleton's figure starts at 0, a static one is round its middle)
+      expect(entry.bounds[4]! - entry.bounds[1]!, MONSTERS[id]!.name).toBeGreaterThan(0.3);
+    }
+  });
+
+  it("keeps the four figures without a skeleton static and the others animated", () => {
+    const stat = Object.entries(registry).filter(([, e]) => !e.animated).map(([id]) => Number(id));
+    expect(stat.sort((a, b) => a - b)).toEqual([93, 94, 97, 114]);
+  });
+
+  it("brings the new Capybara without a rig, and no file of Classic is replaced", () => {
+    expect(pack.files).toContain("models-original/obj_capybara.glb");
+    const classic = new Set(readdirSync("public/assets/models-original").map((f) => `models-original/${f}`));
+    // the Capybara is the one file the pack has that Classic has too (the pack's version of it); the monsters are new
+    expect(pack.files.filter((f) => f.endsWith(".glb") && classic.has(f))).toEqual(["models-original/obj_capybara.glb"]);
+  });
+
+  it("breathes cold only from the frost wolf and the frost wyrm", () => {
+    expect(Object.keys(BREATH_MOUTHS).map(Number)).toEqual([byName("Rime Wolf"), byName("Frost Wyrm")]);
+    expect(BREATH_EVERY).toBe(5);
   });
 });
 
