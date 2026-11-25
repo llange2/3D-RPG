@@ -26,6 +26,12 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1280, height: 720 },
 });
 
+/** The game is in play when the loading picture and its percentage are gone (the first load of a dev server takes a while). */
+const settle = async (page: Page) => {
+  await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
+  await page.waitForFunction("!/^\\s*\\d+%\\s*$/m.test(document.body.innerText)", { timeout: 120000 });
+  await sleep(1500);
+};
 const evalJs = <T>(page: Page, code: string) => page.evaluate(code) as Promise<T>;
 const shot = async (page: Page, name: string) => {
   if (shots) await page.screenshot({ path: join(shots, `${name}.png`) });
@@ -46,8 +52,7 @@ try {
   await page.goto(`${base}?autostart=1&outside=1&seed=pack-check&size=small&dungeons=few`, { waitUntil: "load", timeout: 60000 });
   await evalJs(page, `localStorage.clear()`);
   await page.goto(`${base}?autostart=1&outside=1&seed=pack-check&size=small&dungeons=few`, { waitUntil: "load", timeout: 60000 });
-  await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
-  await sleep(4000);
+  await settle(page);
   expect((await evalJs<number>(page, `document.querySelectorAll(".title-version").length`)) === 0, "Classic shows no version mark on the title");
   expect((await evalJs<string>(page, `__game.state.seed`)) === "pack-check", "Classic game started");
 
@@ -85,8 +90,7 @@ try {
 
   // ---- Fantastic Islands: a game of its own, saved under its own keys
   await page.goto(`${base}?autostart=1&outside=1&seed=other-world&size=small&dungeons=few`, { waitUntil: "load", timeout: 60000 });
-  await page.waitForFunction("window.__game !== undefined", { timeout: 60000 });
-  await sleep(4000);
+  await settle(page);
   expect((await evalJs<string>(page, `__game.state.seed`)) === "other-world", "a game starts in Fantastic Islands");
   await evalJs(page, `__game.game.save("auto")`);
   expect((await store(page, "mm3-seed-rpg:fantastic:save:v1")) !== null, "its autosave is under Fantastic's key");
