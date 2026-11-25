@@ -1,3 +1,4 @@
+import { resolveAsset } from "../assets/pack";
 type Child = Node | string | number | null | undefined | false;
 
 export interface Props {
@@ -78,7 +79,7 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export const assetPath = (p: string): string => `${import.meta.env.BASE_URL}assets/${p}`;
+export const assetPath = (p: string): string => resolveAsset(p);
 /** Pictures that only a CSS rule asks for (the scroll behind every message): the browser fetches those at the first use, and the first box showed without its scroll. */
 const kept: HTMLImageElement[] = [];
 export function preloadImages(paths: string[]): void {

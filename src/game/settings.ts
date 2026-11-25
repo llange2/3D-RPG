@@ -3,6 +3,7 @@
  * Storage can be missing (private window, blocked site data): a failed read gives the default, a failed write just means the
  * choice is not remembered.
  */
+import { parsePackId, type PackId } from "../assets/pack";
 import type { TextureQuality } from "../render/assets";
 import type { Resolution, ViewDistance } from "../render/engine";
 import { ENVIRONMENTS, type Environment } from "../render/environment";
@@ -51,6 +52,11 @@ export interface Settings {
    * death animation, bug_fix_81). Off is how it was before: they move as soon as the last shot has landed. Absent in older stored settings: on.
    */
   waitForDeath: boolean;
+  /**
+   * The version of the game (Options > Controls > Version): Classic or Fantastic Islands (`assets/pack.ts`, `docs/PLAN_FANTASTIC_ISLANDS.md`). The saves of the two are not compatible and are kept apart;
+   * a change reloads the page. Absent in older stored settings: Classic.
+   */
+  pack: PackId;
 }
 
 export type RangeTarget = "closest" | "weakest";
@@ -59,7 +65,7 @@ export const RANGE_TARGETS: readonly RangeTarget[] = ["closest", "weakest"];
 const KEY = "mm3-seed-rpg:settings:v1";
 /** The defaults are the "Medium" quality (`game/quality.ts`): flat ground, normal textures, medium distance, normal resolution, animated town scenes. */
 export function defaultSettings(): Settings {
-  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, effects: "full", fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true, rangeTarget: "closest", waitForDeath: true };
+  return { environment: "flat", viewDistance: "medium", resolution: "normal", showFps: false, music: true, musicVolume: 50, sfx: true, sfxVolume: 50, animatedTown: true, effects: "full", fadeCursor: true, textureQuality: "normal", keys: defaultKeys(), showKeys: true, rangeTarget: "closest", waitForDeath: true, pack: "classic" };
 }
 export const DEFAULT_SETTINGS: Settings = defaultSettings();
 
@@ -106,6 +112,7 @@ export function parseSettings(raw: string | null): Settings {
   if (typeof stored.fadeCursor === "boolean") out.fadeCursor = stored.fadeCursor;
   if (stored.rangeTarget === "closest" || stored.rangeTarget === "weakest") out.rangeTarget = stored.rangeTarget;
   if (typeof stored.waitForDeath === "boolean") out.waitForDeath = stored.waitForDeath;
+  if (stored.pack !== undefined) out.pack = parsePackId(stored.pack);
   if (stored.textureQuality === "normal" || stored.textureQuality === "high") out.textureQuality = stored.textureQuality;
   return out;
 }

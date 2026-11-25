@@ -11,6 +11,9 @@ import { preloadButtonArt } from "../ui/buttonArt";
 import { preloadSpellIcons } from "../ui/spellIcons";
 import { keepSpellArtWarm, loadFonts } from "../ui/warmUp";
 import { preloadItemIcons } from "../ui/itemIcons";
+import { initPack, packMonsterNames, parsePackId } from "../assets/pack";
+import { applyMonsterNames } from "../data/monsterNames";
+import { applyPackStyles } from "../ui/packStyle";
 import { setTextureQuality } from "../render/assets";
 import { readSettings } from "./settings";
 import { splitLegacySaves } from "./state";
@@ -18,6 +21,10 @@ import { parseDungeonDensity, parseWorldSize, type WorldSize } from "../world/ty
 
 async function main(): Promise<void> {
   const params = new URLSearchParams(location.search);
+  // the version of the game (Classic or Fantastic Islands) is chosen before anything asks for a file: an address parameter for tests and tools, else the option
+  await initPack(params.has("pack") ? parsePackId(params.get("pack")) : readSettings().pack);
+  applyPackStyles();
+  applyMonsterNames(packMonsterNames());
   // the start message of index.html stays up until the game can show a screen of its own (the title or the loading picture)
   bootProgress(0);
   installCursor();

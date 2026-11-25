@@ -264,6 +264,11 @@ export const MONSTERS: Record<number, MonsterDef> = Object.fromEntries(
   }),
 );
 export const MONSTER_IDS: number[] = Object.keys(MONSTERS).map(Number).sort((a, b) => a - b);
+/**
+ * The names of the table as it is built. A version of the game may show other names (`data/monsterNames.ts` changes `MONSTERS[id].name` once at start-up), but whatever the generation
+ * decides by a name (the guards of a castle: no "King", "Master", "Lord" or "Leader") reads these, so that the world does not depend on the version.
+ */
+export const BASE_MONSTER_NAMES: Readonly<Record<number, string>> = Object.fromEntries(MONSTER_IDS.map((id) => [id, MONSTERS[id]!.name]));
 
 /** A row of `spell-sheet.json` (generated from `docs/SPELLS.md`, `npm run data:spells`); the damage columns exist for the offensive spells only. */
 interface SheetRow {

@@ -1,3 +1,4 @@
+import { PACKS, activePackId, packKey, type PackId } from "../assets/pack";
 import { GEN_VERSION } from "../core/version";
 import { packSave, unpackSave } from "./saveCodec";
 import { NEUTRAL_SCALE, parseRewardScale, type RewardScale } from "../actions/rewardScale";
@@ -194,6 +195,8 @@ export interface SaveFile {
   version: 1;
   genVersion: number;
   savedAt: string;
+  /** The version of the game that wrote the save (`assets/pack.ts`). Absent: Classic (every save from before the versions). */
+  pack?: PackId;
   seed: string;
   state: {
     seed: string;
@@ -228,6 +231,7 @@ export function toSaveFile(state: GameState): SaveFile {
     version: 1,
     genVersion: GEN_VERSION,
     savedAt: new Date().toISOString(),
+    ...(activePackId() === "classic" ? {} : { pack: activePackId() }),
     seed: state.seed,
     state: {
       seed: state.seed,
@@ -293,7 +297,7 @@ export function fromSaveFile(file: SaveFile): GameState {
  * moves a campaign save that was written under them.
  */
 export type GameKind = "world" | "campaign";
-const KEYS: Record<GameKind, Record<"auto" | "quick", string>> = {
+const BASE_KEYS: Record<GameKind, Record<"auto" | "quick", string>> = {
   world: { auto: "mm3-seed-rpg:save:v1", quick: "mm3-seed-rpg:quicksave:v1" },
   campaign: { auto: "mm3-seed-rpg:campaign:save:v1", quick: "mm3-seed-rpg:campaign:quicksave:v1" },
 };
@@ -301,7 +305,12 @@ const KEYS: Record<GameKind, Record<"auto" | "quick", string>> = {
 const LEGACY_MANUAL: Record<GameKind, string> = { world: "mm3-seed-rpg:manualsave:v1", campaign: "mm3-seed-rpg:campaign:manualsave:v1" };
 
 /** `auto`: written by the game itself, `quick`: F8. What "Save game" in the menu writes are the named saves below. */
-export type SaveSlot = keyof (typeof KEYS)["world"];
+export type SaveSlot = keyof (typeof BASE_KEYS)["world"];
+/**
+ * The key a slot is stored under in the version being played (`assets/pack.ts`): Classic's are the keys above, Fantastic Islands has its own, because its saves are not compatible with
+ * Classic's (it has monsters Classic does not know). Looked up at each use: the version is chosen when the page starts, after this module is loaded.
+ */
+const slotKey = (kind: GameKind, slot: SaveSlot): string => packKey(BASE_KEYS[kind][slot]);
 export const SAVE_SLOTS: readonly SaveSlot[] = ["quick", "auto"];
 export const GAME_KINDS: readonly GameKind[] = ["world", "campaign"];
 /** The kinds of game whose saves the title screen and the menu list: the campaign was taken off the menu (6. 11. 2026), its saves stay in the browser but are not offered. */
@@ -311,12 +320,12 @@ export const kindOfState = (state: Pick<GameState, "campaign">): GameKind => (st
 
 /** Writes a save to localStorage, in the slots of the kind of game being played. Returns false if the browser refuses (private mode, quota). */
 export function writeSave(state: GameState, slot: SaveSlot = "auto"): boolean {
-  return setSaveItem(KEYS[kindOfState(state)][slot], toSaveFile(state));
+  return setSaveItem(slotKey(kindOfState(state), slot), toSaveFile(state));
 }
 
 export function readSave(kind: GameKind, slot: SaveSlot = "auto"): SaveFile | null {
   try {
-    const raw = localStorage.getItem(KEYS[kind][slot]);
+    const raw = localStorage.getItem(slotKey(kind, slot));
     if (!raw) return null;
     const file = JSON.parse(unpackSave(raw)) as SaveFile;
     // a world slot never offers a campaign save and the other way round (see `splitLegacySaves`)
@@ -332,14 +341,16 @@ export function readSave(kind: GameKind, slot: SaveSlot = "auto"): SaveFile | nu
  * and `readSave` ignores it).
  */
 export function splitLegacySaves(): void {
+  // the saves from before the versions are Classic's: another version must not take them in as its own
+  if (activePackId() !== "classic") return;
   migrateManualSaves();
   packStoredSaves();
   try {
     for (const slot of SAVE_SLOTS) {
-      const raw = localStorage.getItem(KEYS.world[slot]);
-      if (!raw || !(JSON.parse(unpackSave(raw)) as SaveFile).state?.campaign || localStorage.getItem(KEYS.campaign[slot]) !== null) continue;
-      localStorage.setItem(KEYS.campaign[slot], raw);
-      localStorage.removeItem(KEYS.world[slot]);
+      const raw = localStorage.getItem(slotKey("world", slot));
+      if (!raw || !(JSON.parse(unpackSave(raw)) as SaveFile).state?.campaign || localStorage.getItem(slotKey("campaign", slot)) !== null) continue;
+      localStorage.setItem(slotKey("campaign", slot), raw);
+      localStorage.removeItem(slotKey("world", slot));
     }
   } catch {
     // storage unavailable or a damaged save: nothing to move
@@ -357,7 +368,7 @@ export function packStoredSaves(): number {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith(namedKey("")) || GAME_KINDS.some((kind) => SAVE_SLOTS.some((slot) => KEYS[kind][slot] === key)))) keys.push(key);
+      if (key && (key.startsWith(namedKey("")) || GAME_KINDS.some((kind) => SAVE_SLOTS.some((slot) => slotKey(kind, slot) === key)))) keys.push(key);
     }
     for (const key of keys) {
       try {
@@ -393,8 +404,8 @@ export interface NamedSave {
   savedAt: string;
 }
 
-const NAMED_INDEX = "mm3-seed-rpg:named:index:v1";
-const namedKey = (id: string) => `mm3-seed-rpg:named:save:${id}`;
+const namedIndexKey = (): string => packKey("mm3-seed-rpg:named:index:v1");
+const namedKey = (id: string): string => packKey(`mm3-seed-rpg:named:save:${id}`);
 export const MAX_SAVE_NAME = 40;
 /** The name a save of the old single slot gets. */
 export const LEGACY_SAVE_NAME = "Saved game";
@@ -406,7 +417,7 @@ const sameName = (a: string, b: string) => a.toLocaleLowerCase() === b.toLocaleL
 function readIndex(): NamedSave[] {
   let listed: NamedSave[] = [];
   try {
-    const raw = localStorage.getItem(NAMED_INDEX);
+    const raw = localStorage.getItem(namedIndexKey());
     const list: unknown = raw ? JSON.parse(raw) : [];
     listed = Array.isArray(list) ? (list as NamedSave[]).filter((e) => typeof e?.id === "string" && typeof e.name === "string") : [];
   } catch {
@@ -468,7 +479,7 @@ export function storeNamedSave(file: SaveFile, name: string): boolean {
     isNew = !old;
     if (!setSaveItem(namedKey(id), file)) return false;
     const entry: NamedSave = { id, name: clean, kind, note: describeSave(file), savedAt: file.savedAt };
-    localStorage.setItem(NAMED_INDEX, JSON.stringify([...index.filter((e) => e.id !== id), entry]));
+    localStorage.setItem(namedIndexKey(), JSON.stringify([...index.filter((e) => e.id !== id), entry]));
     recoveredSaves.delete(id);
     return true;
   } catch {
@@ -501,7 +512,7 @@ export function deleteNamedSave(id: string): void {
   try {
     localStorage.removeItem(namedKey(id));
     recoveredSaves.delete(id);
-    localStorage.setItem(NAMED_INDEX, JSON.stringify(readIndex().filter((e) => e.id !== id)));
+    localStorage.setItem(namedIndexKey(), JSON.stringify(readIndex().filter((e) => e.id !== id)));
   } catch {
     // nothing to remove
   }
@@ -575,8 +586,12 @@ export function importSaves(text: string): { written: string[]; skipped: string[
   const written: string[] = [];
   const skipped: string[] = [];
   const kindOf = (save: SaveFile): GameKind => (save.state.campaign ? "campaign" : "world");
+  // the saves of the two versions are not compatible: one of the other version stays out (and the player is told which version it needs)
+  const foreign = (save: SaveFile): boolean => (save.pack ?? "classic") !== activePackId();
+  const otherVersion = (save: SaveFile): string => `made in ${PACKS[save.pack ?? "classic"].name}, switch the version in Options > Controls first`;
   const putNamed = (save: unknown, name: string, label: string) => {
     if (!isSaveFile(save)) skipped.push(`${label}: not a save`);
+    else if (foreign(save)) skipped.push(`${label}: ${otherVersion(save)}`);
     else if (storeNamedSave(save, name)) written.push(`${kindOf(save)} / ${cleanSaveName(name)}`);
     else skipped.push(`${label}: the browser refused to store it`);
   };
@@ -591,9 +606,10 @@ export function importSaves(text: string): { written: string[]; skipped: string[
     if (slot === "manual") putNamed(save, LEGACY_SAVE_NAME, name);
     else if (!GAME_KINDS.includes(kind) || !SAVE_SLOTS.includes(slot)) skipped.push(`${name}: unknown slot`);
     else if (!isSaveFile(save) || !!save.state.campaign !== (kind === "campaign")) skipped.push(`${name}: not a save of this kind of game`);
+    else if (foreign(save)) skipped.push(`${name}: ${otherVersion(save)}`);
     else {
       try {
-        localStorage.setItem(KEYS[kind][slot], packSave(JSON.stringify(save)));
+        localStorage.setItem(slotKey(kind, slot), packSave(JSON.stringify(save)));
         written.push(name);
       } catch {
         skipped.push(`${name}: the browser refused to store it`);

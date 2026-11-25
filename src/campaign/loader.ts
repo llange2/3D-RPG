@@ -1,3 +1,4 @@
+import { resolveAsset } from "../assets/pack";
 import { CampaignMapModel, type CellOverrides } from "./model";
 import { mapSlugOf, type CampaignIndexEntry, type CampaignMapData } from "./types";
 
@@ -5,7 +6,7 @@ import { mapSlugOf, type CampaignIndexEntry, type CampaignMapData } from "./type
 export type CampaignFetcher = (path: string) => Promise<unknown>;
 
 let fetcher: CampaignFetcher = async (path) => {
-  const res = await fetch(`${import.meta.env.BASE_URL}assets/${path}`);
+  const res = await fetch(resolveAsset(path));
   if (!res.ok) throw new Error(`could not load ${path}: ${res.status}`);
   return res.json();
 };

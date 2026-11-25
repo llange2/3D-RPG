@@ -31,7 +31,7 @@ import { inEndRoom } from "../interiors/endRoom";
 import { hasRoundWalls } from "../interiors/roundCorners";
 import { towerFloorAt } from "../interiors/stairs";
 import { MONSTER_STEP_SECONDS, MonsterRenderer } from "../render/monsters";
-import { TextureCache, fetchJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
+import { TextureCache, fetchJson, fetchMergedJson, type MonsterModelInfo, type StaticModelInfo } from "../render/assets";
 import { ChunkManager } from "../render/chunkManager";
 import { LAMP_RANGE, VIEW_DISTANCES, VIEW_TILES, VIEW_FOG_RANGE, VIEW_SHARE, chunkRadius, createRenderer, readViewDistance, type Renderer, type Resolution, type ViewDistance } from "../render/engine";
 import { groundHeightAt, setTileModels, tileCenterX, tileCenterZ } from "../render/heights";
@@ -45,6 +45,7 @@ import { CRYSTAL_LAMP_REACH, CRYSTAL_PATH_LINE, CRYSTAL_PATH_LIT, CRYSTAL_PATH_W
 import { cellsOfLine } from "../render/glowLineGeometry";
 import { ceilingHeightOf, cellCenterX, cellCenterZ, environmentModels } from "../render/interiorMesher";
 import { TerrainMaterials } from "../render/materials";
+import { PACKS, PACK_IDS, activePackId } from "../assets/pack";
 import { markResume, registryFile, takeResume } from "../render/modelSet";
 import { MENU_KEY, actionOf, assignKey, defaultKeys, primaryKey, GAME_ACTIONS } from "./keybindings";
 import { QUALITY_LEVELS, QUALITY_NAMES, applyQuality, qualityOf } from "./quality";
@@ -489,7 +490,7 @@ export class Game {
     this.effects = new Effects(this.r.scene, this.settings.effects);
     this.props.watch(this.effects);
     this.projectiles = new Projectiles(this.props, this.r.scene, this.effects);
-    const [staticInfo, monsterInfo] = await Promise.all([fetchJson<Record<string, StaticModelInfo>>(registryFile("static")), fetchJson<Record<string, MonsterModelInfo>>(registryFile("monsters"))]);
+    const [staticInfo, monsterInfo] = await Promise.all([fetchMergedJson<Record<string, StaticModelInfo>>(registryFile("static")), fetchMergedJson<Record<string, MonsterModelInfo>>(registryFile("monsters"))]);
     progress?.(0.15);
     // the models are the originals, and so is the ground: the full ground tiles of the old game
     setUltraGround(true);
@@ -5728,13 +5729,20 @@ export class Game {
 
   /** The settings as the options window starts with them: the view distance is the one in use, which a `?view=` in the address may have set. */
   private optionsDraft(): Settings {
-    return { ...this.settings, viewDistance: this.viewDistance };
+    // (the version in use may come from a `?pack=` in the address, not from the stored choice)
+    return { ...this.settings, viewDistance: this.viewDistance, pack: activePackId() };
   }
 
   private async controlsOptions(): Promise<boolean> {
     const draft = this.optionsDraft();
     const onOff = (v: boolean) => (v ? "on" : "off");
     const picked = await this.ui.settingsPanel("Controls", [
+      {
+        type: "toggle",
+        // the saves of the two versions are not compatible (Fantastic Islands has monsters Classic does not know), so each keeps its own and a change reloads the game
+        label: () => `Version: ${PACKS[draft.pack].name}${draft.pack === activePackId() ? "" : " (the game reloads)"}`,
+        flip: () => (draft.pack = PACK_IDS[(PACK_IDS.indexOf(draft.pack) + 1) % PACK_IDS.length]!),
+      },
       {
         type: "button",
         label: () => "Key bindings",
@@ -5868,10 +5876,28 @@ export class Game {
     this.showKeyHints();
     writeSettings(this.settings);
 
+    // another version has other files and other saves: it is a reload too, to the title of that version (the settings were stored above)
+    if (next.pack !== activePackId()) return this.switchPack();
     // the textures stay in the cache for the whole session, so a new quality is a reload (the settings were stored above)
     if (next.textureQuality !== before.textureQuality) return this.reloadPage();
     this.ui.toast("Options applied");
     return false;
+  }
+
+  /**
+   * The other version of the game: the game in progress is saved as the autosave of the version being left (its saves are not compatible with the other's), and the page reloads
+   * to the title of the new one. Not marked as a continuation: the other version has its own saves, "Continue" there offers its own. A `?pack=` in the address would win over the choice.
+   */
+  private switchPack(): boolean {
+    if (this.mode !== "title") this.save("auto");
+    const params = new URLSearchParams(location.search);
+    if (params.has("pack")) {
+      params.delete("pack");
+      const query = params.toString();
+      history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}`);
+    }
+    location.reload();
+    return true;
   }
 
   /** Saves the game, marks the reload as a continuation and reloads the page (after a change that the loaded textures cannot follow). */

@@ -23,6 +23,7 @@
     "assets:hd": "tsx tools/assets/build-hd-textures.ts",
     "assets:audio": "tsx tools/assets/build-audio.ts",
     "assets:build": "tsx tools/assets/build.ts",
+    "assets:pack": "tsx tools/assets/build-pack.ts",
     "golden:update": "tsx tools/dev/update-golden.ts",
     "check:chrome": "tsx tools/dev/chrome-golden.ts",
     "check:render": "tsx tools/dev/check-render.ts",

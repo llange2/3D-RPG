@@ -143,7 +143,7 @@ html.ending-on #game-cursor { display: none; }
   position: relative; box-sizing: border-box; color: var(--ink); max-width: min(960px, 94vw); max-height: 90vh; overflow: auto;
   /* no fallback colour: the rolled edges of the scroll are transparent and must show the game behind them */
   border: solid transparent; border-width: var(--edge-t) var(--roll-r) var(--edge-b) var(--roll-l);
-  border-image: url("/assets/ui/scroll.webp") 42 106 52 76 fill / 1 / 0 stretch;
+  border-image: var(--img-scroll, url("/assets/ui/scroll.webp")) 42 106 52 76 fill / 1 / 0 stretch;
   padding: 10px 18px 12px; filter: drop-shadow(0 8px 24px #000c);
   font-size: 18px; line-height: 1.35;
 }
@@ -152,7 +152,7 @@ html.ending-on #game-cursor { display: none; }
 .parchment.computer {
   --roll-l: 40px; --roll-r: 40px; --edge-t: 40px; --edge-b: 40px; color: #8ff0ff;
   border-width: var(--edge-t) var(--roll-r) var(--edge-b) var(--roll-l);
-  border-image: url("/assets/ui/computer_screen.webp") 80 80 80 80 fill / 1 / 0 stretch;
+  border-image: var(--img-computer-screen, url("/assets/ui/computer_screen.webp")) 80 80 80 80 fill / 1 / 0 stretch;
   width: min(960px, 94vw); min-height: min(580px, 90vh); display: flex; flex-direction: column; justify-content: flex-start;
   font-family: "Consolas", "Lucida Console", monospace; font-size: 15px; line-height: 1.3; text-shadow: 0 0 6px #1cd6ff88; filter: drop-shadow(0 8px 24px #000c);
 }
@@ -394,9 +394,10 @@ html.ending-on #game-cursor { display: none; }
 /* ---------- title screen ---------- */
 .title {
   position: absolute; inset: 0; pointer-events: auto; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
-  background: radial-gradient(ellipse at center, #00000033 0%, #000000dd 85%), url("/assets/ui/title.webp") center / cover no-repeat, #05060a; z-index: 20;
+  background: radial-gradient(ellipse at center, #00000033 0%, #000000dd 85%), var(--img-title, url("/assets/ui/title.webp")) center / cover no-repeat, #05060a; z-index: 20;
 }
 .title h1 { font-family: var(--font-head); font-size: clamp(34px, 7vw, 76px); margin: 0; color: var(--gold); letter-spacing: 0.06em; text-shadow: 0 4px 24px #000, 0 0 30px #d9a44166; text-align: center; }
+.title-version { position: absolute; right: 18px; bottom: 14px; font-family: var(--font-head); font-size: 20px; letter-spacing: 0.08em; color: var(--gold); text-shadow: 0 2px 10px #000; pointer-events: none; }
 .title .sub { opacity: 0.85; margin-top: -8px; font-size: 18px; }
 /* the settings of a new game: a label column and a column of controls, so the first letters of the rows stand on one line (Seed, World size, Dungeons) */
 .title .seedbox { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 14px; align-items: center; background: #1b1410cc; padding: 10px 14px; border: 1px solid var(--gold-dim); border-radius: 8px; }
