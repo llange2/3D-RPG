@@ -14,16 +14,16 @@ import { ALL_EXTENSIONS, EXTTextureWebP } from "@gltf-transform/extensions";
 import { dedup, prune, resample, simplify, weld } from "@gltf-transform/functions";
 import { MeshoptSimplifier } from "meshoptimizer";
 import sharp from "sharp";
-import { USER_MONSTER_MODELS } from "../../src/data/monster-models";
+import { FANTASTIC_MONSTER_MODELS, USER_MONSTER_MODELS } from "../../src/data/monster-models";
 import { PERSONAS, personaModelId } from "../../src/data/personas";
-import { OLD, OUT, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
+import { OLD, OUT, PACK, PACK_SOURCES, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
 
 const OBJ_DIR = join(OLD, "objects");
 /**
  * The user's own models (floors, ceilings, a wall, the village, the castle, the cottage, the pirate ship, the lantern), made after the old game: not part of
  * `old_code`. They are the sources of these models and live in the repository (the `.ignore/3D Models` folder they came from was only a hand-over folder).
  */
-const NEW_DIR = join(ROOT, "tools", "assets", "sources", "models");
+const NEW_DIR = PACK_SOURCES ? join(PACK_SOURCES, "models") : join(ROOT, "tools", "assets", "sources", "models");
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 
 /** `new:` in front of a source names a file of the user's own models folder, anything else lies in the old game's objects. */
@@ -58,6 +58,8 @@ export interface ModelSpec {
   texSize: number;
   /** Keep skins and animations (monsters, NPCs). */
   animated?: boolean;
+  /** Take the rig and the clips out of a file that stands as a static prop: it keeps the shape of its bind pose. */
+  dropSkin?: boolean;
   /**
    * Shading of the rebuilt normals. `crease` (the default) smooths what bends gently and keeps edges sharper than `CREASE_ANGLE`, so statues
    * and trees lose the faceted look of the reduced meshes while walls and boxes stay crisp. `flat` shows every triangle, `smooth` averages
@@ -259,6 +261,18 @@ async function processDoc(doc: Document, spec: ModelSpec, profile: ModelProfile)
   doc.setLogger(new Logger(Logger.Verbosity.WARN));
   for (const node of doc.getRoot().listNodes()) if (spec.drop?.includes(node.getName())) node.dispose();
   if (spec.dropFlat) dropFlatTriangles(doc);
+  if (spec.dropSkin) {
+    // a figure that stands as a static prop (the Capybara of Fantastic Islands comes with a rig and an idle clip the prop renderer does not play): it keeps its shape as the bind pose has it
+    for (const anim of doc.getRoot().listAnimations()) anim.dispose();
+    for (const node of doc.getRoot().listNodes()) if (node.getSkin()) node.setSkin(null);
+    for (const skin of doc.getRoot().listSkins()) skin.dispose();
+    for (const mesh of doc.getRoot().listMeshes()) {
+      for (const prim of mesh.listPrimitives()) {
+        prim.setAttribute("JOINTS_0", null);
+        prim.setAttribute("WEIGHTS_0", null);
+      }
+    }
+  }
   if (spec.rotateX || spec.rotateY || spec.rotateZ) {
     // a rotation on the nodes that hang directly under the scene: the geometry stays as it is, bounds and ground top read the world matrix
     const half = (deg: number) => [Math.sin((deg * Math.PI) / 360), Math.cos((deg * Math.PI) / 360)] as const;
@@ -653,7 +667,7 @@ export async function buildModel(spec: ModelSpec, profile: ModelProfile = "origi
   const { dir } = PROFILES[profile];
   const out = join(OUT, dir, `${spec.key}.glb`);
   const stamp = join(import.meta.dirname, "build-models.ts");
-  const cacheFile = join(ROOT, ".cache", dir, `${spec.key}.json`); // build cache, not served
+  const cacheFile = join(ROOT, ".cache", PACK ?? "", dir, `${spec.key}.json`); // build cache, not served (a pack has its own: `obj_capybara` of a pack is not Classic's)
   if (upToDate(out, src, stamp) && existsSync(cacheFile)) {
     const cached = JSON.parse(readFileSync(cacheFile, "utf-8")) as ModelInfo;
     // a cache from before the brightness was recorded: read it from the built file instead of building the model again
@@ -764,7 +778,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   S("obj_wooden_stairs", "new:Wooden_Stairs.glb", 4800, 1024),
   S("obj_pirate_ship", "new:Pirate Ship.glb", 4500, 1024),
   // the Capybara (7. 11. 2026, the user's model): the Easter egg mascot that waits behind a brittle wall of the start town (`world/mascots.ts`)
-  S("obj_capybara", "new:Capybara.glb", 3000, 1024),
+  // (the Capybara of Fantastic Islands, the user's newer file of 23. 11. 2026, has a rig and an idle clip: the prop stands still, so `dropSkin`; Classic's file has none, nothing changes there)
+  { ...S("obj_capybara", "new:Capybara.glb", 3000, 1024), dropSkin: true },
   // the spaceship of quest_7 (quest document 1.5, the user's models): the futuristic crate of the storage bay, the broken power crystal that the new one mends
   // (the intact one is item 67) and the console of the bridge that starts the ending. The files are 10 424, 15 676 and 3 885 triangles with three 2048 to 4096 px textures each
   S("obj_futuristic_box", "new:Futuristic_Box.glb", 3000, 1024),
@@ -1020,6 +1035,30 @@ export async function buildMonsters(profile: ModelProfile = "original", only?: R
   return result;
 }
 
+/**
+ * The models of the monsters that only Fantastic Islands has, built into the pack's own sources (`--pack=fantastic`, `FANTASTIC_MONSTER_MODELS`). A model without a skeleton is a static one: it stands
+ * on the floor and bobs, with the `scale` of the table and `y` 0 (the lift comes from its bounds when it is drawn, `render/monsters.ts`).
+ */
+export async function buildFantasticMonsters(profile: ModelProfile = "original", only?: ReadonlySet<number>): Promise<Record<number, MonsterModel>> {
+  const result: Record<number, MonsterModel> = {};
+  const jobs = Object.entries(FANTASTIC_MONSTER_MODELS)
+    .map(([id, m]) => ({ id: Number(id), ...m }))
+    .filter((job) => !only || only.has(job.id));
+  await pool(jobs, 3, async (job) => {
+    const source = `${job.file}.glb`;
+    if (!existsSync(sourcePath(source))) {
+      console.warn(`  monster ${job.id} has no model: ${source}`);
+      return;
+    }
+    // a file with a skeleton is an animated model (clips, rig); one without is a static model: it keeps its own shape and stands on the floor
+    const animated = (await io.readBinary(new Uint8Array(readFileSync(sourcePath(source))))).getRoot().listSkins().length > 0;
+    const info = await buildModel({ ...S(`monster_${job.id}`, source, 3500, 512, animated), ...(job.rotateY ? { rotateY: job.rotateY } : {}) }, profile);
+    if (!info) return;
+    result[job.id] = { ...info, animated, scale: job.scale, y: 0 };
+  });
+  return result;
+}
+
 export async function buildAllModels(only?: string, profile: ModelProfile = "original"): Promise<Record<string, ModelInfo>> {
   const registry: Record<string, ModelInfo> = {};
   const specs = STATIC_MODELS.filter((s) => !only || s.key.startsWith(only));
@@ -1035,6 +1074,27 @@ if (process.argv[1]?.endsWith("build-models.ts")) {
   const profile: ModelProfile = "original"; // (`--original`, as `npm run assets:originals` passes it, changes nothing any more)
   // `--monster=54,79` builds only these monster models (ids of the monster registry) and keeps the rest of both registries
   const monsterArg = process.argv.find((a) => a.startsWith("--monster="))?.slice(10);
+  if (PACK) {
+    // a pack builds only what it names, into its own sources: `--monster=92,93` (the ids of its extension) and/or `--only=obj_capybara` (static models of the table below); never everything
+    if (monsterArg === undefined && only === undefined) throw new Error(`--pack=${PACK} needs --monster=<ids> and/or --only=<key prefix>: a pack builds only what it brings`);
+    if (monsterArg !== undefined) {
+      const built = await buildFantasticMonsters(profile, new Set(monsterArg === "all" ? Object.keys(FANTASTIC_MONSTER_MODELS).map(Number) : monsterArg.split(",").map(Number)));
+      const file = join(OUT, PROFILES[profile].monsterRegistry);
+      const previous = existsSync(file) ? (JSON.parse(readFileSync(file, "utf-8")) as Record<string, MonsterModel>) : {};
+      ensureDir(file);
+      writeFileSync(file, JSON.stringify({ ...previous, ...built }, null, 1));
+      for (const [id, m] of Object.entries(built)) console.log(`monster ${id}: ${m.tris} tris ${Math.round(m.bytes / 1024)} KB ${m.animated ? "animated" : "static"} bounds ${m.bounds.map((v) => Math.round(v * 100) / 100).join(",")}`);
+    }
+    if (only !== undefined) {
+      const built = await buildAllModels(only, profile);
+      const file = join(OUT, PROFILES[profile].staticRegistry);
+      const previous = existsSync(file) ? (JSON.parse(readFileSync(file, "utf-8")) as Record<string, ModelInfo>) : {};
+      ensureDir(file);
+      writeFileSync(file, JSON.stringify({ ...previous, ...built }, null, 1));
+      for (const [key, info] of Object.entries(built)) console.log(`${key}: ${info.tris} tris ${Math.round(info.bytes / 1024)} KB bounds ${info.bounds.map((v) => Math.round(v * 100) / 100).join(",")}`);
+    }
+    process.exit(0);
+  }
   if (monsterArg !== undefined) {
     const ids = new Set(monsterArg.split(",").map(Number));
     const built = await buildMonsters(profile, ids);

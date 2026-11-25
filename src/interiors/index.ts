@@ -25,7 +25,7 @@ export { checkKeyChain, planDungeon } from "./dungeonPlan";
  * POI twice, on any machine, gives the same map.
  */
 export function generateInterior(world: World, poi: Poi, floor = 0): InteriorMap {
-  if (poi.id === SHOWCASE_ID) return generateShowcase();
+  if (poi.id === SHOWCASE_ID) return generateShowcase(world.ruleset);
   const rng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor);
   const themeRng = rngFor(world.rootSeed, LAYER.INTERIOR, poi.x, poi.y, floor, "theme");
   const dungeon = planDungeon(world, poi) ?? undefined;

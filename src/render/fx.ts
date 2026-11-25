@@ -44,6 +44,9 @@ const HIT_MIN_LIGHT = 0.35;
 /** Toxic Cloud's gas: the green of the poison (the same as the acid light, `PROJECTILE_LAMPS`), never darker than a half of the light of the place (it is a magic cloud and must show in a dungeon). */
 const TOXIC_GREEN: readonly [number, number, number] = [0.42, 0.95, 0.2];
 const TOXIC_MIN_LIGHT = 0.55;
+/** The white of cold breath (`Effects.breath`). */
+const BREATH_WHITE: readonly [number, number, number] = [0.95, 0.98, 1];
+const BREATH_MIN_LIGHT = 0.95;
 /** How fast the particles of a storm hit go when the monster dies (seconds). */
 const GROUP_FADE = 0.2;
 /** What the three hits of Elemental Storm are made of: the sprites of the particle sheet with their colour, and the colour of the small cloud beside them (bug_fix_83). */
@@ -605,6 +608,27 @@ export class Effects implements PropWatcher {
       kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: foot.x + (r() - 0.5) * 0.6, y: foot.y + 0.05, z: foot.z + (r() - 0.5) * 0.6, vx: (r() - 0.5) * 0.12, vy: height / life, vz: (r() - 0.5) * 0.12,
       age: 0, life, size0: 0.35, size1: 0.9, peak: 0.85, floor: -1e9, lands: "none", scale: 1, site: null, tint: TOXIC_GREEN, lit,
     });
+  }
+
+  /**
+   * A cloud of white cold breath in front of a monster's mouth (`render/breath.ts`): a few puffs leave `at` in the direction `dir` (a horizontal unit vector), slow down, rise a little and swell while
+   * they thin out. `size` is the width of the cloud (a wolf's is 1). The puffs are as bright as the place lets them be, at least `TOXIC_MIN_LIGHT`, so that they show in a dark cave too.
+   */
+  breath(at: { x: number; y: number; z: number }, dir: { x: number; z: number }, size: number): void {
+    if (this.level === "off") return;
+    this.ensure();
+    const r = this.random;
+    // (white, not the grey of smoke in a dark place: the breath of the cold is bright)
+    const lit = Math.min(1, Math.max(BREATH_MIN_LIGHT, lightAt(this.scene, at.x, at.y, at.z)));
+    for (let i = 0; i < (this.level === "full" ? 5 : 3) && this.particles.length < MAX_PARTICLES; i++) {
+      const speed = (0.5 + r() * 0.5) * size;
+      this.particles.push({
+        kind: "smoke", cell: Math.floor(r() * SMOKE_PUFFS), x: at.x + (r() - 0.5) * 0.1 * size, y: at.y + (r() - 0.5) * 0.1 * size, z: at.z + (r() - 0.5) * 0.1 * size,
+        vx: dir.x * speed + (r() - 0.5) * 0.2, vy: 0.12 + r() * 0.2, vz: dir.z * speed + (r() - 0.5) * 0.2,
+        // (a negative age is a wait: the puffs leave one after the other, so the cloud has a length)
+        age: -i * 0.1, life: 1.5 + r() * 0.5, size0: 0.12 * size, size1: (0.4 + r() * 0.25) * size, peak: 0.65, floor: -1e9, lands: "none", scale: 1, site: null, tint: BREATH_WHITE, lit,
+      });
+    }
   }
 
   /**

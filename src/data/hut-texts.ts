@@ -27,6 +27,9 @@ const HUT_SCENES: Record<number, string> = {
   72: "The hut stinks like a swamp. A huge cauldron simmers over a smouldering fire with something that was once a farmer's cow, and the bones in the corner have been cracked open to get at the marrow." + ASK,
   16: "A buzzing like a thousand tiny saws fills the hut. The walls are bare, the straw is gone and every plank has been chewed to splinters. Heaps of pale husks rise in the corners, and the few things that remain are bitten clean." + ASK,
   2: "Furs, a rusty axe and a rough bench are all the furniture in the hut. Skulls of beasts and men hang over the door as trophies, and a mighty tankard, still half full, stands by the fire." + ASK,
+  // Fantastic Islands (docs/MONSTER_1.2.xlsx): the two monsters of the extension that have a hut
+  92: "The hut is as cold as a cellar in midwinter. Frost flowers creep over every plank, small icicles hang from the rafters, and stolen glass and splinters of ice lie in neat little heaps beside a nest of frozen straw. Somewhere in the walls a thin giggle tinkles like breaking glass." + ASK,
+  102: "A sweet, sickly smell hangs in the damp hut. Huge purple blossoms grow up through the floorboards and out of the roof, their petals wet with green drops, and the ground is covered in yellow pollen and the picked-clean bones of small animals. Your eyes begin to water." + ASK,
   44: "The hut is hot as a bread oven. The walls are scorched black, the ground is covered in cinders and melted coins, and a pile of charred bones lies in a nest of ash and smouldering straw." + ASK,
 };
 

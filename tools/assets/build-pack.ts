@@ -10,7 +10,7 @@
 import { existsSync, copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, rmdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MONSTER_IDS } from "../../src/data/tables";
+import { monsterIdsOf } from "../../src/data/tables";
 import { checkNames, checkPackFiles, checkRegistryEntries } from "./packRules";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -63,7 +63,8 @@ export function buildPack(id: string): PackBuildResult {
   }
   const namesFile = join(src, "names.json");
   const names = existsSync(namesFile) ? (JSON.parse(readFileSync(namesFile, "utf-8")) as Record<string, string>) : undefined;
-  problems.push(...checkNames(names, new Set(MONSTER_IDS)));
+  // (a pack may name the monsters of Fantastic Islands too; it names ids, never more than the table of its version has)
+  problems.push(...checkNames(names, new Set(monsterIdsOf(id === "fantastic" ? "fantastic" : "classic"))));
 
   const manifest = { id, files: wanted, ...(names ? { names } : {}) };
   writeFileSync(join(out, "pack.json"), `${JSON.stringify(manifest, null, 1)}\n`);

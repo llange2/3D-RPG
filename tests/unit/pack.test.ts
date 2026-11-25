@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { PACKS, PACK_IDS, initPack, packBrings, packKey, packMonsterNames, parsePackId, resetPack, resolveAsset, setPackManifest } from "../../src/assets/pack";
 import { applyMonsterNames } from "../../src/data/monsterNames";
-import { BASE_MONSTER_NAMES, MONSTERS, MONSTER_IDS } from "../../src/data/tables";
+import { BASE_MONSTER_NAMES, MONSTERS, MONSTER_IDS, monsterIdsOf } from "../../src/data/tables";
 import { defaultSettings, parseSettings } from "../../src/game/settings";
 import { exportSaves, importSaves, listNamedSaves, newGameState, readSave, toSaveFile, writeNamedSave, writeSave } from "../../src/game/state";
 import { checkNames, checkPackFiles, checkRegistryEntries } from "../../tools/assets/packRules";
@@ -46,7 +46,8 @@ describe("versions of the game", () => {
       const { readFileSync } = await import("node:fs");
       const manifest = JSON.parse(readFileSync("public/assets-packs/fantastic/pack.json", "utf-8")) as { id: string; files: string[]; names?: unknown };
       expect(manifest.id).toBe("fantastic");
-      expect(checkNames(manifest.names, new Set(MONSTER_IDS))).toEqual([]);
+      // (a pack may name the monsters of its own version too: Fantastic Islands has the 25 of the extension)
+      expect(checkNames(manifest.names, new Set(monsterIdsOf("fantastic")))).toEqual([]);
     });
   });
 

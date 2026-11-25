@@ -4,7 +4,8 @@ import { PERSONAS } from "../data/personas";
 import { TEMPORAL_SCALE } from "../data/quest-table";
 import { DECO_MODELS, DECO_SCALE } from "../data/wall-deco";
 import { CRYSTAL_SCALE, FLOOR_HOLDER_SCALE } from "../render/crystalLook";
-import { MAP_ITEMS, MONSTERS } from "../data/tables";
+import { MAP_ITEMS, MONSTERS, monsterIdsOf } from "../data/tables";
+import type { Ruleset } from "../core/ruleset";
 import { Builder } from "./builder";
 import type { InteriorMap, LightLine, ShowcaseLayout } from "./types";
 
@@ -107,10 +108,11 @@ export function showcaseLabelAt(layout: ShowcaseLayout, x: number, y: number): s
 }
 
 /** The showcase map. The party starts at the south end and looks north over the objects (and their lights), the monsters and the people lie beyond. */
-export function generateShowcase(): InteriorMap {
+export function generateShowcase(ruleset: Ruleset = "classic"): InteriorMap {
   const items = showcaseItems();
   const personas = Object.keys(PERSONAS).map(Number).sort((a, b) => a - b);
-  const monsters = Object.keys(MONSTERS).map(Number).sort((a, b) => a - b);
+  // every monster of the version: Fantastic Islands shows the ones it adds too (`monsterIdsOf` is ascending)
+  const monsters = [...monsterIdsOf(ruleset)];
   const width = PITCH * COLUMNS + 3;
   const wideColumns = Math.floor(COLUMNS / (WIDE / PITCH));
 

@@ -25,6 +25,7 @@
     "assets:build": "tsx tools/assets/build.ts",
     "assets:pack": "tsx tools/assets/build-pack.ts",
     "golden:update": "tsx tools/dev/update-golden.ts",
+    "golden:update:fantastic": "tsx tools/dev/update-golden.ts --fantastic",
     "check:chrome": "tsx tools/dev/chrome-golden.ts",
     "check:render": "tsx tools/dev/check-render.ts",
     "sheet:monsters": "tsx tools/dev/monster-sheet.ts",

@@ -60,6 +60,17 @@ export const BOSS_PAIRS: readonly { population: number; boss: number }[] = [
   { population: 46, boss: 91 }, // Moose Rat > Rat Overlord
 ];
 
+/** The pairs that only Fantastic Islands has (the sheet's "Boss for ID103/ID113"), behind those of Classic. */
+export const FANTASTIC_BOSS_PAIRS: readonly { population: number; boss: number }[] = [
+  { population: 103, boss: 106 }, // Frost Giant > Frost Giant King
+  { population: 113, boss: 115 }, // Elder Treant > Treant King
+];
+
+/** The population-and-boss pairs of quest 5 in a rule set. */
+export function bossPairsOf(ruleset: "classic" | "fantastic"): readonly { population: number; boss: number }[] {
+  return ruleset === "fantastic" ? [...BOSS_PAIRS, ...FANTASTIC_BOSS_PAIRS] : BOSS_PAIRS;
+}
+
 /** Quest items: the nine keys (items 17 to 25), the five key cards of the pyramids and the black key card that the king gives. */
 export const KEY_COLORS = ["blue", "black", "bronze", "golden", "green", "orange", "red", "silver", "rainbow"] as const;
 export type KeyColor = (typeof KEY_COLORS)[number];

@@ -1,5 +1,6 @@
 import { ACHIEVEMENTS, TAVERN_PASSWORDS, UNSTOPPABLE_LEVEL, type CounterKey } from "../data/achievements";
 import { OLD_AGE, totalAge } from "./aging";
+import { isTwoHanded } from "./items";
 import type { Character, Ledger, Party, PartyAch } from "./types";
 
 /**
@@ -138,9 +139,14 @@ const OBSIDIAN = 8;
 /**
  * "Black is beautiful": every slot of weapons and armor holds obsidian (the material 8 and above; the rings carry no material): helmet, body armor, a one-handed weapon, shield, belt, boots and
  * a ranged weapon. A hero whose class cannot hold a shield or a bow (the Wizard, the Cleric) can never get there, as the spec says.
+ * An obsidian two-hander counts for weapon and shield together (it takes both hands, so the shield slot stays empty).
  */
 export function isFullyObsidian(c: Character): boolean {
+  // a two-hander takes both hands (the shield slot stays empty, it shows a ghost of the weapon): the hero with an obsidian two-hander has no shield to wear
+  const weapon = c.inventory.left_hand;
+  const twoHanded = !!weapon && isTwoHanded(weapon);
   return GEAR_SLOTS.every((slot) => {
+    if (slot === "right_hand" && twoHanded) return true;
     const item = c.inventory[slot];
     return !!item && !item.quest && item.material >= OBSIDIAN;
   });

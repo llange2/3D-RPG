@@ -195,3 +195,12 @@
  * 82 = bug_fix_83: the streets of every town are lit at regular distances (`townTorches`: the user's Torchlight, item 334, on the wall of every fourth street cell along a straight stretch of house wall, looking into the street), as the walls of a castle are.
  */
 export const GEN_VERSION = 82;
+
+/**
+ * Version of what only Fantastic Islands generates: the monsters of its table and where they stand (`Ruleset` "fantastic", `docs/PLAN_FANTASTIC_ISLANDS.md` 4.6). It counts apart from `GEN_VERSION`
+ * so that a change to the extension never forces new golden values on Classic (`tests/golden/world-hashes.json` stays as it is); a Fantastic save writes both. The shape of the world (islands,
+ * places, ways) is `GEN_VERSION`'s in both rule sets.
+ * History: 1 = the 25 monsters of `docs/MONSTER_1.2.xlsx` (ids 92 to 116) in the wild groups, huts, caves, dungeons and castles of Fantastic Islands; cold monsters stay out of the desert and off lava, fire monsters
+ * out of the snow (`world/biomeRules.ts`), the very strong ones (Vulture Roc, Great Hydra, Void Horror, Frost Wyrm) are drawn a quarter as often.
+ */
+export const FANTASTIC_GEN_VERSION = 1;

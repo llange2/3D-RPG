@@ -549,6 +549,25 @@ function fleeFromWater(view: GridView, enc: Encounter, px: number, py: number, r
 }
 
 /**
+ * Monsters that regenerate (`regen` > 0: Troll, Vampire, Vampire King, Elder Treant, Treant King) are whole again once the party is out of their sight (user, 25. 11. 2026, `docs/REGELN_SPIEL.md`):
+ * those that stand beyond `radius` from the party (`MONSTER_ACTION_RADIUS`: the party has walked away, or a teleport, a jump or a portal set it down elsewhere), or all of them when the party has
+ * slept (`everybody`: a night in camp or in a Super Shelter). Monsters that do not regenerate keep their wounds. A monster at the party's side (`enc.battleMode`) is within the radius and only heals
+ * with every step (`endMonsterTurn`). Returns how many were healed.
+ */
+export function restoreRegenerators(enc: Encounter, px: number, py: number, radius = MONSTER_ACTION_RADIUS, everybody = false): number {
+  let healed = 0;
+  for (const m of enc.monsters) {
+    if (m.hp <= 0) continue;
+    const def = monsterById(m.defId);
+    if (def.regen <= 0 || m.hp >= def.health) continue;
+    if (!everybody && Math.max(Math.abs(m.x - px), Math.abs(m.y - py)) <= radius) continue;
+    m.hp = def.health;
+    healed++;
+  }
+  return healed;
+}
+
+/**
  * All monsters near the player act: first everybody moves one step along its path, then everybody attacks
  * (melee when adjacent, ranged when it has a ranged attack and a clear line). Port of monster_action.
  */

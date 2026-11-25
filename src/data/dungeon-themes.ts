@@ -6,9 +6,10 @@
 import type { Rng } from "../core/rng";
 import type { PoiKind } from "../world/types";
 import { allowedIn, isFunctional, type Place } from "./item-rules";
-import { BOSS_PAIRS, type MonsterGroup, type QuestId } from "./quest-table";
+import type { Ruleset } from "../core/ruleset";
+import { bossPairsOf, type MonsterGroup, type QuestId } from "./quest-table";
 import { BOOKSHELVES } from "./spell-loot";
-import { MONSTERS, MONSTER_IDS, monsterGroup, walksOnLand } from "./tables";
+import { MONSTERS, monsterGroup, monsterIdsOf, walksOnLand } from "./tables";
 
 export { CARD_COLORS, KEY_COLORS, QUEST_PROP, cardType, keyType, type CardColor, type KeyColor } from "./quest-table";
 
@@ -84,12 +85,12 @@ const SHRINES = [35, 37, 88, 117, 86];
 /** The effect a shrine of this kind tends to have (crystals raise attributes, red wells heal, altars guard against the elements). */
 export const SHRINE_EFFECT: Record<number, "resist" | "attribute" | "heal"> = { 117: "attribute", 88: "attribute", 14: "attribute", 35: "resist", 37: "heal", 86: "heal" };
 
-const BOSS_IDS = new Set(BOSS_PAIRS.map((p) => p.boss));
+const BOSS_IDS: Record<Ruleset, ReadonlySet<number>> = { classic: new Set(bossPairsOf("classic").map((p) => p.boss)), fantastic: new Set(bossPairsOf("fantastic").map((p) => p.boss)) };
 const levelOf = (id: number): number => MONSTERS[id]!.treasure_level;
 
-/** The land monsters of the groups, without the bosses of quest 5 (they lead a population, they are no ordinary monsters). */
-export function monstersOfGroups(groups: readonly MonsterGroup[]): number[] {
-  return MONSTER_IDS.filter((id) => groups.includes(monsterGroup(id) as MonsterGroup) && walksOnLand(MONSTERS[id]!) && !BOSS_IDS.has(id));
+/** The land monsters of the groups, without the bosses of quest 5 (they lead a population, they are no ordinary monsters), of the rule set's table. */
+export function monstersOfGroups(groups: readonly MonsterGroup[], ruleset: Ruleset = "classic"): number[] {
+  return monsterIdsOf(ruleset).filter((id) => groups.includes(monsterGroup(id) as MonsterGroup) && walksOnLand(MONSTERS[id]!) && !BOSS_IDS[ruleset].has(id));
 }
 
 /**
@@ -98,8 +99,8 @@ export function monstersOfGroups(groups: readonly MonsterGroup[]): number[] {
  * the tier, or the weakest of the groups if all of them are above it. And the boss: the strongest that is at most one level above the tier (not
  * above the tier at all on tier 1, so a new party can win).
  */
-export function pickMonsters(rng: Rng, groups: readonly MonsterGroup[], tier: number): { monsters: number[]; boss: number } {
-  const pool = monstersOfGroups(groups);
+export function pickMonsters(rng: Rng, groups: readonly MonsterGroup[], tier: number, ruleset: Ruleset = "classic"): { monsters: number[]; boss: number } {
+  const pool = monstersOfGroups(groups, ruleset);
   let fit = pool.filter((id) => levelOf(id) <= tier);
   if (fit.length === 0) {
     const weakest = Math.min(...pool.map(levelOf));
@@ -131,9 +132,10 @@ export function buildLook(
   klass: DungeonClass,
   id: string,
   led?: { population: number; boss: number },
+  ruleset: Ruleset = "classic",
 ): DungeonTheme {
   const place = placeOf(kind);
-  const picked = pickMonsters(rng, groups, tier);
+  const picked = pickMonsters(rng, groups, tier, ruleset);
   // a place led by a boss (quest 5): the population is 60 % of the monsters (three of five), the rest are two others of the groups
   const monsters = led ? [led.population, led.population, led.population, ...picked.monsters.filter((m) => m !== led.population).slice(0, 2)] : picked.monsters;
   const boss = led ? led.boss : picked.boss;

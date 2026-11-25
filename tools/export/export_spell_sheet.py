@@ -3,8 +3,8 @@
 - docs/SPELLS.md (the user's table of the 78 spells, one row each, the columns of the sheet "Spells" of MM3_Master_documentation.xlsx plus the column Explanation): name, description, explanation and the
   numbers the user changes (mana, scales with level, damage, damage types, penetrating). Since 22. 11. 2026 (bug_fix_79) this file is the source, no longer the workbook in old_code (read-only,
   it still carries the numbers of the old game). The other numbers (level, price, schools, healing) are those of src/data/raw/SPELLS.json, which equal the table's.
-- docs/RPG_0.1.xlsx (the user's current workbook), sheet "Monster": the column "entity 22: group" says who is undead (the flag of entity 20 is
-  not used for that).
+- docs/MONSTER_1.2.xlsx (the user's current workbook), sheet "Monster": the column "entity 22: group" says who is undead (the sheet has no flag of
+  entity 20 any more). All ids go into one file, those of Fantastic Islands (from 92 on) come last.
 
 Run:  python -I tools/export/export_spell_sheet.py
 Out:  src/data/spell-sheet.json, src/data/monster-groups.json
@@ -83,7 +83,7 @@ def export_spells() -> int:
 
 
 def export_groups() -> int:
-    ws = openpyxl.load_workbook(ROOT / "docs" / "RPG_0.1.xlsx", data_only=True)["Monster"]
+    ws = openpyxl.load_workbook(ROOT / "docs" / "MONSTER_1.2.xlsx", data_only=True)["Monster"]
     head = [c.value for c in ws[1]]
     group_col = next(i for i, h in enumerate(head) if h and "group" in str(h))
     out = {}
@@ -91,7 +91,11 @@ def export_groups() -> int:
         if row[0] is None or row[group_col] is None:
             continue
         out[str(int(row[0]))] = clean(row[group_col])
-    (OUT / "monster-groups.json").write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    # the file keeps the order it has (a small diff), a new id comes last
+    file = OUT / "monster-groups.json"
+    known = list(json.loads(file.read_text(encoding="utf-8"))) if file.exists() else []
+    out = {k: out[k] for k in [k for k in known if k in out] + sorted((k for k in out if k not in known), key=int)}
+    file.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     return len(out)
 
 

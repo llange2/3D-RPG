@@ -3,7 +3,7 @@ import { pickSeaMonster, pickWildMonster, spotShares } from "./difficulty";
 import { hutsOf } from "./huts";
 import { isqrt, wrapDist2, type Island } from "./islands";
 import { SAFE_RADIUS, inSafeZone, inStrongKeepOff, nearTownExit } from "./safezone";
-import { CHUNK_SIZE, GROUND, isTileWalkable, wrap } from "./types";
+import { CHUNK_SIZE, GROUND, isTileWalkable, wrap, type Biome } from "./types";
 import type { World } from "./world";
 
 export { SAFE_RADIUS, inSafeZone };
@@ -111,7 +111,7 @@ function planOf(world: World): Map<number, OverworldSpawn[]> {
   const known = plans.get(world);
   if (known) return known;
   const planned: Planned[] = [];
-  const lands: { x: number; y: number; tier: number; size: number }[] = [];
+  const lands: { x: number; y: number; tier: number; biome: Biome; size: number }[] = [];
   const huts = hutsOf(world);
   const hutSlots = new Set<number>(huts.flatMap((h) => h.slots.map((s) => world.wrapY(s.y) * world.width + world.wrapX(s.x))));
 
@@ -132,7 +132,7 @@ function planOf(world: World): Map<number, OverworldSpawn[]> {
       if (!spot) continue;
       near.push(spot);
       const tier = world.tierAt(spot.x, spot.y);
-      lands.push({ x: spot.x, y: spot.y, tier, size: rng.range(1, Math.min(4, 1 + Math.ceil(tier / 2))) });
+      lands.push({ x: spot.x, y: spot.y, tier, biome: isl.biome, size: rng.range(1, Math.min(4, 1 + Math.ceil(tier / 2))) });
     }
   }
   // the monsters once every spot of the world is set: the groups of a level share its wild monsters evenly by their rank from Starthaven (`spotShares`)
@@ -140,7 +140,7 @@ function planOf(world: World): Map<number, OverworldSpawn[]> {
   const pick = rngFor(world.rootSeed, LAYER.SPAWN, "wild-monsters");
   lands.forEach((g, n) => {
     const monsterIds: number[] = [];
-    for (let i = 0; i < g.size; i++) monsterIds.push(pickWildMonster(pick, g.tier, shares[n]!).id);
+    for (let i = 0; i < g.size; i++) monsterIds.push(pickWildMonster(pick, g.tier, shares[n]!, world.ruleset, g.biome).id);
     planned.push({ x: g.x, y: g.y, monsterIds });
   });
 

@@ -13,7 +13,9 @@ import { resolveAction, type ActionContext, type ActionOutcome, type Effect, typ
 import type { ActionInstance, MapContent } from "../actions/types";
 import { AudioManager } from "../audio/audio";
 import { LAYER, Rng, rngFor, seedFromString } from "../core/rng";
-import { GEN_VERSION } from "../core/version";
+import { parseRuleset } from "../core/ruleset";
+import { BREATH_EVERY, BREATH_MOUTHS } from "../render/breath";
+import { FANTASTIC_GEN_VERSION, GEN_VERSION } from "../core/version";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
 import { endFlag, isEndBoss, ringBlocked } from "../actions/quests";
 import { colorHex, simulateCrystals, type PlacedCrystal, type WallNode } from "../actions/crystals";
@@ -69,7 +71,7 @@ import { monsterById } from "../sim/combat";
 import { walkOnLava } from "../sim/lava";
 import {
   alertMonsters, areaSpell, battleActor, cancelRifts, createEncounter, createMonster, identifyMonsters, immobilize, isAdjacent, isPhased, makeClumsy, monsterTurn, monstersReaching, closestInCone, partyAttack, phaseMonsters, phaseReach, phaseTargets, pullMonsters, weakestInCone,
-  specialSpell, spellInLine, spellRound, updateBattleMode, ELEMENTAL_STORM_ELEMENTS, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, FANTASTIC_FREEZE_RADIUS, STAR_BURST_RADIUS, TOXIC_RADIUS, isPainable, isPhaseProof,
+  restoreRegenerators, specialSpell, spellInLine, spellRound, updateBattleMode, ELEMENTAL_STORM_ELEMENTS, GRAVITY_RADIUS, IMMOBILIZE_TURNS, MONSTER_ACTION_RADIUS, PHASE_RADIUS, PHASE_ROBOT_TEXT, PHASE_TURNS, PHASE_USED_TEXT, FANTASTIC_FREEZE_RADIUS, STAR_BURST_RADIUS, TOXIC_RADIUS, isPainable, isPhaseProof,
   type AreaSpell, type CombatEvent, type Encounter, type GridView, type MonsterInstance,
 } from "../sim/encounter";
 import { ACTION_MINUTES, activeCharacters, addXp, advanceTime, carriedItems, giveItem, takeItems, canSail, canSwim, hasEffect, hasLight, isDefeated, isNight, MINUTES_PER_DAY, rest, setMascot, stepMinutes, surroundings } from "../sim/party";
@@ -158,6 +160,8 @@ const ATTACK_SOUND: Record<string, number> = { acid: 9025, fire: 9027, ice: 9026
 /** What a spell of an element throws (old items 9018 to 9022). A monster's physical shot is an arrow, a spell's is the "physical attack". */
 /** How often the wisps of Toxic Cloud rise from a poisoned monster (seconds). */
 const POISON_WISP_EVERY = 0.15;
+/** Cold breath is made for monsters this close to the party (units); the others are out of sight. */
+const BREATH_REACH = 40;
 /**
  * How a spell that hits several monsters is drawn: Cold Ray lines of light, Summon Snakes a coil of snakes at each monster, Fireball one bolt that bursts on the neighbours (bug_fix_79); Moon Ray and Sun Ray
  * a thick ray instead of a projectile, Deadly Swarm a swarm of insects round the first monsters of the line (bug_fix_81).
@@ -649,9 +653,11 @@ export class Game {
   /** `inTown`: begin on the street in front of the inn of Starthaven (what a player gets); false begins outside on the road, for the tools that measure the overworld. */
   async newGame(seed: string, inTown = true, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY, scaled = false): Promise<void> {
     this.setSeedInUrl(seed, size, dungeons);
-    this.world = new World(seed, size, dungeons);
+    // the version the player chose decides the rule set of the world (Fantastic Islands has more monsters); a saved world keeps the one it was made with
+    const ruleset = parseRuleset(activePackId());
+    this.world = new World(seed, size, dungeons, ruleset);
     const start = this.world.startPosition();
-    this.state = newGameState(seed, start, size, dungeons);
+    this.state = newGameState(seed, start, size, dungeons, ruleset);
     // bug_fix_59, points 4 and 6: the world pays what a default world pays (gold, experience, attribute and resistance points). The measure builds every place once (a few seconds, behind the loading screen of
     // the new game); the tools and the tests that start a game without the title screen keep the plain tables (`scaled` false)
     if (scaled) this.state.scale = rewardScaleFor(this.world);
@@ -672,12 +678,16 @@ export class Game {
     const size = parseWorldSize(file.state.size);
     const dungeons = parseDungeonDensity(file.state.dungeons);
     this.setSeedInUrl(file.seed, size, dungeons);
-    this.world = new World(file.seed, size, dungeons);
+    const ruleset = parseRuleset(file.state.ruleset);
+    this.world = new World(file.seed, size, dungeons, ruleset);
     this.state = fromSaveFile(file);
     this.over = false;
     if (file.genVersion !== GEN_VERSION) {
       this.ui.log(`This save was made with generator version ${file.genVersion}; the world may look different.`, "bad");
       if (!this.state.campaign) this.migrateSave(file.genVersion);
+    } else if (ruleset === "fantastic" && file.fantasticVersion !== FANTASTIC_GEN_VERSION) {
+      // (the shape of the world is the same; only the monsters of Fantastic Islands changed, so nothing has to be moved)
+      this.ui.log(`This save was made with version ${file.fantasticVersion ?? 0} of the Fantastic Islands monsters; the monsters may stand elsewhere.`, "bad");
     }
     await this.beginPlay();
   }
@@ -1528,6 +1538,8 @@ export class Game {
       this.ambushGrace = false;
       updateBattleMode(this.enc, x, y, this.gridView());
     } else if (this.enc.monsters.length > 0 && !this.over) {
+      // a monster that regenerates is whole again once the party is out of its action radius (it walked away, or a teleport or a jump put it elsewhere, `docs/REGELN_SPIEL.md`)
+      restoreRegenerators(this.enc, x, y);
       updateBattleMode(this.enc, x, y, this.gridView());
       const events = monsterTurn(this.state.party, this.gridView(), this.enc, x, y, this.combatRng(), MONSTER_ACTION_RADIUS);
       this.handleEvents(events);
@@ -3130,7 +3142,7 @@ export class Game {
     const castle = rt?.map.castle;
     if (!rt || !castle) return;
     const rng = rngFor(this.world.rootSeed, LAYER.SPAWN, rt.map.key, "guards", kind, this.state.steps);
-    const id = guardsOf(castle.alignment, rt.map.tier, rngFor(this.world.rootSeed, LAYER.SPAWN, rt.map.key, "guards"))[kind];
+    const id = guardsOf(castle.alignment, rt.map.tier, rngFor(this.world.rootSeed, LAYER.SPAWN, rt.map.key, "guards"), this.world.ruleset)[kind];
     const count = Math.max(2, Math.round((kind === "light" ? rng.range(10, 20) : rng.range(6, 10)) * castle.scale));
     const w = rt.map.width;
     // the cells they come to: the keep, or the way from the king to the cell inside its gate
@@ -4245,6 +4257,34 @@ export class Game {
     }
   }
 
+  /** Seconds until each breathing monster (by view uid) lets its next cloud out (`breathFx`). */
+  private readonly breathClock = new Map<string, number>();
+
+  /**
+   * Cold breath (`render/breath.ts`): the frost wolf and the frost wyrm let out a white cloud in front of their mouths every `BREATH_EVERY` seconds. Each monster has its own clock, started at a
+   * point of the period that follows from its uid, so a pack does not breathe together; only monsters within `BREATH_REACH` of the party count and show (nobody sees the others).
+   */
+  private breathFx(dt: number): void {
+    const seen = new Set<string>();
+    for (const b of this.monsters.breathers(BREATH_MOUTHS)) {
+      if (Math.hypot(b.at.x - this.player.x, b.at.z - this.player.z) > BREATH_REACH) continue;
+      seen.add(b.uid);
+      let left = this.breathClock.get(b.uid);
+      if (left === undefined) {
+        let h = 0;
+        for (let i = 0; i < b.uid.length; i++) h = (h * 31 + b.uid.charCodeAt(i)) % 997;
+        left = (h / 997) * BREATH_EVERY;
+      }
+      left -= dt;
+      if (left <= 0) {
+        this.effects.breath(b.at, b.dir, b.size);
+        left += BREATH_EVERY;
+      }
+      this.breathClock.set(b.uid, left);
+    }
+    for (const uid of [...this.breathClock.keys()]) if (!seen.has(uid)) this.breathClock.delete(uid);
+  }
+
   /** Runs `run` after `seconds` unless the scene has changed by then. */
   private later(seconds: number, run: () => void): void {
     if (seconds <= 0) {
@@ -4855,6 +4895,8 @@ export class Game {
           return false;
         }
         this.audio.play(9030);
+        // the night in the shelter counts like a night in camp: the monsters that regenerate are whole again
+        restoreRegenerators(this.enc, tx, ty, MONSTER_ACTION_RADIUS, true);
         this.ui.log("A shelter of magic closes round the party, which rests and recovers.", "good");
         this.logConditions(r.conditions ?? []);
         this.save("auto");
@@ -5258,6 +5300,8 @@ export class Game {
         return;
       }
       this.audio.play(9030);
+      // a night passed: the monsters that regenerate are whole again, wherever they stand
+      restoreRegenerators(this.enc, this.player.tx, this.player.ty, MONSTER_ACTION_RADIUS, true);
       this.ui.log("The party rests and recovers.", "good");
       this.logConditions(r.conditions ?? []);
       this.save("auto");
@@ -6306,6 +6350,7 @@ export class Game {
     }
     this.projectiles.update(dt);
     this.poisonFx(dt);
+    this.breathFx(dt);
     this.effects.update(dt);
     this.campaignView.tick(dt);
     this.syncMascots();
