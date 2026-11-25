@@ -1,5 +1,6 @@
 import { PACKS, activePackId, packKey, type PackId } from "../assets/pack";
-import { GEN_VERSION } from "../core/version";
+import { DEFAULT_RULESET, parseRuleset, type Ruleset } from "../core/ruleset";
+import { FANTASTIC_GEN_VERSION, GEN_VERSION } from "../core/version";
 import { packSave, unpackSave } from "./saveCodec";
 import { NEUTRAL_SCALE, parseRewardScale, type RewardScale } from "../actions/rewardScale";
 import type { Facing } from "../interiors/types";
@@ -123,6 +124,8 @@ export interface GameState {
   size: WorldSize;
   /** How many of the caves and dungeons the world keeps (title screen, "Dungeons"); a save without it has all of them. */
   dungeons: DungeonDensity;
+  /** The rule set of the world (the version of the game it was made in, `core/ruleset.ts`): which monsters there are. */
+  ruleset: Ruleset;
   /** The reward factors of this world (bug_fix_59: gold, experience, attribute and resistance points as in a default world), worked out when the game was created; a save without them pays as the tables say. */
   scale: RewardScale;
   /** Set when the game is played in the campaign maps instead of the endless world. */
@@ -155,11 +158,12 @@ export interface GameState {
   kills: number;
 }
 
-export function newGameState(seed: string, start: { x: number; y: number; facing: Facing }, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY): GameState {
+export function newGameState(seed: string, start: { x: number; y: number; facing: Facing }, size: WorldSize = DEFAULT_WORLD_SIZE, dungeons: DungeonDensity = FULL_DUNGEON_DENSITY, ruleset: Ruleset = DEFAULT_RULESET): GameState {
   return {
     seed,
     size,
     dungeons,
+    ruleset,
     scale: { ...NEUTRAL_SCALE },
     campaign: null,
     party: createDefaultParty(),
@@ -194,6 +198,8 @@ export function isCampaignPlace(at: Location): at is Extract<Location, { mode: "
 export interface SaveFile {
   version: 1;
   genVersion: number;
+  /** The generator version of the monsters of Fantastic Islands (`FANTASTIC_GEN_VERSION`); absent in a Classic save. */
+  fantasticVersion?: number;
   savedAt: string;
   /** The version of the game that wrote the save (`assets/pack.ts`). Absent: Classic (every save from before the versions). */
   pack?: PackId;
@@ -204,6 +210,8 @@ export interface SaveFile {
     size?: WorldSize;
     /** Absent in saves from before the choice of how many dungeons a world has: they have all of them. */
     dungeons?: DungeonDensity;
+    /** Part of the identity of the world like `size` and `dungeons`; absent = Classic (every save from before the versions). */
+    ruleset?: Ruleset;
     /** Absent in saves from before the reward factors: they pay as the tables say. */
     scale?: RewardScale;
     party: Party;
@@ -230,6 +238,7 @@ export function toSaveFile(state: GameState): SaveFile {
   return {
     version: 1,
     genVersion: GEN_VERSION,
+    ...(state.ruleset === "fantastic" ? { fantasticVersion: FANTASTIC_GEN_VERSION } : {}),
     savedAt: new Date().toISOString(),
     ...(activePackId() === "classic" ? {} : { pack: activePackId() }),
     seed: state.seed,
@@ -237,6 +246,8 @@ export function toSaveFile(state: GameState): SaveFile {
       seed: state.seed,
       size: state.size,
       dungeons: state.dungeons,
+      // (a Classic save stays what it was: no new field)
+      ...(state.ruleset === "fantastic" ? { ruleset: state.ruleset } : {}),
       scale: state.scale,
       party: state.party,
       at: state.at,
@@ -273,6 +284,7 @@ export function fromSaveFile(file: SaveFile): GameState {
     seed: s.seed,
     size,
     dungeons: parseDungeonDensity(s.dungeons),
+    ruleset: parseRuleset(s.ruleset),
     scale: parseRewardScale(s.scale),
     party: normalizeParty(s.party),
     at: s.at,

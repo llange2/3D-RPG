@@ -1,0 +1,632 @@
+{
+ "92": {
+  "file": "models-original/monster_92.glb",
+  "tris": 10406,
+  "bytes": 1872472,
+  "bounds": [
+   -0.7548614144325256,
+   -1.621244116734033e-8,
+   -0.2659396231174469,
+   0.7548614740371704,
+   1.6999999284744263,
+   0.2659395635128021
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "mage_soell_cast_3"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.491,
+  "animated": true,
+  "scale": 0.8,
+  "y": 0
+ },
+ "93": {
+  "file": "models-original/monster_93.glb",
+  "tris": 10176,
+  "bytes": 1463684,
+  "bounds": [
+   -0.32635000348091125,
+   -0.4948260486125946,
+   -0.9498931169509888,
+   0.33423298597335815,
+   0.4975360035896301,
+   0.944499135017395
+  ],
+  "animations": [],
+  "groundTop": -0.45,
+  "surface": 0.44,
+  "fromObj": false,
+  "mean": 0.301,
+  "animated": false,
+  "scale": 1.3,
+  "y": 0
+ },
+ "94": {
+  "file": "models-original/monster_94.glb",
+  "tris": 10462,
+  "bytes": 1677972,
+  "bounds": [
+   -0.8318060040473938,
+   -0.6541039943695068,
+   -0.9667341113090515,
+   0.8281260132789612,
+   0.6556931138038635,
+   0.9469330310821533
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "surface": -0.245,
+  "fromObj": false,
+  "mean": 0.182,
+  "animated": false,
+  "scale": 1.2,
+  "y": 0
+ },
+ "95": {
+  "file": "models-original/monster_95.glb",
+  "tris": 10332,
+  "bytes": 1449780,
+  "bounds": [
+   -0.9693524241447449,
+   5.549686044048485e-9,
+   -0.36107221245765686,
+   0.9693522453308105,
+   1.7000000476837158,
+   0.36107227206230164
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "Left_Slash"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.197,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "96": {
+  "file": "models-original/monster_96.glb",
+  "tris": 9984,
+  "bytes": 1493700,
+  "bounds": [
+   -0.8979971408843994,
+   -1.1611970940350602e-8,
+   -0.2213573157787323,
+   0.8979970216751099,
+   1.7000000476837158,
+   0.2213573008775711
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.283,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "97": {
+  "file": "models-original/monster_97.glb",
+  "tris": 10312,
+  "bytes": 2408540,
+  "bounds": [
+   -0.42635801434516907,
+   -0.6890429854393005,
+   -0.9526941776275635,
+   0.4057359993457794,
+   0.690375030040741,
+   0.9482551217079163
+  ],
+  "animations": [],
+  "groundTop": -0.65,
+  "surface": 0.4475,
+  "fromObj": false,
+  "mean": 0.573,
+  "animated": false,
+  "scale": 1.3,
+  "y": 0
+ },
+ "98": {
+  "file": "models-original/monster_98.glb",
+  "tris": 10204,
+  "bytes": 1305796,
+  "bounds": [
+   -0.893308162689209,
+   -3.158085126742094e-9,
+   -0.24358853697776794,
+   0.8933082818984985,
+   1.7000001668930054,
+   0.24358853697776794
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "mage_soell_cast_7"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.142,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "99": {
+  "file": "models-original/monster_99.glb",
+  "tris": 10286,
+  "bytes": 1288892,
+  "bounds": [
+   -1.053396463394165,
+   -1.7211393199545455e-8,
+   -0.5622818470001221,
+   1.053396463394165,
+   1.7000000476837158,
+   0.5622818470001221
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.354,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "100": {
+  "file": "models-original/monster_100.glb",
+  "tris": 10476,
+  "bytes": 1865692,
+  "bounds": [
+   -1.076687216758728,
+   -2.7042037498148375e-9,
+   -0.8949154615402222,
+   1.076687216758728,
+   1.7000000476837158,
+   0.8949154019355774
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.234,
+  "animated": true,
+  "scale": 1.2,
+  "y": 0
+ },
+ "101": {
+  "file": "models-original/monster_101.glb",
+  "tris": 14843,
+  "bytes": 2485052,
+  "bounds": [
+   -0.875046968460083,
+   -2.1522273740970377e-8,
+   -0.3284488320350647,
+   0.8750470876693726,
+   1.7000000476837158,
+   0.3284488320350647
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "Left_Slash"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.382,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "102": {
+  "file": "models-original/monster_102.glb",
+  "tris": 10278,
+  "bytes": 1615068,
+  "bounds": [
+   -0.6013439297676086,
+   1.3782361918401875e-9,
+   -0.5196726322174072,
+   0.6013439297676086,
+   1.6999998092651367,
+   0.5196727514266968
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.279,
+  "animated": true,
+  "scale": 1.5,
+  "y": 0
+ },
+ "103": {
+  "file": "models-original/monster_103.glb",
+  "tris": 10288,
+  "bytes": 1526596,
+  "bounds": [
+   -0.7969245910644531,
+   -4.258686203684192e-8,
+   -0.3210546672344208,
+   0.7969244718551636,
+   1.7000001668930054,
+   0.3210546672344208
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.469,
+  "animated": true,
+  "scale": 2,
+  "y": 0
+ },
+ "104": {
+  "file": "models-original/monster_104.glb",
+  "tris": 10336,
+  "bytes": 1383680,
+  "bounds": [
+   -0.735937237739563,
+   2.4887066629730725e-8,
+   -0.32844114303588867,
+   0.735937237739563,
+   1.7000000476837158,
+   0.32844114303588867
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "Left_Slash"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.475,
+  "animated": true,
+  "scale": 2.2,
+  "y": 0
+ },
+ "105": {
+  "file": "models-original/monster_105.glb",
+  "tris": 10358,
+  "bytes": 1499072,
+  "bounds": [
+   -0.9189825057983398,
+   -6.291159593274642e-9,
+   -0.643348753452301,
+   0.9189825057983398,
+   1.7000000476837158,
+   0.6433489322662354
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "mage_soell_cast_8"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.179,
+  "animated": true,
+  "scale": 1.4,
+  "y": 0
+ },
+ "106": {
+  "file": "models-original/monster_106.glb",
+  "tris": 10306,
+  "bytes": 1529092,
+  "bounds": [
+   -0.8948408365249634,
+   -3.1484463924869033e-9,
+   -0.36511802673339844,
+   0.8948408365249634,
+   1.700000286102295,
+   0.36511796712875366
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.495,
+  "animated": true,
+  "scale": 2.6,
+  "y": 0
+ },
+ "107": {
+  "file": "models-original/monster_107.glb",
+  "tris": 10230,
+  "bytes": 1158524,
+  "bounds": [
+   -0.8755320310592651,
+   -5.561151183997026e-8,
+   -0.2388315051794052,
+   0.8755320310592651,
+   1.7000000476837158,
+   0.2388315051794052
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "mage_soell_cast_4"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.241,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "108": {
+  "file": "models-original/monster_108.glb",
+  "tris": 10420,
+  "bytes": 1475552,
+  "bounds": [
+   -1.090671420097351,
+   1.0301082209451806e-9,
+   -1.2228481769561768,
+   1.0906716585159302,
+   2.2100002765655518,
+   1.2228481769561768
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "Left_Slash"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.265,
+  "animated": true,
+  "scale": 1.3,
+  "y": 0
+ },
+ "109": {
+  "file": "models-original/monster_109.glb",
+  "tris": 10286,
+  "bytes": 1510708,
+  "bounds": [
+   -0.7517472505569458,
+   2.8244893091056156e-9,
+   -0.3082663416862488,
+   0.7517473697662354,
+   1.7000001668930054,
+   0.30826640129089355
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "mage_soell_cast_3"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.416,
+  "animated": true,
+  "scale": 1.5,
+  "y": 0
+ },
+ "110": {
+  "file": "models-original/monster_110.glb",
+  "tris": 10286,
+  "bytes": 1509712,
+  "bounds": [
+   -0.884780764579773,
+   -1.4957210581201252e-8,
+   -0.3039053678512573,
+   0.884780764579773,
+   1.7000000476837158,
+   0.3039053976535797
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "Left_Slash"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.192,
+  "animated": true,
+  "scale": 1.8,
+  "y": 0
+ },
+ "111": {
+  "file": "models-original/monster_111.glb",
+  "tris": 10418,
+  "bytes": 1319612,
+  "bounds": [
+   -1.14274263381958,
+   -4.8408445252334786e-8,
+   -0.3100886940956116,
+   1.14274263381958,
+   1.9099994897842407,
+   0.3100886940956116
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.199,
+  "animated": true,
+  "scale": 2.4,
+  "y": 0
+ },
+ "112": {
+  "file": "models-original/monster_112.glb",
+  "tris": 10298,
+  "bytes": 1392820,
+  "bounds": [
+   -0.6440993547439575,
+   2.776088692257872e-9,
+   -0.30168241262435913,
+   0.6440994143486023,
+   1.7000000476837158,
+   0.30168241262435913
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.391,
+  "animated": true,
+  "scale": 2.4,
+  "y": 0
+ },
+ "113": {
+  "file": "models-original/monster_113.glb",
+  "tris": 10106,
+  "bytes": 1533340,
+  "bounds": [
+   -0.8482919335365295,
+   8.830193465314551e-9,
+   -0.3437075614929199,
+   0.8482919335365295,
+   1.7000000476837158,
+   0.3437075614929199
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.219,
+  "animated": true,
+  "scale": 2.6,
+  "y": 0
+ },
+ "114": {
+  "file": "models-original/monster_114.glb",
+  "tris": 10436,
+  "bytes": 2207608,
+  "bounds": [
+   -0.49800905585288985,
+   -0.562061071395874,
+   -0.949620008468628,
+   0.48782700300216664,
+   0.5621200799942017,
+   0.9497489929199219
+  ],
+  "animations": [],
+  "groundTop": -0.5,
+  "surface": -0.08,
+  "fromObj": false,
+  "mean": 0.559,
+  "animated": false,
+  "scale": 2,
+  "y": 0
+ },
+ "115": {
+  "file": "models-original/monster_115.glb",
+  "tris": 10353,
+  "bytes": 1462552,
+  "bounds": [
+   -0.631433367729187,
+   -2.0348007723214323e-8,
+   -0.299429714679718,
+   0.631433367729187,
+   1.9100000858306885,
+   0.299429714679718
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Charged_Upward_Slash",
+   "Dead"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.277,
+  "animated": true,
+  "scale": 3,
+  "y": 0
+ },
+ "116": {
+  "file": "models-original/monster_116.glb",
+  "tris": 10424,
+  "bytes": 1461720,
+  "bounds": [
+   -1.0391077995300293,
+   -7.206419905259054e-9,
+   -0.3978455662727356,
+   1.0391080379486084,
+   1.880000114440918,
+   0.3978455066680908
+  ],
+  "animations": [
+   "Running",
+   "Walking",
+   "Alert",
+   "Dead",
+   "mage_soell_cast_3"
+  ],
+  "groundTop": 0,
+  "fromObj": false,
+  "mean": 0.142,
+  "animated": true,
+  "scale": 2.6,
+  "y": 0
+ }
+}

@@ -4,7 +4,8 @@
  */
 import type { Rng } from "../core/rng";
 import type { MonsterGroup } from "./quest-table";
-import { BASE_MONSTER_NAMES, MONSTER_IDS, MONSTERS, monsterGroup, walksOnLand } from "./tables";
+import type { Ruleset } from "../core/ruleset";
+import { BASE_MONSTER_NAMES, MONSTERS, monsterGroup, monsterIdsOf, walksOnLand } from "./tables";
 
 export const ALIGNMENTS = ["good", "neutral", "evil"] as const;
 export type Alignment = (typeof ALIGNMENTS)[number];
@@ -43,16 +44,16 @@ export function pickAlignment(rng: Rng, lava: boolean): Alignment {
 const level = (id: number): number => MONSTERS[id]?.treasure_level ?? 5;
 
 /** The land monsters of a kind of castle, weakest first (the bosses of quest 5 are no guards). */
-export function guardPool(alignment: Alignment): number[] {
-  return MONSTER_IDS.filter((id) => monsterGroup(id) === GUARD_GROUP[alignment] && walksOnLand(MONSTERS[id]!) && !BASE_MONSTER_NAMES[id]!.includes("King") && !BASE_MONSTER_NAMES[id]!.includes("Master") && !BASE_MONSTER_NAMES[id]!.includes("Lord") && !BASE_MONSTER_NAMES[id]!.includes("Leader")).sort((a, b) => level(a) - level(b) || a - b);
+export function guardPool(alignment: Alignment, ruleset: Ruleset = "classic"): number[] {
+  return monsterIdsOf(ruleset).filter((id) => monsterGroup(id) === GUARD_GROUP[alignment] && walksOnLand(MONSTERS[id]!) && !BASE_MONSTER_NAMES[id]!.includes("King") && !BASE_MONSTER_NAMES[id]!.includes("Master") && !BASE_MONSTER_NAMES[id]!.includes("Lord") && !BASE_MONSTER_NAMES[id]!.includes("Leader")).sort((a, b) => level(a) - level(b) || a - b);
 }
 
 /**
  * The two kinds of guard of a castle (document: "Leichte Wachen entsprechen dem Level des Schlosses, schwere Wachen dem Level des Schlosses +1. Sollte es kein
  * entsprechendes Monster des richtigen Typs für das Level geben, wird das nächst höhere Monster genommen"). Exactly two different monsters per castle.
  */
-export function guardsOf(alignment: Alignment, tier: number, rng: Rng): { light: number; heavy: number } {
-  const pool = guardPool(alignment);
+export function guardsOf(alignment: Alignment, tier: number, rng: Rng, ruleset: Ruleset = "classic"): { light: number; heavy: number } {
+  const pool = guardPool(alignment, ruleset);
   // the monster of the level asked for, or the weakest of the next level that has one, or the strongest there is
   const forLevel = (wanted: number, not?: number): number => {
     const fits = pool.filter((id) => id !== not);

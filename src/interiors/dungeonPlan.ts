@@ -2,9 +2,10 @@ import { LAYER, Rng, rngFor, type SeedState } from "../core/rng";
 import { ALIGNMENTS } from "../data/castles";
 import { buildLook, type DungeonClass } from "../data/dungeon-themes";
 import { ARTIFACTS_PER_KIND, ARTIFACT_TYPE } from "../data/keepers";
+import type { Ruleset } from "../core/ruleset";
 import {
-  BOSS_PAIRS,
   CARD_COLORS,
+  bossPairsOf,
   KEY_COLORS,
   MAX_ITEMS_PER_ROOM,
   ORBS_IN_SPACESHIP,
@@ -98,9 +99,10 @@ const layoutsFor = (quest: QuestId, kind: "dungeon" | "cave"): LayoutId[] => QUE
  * Quest 5: the population of the place's level, the boss that leads it. The population counts 60 % of the groups, so it is listed three times
  * against two of the others.
  */
-function bossPair(rng: Rng, tier: number): { population: number; boss: number } {
-  const fitting = BOSS_PAIRS.filter((p) => MONSTERS[p.population]!.treasure_level === tier);
-  const pool = fitting.length > 0 ? fitting : BOSS_PAIRS.filter((p) => MONSTERS[p.population]!.treasure_level <= tier);
+function bossPair(rng: Rng, tier: number, ruleset: Ruleset): { population: number; boss: number } {
+  const pairs = bossPairsOf(ruleset);
+  const fitting = pairs.filter((p) => MONSTERS[p.population]!.treasure_level === tier);
+  const pool = fitting.length > 0 ? fitting : pairs.filter((p) => MONSTERS[p.population]!.treasure_level <= tier);
   return pool[rng.int(pool.length)]!;
 }
 
@@ -146,7 +148,7 @@ export function thinOutPlaces(rootSeed: SeedState, placed: readonly (readonly Po
   return { placed: placed.map((list) => list.filter((p) => !dropped.has(p.id))) };
 }
 
-export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly Poi[], castleWords: Map<string, number> = new Map(), castleSpells: Map<string, number[]> = new Map(), pickedPyramids?: readonly Poi[]): Map<string, DungeonRef> {
+export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly Poi[], castleWords: Map<string, number> = new Map(), castleSpells: Map<string, number[]> = new Map(), pickedPyramids?: readonly Poi[], ruleset: Ruleset = "classic"): Map<string, DungeonRef> {
   const out = new Map<string, DungeonRef>();
   const places = pois.filter((p) => p.kind === "dungeon" || p.kind === "cave");
   if (places.length === 0) return out;
@@ -246,7 +248,7 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     const holds = gives.get(poi.id) ?? [];
     if (pyramidIds.has(poi.id)) {
       // (the same look for all five pyramids: behind each of them is the same level)
-      const theme = buildLook(rngFor(rootSeed, LAYER.INTERIOR, "spaceship-look"), "dungeon", 5, "quest_6", "Spaceship", ["robot"], "C", "spaceship");
+      const theme = buildLook(rngFor(rootSeed, LAYER.INTERIOR, "spaceship-look"), "dungeon", 5, "quest_6", "Spaceship", ["robot"], "C", "spaceship", undefined, ruleset);
       out.set(poi.id, { id: "spaceship", klass: "C", quest: "spaceship", layout: "spaceship_1", look: theme, requires: need, gives: [], orbs: ORBS_PER_SECTION, minis: [], coins: 0, skulls: 0, pearls: 0, spells: [], scale: SIZE_SCALE[size] ?? 1, section: sectionOf.get(poi.id)! });
       continue;
     }
@@ -260,7 +262,7 @@ export function planPlaces(rootSeed: SeedState, size: WorldSize, pois: readonly 
     const def = QUESTS[quest];
     const klass: DungeonClass = need ? "B" : "A";
     const name = `${def.name} (${layout})`;
-    const theme = buildLook(look, kind, poi.tier, quest, name, def.groups as MonsterGroup[], klass, `${quest}/${layout}`, quest === "quest_5" ? bossPair(look, poi.tier) : undefined);
+    const theme = buildLook(look, kind, poi.tier, quest, name, def.groups as MonsterGroup[], klass, `${quest}/${layout}`, quest === "quest_5" ? bossPair(look, poi.tier, ruleset) : undefined, ruleset);
     out.set(poi.id, { id: `${quest}/${layout}`, klass, quest, layout, look: theme, requires: need, gives: holds, orbs: orbs.get(poi.id) ?? 0, minis: miniIds, coins: 0, skulls: 0, pearls: 0, spells: [], scale: SIZE_SCALE[size] ?? 1, ...(quest === "quest_6" ? { word: takeRiddle(WORD_RIDDLES) } : {}) });
   }
   distributeItems(rng, out, places, pois);
@@ -335,7 +337,7 @@ function standalone(world: World, poi: Poi): DungeonRef {
   const quests = (Object.keys(QUESTS) as QuestId[]).filter((q) => layoutsFor(q, kind).length > 0);
   const quest = quests[rng.int(quests.length)]!;
   const layout = rngPick(rng, layoutsFor(quest, kind));
-  const theme = buildLook(rng, kind, poi.tier, quest, `${QUESTS[quest].name} (${layout})`, QUESTS[quest].groups as MonsterGroup[], "A", `${quest}/${layout}`, quest === "quest_5" ? bossPair(rng, poi.tier) : undefined);
+  const theme = buildLook(rng, kind, poi.tier, quest, `${QUESTS[quest].name} (${layout})`, QUESTS[quest].groups as MonsterGroup[], "A", `${quest}/${layout}`, quest === "quest_5" ? bossPair(rng, poi.tier, world.ruleset) : undefined, world.ruleset);
   return { id: `${quest}/${layout}`, klass: "A", quest, layout, look: theme, requires: null, gives: [], orbs: 0, minis: [], coins: 0, skulls: 0, pearls: 0, spells: [], scale: 1, ...(quest === "quest_6" ? { word: WORD_RIDDLES[rng.int(WORD_RIDDLES.length)]! } : {}) };
 }
 

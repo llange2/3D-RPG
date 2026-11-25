@@ -14,6 +14,7 @@ import type { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/loaders/glTF";
 import { BOW_MODEL, BOW_MONSTERS, STICK_MODEL, STICK_MONSTERS, equipmentModel } from "../data/equipment";
 import { MONSTERS } from "../data/tables";
+import type { BreathMouth } from "./breath";
 import { assetUrl, type MonsterModelInfo, type StaticModelInfo } from "./assets";
 import { GRIP_TWEAK, GRIP_Y, MIXAMO_GRIP, holdInHand, type Hand } from "./equipment";
 import { FLOAT_AMPLITUDE, floatY } from "./itemProps";
@@ -431,6 +432,25 @@ export class MonsterRenderer {
     // `to.y` is the height of the model's origin (the feet of an animated model, the middle of a static one): the shot goes to the middle of the body that is drawn, whatever its origin is
     v.aim ??= this.bodyMiddle(v);
     return { x: v.to.x, y: v.to.y + v.aim, z: v.to.z };
+  }
+
+  /**
+   * The mouths of the monsters that breathe a visible cloud (`BREATH_MOUTHS`): where it stands in the world, the way it faces (a horizontal unit vector) and how big its cloud is. The point is
+   * the model's own (forward and up from its origin, in model units) turned with the holder and scaled with it, so it follows the bobbing and the turning. A monster that is dying or in another
+   * dimension has no breath.
+   */
+  breathers(table: Readonly<Record<number, BreathMouth>>): { uid: string; at: { x: number; y: number; z: number }; dir: { x: number; z: number }; size: number }[] {
+    const out: { uid: string; at: { x: number; y: number; z: number }; dir: { x: number; z: number }; size: number }[] = [];
+    for (const [uid, v] of this.views) {
+      const mouth = table[v.defId];
+      if (!mouth || v.dying !== null || v.phased) continue;
+      const turn = v.holder.rotation.y;
+      const sin = Math.sin(turn);
+      const cos = Math.cos(turn);
+      const scale = v.holder.scaling.x;
+      out.push({ uid, at: { x: v.holder.position.x + mouth.z * scale * sin, y: v.holder.position.y + mouth.y * scale, z: v.holder.position.z + mouth.z * scale * cos }, dir: { x: sin, z: cos }, size: mouth.size * scale });
+    }
+    return out;
   }
 
   /** Where a blow or an arrow hits a monster (`anchor`) and the height of the floor under it: the lowest point of the body that is drawn, so that what flies off it falls to its feet. Null when it has no view. */

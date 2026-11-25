@@ -22,7 +22,8 @@ const rows: Array<WorldRewards & { size: string; dungeons: string; scale: Return
 for (const size of sizes) {
   for (const dungeons of densities) {
     const t0 = Date.now();
-    const world = new World(seed, size, dungeons);
+    // RULESET=fantastic measures the world with the monsters of Fantastic Islands (same islands, other monsters)
+    const world = new World(seed, size, dungeons, process.env.RULESET === "fantastic" ? "fantastic" : "classic");
     const raw = measureWorld(world);
     const scale = rewardScaleOf(raw);
     // what the game pays: the factors on the gold of monsters and containers, the experience of monsters, huts and containers, the points of containers (the coins make up the rest)

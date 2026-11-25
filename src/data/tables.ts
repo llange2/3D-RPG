@@ -13,6 +13,8 @@ import SPELLS_RAW from "./raw/SPELLS.json";
 import SPELL_SHEET from "./spell-sheet.json";
 import MONSTER_GROUPS from "./monster-groups.json";
 import MONSTER_SHEET from "./monster-sheet.json";
+import MONSTER_SHEET_FANTASTIC from "./monster-sheet-fantastic.json";
+import type { Ruleset } from "../core/ruleset";
 import TALENTS_RAW from "./raw/TALENTS.json";
 import textsRaw from "./raw/texts.json";
 
@@ -145,7 +147,8 @@ interface MonsterSheetRow {
   gold: number;
   iconHeight: number;
   terrain: "land" | "water" | "both";
-  undead: boolean;
+  /** The sheet's column "group" ("undead", "beast", "humanoid" ...). */
+  group: string;
   xp: number;
   level: number;
   ranged: boolean;
@@ -199,7 +202,7 @@ const EQUIPMENT_OVERRIDES: Readonly<Record<number, Pick<OldMonster, "anim_weapon
 };
 
 /**
- * A monster of the user's sheet (`docs/RPG_0.1.xlsx`, exported by `npm run data:monsters`) laid over the old table: stats, resistances, XP
+ * A monster of the user's sheet (`docs/MONSTER_1.2.xlsx`, exported by `npm run data:monsters`) laid over the old table: stats, resistances, XP
  * (the sheet's new XP column; the old one is not used any more), treasure level, abilities and the Monster Hut come from the sheet, the
  * animation and sound entries only the old table has stay.
  */
@@ -240,7 +243,8 @@ function monsterFromSheet(id: number, old: OldMonster, row: MonsterSheetRow): Mo
     treasure_level: row.level,
     icon_height: row.iconHeight,
     terrain: TERRAIN_OVERRIDES[id] ?? row.terrain,
-    undead: row.undead,
+    // (the sheet has no flag any more, the old table's stays; nothing reads it, `isUndead` goes by the group)
+    undead: old.undead,
     // the sheet knows no hatred of one class (the old "Targets Clerics" and "Hatred:Paladins")
     preferred_enemy: null,
     special_abilties: abilities.length > 0 ? abilities.join(", ") : null,
@@ -263,12 +267,33 @@ export const MONSTERS: Record<number, MonsterDef> = Object.fromEntries(
     return [Number(id), monsterFromSheet(Number(id), m, row)];
   }),
 );
+/** The monsters of Classic, by id: what every table, tool and test that walks `MONSTERS` sees. Fantastic Islands has more (`monsterIdsOf`). */
 export const MONSTER_IDS: number[] = Object.keys(MONSTERS).map(Number).sort((a, b) => a - b);
+
+/**
+ * The monsters that only Fantastic Islands has (`docs/MONSTER_1.2.xlsx`, ids from 92 on, appended behind those of Classic and never in between: the order of the table goes into
+ * draws). They are in `MONSTERS` too, so that `MONSTERS[id]` finds them wherever a save or a spawn names an id, but as properties that are not enumerable: `Object.keys/values/entries`,
+ * `for ... in` and a spread see Classic only, so nothing that walks the table (Classic's generation, the balance tools, the tests of Classic) can meet a monster it does not know.
+ * What Fantastic walks it asks for: `monsterIdsOf("fantastic")`.
+ */
+export const FANTASTIC_MONSTER_IDS: number[] = Object.keys(MONSTER_SHEET_FANTASTIC).map(Number).sort((a, b) => a - b);
+for (const id of FANTASTIC_MONSTER_IDS) {
+  const row = (MONSTER_SHEET_FANTASTIC as unknown as Record<string, MonsterSheetRow>)[String(id)]!;
+  if (MONSTERS[id]) throw new Error(`monster ${id} of Fantastic Islands is already a monster of Classic`);
+  // (the old table has no entry for it: everything but the flag is the sheet's)
+  Object.defineProperty(MONSTERS, id, { value: monsterFromSheet(id, { undead: row.group === "undead" } as OldMonster, row), enumerable: false, writable: true, configurable: true });
+}
+
+/** The ids of the monsters a rule set generates with, ascending: Classic's table, and for Fantastic Islands the same with the extension behind it. */
+const IDS_BY_RULESET: Record<Ruleset, readonly number[]> = { classic: MONSTER_IDS, fantastic: [...MONSTER_IDS, ...FANTASTIC_MONSTER_IDS] };
+export function monsterIdsOf(ruleset: Ruleset): readonly number[] {
+  return IDS_BY_RULESET[ruleset];
+}
 /**
  * The names of the table as it is built. A version of the game may show other names (`data/monsterNames.ts` changes `MONSTERS[id].name` once at start-up), but whatever the generation
  * decides by a name (the guards of a castle: no "King", "Master", "Lord" or "Leader") reads these, so that the world does not depend on the version.
  */
-export const BASE_MONSTER_NAMES: Readonly<Record<number, string>> = Object.fromEntries(MONSTER_IDS.map((id) => [id, MONSTERS[id]!.name]));
+export const BASE_MONSTER_NAMES: Readonly<Record<number, string>> = Object.fromEntries(monsterIdsOf("fantastic").map((id) => [id, MONSTERS[id]!.name]));
 
 /** A row of `spell-sheet.json` (generated from `docs/SPELLS.md`, `npm run data:spells`); the damage columns exist for the offensive spells only. */
 interface SheetRow {

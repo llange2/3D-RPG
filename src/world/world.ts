@@ -4,6 +4,7 @@ import { ALIGNMENTS, type Alignment } from "../data/castles";
 import { CASTLE_TIERS, SECTIONS } from "../data/quest-table";
 import { placeName, towerName } from "../data/names";
 import { OVERWORLD_THEMES } from "../data/overworld-themes";
+import { DEFAULT_RULESET, type Ruleset } from "../core/ruleset";
 import { planPlaces, thinOutPlaces } from "../interiors/dungeonPlan";
 import { SHOWCASE_ID, SHOWCASE_NAME } from "../interiors/showcase";
 import type { DungeonRef } from "../interiors/types";
@@ -258,6 +259,11 @@ export class World {
   readonly size: WorldSize;
   /** How many of the caves and dungeons the world keeps (the seed and the size alone do not tell). */
   readonly density: DungeonDensity;
+  /**
+   * The rule set the monsters are drawn with (`core/ruleset.ts`): part of the identity of a world like `size` and `density`. It decides which monsters stand where (wild groups, huts, the
+   * populations of caves and dungeons, the guards of castles), never the shape of the world: the same seed has the same islands, places and ways in both rule sets.
+   */
+  readonly ruleset: Ruleset;
   /** Tiles across and down; the world is a globe, tile `width` is tile 0 again. */
   readonly width: number;
   readonly height: number;
@@ -299,10 +305,11 @@ export class World {
   private chunkRoads: RoadSeg[][] = [];
   private chunkPois: Poi[][] = [];
 
-  constructor(seedText: string, size: WorldSize = DEFAULT_WORLD_SIZE, density: DungeonDensity = FULL_DUNGEON_DENSITY) {
+  constructor(seedText: string, size: WorldSize = DEFAULT_WORLD_SIZE, density: DungeonDensity = FULL_DUNGEON_DENSITY, ruleset: Ruleset = DEFAULT_RULESET) {
     this.seedText = seedText;
     this.size = size;
     this.density = density;
+    this.ruleset = ruleset;
     this.width = WORLD_SIZES[size].width;
     this.height = WORLD_SIZES[size].height;
     this.chunksAcross = this.width / CHUNK_SIZE;
@@ -1106,7 +1113,7 @@ export class World {
     // fewer caves and dungeons (title screen, "Dungeons"): after the castles and the pyramids are chosen, so that they stand where they stand in a full world.
     const share = DUNGEON_DENSITIES[this.density].share;
     if (share < 1) placed = thinOutPlaces(this.seed, placed, share, pyramids).placed;
-    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords, this.castleSpells, pyramids);
+    this.dungeonRefs = planPlaces(this.seed, this.size, placed.flat(), this.castleWords, this.castleSpells, pyramids, this.ruleset);
     for (const p of placed.flat()) {
       const ref = this.dungeonRefs.get(p.id);
       if (ref?.klass === "C") p.size = PYRAMID_SIZE;

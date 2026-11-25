@@ -1,4 +1,5 @@
 import { derive, LAYER, Rng, type SeedState } from "../core/rng";
+import type { Ruleset } from "../core/ruleset";
 import { QUEST_PROP, SHRINE_EFFECT, type DungeonTheme } from "../data/dungeon-themes";
 import { buildCastleContent } from "./castle";
 import { townTorches } from "./townTorches";
@@ -40,6 +41,8 @@ const BARREL = 5;
 
 export interface ContentContext {
   rootSeed: SeedState;
+  /** The rule set of the world (absent = Classic): which monsters the plain generator may draw. */
+  ruleset?: Ruleset;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -576,11 +579,11 @@ export function generateContent(map: InteriorMap, rules: RuleSet, ctx: ContentCo
           for (let m = 0; m < group; m++) monsterIds.push(pool[local.int(pool.length)]!);
           // (the guard of the deepest room is the strongest monster of the place's own level; only the end boss of a quest may be a level above)
           if (boss) monsterIds[0] = themeBoss(dt, Math.min(5, tier), false);
-        } else for (let m = 0; m < group; m++) monsterIds.push(pickMonsterWeighted(local, map.theme.monsterThemes, tier).id);
+        } else for (let m = 0; m < group; m++) monsterIds.push(pickMonsterWeighted(local, map.theme.monsterThemes, tier, false, ctx.ruleset).id);
         if (boss && !dt) {
           // the boss is one step above the rest of the place (but not above tier 2 on the first tier, so a new party can win)
-          const themeNames = Object.keys(map.theme.monsterThemes).filter(hasLandMonster);
-          monsterIds[0] = pickMonster(local, themeNames[local.int(themeNames.length)] ?? "humanoid", Math.min(5, tier + (tier >= 2 ? 1 : 0))).id;
+          const themeNames = Object.keys(map.theme.monsterThemes).filter((n) => hasLandMonster(n, ctx.ruleset));
+          monsterIds[0] = pickMonster(local, themeNames[local.int(themeNames.length)] ?? "humanoid", Math.min(5, tier + (tier >= 2 ? 1 : 0)), false, ctx.ruleset).id;
         }
         // the party may land on this cell: the group starts on a free cell beside it (never dropped: a boss must stay)
         let sx = a.x;

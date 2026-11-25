@@ -16,5 +16,5 @@ export const START_TOWN_ID = "p:0:0:0";
 
 /** Actions and monster spawns of a POI interior, produced by the rule set of its kind. */
 export function buildMapContent(world: World, poi: Poi, map: InteriorMap): MapContent {
-  return generateContent(map, RULE_SETS[map.kind], { rootSeed: world.rootSeed }, analyzeTopology(map));
+  return generateContent(map, RULE_SETS[map.kind], { rootSeed: world.rootSeed, ruleset: world.ruleset }, analyzeTopology(map));
 }

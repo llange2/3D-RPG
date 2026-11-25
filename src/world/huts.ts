@@ -1,10 +1,11 @@
 import { LAYER, rngFor } from "../core/rng";
-import { MONSTER_IDS, MONSTERS } from "../data/tables";
+import { MONSTERS, monsterIdsOf } from "../data/tables";
+import { biomeAllows } from "./biomeRules";
 import { caravansOf } from "./caravans";
 import { wrapDist2 } from "./islands";
 import { overworldMascotSpots } from "./mascots";
 import { SAFE_RADIUS, inSafeZone, nearTownExit, safeSpots } from "./safezone";
-import { DECO, GROUND, wrapDelta, type WorldSize } from "./types";
+import { DECO, GROUND, wrapDelta, type Biome, type WorldSize } from "./types";
 import type { World } from "./world";
 
 /** Map items of the old game: the Monster Hut and the one that replaces it once it is burnt down. */
@@ -109,17 +110,18 @@ function makeHuts(world: World): HutSpot[] {
   // the town the game begins in: nothing stands within `SAFE_RADIUS` of it, and the huts of levels 1 and 2 are laid out outwards from it
   const start = world.anchorOf(0, 0);
   const wanted = hutMonsters(world.size);
+  const fantastic = world.ruleset === "fantastic";
   // what already stands on open ground and must keep its ways: the mascots, the wagons of the talent traders
   const blockers: { x: number; y: number }[] = [...overworldMascotSpots(world)];
   for (const p of world.allPois()) if (p.kind === "town") blockers.push(...caravansOf(world, p));
   const out: HutSpot[] = [];
   for (let level = 1; level <= 5; level++) {
-    const spawners = MONSTER_IDS.filter((id) => MONSTERS[id]!.outside === "hut" && MONSTERS[id]!.treasure_level === level).sort((a, b) => MONSTERS[a]!.xp - MONSTERS[b]!.xp || a - b);
+    const spawners = monsterIdsOf(world.ruleset).filter((id) => MONSTERS[id]!.outside === "hut" && MONSTERS[id]!.treasure_level === level).sort((a, b) => MONSTERS[a]!.xp - MONSTERS[b]!.xp || a - b);
     if (spawners.length === 0) continue;
     const rng = rngFor(world.rootSeed, LAYER.SPAWN, "hutsites", level);
     // spots on the islands of the level, ordered by their distance from Starthaven: the weakest hut of a level is the nearest to it, the next weakest the
     // second nearest, and so on, so the monsters grow harder from the town outwards (26th playtest: in every level, not only on the start island)
-    const spots: { x: number; y: number; island: number; reach: number; fromStart: number }[] = [];
+    const spots: { x: number; y: number; island: number; biome: Biome; reach: number; fromStart: number }[] = [];
     const seen = new Set<number>();
     for (const isl of world.islands) {
       if (!isl.tiers.includes(level)) continue;
@@ -134,7 +136,7 @@ function makeHuts(world: World): HutSpot[] {
         const fromStart = wrapDist2(x, y, start.x, start.y, world.width, world.height);
         if (fromStart < LEAST_START * LEAST_START || safeSpots(world).some((p) => wrapDist2(x, y, p.x, p.y, world.width, world.height) < LEAST_START * LEAST_START)) continue;
         const reach = wrapDist2(x, y, start.x, start.y, world.width, world.height);
-        spots.push({ x, y, island: isl.index, reach, fromStart });
+        spots.push({ x, y, island: isl.index, biome: isl.biome, reach, fromStart });
       }
     }
     spots.sort((a, b) => a.reach - b.reach || a.y - b.y || a.x - b.x);
@@ -168,6 +170,8 @@ function makeHuts(world: World): HutSpot[] {
         for (let i = from; i < spots.length; i++) {
           const spot = spots[i]!;
           if (spot.fromStart < pass.start * pass.start || roomAt(i, id) < needed) continue;
+          // Fantastic Islands: a cold monster's hut does not stand in the desert or on lava, a fire monster's not in the snow (`biomeRules.ts`); the loosest pass is the last word and leaves the ban
+          if (fantastic && !last && !biomeAllows(MONSTERS[monster]!, spot.biome)) continue;
           const { x, y } = spot;
           const all = [...out, ...placed];
           if (all.some((h) => near(world, x, y, h.x, h.y, pass.apart))) continue;

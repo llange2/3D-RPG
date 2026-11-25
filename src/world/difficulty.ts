@@ -1,6 +1,9 @@
 import type { Rng } from "../core/rng";
-import { MONSTER_IDS, MONSTERS, walksOnLand, type MonsterDef } from "../data/tables";
+import type { Ruleset } from "../core/ruleset";
+import { MONSTERS, monsterIdsOf, walksOnLand, type MonsterDef } from "../data/tables";
+import { PREFERRED_WEIGHT, biomeAllows, biomePrefers } from "./biomeRules";
 import { isqrt, wrapDist2 } from "./islands";
+import type { Biome } from "./types";
 import type { World } from "./world";
 
 /**
@@ -77,16 +80,18 @@ export function levelAt(world: World, x: number, y: number): number {
   return tier * 1000 + wayAt(world, x, y, tier);
 }
 
-let ranks: Map<number, number> | null = null;
+const ranksOf = new Map<Ruleset, Map<number, number>>();
 
-/** Where a monster stands on the scale: its treasure level in thousandths plus the middle of its XP rank among the monsters of that level. */
-export function monsterLevel(id: number): number {
+/** Where a monster stands on the scale: its treasure level in thousandths plus the middle of its XP rank among the monsters of that level (of the rule set's table). */
+export function monsterLevel(id: number, ruleset: Ruleset = "classic"): number {
+  let ranks = ranksOf.get(ruleset);
   if (!ranks) {
     ranks = new Map();
     for (let level = 1; level <= 5; level++) {
-      const list = MONSTER_IDS.filter((m) => MONSTERS[m]!.treasure_level === level).sort((a, b) => MONSTERS[a]!.xp - MONSTERS[b]!.xp || a - b);
+      const list = monsterIdsOf(ruleset).filter((m) => MONSTERS[m]!.treasure_level === level).sort((a, b) => MONSTERS[a]!.xp - MONSTERS[b]!.xp || a - b);
       list.forEach((m, i) => ranks!.set(m, level * 1000 + Math.floor(((2 * i + 1) * 500) / list.length)));
     }
+    ranksOf.set(ruleset, ranks);
   }
   return ranks.get(id) ?? MONSTERS[id]!.treasure_level * 1000;
 }
@@ -99,10 +104,22 @@ export function monsterLevel(id: number): number {
 export const WILD_WINDOW = 150;
 
 /** The monsters that walk the overworld without a hut, the sheet's "x", and those of the open sea. */
-function wildPool(water: boolean): MonsterDef[] {
-  return MONSTER_IDS.map((id) => MONSTERS[id]!).filter((m) => m.outside === "wild" && (water ? m.terrain === "water" : walksOnLand(m)));
+function wildPool(ruleset: Ruleset, water: boolean): MonsterDef[] {
+  return monsterIdsOf(ruleset).map((id) => MONSTERS[id]!).filter((m) => m.outside === "wild" && (water ? m.terrain === "water" : walksOnLand(m)));
 }
-const pools = { land: wildPool(false), water: wildPool(true) };
+const poolsOf: Record<Ruleset, { land: MonsterDef[]; water: MonsterDef[] }> = {
+  classic: { land: wildPool("classic", false), water: wildPool("classic", true) },
+  fantastic: { land: wildPool("fantastic", false), water: wildPool("fantastic", true) },
+};
+
+/**
+ * The very strong monsters of Fantastic Islands (Vulture Roc, Great Hydra, Void Horror, Frost Wyrm: 1 to 3 million XP) stand on the overworld only now and then (user, 24. 11. 2026): in the draw of a
+ * wild monster each counts a quarter of a normal one of its level and takes no place on the even scale of the others. Water monsters are no part of this (the sea has its own draw). Classic
+ * keeps its even shares (`wildEvenL5`).
+ */
+export const ULTRA_WILD: ReadonlySet<number> = new Set([75, 32, 116, 114]);
+/** A normal monster counts this many times an ultra one. */
+const ULTRA_QUARTER = 4;
 
 /**
  * A wild monster of the land for a group: of the monsters of the sheet's "x" that belong to the level of the island (the hardest of level 1 do not stand at the
@@ -114,12 +131,31 @@ const pools = { land: wildPool(false), water: wildPool(true) };
  * XP: the Vulture Roc stood at 5710 among all monsters of the level, with those that have a hut or live in dungeons). Each of n monsters gets about 1/n of the
  * groups, the weakest the nearest to Starthaven, the strongest the farthest.
  */
-export function pickWildMonster(rng: Rng, tier: number, share: number): MonsterDef {
-  const own = pools.land.filter((m) => m.treasure_level === tier);
-  const pool = own.length > 0 ? own : pools.land;
+export function pickWildMonster(rng: Rng, tier: number, share: number, ruleset: Ruleset = "classic", biome?: Biome): MonsterDef {
+  const land = poolsOf[ruleset].land;
+  let own = land.filter((m) => m.treasure_level === tier);
+  let ultra: MonsterDef[] = [];
+  if (ruleset === "fantastic") {
+    // the climate of the island (`biomeRules.ts`): what does not belong there stays out, as far as the level has anything else
+    if (biome !== undefined) {
+      const fitting = own.filter((m) => biomeAllows(m, biome));
+      if (fitting.length > 0) own = fitting;
+    }
+    // the very strong ones are drawn on their own and do not take a place on the scale: one in `4 n + k` draws is one of the k of them (a quarter of a normal monster's chance)
+    ultra = own.filter((m) => ULTRA_WILD.has(m.id));
+    if (ultra.length > 0 && ultra.length < own.length) {
+      own = own.filter((m) => !ULTRA_WILD.has(m.id));
+      const r = rng.int(ULTRA_QUARTER * own.length + ultra.length);
+      if (r < ultra.length) return ultra[r]!;
+    }
+  }
+  const pool = own.length > 0 ? own : land;
   const here = tier * 1000 + share;
-  const place = own.length > 0 ? evenPlaces(tier, pool) : monsterLevel;
-  const weights = pool.map((m) => Math.max(0, 1000 - Math.floor((Math.abs(place(m.id) - here) * 1000) / WILD_WINDOW)));
+  const place = own.length > 0 ? evenPlaces(tier, pool) : (id: number) => monsterLevel(id, ruleset);
+  const weights = pool.map((m) => {
+    const near = Math.max(0, 1000 - Math.floor((Math.abs(place(m.id) - here) * 1000) / WILD_WINDOW));
+    return ruleset === "fantastic" && biome !== undefined && biomePrefers(m, biome) ? near * PREFERRED_WEIGHT : near;
+  });
   if (weights.every((w) => w === 0)) {
     // nothing within reach: the one nearest on the scale
     return [...pool].sort((a, b) => Math.abs(place(a.id) - here) - Math.abs(place(b.id) - here) || a.id - b.id)[0]!;
@@ -142,7 +178,7 @@ function evenPlaces(tier: number, pool: readonly MonsterDef[]): (id: number) => 
 export function pickSeaMonster(rng: Rng, world: World, x: number, y: number, farthest: number): MonsterDef {
   const home = world.anchorOf(0, 0);
   const d = isqrt(wrapDist2(x, y, home.x, home.y, world.width, world.height));
-  const ranked = [...pools.water].sort((a, b) => a.xp - b.xp || a.id - b.id);
+  const ranked = [...poolsOf[world.ruleset].water].sort((a, b) => a.xp - b.xp || a.id - b.id);
   // the sea monsters share the distance in equal parts, the weakest the nearest; the strongest (the Octobeast, stronger than most of level 5) only stands
   // beyond two thirds of the way to the far side of the globe, for the parts end at 1.4 times that distance
   const part = Math.min(ranked.length - 1, Math.floor((d * ranked.length) / Math.max(1, Math.floor(farthest * 1.4))));
