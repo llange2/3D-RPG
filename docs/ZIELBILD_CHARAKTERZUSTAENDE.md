@@ -39,7 +39,7 @@ Zeile 2:   6 Drunk       7 Paralyzed   8 Petrified   9 Poisoned    10 Sleeping
 
 | Merkmal | Vorgabe |
 |---|---|
-| Zelle | quadratisch, im Beispiel 384 × 384 px; zum Malen 512 × 512 oder größer, das Spiel zeigt am Ende 192 × 192 |
+| Zelle | quadratisch, im Beispiel 384 × 384 px; zum Malen 512 × 512 oder größer, das Spiel zeigt am Ende 192 × 192. Bei ChatGPT (Abschnitt 5a) sind es 288 × 288 px, damit 5 Zellen genau in ein 1536 px breites Bild passen |
 | Zwischenraum | 16 px, **einfarbig mittelgrau** (`#7F7F7F`), auch als äußerer Rand: Gesamtgröße = 16 + 5 × (Zelle + 16) breit, 16 + 2 × (Zelle + 16) hoch (Beispiel: 2016 × 816) |
 | Text | **keiner**: keine Nummern, keine Namen, keine Wasserzeichen. Die Zuordnung ergibt sich nur aus der Reihenfolge |
 | Zuschnitt | Zelle (Spalte c, Zeile r, jeweils ab 0): x = 16 + c × (Zelle + 16), y = 16 + r × (Zelle + 16) |
@@ -123,6 +123,55 @@ Negativ (für Modelle mit Negativtext):
 text, letters, numbers, watermark, signature, logo, frame, border, vignette, photograph, 3d render, cel shading,
 black outline, comic, anime, extra people, hands, background scene, cropped head
 ```
+
+## 5a. Prompt für ChatGPT (Image 2) mit dem Zielbild als Referenz
+
+**Vorgehen:** `docs/zielbild/beispiel_zustaende_sauber.png` als Referenzbild anhängen, `[Charakterbeschreibung]` ersetzen, den Prompt absenden. Das Ergebnis wird danach auf das Raster zugeschnitten (siehe unten).
+
+**Warum der Prompt so aufgebaut ist (Befund aus den ersten zwei Versuchen, 25. 11. 2026):** Stil, Zustände und Reihenfolge kamen gut, aber das Raster füllte das ganze Querformat (1536 × 1024 px, 3:2) aus. Fünf Spalten × zwei Zeilen auf 3:2 ergeben zwangsläufig **hochformatige** Zellen (rund 290 × 485 px). Quadratische Zellen gehen in 3:2 nur, wenn das Raster **nicht** das ganze Bild füllt: mit Zellen von 288 px und 16 px Zwischenraum ist es genau 1536 px breit, aber nur 624 px hoch; darunter bleibt eine graue Fläche von 400 px. Das verlangt der Prompt ausdrücklich. Außerdem änderte sich im Versteinert-Bild die Frisur (Locken wurden zu Steinlocken anderer Form); der Prompt verlangt dort dieselbe Frisur in Stein. Das Referenzbild zeigt eine Person; damit sie nicht übernommen wird, sagt der Prompt, dass nur Aufbau und Stil gelten.
+
+**Der Prompt** (Anfang wie vorgegeben; „in zehn Zuständen, die …“ ergänzt, damit der Satz mit „einen“ und „die“ grammatisch aufgeht):
+
+```
+Zeichne einen [Charakterbeschreibung] in zehn Zuständen, die zusammen ein Raster aus zehn quadratischen Porträts bilden. Das angehängte Referenzbild zeigt NUR den Aufbau des Rasters, die Reihenfolge der Zustände, die Ausdrücke und den Malstil. Übernimm NICHT die abgebildete Person, ihr Gesicht, ihre Haare, ihren Schmuck oder ihre Kleidung, sondern male die oben beschriebene Figur.
+
+FORMAT (sehr wichtig, geht vor allem anderen):
+- Das Bild ist ein Querformat 3:2 (1536 × 1024 px). Der gesamte Hintergrund ist eine einfarbige, mittelgraue Fläche (#7F7F7F).
+- Darauf liegt, bündig am oberen Bildrand, ein Raster aus 5 Spalten × 2 Zeilen mit insgesamt 10 Porträts. Jedes Porträt ist EXAKT QUADRATISCH (288 × 288 px), niemals hochformatig oder gestreckt. Zwischen den Porträts und rundum am Rand liegen 16 px der grauen Fläche. Das Raster ist dadurch 1536 px breit und nur 624 px hoch.
+- Das Raster füllt NICHT das ganze Bild: Unter der zweiten Zeile bleibt eine leere, einfarbig graue Fläche von etwa 400 px. Lass lieber diesen grauen Rest frei, als die Porträts zu strecken oder hochformatig zu machen.
+- Kein Text, keine Nummern, keine Beschriftungen, keine Rahmen, keine Wasserzeichen.
+
+REIHENFOLGE (von links nach rechts, dann nächste Zeile):
+Zeile 1: 1 Normal, 2 Gesegnet, 3 Wahnsinnig, 4 Verflucht, 5 Krank
+Zeile 2: 6 Betrunken, 7 Gelähmt, 8 Versteinert, 9 Vergiftet, 10 Schlafend
+
+AUFBAU JEDES PORTRÄTS (in allen zehn gleich): Brustbild, frontal, Blick in die Kamera (außer 10), Kopf füllt etwa drei Viertel der Höhe, Augenlinie bei etwa 40 % der Höhe, Gesicht mittig, Schultern unten angeschnitten. Gleiche Kamera, gleiches weiches Licht von links oben, derselbe ruhige, dunkle, leicht unscharfe Hintergrund in einem Farbton in allen zehn Porträts. Die Augen stehen in allen zehn auf derselben Höhe.
+
+DIE ZEHN ZUSTÄNDE (immer dieselbe Figur: gleiche Gesichtszüge, Frisur, Haarfarbe, Kopfschmuck, Kleidung; es ändern sich nur Ausdruck, Hautton und die genannten Zeichen):
+1 Normal: neutraler, wacher, ruhiger Blick, Mund geschlossen, gesunde Hautfarbe.
+2 Gesegnet: mildes, heiteres Lächeln, Augen weich und leicht nach oben, warme goldene Haut, dünner leuchtender goldener Heiligenschein schwebend über dem Kopf, vollständig im Bild.
+3 Wahnsinnig: weit aufgerissene Augen mit sichtbarem Weiß und kleinen Pupillen, breites verzerrtes Grinsen mit Zähnen, Stirn in Falten, Brauen ungleich hoch.
+4 Verflucht: niedergeschlagen, Mundwinkel hängen, Brauen innen hochgezogen, matter Blick nach unten, schwere Lider, fahle graue Haut, Augenringe; kein Fluchsymbol.
+5 Krank: angewidert und leidend, Nase gerümpft, Zunge etwas herausgestreckt, gefurchte Stirn, müde feuchte Augen, blasse Haut mit roten Fieberflecken; kein Blut, keine Beulen.
+6 Betrunken: breites, schiefes, seliges Lachen, Augen halb geschlossen, Kopf leicht geneigt, deutlich gerötete Wangen und Nase; kein Glas, keine Flasche, keine Herzchen.
+7 Gelähmt: erstarrt, Augen weit offen und starr, Mund leicht offen wie im stummen Schreck, Brauen hoch, Haut leicht blass; kein Funken, kein Eis.
+8 Versteinert: das Gesicht ist zu Stein geworden: Haut, Haar und Schmuck in mattem warmem Grau-Beige mit Steinmaserung und feinen Rissen, leere glanzlose Augen, eingefrorener Ausdruck. Die Frisur hat dieselbe Form, Länge und Anordnung wie in den anderen neun Porträts, nur in Stein. Entsättigt, aber das Gesicht bleibt wiedererkennbar. Keine Statue als Ganzes, kein Sockel.
+9 Vergiftet: grünlich-fahle Haut (kräftiges, nicht neonfarbenes Grün auf Gesicht und Hals), Schweißglanz auf Stirn und Schläfen, glasige Augen, schmaler zusammengepresster Mund, übel. Haare und Schmuck behalten ihre Farbe.
+10 Schlafend: Augen fest geschlossen, Mund geschlossen und entspannt, Kopf eine Spur zur Seite geneigt, Haut normal, Licht eine Spur dunkler; kein „Zzz“, kein Kissen.
+
+MALSTIL (in allen zehn gleich): handgemaltes Ölporträt (oder deckende Gouache) auf Leinwand mit sichtbarem, ruhigem Pinselduktus, besonders in Haar und Hintergrund; weiche gemalte Kanten ohne schwarze Umrisslinie; gedeckte, leicht warme Farben, getönte Schatten (nie reines Schwarz), ein weiches Hauptlicht mit schwachem Randlicht an Haar und Schulter; feine Leinwandstruktur, die bei kleiner Größe nicht flimmert. Augen, Mund und Brauen am feinsten ausgearbeitet, Haare, Kleidung und Hintergrund lockerer. Leicht überzeichneter Ausdruck wie in einem gemalten Bühnenporträt, aber nicht comichaft. Kein Foto, kein 3D-Render, kein Cel-Shading, kein Anime.
+
+Gib genau ein Bild aus.
+```
+
+**Beispiele für `[Charakterbeschreibung]`** (mit Artikel „einen“; Aussehen, Haare, Kopfschmuck, Kleidung und Hintergrundfarbe angeben, damit sie in allen zehn gleich bleiben): „menschlichen Waldläufer mittleren Alters mit kurzem rotbraunem Haar, Narbe über dem linken Auge, Lederkragen und moosgrünem Umhang, Hintergrund dunkles Waldgrün“; „Zwergen-Kleriker mit geflochtenem grauem Bart, Eisenreif auf der Stirn und blauer Kutte, Hintergrund dunkles Blau“.
+
+**Wenn die Zellen trotzdem hochformatig kommen:** als Folgenachricht senden: „Die Porträts sind hochformatig. Erzeuge dasselbe Bild neu mit exakt quadratischen Porträts (288 × 288 px) und lasse unter dem Raster eine einfarbig graue Fläche von etwa 400 px frei. Gleiche Figur, gleiche Zustände.“
+
+**Nach der Erzeugung:**
+1. Das Raster oben herausschneiden: 1536 × 624 px ab Oberkante (liegt es mittig statt oben, den tatsächlichen Raster-Ausschnitt nehmen).
+2. Die Zellen ausschneiden: Zelle (Spalte c, Zeile r, jeweils ab 0) hat die Ecke x = 16 + c × 304, y = 16 + r × 304 und die Größe 288 × 288; weicht das Ergebnis um einige Pixel ab, die graue Fläche als Maß nehmen.
+3. Jede Zelle auf 192 × 192 px verkleinern und gemäß Abschnitt 1 benennen; Abnahme nach Abschnitt 6.
 
 ## 6. Abnahme (Checkliste)
 
