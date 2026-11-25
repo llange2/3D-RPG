@@ -543,7 +543,7 @@
   "regen": null,
   "stealMana": null,
   "aging": null,
-  "hut": "x",
+  "hut": null,
   "resMagic": 0.3,
   "resFire": 0,
   "resPhysical": 0,
