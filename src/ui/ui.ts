@@ -47,12 +47,13 @@ export interface HudInfo {
 
 type TitlePage = "main" | "new" | "load";
 /**
- * Size of `title.webp` and the height of the middle of its grey rock (fraction of the picture height). Fantastic Islands brings its own picture (27. 11. 2026) with no rock: the three buttons
- * sit in the open sea under the scarecrow's island (`rockY`), the taller pages of a new game and the saves in the middle of the picture (`panelY`), where their own backdrop carries them.
+ * Size of `title.webp` and the height of the middle of its grey rock (fraction of the picture height). Fantastic Islands brings its own picture (27. 11. 2026) with no rock: it is drawn whole
+ * (`contain`: the height fits the window, a wide window gets black sides, nothing is cut off), the three buttons of the main page stand at the bottom edge in the middle (`atBottom`), the taller
+ * pages of a new game and the saves in the middle of the picture (`panelY`), where their own backdrop carries them.
  */
-const TITLE_LAYOUTS: Readonly<Record<PackId, { w: number; h: number; rockY: number; panelY?: number }>> = {
+const TITLE_LAYOUTS: Readonly<Record<PackId, { w: number; h: number; rockY: number; panelY?: number; contain?: boolean; atBottom?: boolean }>> = {
   classic: { w: 1600, h: 995, rockY: 0.69 },
-  fantastic: { w: 1672, h: 941, rockY: 0.9, panelY: 0.58 },
+  fantastic: { w: 1672, h: 941, rockY: 0.9, panelY: 0.58, contain: true, atBottom: true },
 };
 
 /** What the title screen resolves with: a new game (endless world or campaign, with its seed) or one of the saves it was given. */
@@ -896,13 +897,14 @@ export class UI {
         clear(menu);
         menu.append(...pages[to]());
         menu.classList.toggle("on-rock", to !== "load");
+        menu.classList.toggle("at-bottom", to === "main" && !!TITLE_LAYOUTS[activePackId()].atBottom);
         placeMenu();
       };
       // The picture carries the name of the game itself; the menu sits on the grey rock of its island. The picture is drawn
       // with `cover` (1600 x 995), so the rock moves with the window shape and the menu has to follow it.
       const placeMenu = () => {
         const image = TITLE_LAYOUTS[activePackId()];
-        const scale = Math.max(window.innerWidth / image.w, window.innerHeight / image.h);
+        const scale = (image.contain ? Math.min : Math.max)(window.innerWidth / image.w, window.innerHeight / image.h);
         const top = (window.innerHeight - image.h * scale) / 2;
         el.style.setProperty("--rock-y", `${Math.round(top + image.h * scale * (page === "main" ? image.rockY : (image.panelY ?? image.rockY)))}px`);
       };
