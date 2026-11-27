@@ -398,7 +398,9 @@ html.ending-on #game-cursor { display: none; }
 }
 .title h1 { font-family: var(--font-head); font-size: clamp(34px, 7vw, 76px); margin: 0; color: var(--gold); letter-spacing: 0.06em; text-shadow: 0 4px 24px #000, 0 0 30px #d9a44166; text-align: center; }
 /* a version with its own title picture (it has its own dark edge): a lighter veil than Classic's, so the islands keep their colours */
-.title.title-pack { background: radial-gradient(ellipse at center, #00000000 0%, #000000aa 95%), var(--img-title, url("/assets/ui/title.webp")) center / cover no-repeat, #05060a; }
+.title.title-pack { background: var(--img-title, url("/assets/ui/title.webp")) center / contain no-repeat, #000; }
+/* the three buttons of the main page at the bottom edge, in the middle (the picture has no rock to put them on) */
+.title .menu.on-rock.at-bottom { top: auto; bottom: 18px; transform: translateX(-50%); }
 .title-version { position: absolute; right: 18px; bottom: 14px; font-family: var(--font-head); font-size: 20px; letter-spacing: 0.08em; color: var(--gold); text-shadow: 0 2px 10px #000; pointer-events: none; }
 .title .sub { opacity: 0.85; margin-top: -8px; font-size: 18px; }
 /* the settings of a new game: a label column and a column of controls, so the first letters of the rows stand on one line (Seed, World size, Dungeons) */
