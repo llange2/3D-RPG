@@ -30,7 +30,14 @@ export const BOW_MONSTERS: ReadonlySet<number> = new Set([1]);
 export const STICK_MODEL = "wpn_stick";
 export const STICK_MONSTERS: ReadonlySet<number> = new Set([24]);
 
-export const EQUIPMENT_MODELS: readonly string[] = [...Object.values(MODEL_OF_FILE), BOW_MODEL, STICK_MODEL];
+/**
+ * The Hollow Scarecrow's scythe (monster 96 of Fantastic Islands, the user's `Scythe.glb`, 27. 11. 2026): the model exists in that version's pack only, a monster of Classic never asks for it.
+ * Held in the right hand like the staff.
+ */
+export const SCYTHE_MODEL = "wpn_scythe";
+export const SCYTHE_MONSTERS: ReadonlySet<number> = new Set([96]);
+
+export const EQUIPMENT_MODELS: readonly string[] = [...Object.values(MODEL_OF_FILE), BOW_MODEL, STICK_MODEL, SCYTHE_MODEL];
 
 /** The registry key of an old equipment path (`resources/objects/Sword 2.glb`), or null for none or an unknown model. */
 export function equipmentModel(path: string | undefined | null): string | null {

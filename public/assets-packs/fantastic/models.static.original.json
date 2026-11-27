@@ -16,5 +16,23 @@
   "surface": 0.645,
   "fromObj": false,
   "mean": 0.249
+ },
+ "wpn_scythe": {
+  "file": "models-original/wpn_scythe.glb",
+  "tris": 3398,
+  "bytes": 390904,
+  "bounds": [
+   -0.4932610094547272,
+   -1.0031801462173462,
+   -0.08675990253686905,
+   0.49593299627304077,
+   1.0031241178512573,
+   0.0886530876159668
+  ],
+  "animations": [],
+  "groundTop": -0.25,
+  "surface": 0.9975,
+  "fromObj": false,
+  "mean": 0.4
  }
 }

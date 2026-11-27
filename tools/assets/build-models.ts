@@ -953,6 +953,8 @@ export const STATIC_MODELS: ModelSpec[] = [
   { ...S("wpn_bow", "new:Bow.glb", 1500, 512), rotateZ: -45 },
   // the Evil Ranger's staff (the user's file, 22. 11. 2026): 1.91 long, its middle at the origin, its long axis along y, a plain cylinder of 0.05 radius
   S("wpn_stick", "new:Wooden_Stick.glb", 1500, 512),
+  // the Hollow Scarecrow's scythe (Fantastic Islands only, the user's file of 27. 11. 2026, built with `--pack=fantastic --only=wpn_scythe`; Classic has no such source and skips it): 0.99 x 2.01 x 0.18, middle at the origin, the shaft along y with the blade at the top
+  S("wpn_scythe", "new:Scythe.glb", 2500, 512),
   // the snakes of Summon Snakes (spell 37, the user's file, 22. 11. 2026): a coil of three snakes, 1.62 high and about 2 across, middle at the origin; a projectile model (`PROJECTILE_MODELS`), so it is loaded with the game
   S("proj_snakes", "new:Snakes.glb", 3000, 512),
   // the insects of Deadly Swarm (spell 49, the user's file, 22. 11. 2026): one flying insect, wings spread, 0.96 x 0.31 x 0.89 around its middle; ten of them fly round the monster, so it keeps 800 triangles

@@ -155,6 +155,9 @@ export const MIXAMO_GRIP: Record<string, { rotation: readonly [number, number, n
   // The rotation puts its axis vertical on the screen in his Alert pose seen from the front (`SCREEN=1 VARIANTS="0,1,0:0,0,0:0.8" check-stick.ts`); scale 0.8 (the fit's 0.4 would make a walking stick of 0.76
   // in the rig's metres) gives 1.5, about his height.
   wpn_stick: { rotation: [0.7164, 0, 0.5974, 0.3604], position: [0, 6, 0], scale: 0.8 },
+  // the Hollow Scarecrow's scythe (Fantastic Islands): the shaft stands upright in the fist like the staff, the blade above it curving in towards the head, the foot of the shaft on the ground
+  // (`SCREEN=1 ROLL=90 VARIANTS="0,1,0:-28,-4,0:0.8" MONSTER=96 PACK=fantastic check-stick.ts`; the scarecrow's fist lies 28 centimetres off the joint's axis, so the shaft is moved across to pass through it)
+  wpn_scythe: { rotation: [0.9477, 0.1903, -0.1716, 0.1903], position: [-28, 2, 0], scale: 0.8 },
 };
 
 /**

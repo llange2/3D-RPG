@@ -20,7 +20,8 @@ describe("the user's models live in the repository", () => {
     const text = readFileSync(join(ROOT, "tools", "assets", "build-models.ts"), "utf-8");
     const files = [...text.matchAll(/"new:([^"]+\.glb)"/g)].map((m) => m[1]!);
     expect(new Set(files).size).toBeGreaterThanOrEqual(11);
-    for (const f of files) expect(existsSync(join(ROOT, "tools", "assets", "sources", "models", f)), f).toBe(true);
+    // (a model of a pack, built with `--pack=`, lies in the pack's own folder and Classic skips it: `wpn_scythe`)
+    for (const f of files) expect(existsSync(join(ROOT, "tools", "assets", "sources", "models", f)) || existsSync(join(ROOT, "tools", "assets", "sources-packs", "fantastic", "models", f)), f).toBe(true);
     // the `.ignore` folder was a hand-over folder: nothing reads it any more
     expect(text).toContain(`join(ROOT, "tools", "assets", "sources", "models")`);
     expect(text).not.toContain(`join(ROOT, ".ignore"`);
