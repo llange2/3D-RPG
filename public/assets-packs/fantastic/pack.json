@@ -1,6 +1,20 @@
 {
  "id": "fantastic",
  "files": [
+  "audio/music/castle.webm",
+  "audio/music/cave.webm",
+  "audio/music/cyber.webm",
+  "audio/music/dungeon.webm",
+  "audio/music/outside.webm",
+  "audio/music/title.webm",
+  "audio/music/town.webm",
+  "audio/music/town_bank.webm",
+  "audio/music/town_guild.webm",
+  "audio/music/town_inn.webm",
+  "audio/music/town_smith.webm",
+  "audio/music/town_tavern.webm",
+  "audio/music/town_temple.webm",
+  "audio/music/town_training_grounds.webm",
   "models-original/monster_100.glb",
   "models-original/monster_101.glb",
   "models-original/monster_102.glb",
@@ -27,8 +41,10 @@
   "models-original/monster_98.glb",
   "models-original/monster_99.glb",
   "models-original/obj_capybara.glb",
+  "models-original/wpn_scythe.glb",
   "models.monsters.original.json",
-  "models.static.original.json"
+  "models.static.original.json",
+  "ui/title.webp"
  ],
  "names": {}
 }

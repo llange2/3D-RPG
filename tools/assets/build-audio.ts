@@ -4,7 +4,7 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
-import { OLD, OUT, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
+import { OLD, OUT, PACK, ROOT, ensureDir, mb, pool, upToDate } from "./lib";
 
 const run = promisify(execFile);
 
@@ -47,7 +47,26 @@ export async function buildAudio(): Promise<Record<string, { files: number; byte
   return stats;
 }
 
+/**
+ * The music of a pack (`--pack=fantastic`): every mp3 of the folder (`--from=<folder>`, default `.ignore/Music` of the user) becomes a track of the pack with the name of the file, so it replaces the
+ * Classic track of the same name (`music/town.webm`, ...); a track the folder lacks stays Classic's. The mp3 files are large and not in the repository, only the transcoded tracks are.
+ */
+export async function buildPackMusic(from: string): Promise<{ files: number; bytes: number }> {
+  const s = { files: 0, bytes: 0 };
+  await pool(readdirSync(from).filter((f) => f.endsWith(".mp3")), 4, async (f) => {
+    s.bytes += await transcode(join(from, f), join(OUT, "audio", "music", `${basename(f, ".mp3")}.webm`), "64k", 2);
+    s.files++;
+  });
+  return s;
+}
+
 if (process.argv[1]?.endsWith("build-audio.ts")) {
+  if (PACK) {
+    const from = process.argv.find((a) => a.startsWith("--from="))?.slice(7) ?? join(ROOT, ".ignore", "Music");
+    const s = await buildPackMusic(from);
+    console.log(`${PACK} music ${String(s.files).padStart(3)} files ${String(mb(s.bytes)).padStart(7)} MB`);
+    process.exit(0);
+  }
   const stats = await buildAudio();
   for (const [group, s] of Object.entries(stats)) console.log(`${group.padEnd(8)} ${String(s.files).padStart(3)} files ${String(mb(s.bytes)).padStart(7)} MB`);
 }

@@ -1,4 +1,4 @@
-import { activePack, activePackId } from "../assets/pack";
+import { activePack, activePackId, type PackId } from "../assets/pack";
 import "./style.css";
 import { resistanceTone } from "../data/resistance-tone";
 import { clockText } from "../sim/party";
@@ -46,9 +46,14 @@ export interface HudInfo {
 }
 
 type TitlePage = "main" | "new" | "load";
-/** Size of `title.webp` and the height of the middle of its grey rock (fraction of the picture height). */
-const TITLE_IMAGE = { w: 1600, h: 995 };
-const TITLE_ROCK_Y = 0.69;
+/**
+ * Size of `title.webp` and the height of the middle of its grey rock (fraction of the picture height). Fantastic Islands brings its own picture (27. 11. 2026) with no rock: the three buttons
+ * sit in the open sea under the scarecrow's island (`rockY`), the taller pages of a new game and the saves in the middle of the picture (`panelY`), where their own backdrop carries them.
+ */
+const TITLE_LAYOUTS: Readonly<Record<PackId, { w: number; h: number; rockY: number; panelY?: number }>> = {
+  classic: { w: 1600, h: 995, rockY: 0.69 },
+  fantastic: { w: 1672, h: 941, rockY: 0.9, panelY: 0.58 },
+};
 
 /** What the title screen resolves with: a new game (endless world or campaign, with its seed) or one of the saves it was given. */
 export type TitleChoice<S> = { action: "new" | "campaign"; seed: string; size: WorldSize } | { action: "load"; save: S };
@@ -896,12 +901,13 @@ export class UI {
       // The picture carries the name of the game itself; the menu sits on the grey rock of its island. The picture is drawn
       // with `cover` (1600 x 995), so the rock moves with the window shape and the menu has to follow it.
       const placeMenu = () => {
-        const scale = Math.max(window.innerWidth / TITLE_IMAGE.w, window.innerHeight / TITLE_IMAGE.h);
-        const top = (window.innerHeight - TITLE_IMAGE.h * scale) / 2;
-        el.style.setProperty("--rock-y", `${Math.round(top + TITLE_IMAGE.h * scale * TITLE_ROCK_Y)}px`);
+        const image = TITLE_LAYOUTS[activePackId()];
+        const scale = Math.max(window.innerWidth / image.w, window.innerHeight / image.h);
+        const top = (window.innerHeight - image.h * scale) / 2;
+        el.style.setProperty("--rock-y", `${Math.round(top + image.h * scale * (page === "main" ? image.rockY : (image.panelY ?? image.rockY)))}px`);
       };
       // Classic's title is as it always was; another version names itself in the corner
-      const el = h("div", { class: "title" }, menu, ...(activePackId() === "classic" ? [] : [h("div", { class: "title-version", text: activePack().name })]));
+      const el = h("div", { class: activePackId() === "classic" ? "title" : "title title-pack" }, menu, ...(activePackId() === "classic" ? [] : [h("div", { class: "title-version", text: activePack().name })]));
       // Esc steps back from the second page; the title is no modal, so it has to listen itself
       const onKey = (e: KeyboardEvent) => {
         if (e.key === "Escape" && page !== "main") show("main");

@@ -31,7 +31,7 @@ const browser = await puppeteer.launch({
 try {
   const page = await browser.newPage();
   const evalJs = <T>(code: string) => page.evaluate(code) as Promise<T>;
-  await page.goto(`${base}?seed=test&autostart=1&outside=1`, { waitUntil: "load", timeout: 60000 });
+  await page.goto(`${base}?seed=test&autostart=1&outside=1${process.env.PACK ? `&pack=${process.env.PACK}` : ""}`, { waitUntil: "load", timeout: 60000 });
   await page.waitForFunction("window.__game && window.__game.state", { timeout: 60000 });
   await sleep(4000);
   const spot = await evalJs<{ x: number; y: number }>(`(() => { const g = __game.game; const w = g.world; const p = g.player; for (let r = 0; r < 40; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; let ok = true; for (let ky = -2; ky <= 6 && ok; ky++) for (let kx = -2; kx <= 2 && ok; kx++) { const t = w.tile(p.tx + dx + kx, p.ty + dy + ky); if (t.deco !== 0 || t.ground !== w.tile(p.tx, p.ty).ground || t.poiId !== null) ok = false; } if (ok) return { x: p.tx + dx, y: p.ty + dy }; } return { x: p.tx, y: p.ty }; })()`);
@@ -61,7 +61,8 @@ try {
           const inv = stick.parent.computeWorldMatrix(true).clone().invert();
           to = V.TransformNormal(D, inv).normalize();
         }
-        const q = Q.FromUnitVectorsToRef(new V(0, 1, 0), to, new Q());
+        // ROLL (degrees) turns the item about its own long axis afterwards (a scythe's blade has a side)
+        const q = Q.FromUnitVectorsToRef(new V(0, 1, 0), to, new Q()).multiply(Q.RotationAxis(new V(0, 1, 0), ${Number(process.env.ROLL ?? 0)} * Math.PI / 180));
         const unit = 0.01;
         stick.rotationQuaternion = q;
         stick.position.set(${shift[0]} * unit, (6 + ${shift[1]}) * unit, ${shift[2]} * unit);

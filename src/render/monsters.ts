@@ -12,7 +12,7 @@ import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/loaders/glTF";
-import { BOW_MODEL, BOW_MONSTERS, STICK_MODEL, STICK_MONSTERS, equipmentModel } from "../data/equipment";
+import { BOW_MODEL, BOW_MONSTERS, SCYTHE_MODEL, SCYTHE_MONSTERS, STICK_MODEL, STICK_MONSTERS, equipmentModel } from "../data/equipment";
 import { MONSTERS } from "../data/tables";
 import type { BreathMouth } from "./breath";
 import { assetUrl, type MonsterModelInfo, type StaticModelInfo } from "./assets";
@@ -178,7 +178,7 @@ export class MonsterRenderer {
   private async kit(defId: number): Promise<{ hand: Hand; container: AssetContainer; key: string }[]> {
     const def = MONSTERS[defId];
     const wanted: [Hand, string | null][] = [
-      ["right", STICK_MONSTERS.has(defId) ? STICK_MODEL : equipmentModel(def?.anim_weapon)],
+      ["right", STICK_MONSTERS.has(defId) ? STICK_MODEL : SCYTHE_MONSTERS.has(defId) ? SCYTHE_MODEL : equipmentModel(def?.anim_weapon)],
       ["left", BOW_MONSTERS.has(defId) ? BOW_MODEL : equipmentModel(def?.anim_shield)],
     ];
     const out: { hand: Hand; container: AssetContainer; key: string }[] = [];

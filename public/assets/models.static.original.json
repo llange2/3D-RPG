@@ -1387,7 +1387,7 @@
  "blk_dungeon_wall_broken": {
   "file": "models-original/blk_dungeon_wall_broken.glb",
   "tris": 3169,
-  "bytes": 1355724,
+  "bytes": 452840,
   "bounds": [
    -0.31665000319480896,
    -0.47680699825286865,
@@ -1400,7 +1400,7 @@
   "groundTop": -0.45,
   "surface": 0.475,
   "fromObj": false,
-  "mean": 0.217
+  "mean": 0.144
  },
  "blk_cave_wall": {
   "file": "models-original/blk_cave_wall.glb",
